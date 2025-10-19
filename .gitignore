@@ -1,0 +1,36 @@
+# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
+
+# dependencies
+/node_modules
+
+# next.js
+/.next/
+/out/
+
+# production
+/build
+
+# debug
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# env files (don't commit secrets, but allow .env.example)
+.env
+.env*.local
+
+# database
+prisma/migrations/*
+!prisma/migrations/.gitkeep
+
+# vercel
+.vercel
+
+# typescript
+*.tsbuildinfo
+next-env.d.ts
+
+# firebase
+firebase-debug.log
+firebase-debug.*.log
