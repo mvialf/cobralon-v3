@@ -16,6 +16,8 @@ import { CurrencyInput } from '@/components/ui/currency-input'
 import { PercentageInput } from '@/components/ui/percentage-input'
 import { FormGrid } from '@/components/ui/form-grid'
 import { StatusBadge } from '@/components/ui/status-badge'
+import { AddressFields } from '@/components/forms/address-fields'
+import { useConfiguration } from '@/hooks/use-configuration'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import {
   Command,
@@ -56,6 +58,8 @@ interface ProjectStatus {
 }
 
 export function ProjectForm({ onSubmit, isSubmitting, defaultValues }: ProjectFormProps) {
+  const { configuration } = useConfiguration()
+
   const [customers, setCustomers] = React.useState<Customer[]>([])
   const [loadingCustomers, setLoadingCustomers] = React.useState(true)
   const [openCustomerCombobox, setOpenCustomerCombobox] = React.useState(false)
@@ -71,6 +75,10 @@ export function ProjectForm({ onSubmit, isSubmitting, defaultValues }: ProjectFo
       projectNumber: '',
       projectName: '',
       phone: '',
+      street: '',
+      apartment: '',
+      comuna: '',
+      region: configuration.region || '',
       projectStatusId: '',
       date: new Date(),
       subtotal: 0,
@@ -255,9 +263,6 @@ export function ProjectForm({ onSubmit, isSubmitting, defaultValues }: ProjectFo
                 <FormControl>
                   <PhoneInput {...field} />
                 </FormControl>
-                <FormDescription>
-                  Se autocompleta desde cliente, pero puede editarse
-                </FormDescription>
                 <FormMessage />
               </FormItem>
             )}
@@ -362,6 +367,10 @@ export function ProjectForm({ onSubmit, isSubmitting, defaultValues }: ProjectFo
           />
         </FormGrid>
 
+        <FormGrid columns={2}>
+          <AddressFields control={form.control} defaultRegion={configuration.region} />
+        </FormGrid>
+
         <FormGrid columns={3}>
           {/* Subtotal */}
           <FormField
@@ -404,7 +413,6 @@ export function ProjectForm({ onSubmit, isSubmitting, defaultValues }: ProjectFo
             <FormControl>
               <CurrencyInput value={total} onChange={() => {}} disabled className="bg-muted" />
             </FormControl>
-            <FormDescription>Calculado automáticamente</FormDescription>
           </FormItem>
         </FormGrid>
 
