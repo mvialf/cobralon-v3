@@ -15,6 +15,7 @@ import { PhoneInput } from '@/components/ui/phone-input'
 import { CurrencyInput } from '@/components/ui/currency-input'
 import { PercentageInput } from '@/components/ui/percentage-input'
 import { FormGrid } from '@/components/ui/form-grid'
+import { StatusBadge } from '@/components/ui/status-badge'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import {
   Command,
@@ -46,10 +47,22 @@ interface Customer {
   phone: string
 }
 
+interface ProjectStatus {
+  id: string
+  name: string
+  color: {
+    bgClass: string
+  }
+}
+
 export function ProjectForm({ onSubmit, isSubmitting, defaultValues }: ProjectFormProps) {
   const [customers, setCustomers] = React.useState<Customer[]>([])
   const [loadingCustomers, setLoadingCustomers] = React.useState(true)
   const [openCustomerCombobox, setOpenCustomerCombobox] = React.useState(false)
+
+  const [projectStatuses, setProjectStatuses] = React.useState<ProjectStatus[]>([])
+  const [loadingStatuses, setLoadingStatuses] = React.useState(true)
+  const [openStatusCombobox, setOpenStatusCombobox] = React.useState(false)
 
   const form = useForm<ProjectFormData>({
     resolver: zodResolver(projectSchema),
@@ -87,6 +100,24 @@ export function ProjectForm({ onSubmit, isSubmitting, defaultValues }: ProjectFo
     loadCustomers()
   }, [])
 
+  // Cargar lista de project statuses al montar
+  React.useEffect(() => {
+    async function loadStatuses() {
+      try {
+        const response = await fetch('/api/project-status')
+        if (!response.ok) throw new Error('Error al cargar estados')
+        const data = await response.json()
+        setProjectStatuses(data.projectStatuses || [])
+      } catch (error) {
+        console.error('Error al cargar estados:', error)
+      } finally {
+        setLoadingStatuses(false)
+      }
+    }
+
+    loadStatuses()
+  }, [])
+
   // Watch subtotal y taxRate para calcular total
   const subtotal = form.watch('subtotal')
   const taxRate = form.watch('taxRate')
@@ -110,6 +141,7 @@ export function ProjectForm({ onSubmit, isSubmitting, defaultValues }: ProjectFo
   }
 
   const selectedCustomer = customers.find((c) => c.id === form.watch('customerId'))
+  const selectedStatus = projectStatuses.find((s) => s.id === form.watch('projectStatus'))
 
   return (
     <Form {...form}>
@@ -122,16 +154,18 @@ export function ProjectForm({ onSubmit, isSubmitting, defaultValues }: ProjectFo
             render={({ field }) => (
               <FormItem className="flex flex-col">
                 <FormLabel>Cliente *</FormLabel>
-                <Popover open={openCustomerCombobox} onOpenChange={setOpenCustomerCombobox}>
+                <Popover
+                  open={openCustomerCombobox}
+                  onOpenChange={setOpenCustomerCombobox}
+                  modal={true}
+                >
                   <PopoverTrigger asChild>
                     <FormControl>
                       <Button
-                        variant="outline"
+                        variant="input-like"
+                        size="input"
                         role="combobox"
-                        className={cn(
-                          'w-full justify-between',
-                          !field.value && 'text-muted-foreground'
-                        )}
+                        className={cn('w-full', !field.value && 'text-muted-foreground')}
                         disabled={loadingCustomers}
                       >
                         {loadingCustomers
@@ -231,16 +265,74 @@ export function ProjectForm({ onSubmit, isSubmitting, defaultValues }: ProjectFo
         </FormGrid>
 
         <FormGrid columns={2}>
-          {/* Estado */}
+          {/* Estado - Combobox */}
           <FormField
             control={form.control}
             name="projectStatus"
             render={({ field }) => (
-              <FormItem>
+              <FormItem className="flex flex-col">
                 <FormLabel>Estado</FormLabel>
-                <FormControl>
-                  <Input {...field} placeholder="Ej: Pendiente, En Proceso, Completado" />
-                </FormControl>
+                <Popover
+                  open={openStatusCombobox}
+                  onOpenChange={setOpenStatusCombobox}
+                  modal={true}
+                >
+                  <PopoverTrigger asChild>
+                    <FormControl>
+                      <Button
+                        variant="input-like"
+                        size="input"
+                        role="combobox"
+                        className={cn(
+                          'w-full justify-start',
+                          !field.value && 'text-muted-foreground'
+                        )}
+                        disabled={loadingStatuses}
+                      >
+                        {loadingStatuses ? (
+                          'Cargando...'
+                        ) : field.value && selectedStatus ? (
+                          <StatusBadge
+                            bgClass={selectedStatus.color.bgClass}
+                            label={selectedStatus.name}
+                            className="mr-2"
+                          />
+                        ) : (
+                          'Seleccionar estado'
+                        )}
+                        <ChevronsUpDown className="ml-auto h-4 w-4 shrink-0 opacity-50" />
+                      </Button>
+                    </FormControl>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-[300px] p-0">
+                    <Command>
+                      <CommandInput placeholder="Buscar estado..." />
+                      <CommandList>
+                        <CommandEmpty>No se encontraron estados</CommandEmpty>
+                        <CommandGroup>
+                          {projectStatuses.map((status) => (
+                            <CommandItem
+                              key={status.id}
+                              value={status.name}
+                              onSelect={() => {
+                                form.setValue('projectStatus', status.id)
+                                setOpenStatusCombobox(false)
+                              }}
+                            >
+                              <Check
+                                className={cn(
+                                  'mr-2 h-4 w-4',
+                                  status.id === field.value ? 'opacity-100' : 'opacity-0'
+                                )}
+                              />
+                              <StatusBadge bgClass={status.color.bgClass} label={status.name} />
+                            </CommandItem>
+                          ))}
+                        </CommandGroup>
+                      </CommandList>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
                 <FormMessage />
               </FormItem>
             )}

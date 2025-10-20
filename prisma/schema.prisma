@@ -43,6 +43,47 @@ model Customer {
   @@index([email])
 }
 
+model BadgeColor {
+  id          String   @id @default(uuid())
+  name        String   @unique       // "Azul", "Verde", "Rojo"
+  key         String   @unique       // "blue", "green", "red" (para código)
+  bgClass     String                 // "bg-blue-500"
+  textClass   String   @default("text-white")  // "text-white"
+  order       Int      @default(0)   // Para ordenar en UI
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations - todas las entidades que usen badges
+  projectStatuses  ProjectStatus[]
+
+  @@index([order])
+  @@index([isActive])
+}
+
+model ProjectStatus {
+  id        String   @id @default(uuid())
+  name      String   @unique
+  order     Int      @default(0)
+
+  // FK a BadgeColor
+  colorId   String
+  color     BadgeColor @relation(fields: [colorId], references: [id], onDelete: Restrict)
+
+  isInitial Boolean  @default(false)
+  isFinal   Boolean  @default(false)
+  isActive  Boolean  @default(true)
+
+  projects  Project[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([colorId])
+  @@index([order])
+  @@index([isActive])
+}
+
 model Project {
   id             String   @id @default(uuid())
   projectNumber  String
@@ -53,7 +94,14 @@ model Project {
   customer       Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
 
   phone          String   // Teléfono obligatorio (autocompletado desde customer pero editable)
-  projectStatus  String   @default("") // Estado del proyecto (por ahora input libre)
+
+  // NUEVO: FK a ProjectStatus
+  projectStatusId String?
+  projectStatus   ProjectStatus? @relation(fields: [projectStatusId], references: [id], onDelete: Restrict)
+
+  // LEGACY: Campo antiguo para migración (temporal)
+  projectStatusLegacy String @default("") @map("projectStatus")
+
   date           DateTime @default(now()) // Fecha de ingreso
 
   // Financials
@@ -71,7 +119,7 @@ model Project {
 
   @@index([customerId])
   @@index([projectNumber])
-  @@index([projectStatus])
+  @@index([projectStatusId])
   @@index([date])
 }
 
