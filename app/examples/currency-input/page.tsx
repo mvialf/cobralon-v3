@@ -61,7 +61,7 @@ export default function CurrencyInputDemoPage() {
       pageDescription="Ejemplos de uso del componente CurrencyInput"
       breadcrumbs={[
         { label: 'Inicio', href: '/' },
-        { label: 'Ejemplos', href: '/ejemplos' },
+        { label: 'Ejemplos', href: '/examples' },
         { label: 'Currency Input' },
       ]}
     >

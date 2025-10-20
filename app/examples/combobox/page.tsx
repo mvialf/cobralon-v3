@@ -36,10 +36,11 @@ function ComboboxDemo() {
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
           <Button
-            variant="outline"
+            variant="input-like"
+            size="input"
             role="combobox"
             aria-expanded={open}
-            className="w-full justify-between"
+            className="w-full"
           >
             {value ? tricks.find((trick) => trick.value === value)?.label : 'Select trick...'}
             <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
@@ -93,7 +94,7 @@ export default function ComboboxDemoPage() {
       pageDescription="Combobox con Command + Popover (shadcn/ui)"
       breadcrumbs={[
         { label: 'Inicio', href: '/' },
-        { label: 'Ejemplos', href: '/ejemplos' },
+        { label: 'Ejemplos', href: '/examples' },
         { label: 'Combobox' },
       ]}
     >

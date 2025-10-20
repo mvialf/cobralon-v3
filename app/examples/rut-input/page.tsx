@@ -34,8 +34,8 @@ type FormValues = z.infer<typeof formSchema>
 export default function RutInputExamplePage() {
   // Estado para ejemplos standalone
   const [standaloneRut, setStandaloneRut] = useState('')
-  const [rutWithIcon, setRutWithIcon] = useState('')
-  const [rutNoFormat, setRutNoFormat] = useState('')
+  const [_rutWithIcon, setRutWithIcon] = useState('')
+  const [_rutNoFormat, setRutNoFormat] = useState('')
 
   // Estado para resultado del form
   const [submittedData, setSubmittedData] = useState<FormValues | null>(null)
@@ -59,7 +59,7 @@ export default function RutInputExamplePage() {
     <AppLayout
       pageTitle="RUT Input"
       pageDescription="Componente para RUT chileno con formateo y validación automática"
-      breadcrumbs={[{ label: 'Ejemplos', href: '/ejemplos' }, { label: 'RUT Input' }]}
+      breadcrumbs={[{ label: 'Ejemplos', href: '/examples' }, { label: 'RUT Input' }]}
     >
       <div className="space-y-6">
         {/* 1. Uso Standalone Simple */}

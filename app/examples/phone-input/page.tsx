@@ -17,7 +17,7 @@ export default function PhoneInputExamplePage() {
       pageDescription="Componente de entrada de teléfono con validación y formato internacional"
       breadcrumbs={[
         { label: 'Inicio', href: '/' },
-        { label: 'Ejemplos', href: '/ejemplos' },
+        { label: 'Ejemplos', href: '/examples' },
         { label: 'Phone Input' },
       ]}
     >

@@ -64,32 +64,32 @@ const navigationItems: NavigationItem[] = [
   },
   {
     title: 'Ejemplos',
-    url: '/ejemplos',
+    url: '/examples',
     icon: FileText,
     items: [
       {
         title: 'Combobox',
-        url: '/ejemplos/combobox',
+        url: '/examples/combobox',
         icon: ChevronDown,
       },
       {
         title: 'Currency (Config)',
-        url: '/ejemplos/currency',
+        url: '/examples/currency',
         icon: Coins,
       },
       {
         title: 'Currency Input',
-        url: '/ejemplos/currency-input',
+        url: '/examples/currency-input',
         icon: DollarSign,
       },
       {
         title: 'Phone Input',
-        url: '/ejemplos/phone-input',
+        url: '/examples/phone-input',
         icon: Phone,
       },
       {
         title: 'RUT Input',
-        url: '/ejemplos/rut-input',
+        url: '/examples/rut-input',
         icon: CreditCard,
       },
     ],
@@ -99,7 +99,7 @@ const navigationItems: NavigationItem[] = [
 const settingsItems: NavigationItem[] = [
   {
     title: 'Configuración',
-    url: '/configuracion',
+    url: '/settings',
     icon: Settings,
   },
 ]

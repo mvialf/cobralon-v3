@@ -11,7 +11,7 @@ const ejemplos = [
   {
     title: 'Combobox',
     description: 'Combobox con debounce y loading state',
-    href: '/ejemplos/combobox',
+    href: '/examples/combobox',
     icon: ChevronDown,
     features: ['Debounce 300ms', 'Loading state', 'Búsqueda dinámica', 'Barra de progreso'],
     color: 'text-blue-500',
@@ -19,7 +19,7 @@ const ejemplos = [
   {
     title: 'Currency Input',
     description: 'Input de moneda con formateo automático',
-    href: '/ejemplos/currency-input',
+    href: '/examples/currency-input',
     icon: DollarSign,
     features: [
       'Múltiples monedas',

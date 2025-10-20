@@ -20,7 +20,7 @@ export default function CurrencyExamplePage() {
     <AppLayout
       pageTitle="CurrencyInput - Demo"
       pageDescription="Ejemplo de CurrencyInput conectado a la configuración regional"
-      breadcrumbs={[{ label: 'Ejemplos', href: '/ejemplos' }, { label: 'Currency Input' }]}
+      breadcrumbs={[{ label: 'Ejemplos', href: '/examples' }, { label: 'Currency Input' }]}
     >
       <div className="grid gap-6">
         {/* Alert de información */}
@@ -29,8 +29,8 @@ export default function CurrencyExamplePage() {
           <AlertTitle>Sistema de Configuración Regional</AlertTitle>
           <AlertDescription>
             El CurrencyInput ahora se adapta automáticamente según el país configurado en{' '}
-            <Link href="/configuracion" className="font-medium underline">
-              /configuracion
+            <Link href="/settings" className="font-medium underline">
+              /settings
             </Link>
             . Cambia el país allí y verás cómo se actualiza el formato aquí.
           </AlertDescription>
@@ -132,7 +132,7 @@ export default function CurrencyExamplePage() {
               </li>
               <li>
                 <Link
-                  href="/configuracion"
+                  href="/settings"
                   className="inline-flex items-center gap-1 font-medium underline"
                 >
                   Ve a Configuración
@@ -149,7 +149,7 @@ export default function CurrencyExamplePage() {
 
             <div className="mt-4 flex gap-2">
               <Button asChild>
-                <Link href="/configuracion">
+                <Link href="/settings">
                   <Settings className="mr-2 size-4" />
                   Ir a Configuración
                 </Link>
