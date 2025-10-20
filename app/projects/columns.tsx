@@ -12,6 +12,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { StatusBadge } from '@/components/ui/status-badge'
+import { ProjectNameSummary } from '@/components/summarys/project-name-summary'
 import { toast } from 'sonner'
 
 export interface Project {
@@ -39,13 +40,18 @@ interface ColumnsProps {
 
 export const createColumns = ({ onProjectDeleted }: ColumnsProps = {}): ColumnDef<Project>[] => [
   {
-    accessorKey: 'customer.name',
-    header: 'Cliente',
-    cell: ({ row }) => row.original.customer.name,
-  },
-  {
     accessorKey: 'projectNumber',
     header: 'Proyecto',
+    cell: ({ row }) => {
+      const project = row.original
+      return (
+        <ProjectNameSummary
+          projectNumber={project.projectNumber}
+          customerName={project.customer.name}
+          projectName={project.projectName}
+        />
+      )
+    },
   },
   {
     accessorKey: 'projectStatus',
@@ -54,6 +60,18 @@ export const createColumns = ({ onProjectDeleted }: ColumnsProps = {}): ColumnDe
       const status = row.original.projectStatus
       if (!status) return <span className="text-muted-foreground">Sin estado</span>
       return <StatusBadge bgClass={status.color.bgClass} label={status.name} />
+    },
+    filterFn: (row, _id, filterValue) => {
+      const status = row.original.projectStatus
+      // Si el filtro es "null", mostrar solo proyectos sin estado
+      if (filterValue.includes('null')) {
+        if (!status) return true
+      }
+      // Si hay status, verificar si su id está en los valores del filtro
+      if (status && filterValue.includes(status.id)) {
+        return true
+      }
+      return false
     },
   },
   {

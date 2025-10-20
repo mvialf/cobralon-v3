@@ -31,6 +31,8 @@ interface DataTableProps<TData, TValue> {
   data: TData[]
   searchKey?: string
   searchPlaceholder?: string
+  enableGlobalFilter?: boolean
+  globalFilterFn?: (row: any, columnId: string, filterValue: any) => boolean
   filterableColumns?: {
     id: string
     title: string
@@ -46,6 +48,8 @@ export function DataTable<TData, TValue>({
   data,
   searchKey = '',
   searchPlaceholder = 'Buscar...',
+  enableGlobalFilter = false,
+  globalFilterFn,
   filterableColumns = [],
   onRowSelectionChange,
   enableRowSelection = false,
@@ -53,6 +57,7 @@ export function DataTable<TData, TValue>({
 }: DataTableProps<TData, TValue>) {
   const [sorting, setSorting] = React.useState<SortingState>([])
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([])
+  const [globalFilter, setGlobalFilter] = React.useState('')
   const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({})
   const [rowSelection, setRowSelection] = React.useState({})
 
@@ -62,6 +67,7 @@ export function DataTable<TData, TValue>({
     state: {
       sorting,
       columnFilters,
+      globalFilter,
       columnVisibility,
       rowSelection,
     },
@@ -69,7 +75,9 @@ export function DataTable<TData, TValue>({
     onRowSelectionChange: setRowSelection,
     onSortingChange: setSorting,
     onColumnFiltersChange: setColumnFilters,
+    onGlobalFilterChange: setGlobalFilter,
     onColumnVisibilityChange: setColumnVisibility,
+    globalFilterFn: globalFilterFn as any,
     getCoreRowModel: getCoreRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
@@ -91,6 +99,7 @@ export function DataTable<TData, TValue>({
         table={table}
         searchKey={searchKey}
         searchPlaceholder={searchPlaceholder}
+        enableGlobalFilter={enableGlobalFilter}
         filterableColumns={filterableColumns}
       />
       <div className="rounded-md border">

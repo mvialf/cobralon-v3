@@ -20,6 +20,7 @@ interface DataTableToolbarProps<TData> {
   table: Table<TData>
   searchKey?: string
   searchPlaceholder?: string
+  enableGlobalFilter?: boolean
   filterableColumns?: {
     id: string
     title: string
@@ -31,9 +32,10 @@ export function DataTableToolbar<TData>({
   table,
   searchKey = '',
   searchPlaceholder = 'Buscar...',
+  enableGlobalFilter = false,
   filterableColumns = [],
 }: DataTableToolbarProps<TData>) {
-  const isFiltered = table.getState().columnFilters.length > 0
+  const isFiltered = table.getState().columnFilters.length > 0 || !!table.getState().globalFilter
 
   return (
     <div className="flex py-4 px-4 items-center bg-card rounded-lg justify-between">
@@ -43,8 +45,16 @@ export function DataTableToolbar<TData>({
             <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input
               placeholder={searchPlaceholder}
-              value={(table.getColumn(searchKey)?.getFilterValue() as string) ?? ''}
-              onChange={(event) => table.getColumn(searchKey)?.setFilterValue(event.target.value)}
+              value={
+                enableGlobalFilter
+                  ? ((table.getState().globalFilter as string) ?? '')
+                  : ((table.getColumn(searchKey)?.getFilterValue() as string) ?? '')
+              }
+              onChange={(event) =>
+                enableGlobalFilter
+                  ? table.setGlobalFilter(event.target.value)
+                  : table.getColumn(searchKey)?.setFilterValue(event.target.value)
+              }
               className="pl-8 w-[150px] lg:w-[250px]"
             />
           </div>

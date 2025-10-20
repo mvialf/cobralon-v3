@@ -6,13 +6,24 @@ import { NewProjectDialog } from '@/components/dialogs/projects/new-project-dial
 import { DataTable } from '@/components/data-table/data-table'
 import { createColumns, type Project } from './columns'
 
+interface ProjectStatus {
+  id: string
+  name: string
+  color: {
+    id: string
+    bgClass: string
+  }
+}
+
 export default function ProjectsPage() {
   const [projects, setProjects] = useState<Project[]>([])
+  const [statuses, setStatuses] = useState<ProjectStatus[]>([])
   const [isLoading, setIsLoading] = useState(true)
 
-  // Cargar proyectos desde la API
+  // Cargar proyectos y statuses desde la API
   useEffect(() => {
     fetchProjects()
+    fetchStatuses()
   }, [])
 
   const fetchProjects = async () => {
@@ -30,6 +41,18 @@ export default function ProjectsPage() {
     }
   }
 
+  const fetchStatuses = async () => {
+    try {
+      const response = await fetch('/api/project-status')
+      if (!response.ok) throw new Error('Error al cargar estados')
+
+      const data = await response.json()
+      setStatuses(data.projectStatuses)
+    } catch (error) {
+      console.error('Error al cargar estados:', error)
+    }
+  }
+
   const handleProjectCreated = () => {
     // Recargar lista de proyectos después de crear uno nuevo
     fetchProjects()
@@ -41,6 +64,41 @@ export default function ProjectsPage() {
   }
 
   const columns = createColumns({ onProjectDeleted: handleProjectDeleted })
+
+  // Función de filtrado global: busca en projectNumber, customer.name y projectName
+  const globalFilterFn = (row: any, _columnId: string, filterValue: string) => {
+    const project = row.original as Project
+    const searchValue = filterValue.toLowerCase()
+
+    // Buscar en número de proyecto
+    if (project.projectNumber.toLowerCase().includes(searchValue)) {
+      return true
+    }
+
+    // Buscar en nombre del cliente
+    if (project.customer.name.toLowerCase().includes(searchValue)) {
+      return true
+    }
+
+    // Buscar en nombre del proyecto (si existe)
+    if (project.projectName && project.projectName.toLowerCase().includes(searchValue)) {
+      return true
+    }
+
+    return false
+  }
+
+  // Formatear opciones para el filtro de status
+  const statusFilterOptions = [
+    // Opción para "Sin estado"
+    { label: 'Sin estado', value: 'null' },
+    // Opciones de statuses disponibles con colores
+    ...(statuses || []).map((status) => ({
+      label: status.name,
+      value: status.id,
+      bgClass: status.color.bgClass,
+    })),
+  ]
 
   return (
     <AppLayout
@@ -58,8 +116,17 @@ export default function ProjectsPage() {
           <DataTable
             columns={columns}
             data={projects}
-            searchKey="projectNumber"
-            searchPlaceholder="Buscar proyecto..."
+            searchKey="search"
+            searchPlaceholder="Buscar por número, cliente o nombre..."
+            enableGlobalFilter={true}
+            globalFilterFn={globalFilterFn}
+            filterableColumns={[
+              {
+                id: 'projectStatus',
+                title: 'Estado',
+                options: statusFilterOptions,
+              },
+            ]}
           />
         )}
       </div>
