@@ -1,7 +1,7 @@
 'use client'
 
 import * as React from 'react'
-import { NumericFormat, NumericFormatProps } from 'react-number-format'
+import { NumericFormat } from 'react-number-format'
 
 import { cn } from '@/lib/utils'
 import { useConfiguration } from '@/hooks/use-configuration'
@@ -92,7 +92,7 @@ function CurrencyInput({
   // Obtener símbolo de moneda y separadores según locale
   const formatConfig = React.useMemo(() => {
     // Crear formatter para obtener el símbolo de la moneda
-    const formatter = new Intl.NumberFormat(locale, {
+    const currencyFormatter = new Intl.NumberFormat(locale, {
       style: 'currency',
       currency,
       minimumFractionDigits: 0,
@@ -100,16 +100,20 @@ function CurrencyInput({
     })
 
     // Extraer símbolo de moneda (ej: "$", "€", "USD")
-    const parts = formatter.formatToParts(0)
-    const currencySymbol = parts.find((p) => p.type === 'currency')?.value || currency
+    const currencyParts = currencyFormatter.formatToParts(0)
+    const currencySymbol = currencyParts.find((p) => p.type === 'currency')?.value || currency
 
-    // Detectar separadores según locale
-    // es-CL: 1.234.567,00 (punto=miles, coma=decimal)
-    // en-US: 1,234,567.00 (coma=miles, punto=decimal)
-    const testNum = 1234.56
-    const formatted = new Intl.NumberFormat(locale).format(testNum)
-    const thousandSeparator = formatted.includes('.') ? '.' : ','
-    const decimalSeparator = formatted.includes(',') ? ',' : '.'
+    // Detectar separadores usando formatToParts (método confiable)
+    // Usar número grande (12345.67) para garantizar que siempre aparezca separador de miles
+    const numberFormatter = new Intl.NumberFormat(locale, {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    })
+    const parts = numberFormatter.formatToParts(12345.67)
+
+    // Buscar separadores específicos por tipo
+    const thousandSeparator = parts.find((p) => p.type === 'group')?.value || ','
+    const decimalSeparator = parts.find((p) => p.type === 'decimal')?.value || '.'
 
     return {
       currencySymbol,
