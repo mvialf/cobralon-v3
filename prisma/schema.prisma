@@ -95,6 +95,12 @@ model Project {
 
   phone          String   // Teléfono obligatorio (autocompletado desde customer pero editable)
 
+  // Dirección del proyecto (donde se realiza el trabajo)
+  street    String   // Calle y numeración - OBLIGATORIO
+  apartment String?  // Casa/Dpto - OPCIONAL
+  comuna    String   // Comuna - OBLIGATORIO
+  region    String   // Región - OBLIGATORIO
+
   // NUEVO: FK a ProjectStatus
   projectStatusId String?
   projectStatus   ProjectStatus? @relation(fields: [projectStatusId], references: [id], onDelete: Restrict)

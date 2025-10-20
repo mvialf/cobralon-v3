@@ -14,6 +14,12 @@ export const projectSchema = z.object({
   // Contacto
   phone: z.string().min(1, 'El teléfono es requerido'), // Obligatorio
 
+  // Dirección del proyecto
+  street: z.string().min(1, 'La calle es obligatoria'),
+  apartment: z.string().optional(),
+  comuna: z.string().min(1, 'La comuna es obligatoria'),
+  region: z.string().min(1, 'La región es obligatoria'),
+
   // Estado y fecha
   projectStatusId: z.string().optional(), // FK a ProjectStatus (opcional)
   date: z.date({

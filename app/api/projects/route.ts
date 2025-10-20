@@ -112,6 +112,10 @@ export async function POST(request: Request) {
       projectNumber,
       projectName,
       phone,
+      street,
+      apartment,
+      comuna,
+      region,
       projectStatusId,
       date,
       subtotal,
@@ -133,6 +137,18 @@ export async function POST(request: Request) {
 
     if (!phone || typeof phone !== 'string' || phone.trim().length === 0) {
       return NextResponse.json({ error: 'El tel�fono es requerido' }, { status: 400 })
+    }
+
+    if (!street || typeof street !== 'string' || street.trim().length === 0) {
+      return NextResponse.json({ error: 'La calle es obligatoria' }, { status: 400 })
+    }
+
+    if (!comuna || typeof comuna !== 'string' || comuna.trim().length === 0) {
+      return NextResponse.json({ error: 'La comuna es obligatoria' }, { status: 400 })
+    }
+
+    if (!region || typeof region !== 'string' || region.trim().length === 0) {
+      return NextResponse.json({ error: 'La región es obligatoria' }, { status: 400 })
     }
 
     if (subtotal === undefined || subtotal === null || typeof subtotal !== 'number') {
@@ -163,6 +179,10 @@ export async function POST(request: Request) {
         projectNumber: projectNumber.trim(),
         projectName: projectName?.trim() || null,
         phone: phone.trim(),
+        street: street.trim(),
+        apartment: apartment?.trim() || null,
+        comuna: comuna.trim(),
+        region: region.trim(),
         projectStatusId: projectStatusId || null,
         date: date ? new Date(date) : new Date(),
         subtotal: new Decimal(subtotal),
