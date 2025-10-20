@@ -18,6 +18,10 @@ interface PhoneInputProps
   defaultCountry?: RPNInput.Country
   /** Mostrar indicador visual de validez (checkmark/x). Default: false */
   showValidationIcon?: boolean
+  /** Mostrar prefijo de país fijo (visual). Default: true */
+  showCountryPrefix?: boolean
+  /** Forzar prefijo en el value si el usuario no lo incluye. Default: true */
+  autoAddPrefix?: boolean
 }
 
 function PhoneInput({
@@ -25,6 +29,8 @@ function PhoneInput({
   onChange,
   defaultCountry: countryProp,
   showValidationIcon = false,
+  showCountryPrefix = true,
+  autoAddPrefix = true,
   className,
   disabled,
   placeholder,
@@ -47,22 +53,46 @@ function PhoneInput({
     }
   }, [defaultCountry])
 
+  // Placeholder que acepta cualquier tipo (celular o fijo)
   const defaultPlaceholder = `+${countryCallingCode} 9 1234 5678`
+  const prefix = `+${countryCallingCode}`
 
-  // Validación del número
+  // Handler que auto-añade prefijo si falta
+  const handleChange = (newValue: string | undefined) => {
+    let finalValue = newValue ?? ''
+
+    if (autoAddPrefix && finalValue && !finalValue.startsWith('+')) {
+      // Usuario escribió "912345678" → forzar "+56912345678"
+      finalValue = prefix + finalValue
+    }
+
+    onChange(finalValue)
+  }
+
+  // Validación del número (solo Chile: +56 + 9 dígitos)
   const isValid = React.useMemo(() => {
     if (!value || value.length === 0) return true // Vacío no es error
-    try {
-      return RPNInput.isValidPhoneNumber(value, defaultCountry)
-    } catch {
-      return false
-    }
-  }, [value, defaultCountry])
+
+    // Validación estricta para Chile: +56 + exactamente 9 dígitos
+    // Celular: +56 9 XXXX XXXX
+    // Fijo RM: +56 2 XXXX XXXX
+    // Fijo región: +56 YY XXX XXXX
+    const chilePhonePattern = /^\+56[2-9]\d{8}$/
+
+    return chilePhonePattern.test(value)
+  }, [value])
 
   const showIcon = showValidationIcon && value.length > 0
 
   return (
     <div className="relative">
+      {/* Prefijo visual fijo */}
+      {showCountryPrefix && (
+        <div className="pointer-events-none absolute inset-y-0 left-0 z-10 flex items-center pl-3">
+          <span className="text-sm font-medium text-muted-foreground">{prefix}</span>
+        </div>
+      )}
+
       {/* @ts-expect-error - react-phone-number-input tiene problemas de tipos con forwardRef */}
       <RPNInput.default
         international={false} // Sin selector internacional
@@ -70,9 +100,13 @@ function PhoneInput({
         countrySelectComponent={() => null} // Quitar completamente el selector de país (bandera)
         inputComponent={InputComponent}
         value={value}
-        onChange={(newValue) => onChange(newValue ?? '')}
+        onChange={handleChange} // Usa el nuevo handler con auto-add de prefijo
         disabled={disabled}
-        className={cn(showIcon && 'pr-9', className)} // Espacio para icono
+        className={cn(
+          showCountryPrefix && 'pl-12', // Espacio para prefijo
+          showIcon && 'pr-9', // Espacio para icono
+          className
+        )}
         placeholder={placeholder || defaultPlaceholder}
         aria-invalid={value.length > 0 && !isValid}
         {...props}

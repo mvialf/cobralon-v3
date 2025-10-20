@@ -10,6 +10,8 @@ export default function PhoneInputExamplePage() {
   const [phoneDefault, setPhoneDefault] = useState('')
   const [phoneChile, setPhoneChile] = useState('')
   const [phoneValidation, setPhoneValidation] = useState('')
+  const [phoneNoPrefix, setPhoneNoPrefix] = useState('')
+  const [phoneNoAutoAdd, setPhoneNoAutoAdd] = useState('')
 
   return (
     <AppLayout
@@ -21,7 +23,7 @@ export default function PhoneInputExamplePage() {
         { label: 'Phone Input' },
       ]}
     >
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3">
         {/* Ejemplo 1: Default (lee del contexto) */}
         <Card>
           <CardHeader>
@@ -103,7 +105,72 @@ export default function PhoneInputExamplePage() {
                 <strong>Valor:</strong> <code>{phoneValidation || '(vacío)'}</code>
               </p>
               <p className="mt-2 text-xs text-muted-foreground">
-                ✓ verde = válido | ✗ rojo = inválido
+                ✓ verde = válido (9 dígitos) | ✗ rojo = inválido
+              </p>
+              <p className="mt-2 text-xs text-muted-foreground">
+                Válidos: 9 1234 5678 (celular), 2 2345 6789 (fijo RM), 32 234 5678 (fijo región)
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Ejemplo 4: Sin prefijo visual */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Sin Prefijo Visual</CardTitle>
+            <CardDescription>
+              Ocultar el prefijo +56 con <code>showCountryPrefix={'{false}'}</code>
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="phone-no-prefix">Teléfono</Label>
+              <PhoneInput
+                id="phone-no-prefix"
+                value={phoneNoPrefix}
+                onChange={setPhoneNoPrefix}
+                showCountryPrefix={false}
+                placeholder="9 1234 5678"
+              />
+            </div>
+            <div className="rounded-md bg-muted p-3">
+              <p className="text-sm">
+                <strong>Valor:</strong> <code>{phoneNoPrefix || '(vacío)'}</code>
+              </p>
+              <p className="mt-2 text-xs text-muted-foreground">
+                El prefijo +56 se agrega automáticamente al value, pero no es visible
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Ejemplo 5: Sin auto-add de prefijo */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Sin Auto-Add de Prefijo</CardTitle>
+            <CardDescription>
+              Usuario debe escribir el prefijo manualmente con{' '}
+              <code>autoAddPrefix={'{false}'}</code>
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="phone-no-auto">Teléfono</Label>
+              <PhoneInput
+                id="phone-no-auto"
+                value={phoneNoAutoAdd}
+                onChange={setPhoneNoAutoAdd}
+                autoAddPrefix={false}
+                showValidationIcon
+                placeholder="+56 9 1234 5678"
+              />
+            </div>
+            <div className="rounded-md bg-muted p-3">
+              <p className="text-sm">
+                <strong>Valor:</strong> <code>{phoneNoAutoAdd || '(vacío)'}</code>
+              </p>
+              <p className="mt-2 text-xs text-muted-foreground">
+                Usuario debe incluir +56 manualmente. Útil para números internacionales.
               </p>
             </div>
           </CardContent>
@@ -122,6 +189,14 @@ export default function PhoneInputExamplePage() {
               <code>useConfiguration()</code>
             </li>
             <li>
+              <strong>Prefijo visual fijo:</strong> Muestra +56 fijo en el input (configurable con{' '}
+              <code>showCountryPrefix</code>)
+            </li>
+            <li>
+              <strong>Auto-add de prefijo:</strong> Agrega +56 automáticamente si el usuario no lo
+              incluye (configurable con <code>autoAddPrefix</code>)
+            </li>
+            <li>
               <strong>Validación visual (opcional):</strong> Muestra ✓ verde o ✗ rojo en tiempo real
               con <code>showValidationIcon</code>
             </li>
@@ -135,7 +210,12 @@ export default function PhoneInputExamplePage() {
               <strong>Ligero:</strong> Sin flags (~20KB vs ~70KB con selector completo)
             </li>
             <li>
-              <strong>Validación automática:</strong> Formatea y valida números chilenos
+              <strong>Validación estricta:</strong> Solo acepta números chilenos válidos (+56 +
+              exactamente 9 dígitos)
+            </li>
+            <li>
+              <strong>Acepta todos los tipos:</strong> Celular (9), Fijo RM (2), Fijo regiones
+              (32-75)
             </li>
             <li>
               <strong>Consistente:</strong> API igual a RutInput y CurrencyInput
@@ -168,6 +248,8 @@ function MyForm() {
       value={phone}
       onChange={setPhone}
       showValidationIcon      // Opcional: muestra ✓ o ✗
+      showCountryPrefix       // Default: true - Muestra +56 fijo
+      autoAddPrefix           // Default: true - Agrega +56 si falta
       defaultCountry="CL"     // Opcional: lee de configuración si se omite
     />
   )
@@ -178,7 +260,12 @@ function MyForm() {
   control={form.control}
   name="phone"
   render={({ field }) => (
-    <PhoneInput {...field} showValidationIcon />
+    <PhoneInput
+      {...field}
+      showValidationIcon
+      showCountryPrefix={true}  // Prefijo visual
+      autoAddPrefix={true}      // Auto-add prefijo
+    />
   )}
 />`}
           </pre>
