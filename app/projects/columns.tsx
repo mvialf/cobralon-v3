@@ -11,13 +11,20 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
+import { StatusBadge } from '@/components/ui/status-badge'
 import { toast } from 'sonner'
 
 export interface Project {
   id: string
   projectNumber: string
   projectName: string | null
-  projectStatus: string
+  projectStatus: {
+    id: string
+    name: string
+    color: {
+      bgClass: string
+    }
+  } | null
   total: number // Decimal se convierte a number en JSON
   customer: {
     id: string
@@ -43,6 +50,11 @@ export const createColumns = ({ onProjectDeleted }: ColumnsProps = {}): ColumnDe
   {
     accessorKey: 'projectStatus',
     header: 'Estado',
+    cell: ({ row }) => {
+      const status = row.original.projectStatus
+      if (!status) return <span className="text-muted-foreground">Sin estado</span>
+      return <StatusBadge bgClass={status.color.bgClass} label={status.name} />
+    },
   },
   {
     accessorKey: 'total',

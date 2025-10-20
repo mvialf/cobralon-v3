@@ -49,7 +49,8 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
     if (body.projectNumber !== undefined) updateData.projectNumber = body.projectNumber.trim()
     if (body.projectName !== undefined) updateData.projectName = body.projectName?.trim() || null
     if (body.phone !== undefined) updateData.phone = body.phone.trim()
-    if (body.projectStatus !== undefined) updateData.projectStatus = body.projectStatus
+    if (body.projectStatusId !== undefined)
+      updateData.projectStatusId = body.projectStatusId || null
     if (body.date !== undefined) updateData.date = new Date(body.date)
     if (body.subtotal !== undefined) updateData.subtotal = new Decimal(body.subtotal)
     if (body.taxRate !== undefined) updateData.taxRate = new Decimal(body.taxRate)
@@ -68,6 +69,17 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
             id: true,
             name: true,
             phone: true,
+          },
+        },
+        projectStatus: {
+          select: {
+            id: true,
+            name: true,
+            color: {
+              select: {
+                bgClass: true,
+              },
+            },
           },
         },
       },

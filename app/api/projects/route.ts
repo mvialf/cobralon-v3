@@ -34,7 +34,7 @@ export async function GET(request: Request) {
       where.OR = [
         { projectNumber: { contains: search, mode: 'insensitive' as const } },
         { projectName: { contains: search, mode: 'insensitive' as const } },
-        { projectStatus: { contains: search, mode: 'insensitive' as const } },
+        { projectStatus: { name: { contains: search, mode: 'insensitive' as const } } },
         { customer: { name: { contains: search, mode: 'insensitive' as const } } },
       ]
     }
@@ -52,6 +52,17 @@ export async function GET(request: Request) {
               id: true,
               name: true,
               phone: true,
+            },
+          },
+          projectStatus: {
+            select: {
+              id: true,
+              name: true,
+              color: {
+                select: {
+                  bgClass: true,
+                },
+              },
             },
           },
         },
@@ -84,7 +95,7 @@ export async function GET(request: Request) {
  *   - projectNumber: string (requerido)
  *   - projectName: string (opcional)
  *   - phone: string (requerido)
- *   - projectStatus: string
+ *   - projectStatusId: string (opcional - FK a ProjectStatus)
  *   - date: ISO date string
  *   - subtotal: number (requerido)
  *   - taxRate: number (default: 19)
@@ -101,7 +112,7 @@ export async function POST(request: Request) {
       projectNumber,
       projectName,
       phone,
-      projectStatus,
+      projectStatusId,
       date,
       subtotal,
       taxRate,
@@ -152,7 +163,7 @@ export async function POST(request: Request) {
         projectNumber: projectNumber.trim(),
         projectName: projectName?.trim() || null,
         phone: phone.trim(),
-        projectStatus: projectStatus || '',
+        projectStatusId: projectStatusId || null,
         date: date ? new Date(date) : new Date(),
         subtotal: new Decimal(subtotal),
         taxRate: new Decimal(finalTaxRate),
@@ -167,6 +178,17 @@ export async function POST(request: Request) {
             id: true,
             name: true,
             phone: true,
+          },
+        },
+        projectStatus: {
+          select: {
+            id: true,
+            name: true,
+            color: {
+              select: {
+                bgClass: true,
+              },
+            },
           },
         },
       },

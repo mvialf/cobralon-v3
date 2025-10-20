@@ -71,7 +71,7 @@ export function ProjectForm({ onSubmit, isSubmitting, defaultValues }: ProjectFo
       projectNumber: '',
       projectName: '',
       phone: '',
-      projectStatus: '',
+      projectStatusId: '',
       date: new Date(),
       subtotal: 0,
       taxRate: 19,
@@ -141,7 +141,7 @@ export function ProjectForm({ onSubmit, isSubmitting, defaultValues }: ProjectFo
   }
 
   const selectedCustomer = customers.find((c) => c.id === form.watch('customerId'))
-  const selectedStatus = projectStatuses.find((s) => s.id === form.watch('projectStatus'))
+  const selectedStatus = projectStatuses.find((s) => s.id === form.watch('projectStatusId'))
 
   return (
     <Form {...form}>
@@ -268,7 +268,7 @@ export function ProjectForm({ onSubmit, isSubmitting, defaultValues }: ProjectFo
           {/* Estado - Combobox */}
           <FormField
             control={form.control}
-            name="projectStatus"
+            name="projectStatusId"
             render={({ field }) => (
               <FormItem className="flex flex-col">
                 <FormLabel>Estado</FormLabel>
@@ -315,7 +315,7 @@ export function ProjectForm({ onSubmit, isSubmitting, defaultValues }: ProjectFo
                               key={status.id}
                               value={status.name}
                               onSelect={() => {
-                                form.setValue('projectStatus', status.id)
+                                form.setValue('projectStatusId', status.id)
                                 setOpenStatusCombobox(false)
                               }}
                             >

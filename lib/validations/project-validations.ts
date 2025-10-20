@@ -15,7 +15,7 @@ export const projectSchema = z.object({
   phone: z.string().min(1, 'El teléfono es requerido'), // Obligatorio
 
   // Estado y fecha
-  projectStatus: z.string(), // Input libre por ahora
+  projectStatusId: z.string().optional(), // FK a ProjectStatus (opcional)
   date: z.date({
     required_error: 'La fecha de ingreso es requerida',
   }),
