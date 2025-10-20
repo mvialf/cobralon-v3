@@ -1,13 +1,12 @@
 'use client'
 
 import * as React from 'react'
+import { NumericFormat, NumericFormatProps } from 'react-number-format'
 
 import { cn } from '@/lib/utils'
-import { Input } from './input'
 import { useConfiguration } from '@/hooks/use-configuration'
 
-interface CurrencyInputProps
-  extends Omit<React.ComponentProps<'input'>, 'value' | 'onChange' | 'type'> {
+interface CurrencyInputProps {
   /** Valor numérico del input */
   value: number
   /** Callback cuando el valor cambia */
@@ -20,8 +19,50 @@ interface CurrencyInputProps
   min?: number
   /** Valor máximo permitido */
   max?: number
+  /** Placeholder del input */
+  placeholder?: string
+  /** Si el input está deshabilitado */
+  disabled?: boolean
+  /** Clase CSS personalizada */
+  className?: string
+  /** ID del input */
+  id?: string
+  /** Nombre del input (para formularios) */
+  name?: string
+  /** Callback onFocus */
+  onFocus?: React.FocusEventHandler<HTMLInputElement>
+  /** Callback onBlur */
+  onBlur?: React.FocusEventHandler<HTMLInputElement>
 }
 
+/**
+ * Input de moneda con formateo en tiempo real (input masking)
+ *
+ * Features:
+ * - Formateo mientras escribes: 1234567 → $1.234.567
+ * - Separadores de miles automáticos
+ * - Símbolo de moneda basado en configuración global
+ * - Soporte para monedas sin decimales (CLP, JPY, KRW)
+ * - Validación min/max
+ *
+ * @example Uso básico
+ * ```tsx
+ * <CurrencyInput
+ *   value={amount}
+ *   onChange={setAmount}
+ * />
+ * ```
+ *
+ * @example Con moneda específica
+ * ```tsx
+ * <CurrencyInput
+ *   value={amount}
+ *   onChange={setAmount}
+ *   currency="USD"
+ *   locale="en-US"
+ * />
+ * ```
+ */
 function CurrencyInput({
   value,
   onChange,
@@ -32,11 +73,11 @@ function CurrencyInput({
   placeholder,
   min,
   max,
-  ...props
+  id,
+  name,
+  onFocus,
+  onBlur,
 }: CurrencyInputProps) {
-  const [displayValue, setDisplayValue] = React.useState<string>('')
-  const [isFocused, setIsFocused] = React.useState(false)
-
   // Leer configuración global del contexto
   const { configuration } = useConfiguration()
 
@@ -48,114 +89,71 @@ function CurrencyInput({
   const currenciesWithoutDecimals = ['CLP', 'JPY', 'KRW']
   const useDecimals = !currenciesWithoutDecimals.includes(currency)
 
-  // Formateador de moneda
-  const formatter = React.useMemo(
-    () =>
-      new Intl.NumberFormat(locale, {
-        style: 'currency',
-        currency,
-        minimumFractionDigits: useDecimals ? 2 : 0,
-        maximumFractionDigits: useDecimals ? 2 : 0,
-      }),
-    [locale, currency, useDecimals]
-  )
+  // Obtener símbolo de moneda y separadores según locale
+  const formatConfig = React.useMemo(() => {
+    // Crear formatter para obtener el símbolo de la moneda
+    const formatter = new Intl.NumberFormat(locale, {
+      style: 'currency',
+      currency,
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
+    })
 
-  // Helper para formatear con separador de miles (workaround para Intl.NumberFormat)
-  // Intl.NumberFormat solo agrega separador de miles desde 10.000 en algunos browsers
-  const formatWithThousandsSeparator = React.useCallback(
-    (num: number): string => {
-      const formatted = formatter.format(num)
+    // Extraer símbolo de moneda (ej: "$", "€", "USD")
+    const parts = formatter.formatToParts(0)
+    const currencySymbol = parts.find((p) => p.type === 'currency')?.value || currency
 
-      // Para números entre 1.000-9.999, forzamos el separador manualmente
-      if (num >= 1000 && num < 10000) {
-        // Regex: Captura símbolo moneda, dígitos enteros, decimales, y sufijo
-        // Ejemplo: "1234,56 €" → grupos: ["", "1234", ",56", " €"]
-        const match = formatted.match(/^(\D*)(\d+)(,\d+)?(\D*)$/)
-        if (match) {
-          const [, prefix, integer, decimal = '', suffix] = match
-          // Agregar punto cada 3 dígitos desde la derecha
-          const withThousandsSep = integer.replace(/\B(?=(\d{3})+(?!\d))/g, '.')
-          return `${prefix}${withThousandsSep}${decimal}${suffix}`
-        }
-      }
+    // Detectar separadores según locale
+    // es-CL: 1.234.567,00 (punto=miles, coma=decimal)
+    // en-US: 1,234,567.00 (coma=miles, punto=decimal)
+    const testNum = 1234.56
+    const formatted = new Intl.NumberFormat(locale).format(testNum)
+    const thousandSeparator = formatted.includes('.') ? '.' : ','
+    const decimalSeparator = formatted.includes(',') ? ',' : '.'
 
-      // Para valores < 1000 o >= 10000, usar comportamiento estándar
-      return formatted
-    },
-    [formatter]
-  )
-
-  // Actualizar display value cuando el value prop cambia (controlled)
-  React.useEffect(() => {
-    if (!isFocused) {
-      setDisplayValue(formatWithThousandsSeparator(value))
+    return {
+      currencySymbol,
+      thousandSeparator,
+      decimalSeparator,
     }
-  }, [value, formatWithThousandsSeparator, isFocused])
-
-  const handleFocus = (e: React.FocusEvent<HTMLInputElement>) => {
-    setIsFocused(true)
-    // Mostrar solo el número cuando está en focus (sin formato)
-    setDisplayValue(value.toString())
-    props.onFocus?.(e)
-  }
-
-  const handleBlur = (e: React.FocusEvent<HTMLInputElement>) => {
-    setIsFocused(false)
-    // Formatear cuando pierde el focus
-    setDisplayValue(formatWithThousandsSeparator(value))
-    props.onBlur?.(e)
-  }
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const inputValue = e.target.value
-
-    // Permitir solo números, punto decimal, coma y signo negativo
-    const sanitized = inputValue.replace(/[^0-9.,-]/g, '')
-
-    // Convertir coma a punto para parsing
-    const normalized = sanitized.replace(',', '.')
-
-    // Parsear a número
-    let numValue = parseFloat(normalized)
-
-    // Si es un número válido, actualizar
-    if (!isNaN(numValue)) {
-      // Redondear si la moneda no permite decimales
-      if (!useDecimals) {
-        numValue = Math.round(numValue)
-      }
-
-      // Validar min/max
-      let finalValue = numValue
-
-      if (min !== undefined && numValue < min) {
-        finalValue = min
-      }
-      if (max !== undefined && numValue > max) {
-        finalValue = max
-      }
-
-      onChange(finalValue)
-      setDisplayValue(!useDecimals ? finalValue.toString() : normalized)
-    } else if (sanitized === '' || sanitized === '-') {
-      // Permitir campo vacío o solo signo negativo (en proceso de escribir)
-      onChange(0)
-      setDisplayValue(sanitized)
-    }
-  }
+  }, [locale, currency])
 
   return (
-    <Input
-      type="text"
-      inputMode="decimal"
-      value={displayValue}
-      onChange={handleChange}
-      onFocus={handleFocus}
-      onBlur={handleBlur}
+    <NumericFormat
+      value={value}
+      onValueChange={(values) => {
+        let numValue = values.floatValue || 0
+
+        // Validar min/max
+        if (min !== undefined && numValue < min) {
+          numValue = min
+        }
+        if (max !== undefined && numValue > max) {
+          numValue = max
+        }
+
+        onChange(numValue)
+      }}
+      // Configuración de formato
+      thousandSeparator={formatConfig.thousandSeparator}
+      decimalSeparator={formatConfig.decimalSeparator}
+      decimalScale={useDecimals ? 2 : 0}
+      fixedDecimalScale={useDecimals}
+      prefix={formatConfig.currencySymbol + ' '}
+      allowNegative={min === undefined || min < 0}
+      // Props del input
+      id={id}
+      name={name}
       disabled={disabled}
-      placeholder={placeholder || formatter.format(0)}
-      className={cn('tabular-nums', className)}
-      {...props}
+      placeholder={placeholder || `${formatConfig.currencySymbol} 0`}
+      onFocus={onFocus}
+      onBlur={onBlur}
+      className={cn(
+        'file:text-foreground placeholder:text-muted-foreground selection:bg-primary selection:text-primary-foreground dark:bg-input/30 border-input flex h-9 w-full min-w-0 rounded-md border bg-transparent px-3 py-1 text-base shadow-xs transition-[color,box-shadow] outline-none file:inline-flex file:h-7 file:border-0 file:bg-transparent file:text-sm file:font-medium disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 md:text-sm',
+        'focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px]',
+        'tabular-nums',
+        className
+      )}
     />
   )
 }
