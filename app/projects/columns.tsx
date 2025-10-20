@@ -46,6 +46,7 @@ export const createColumns = ({ onProjectDeleted }: ColumnsProps = {}): ColumnDe
       const project = row.original
       return (
         <ProjectNameSummary
+          projectId={project.id}
           projectNumber={project.projectNumber}
           customerName={project.customer.name}
           projectName={project.projectName}

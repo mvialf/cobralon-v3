@@ -57,7 +57,11 @@ export function AddressFields({ control, defaultRegion }: AddressFieldsProps) {
             <FormItem className="col-span-5 w-full">
               <FormLabel>Calle y numeración *</FormLabel>
               <FormControl>
-                <Input {...field} placeholder="Av. Libertador Bernardo O'Higgins 123" className="w-full" />
+                <Input
+                  {...field}
+                  placeholder="Av. Libertador Bernardo O'Higgins 123"
+                  className="w-full"
+                />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -159,7 +163,9 @@ export function AddressFields({ control, defaultRegion }: AddressFieldsProps) {
                       disabled={!regionCodigo}
                     >
                       {field.value ||
-                        (regionCodigo ? 'Selecciona una comuna...' : 'Primero selecciona una región')}
+                        (regionCodigo
+                          ? 'Selecciona una comuna...'
+                          : 'Primero selecciona una región')}
                       <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                     </Button>
                   </FormControl>

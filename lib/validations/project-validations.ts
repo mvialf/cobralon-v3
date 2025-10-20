@@ -42,6 +42,16 @@ export const projectSchema = z.object({
     .max(100, 'El impuesto no puede ser mayor a 100')
     .default(19),
 
+  // Total y moneda (para sistema de pagos)
+  totalAmount: z
+    .number({
+      invalid_type_error: 'El monto total debe ser un número',
+    })
+    .positive('El monto total debe ser mayor a 0')
+    .optional(), // Calculado automáticamente en el form
+
+  currency: z.string().length(3, 'La moneda debe ser un código de 3 letras').default('CLP'),
+
   // Metrics
   windowsCount: z
     .number({

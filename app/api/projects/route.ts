@@ -65,6 +65,11 @@ export async function GET(request: Request) {
               },
             },
           },
+          paymentAllocations: {
+            select: {
+              allocatedAmount: true,
+            },
+          },
         },
       }),
       prisma.project.count({ where }),
@@ -121,6 +126,8 @@ export async function POST(request: Request) {
       subtotal,
       taxRate,
       total,
+      totalAmount, // Para sistema de pagos
+      currency, // Para sistema de pagos
       windowsCount,
       squareMeters,
       description,
@@ -172,6 +179,9 @@ export async function POST(request: Request) {
     const finalTaxRate = taxRate ?? 19
     const calculatedTotal = total ?? subtotal + subtotal * (finalTaxRate / 100)
 
+    // totalAmount es el mismo que calculatedTotal si no viene en el body
+    const finalTotalAmount = totalAmount ?? calculatedTotal
+
     // Crear proyecto
     const project = await prisma.project.create({
       data: {
@@ -188,6 +198,8 @@ export async function POST(request: Request) {
         subtotal: new Decimal(subtotal),
         taxRate: new Decimal(finalTaxRate),
         total: new Decimal(calculatedTotal),
+        totalAmount: finalTotalAmount ? new Decimal(finalTotalAmount) : null,
+        currency: currency || 'CLP',
         windowsCount: windowsCount || 0,
         squareMeters: new Decimal(squareMeters || 0),
         description: description?.trim() || null,

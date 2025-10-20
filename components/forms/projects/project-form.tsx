@@ -83,6 +83,8 @@ export function ProjectForm({ onSubmit, isSubmitting, defaultValues }: ProjectFo
       date: new Date(),
       subtotal: 0,
       taxRate: 19,
+      totalAmount: 0,
+      currency: configuration.currency || 'CLP',
       windowsCount: 0,
       squareMeters: 0,
       description: '',
@@ -151,9 +153,24 @@ export function ProjectForm({ onSubmit, isSubmitting, defaultValues }: ProjectFo
   const selectedCustomer = customers.find((c) => c.id === form.watch('customerId'))
   const selectedStatus = projectStatuses.find((s) => s.id === form.watch('projectStatusId'))
 
+  // Wrapper del onSubmit para calcular totalAmount automáticamente
+  const handleFormSubmit = (data: ProjectFormData) => {
+    // Calcular totalAmount basado en subtotal y taxRate
+    const calculatedTotal = data.subtotal + data.subtotal * ((data.taxRate || 0) / 100)
+
+    // Agregar totalAmount calculado al data
+    const dataWithTotal = {
+      ...data,
+      totalAmount: calculatedTotal,
+    }
+
+    // Llamar al onSubmit original
+    return onSubmit(dataWithTotal)
+  }
+
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+      <form onSubmit={form.handleSubmit(handleFormSubmit)} className="space-y-6">
         <FormGrid columns="3-1">
           {/* Cliente - Combobox */}
           <FormField
@@ -382,6 +399,9 @@ export function ProjectForm({ onSubmit, isSubmitting, defaultValues }: ProjectFo
                 <FormControl>
                   <CurrencyInput value={field.value} onChange={field.onChange} />
                 </FormControl>
+                <FormDescription>
+                  Moneda: {form.watch('currency') || configuration.currency || 'CLP'}
+                </FormDescription>
                 <FormMessage />
               </FormItem>
             )}
