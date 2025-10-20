@@ -68,6 +68,11 @@ export async function GET(request: Request) {
           paymentAllocations: {
             select: {
               allocatedAmount: true,
+              payment: {
+                select: {
+                  status: true,
+                },
+              },
             },
           },
         },
