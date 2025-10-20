@@ -440,14 +440,14 @@ npm install @clerk/nextjs
 
 ### Cuándo Usar Cada Opción
 
-| Escenario                       | Recomendación |
-| ------------------------------- | ------------- |
-| Ya usas Neon, quieres rapidez   | Stack Auth    |
-| Necesitas control total         | NextAuth      |
-| Presupuesto OK, máxima velocidad| Clerk         |
-| Proyecto complejo, auth custom  | NextAuth      |
-| MVP rápido                      | Stack Auth    |
-| Enterprise con presupuesto      | Clerk         |
+| Escenario                        | Recomendación |
+| -------------------------------- | ------------- |
+| Ya usas Neon, quieres rapidez    | Stack Auth    |
+| Necesitas control total          | NextAuth      |
+| Presupuesto OK, máxima velocidad | Clerk         |
+| Proyecto complejo, auth custom   | NextAuth      |
+| MVP rápido                       | Stack Auth    |
+| Enterprise con presupuesto       | Clerk         |
 
 ### Configurar Neon MCP (Opcional)
 

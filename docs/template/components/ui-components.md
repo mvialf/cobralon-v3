@@ -243,7 +243,10 @@ function ComboboxDemo() {
                   }}
                 >
                   <Check
-                    className={cn('mr-2 h-4 w-4', value === item.value ? 'opacity-100' : 'opacity-0')}
+                    className={cn(
+                      'mr-2 h-4 w-4',
+                      value === item.value ? 'opacity-100' : 'opacity-0'
+                    )}
                   />
                   {item.label}
                 </CommandItem>

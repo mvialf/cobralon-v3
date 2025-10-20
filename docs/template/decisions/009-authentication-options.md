@@ -199,7 +199,7 @@ npm create saas-template
 {
   "dependencies": {
     "next": "^15.5.6",
-    "react": "^19.2.0",
+    "react": "^19.2.0"
     // ... UI dependencies
     // ❌ NO: "next-auth", "@clerk/nextjs", "@stackframe/stack"
   }
@@ -242,10 +242,10 @@ Si incluimos Stack Auth por defecto:
 
 ```tsx
 // Usuario se acostumbra a:
-import { useUser } from "@stackframe/stack"
+import { useUser } from '@stackframe/stack'
 
 // Si migra a NextAuth:
-import { useSession } from "next-auth/react"
+import { useSession } from 'next-auth/react'
 // ❌ Breaking change masivo
 ```
 
@@ -390,20 +390,20 @@ authentication-setup.md
 ├── Por Qué NO Incluimos Auth
 ├── Quick Comparison (tabla)
 ├── Opción A: Stack Auth
-│   ├── Cuándo elegir
-│   ├── Setup paso a paso
-│   ├── Código de ejemplo
-│   └── Referencias
+│ ├── Cuándo elegir
+│ ├── Setup paso a paso
+│ ├── Código de ejemplo
+│ └── Referencias
 ├── Opción B: NextAuth
-│   ├── Cuándo elegir
-│   ├── Setup paso a paso
-│   ├── Código de ejemplo
-│   └── Referencias
+│ ├── Cuándo elegir
+│ ├── Setup paso a paso
+│ ├── Código de ejemplo
+│ └── Referencias
 ├── Opción C: Clerk
-│   ├── Cuándo elegir
-│   ├── Setup paso a paso
-│   ├── Código de ejemplo
-│   └── Referencias
+│ ├── Cuándo elegir
+│ ├── Setup paso a paso
+│ ├── Código de ejemplo
+│ └── Referencias
 ├── Resumen: ¿Cuál Elegir?
 └── Siguientes Pasos
 ```

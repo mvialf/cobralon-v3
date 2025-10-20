@@ -61,7 +61,10 @@ function ComboboxDemo() {
                     }}
                   >
                     <Check
-                      className={cn('mr-2 h-4 w-4', value === trick.value ? 'opacity-100' : 'opacity-0')}
+                      className={cn(
+                        'mr-2 h-4 w-4',
+                        value === trick.value ? 'opacity-100' : 'opacity-0'
+                      )}
                     />
                     {trick.label}
                   </CommandItem>
@@ -99,7 +102,8 @@ export default function ComboboxDemoPage() {
           <div className="mb-4">
             <h2 className="text-lg font-semibold">Combobox básico</h2>
             <p className="text-sm text-muted-foreground">
-              Combobox construido con Command + Popover de shadcn/ui. Funciona perfectamente con React 19.
+              Combobox construido con Command + Popover de shadcn/ui. Funciona perfectamente con
+              React 19.
             </p>
           </div>
           <ComboboxDemo />
@@ -122,10 +126,12 @@ export default function ComboboxDemoPage() {
           </h3>
           <div className="space-y-2 text-sm text-yellow-800 dark:text-yellow-200">
             <p>
-              Este componente reemplaza al anterior que usaba <code>@diceui/combobox</code>, el cual tenía un bug con React 19 donde se perdían caracteres al escribir.
+              Este componente reemplaza al anterior que usaba <code>@diceui/combobox</code>, el cual
+              tenía un bug con React 19 donde se perdían caracteres al escribir.
             </p>
             <p>
-              <strong>Solución:</strong> Usar el patrón oficial de shadcn/ui con Command + Popover, que está basado en cmdk y funciona correctamente.
+              <strong>Solución:</strong> Usar el patrón oficial de shadcn/ui con Command + Popover,
+              que está basado en cmdk y funciona correctamente.
             </p>
           </div>
         </div>

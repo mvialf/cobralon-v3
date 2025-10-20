@@ -17,23 +17,23 @@ Esta guía te ayuda a implementar auth rápidamente con **3 opciones principales
 
 ## 🎯 Quick Comparison
 
-| Feature                  | Stack Auth                      | NextAuth.js (v5)        | Clerk                       |
-| ------------------------ | ------------------------------- | ----------------------- | --------------------------- |
-| **Setup Time**           | 🚀 15-30 min                    | ⏱️ 2-3 horas            | 🚀 10-15 min                |
-| **UI Components**        | ✅ Sí (`<SignIn />`, etc.)      | ❌ No (debes crearlos)  | ✅ Sí (completos)           |
-| **Neon Integration**     | ✅ Nativa (MCP)                 | ⚠️ Manual (Prisma)      | ❌ No                       |
-| **Database Tables**      | 1 tabla (sincronizada)          | 4 tablas obligatorias   | 0 (Clerk maneja)            |
-| **Customización**        | ✅✅ Alta                        | ✅✅✅ Total              | ✅ Media                    |
-| **Vendor Lock-in**       | ⚠️ Moderado                     | ✅ Ninguno              | ⚠️⚠️ Alto                   |
-| **Madurez**              | ⚠️ ~2 años                      | ✅ 8+ años              | ✅ 5+ años                  |
-| **Cost**                 | ✅ Gratis (generoso)            | ✅ 100% gratis          | ⚠️ Freemium ($25/mes base) |
-| **OAuth Providers**      | 10+ (extensible)                | 20+ oficiales           | 20+ oficiales               |
-| **Email/Password**       | ✅ Built-in                     | ✅ Manual               | ✅ Built-in                 |
-| **Magic Links**          | ✅ Sí (Stack maneja emails)     | ✅ Sí (requiere SMTP)   | ✅ Sí                       |
-| **2FA/MFA**              | ✅ Built-in                     | ⚠️ Manual               | ✅ Built-in                 |
-| **Admin Dashboard**      | ✅ Sí (Stack console)           | ❌ No                   | ✅ Sí (completo)            |
-| **Session Management**   | JWT + DB sync                   | JWT o Database          | Clerk maneja                |
-| **Best For**             | Neon users, rapid development   | Full control, opensource| Speed, enterprise features  |
+| Feature                | Stack Auth                    | NextAuth.js (v5)         | Clerk                      |
+| ---------------------- | ----------------------------- | ------------------------ | -------------------------- |
+| **Setup Time**         | 🚀 15-30 min                  | ⏱️ 2-3 horas             | 🚀 10-15 min               |
+| **UI Components**      | ✅ Sí (`<SignIn />`, etc.)    | ❌ No (debes crearlos)   | ✅ Sí (completos)          |
+| **Neon Integration**   | ✅ Nativa (MCP)               | ⚠️ Manual (Prisma)       | ❌ No                      |
+| **Database Tables**    | 1 tabla (sincronizada)        | 4 tablas obligatorias    | 0 (Clerk maneja)           |
+| **Customización**      | ✅✅ Alta                     | ✅✅✅ Total             | ✅ Media                   |
+| **Vendor Lock-in**     | ⚠️ Moderado                   | ✅ Ninguno               | ⚠️⚠️ Alto                  |
+| **Madurez**            | ⚠️ ~2 años                    | ✅ 8+ años               | ✅ 5+ años                 |
+| **Cost**               | ✅ Gratis (generoso)          | ✅ 100% gratis           | ⚠️ Freemium ($25/mes base) |
+| **OAuth Providers**    | 10+ (extensible)              | 20+ oficiales            | 20+ oficiales              |
+| **Email/Password**     | ✅ Built-in                   | ✅ Manual                | ✅ Built-in                |
+| **Magic Links**        | ✅ Sí (Stack maneja emails)   | ✅ Sí (requiere SMTP)    | ✅ Sí                      |
+| **2FA/MFA**            | ✅ Built-in                   | ⚠️ Manual                | ✅ Built-in                |
+| **Admin Dashboard**    | ✅ Sí (Stack console)         | ❌ No                    | ✅ Sí (completo)           |
+| **Session Management** | JWT + DB sync                 | JWT o Database           | Clerk maneja               |
+| **Best For**           | Neon users, rapid development | Full control, opensource | Speed, enterprise features |
 
 ---
 
@@ -113,6 +113,7 @@ DIRECT_URL="..."
 ```
 
 ⚠️ **Importante:**
+
 - Variables `NEXT_PUBLIC_*` son visibles en el cliente
 - `STACK_SECRET_SERVER_KEY` es privada (solo servidor)
 
@@ -144,8 +145,8 @@ export default function LoginPage() {
 #### **Client Components:**
 
 ```tsx
-"use client"
-import { useUser } from "@stackframe/stack"
+'use client'
+import { useUser } from '@stackframe/stack'
 
 export function UserButton() {
   const user = useUser()
@@ -166,13 +167,13 @@ export function UserButton() {
 #### **Server Components:**
 
 ```tsx
-import { stackServerApp } from "@/stack"
+import { stackServerApp } from '@/stack'
 
 export default async function DashboardPage() {
   const user = await stackServerApp.getUser()
 
   if (!user) {
-    redirect("/login")
+    redirect('/login')
   }
 
   return <div>Hola, {user.displayName}</div>
@@ -183,8 +184,8 @@ export default async function DashboardPage() {
 
 ```tsx
 // middleware.ts
-import { stackServerApp } from "@/stack"
-import { NextResponse } from "next/server"
+import { stackServerApp } from '@/stack'
+import { NextResponse } from 'next/server'
 
 export async function middleware(request: NextRequest) {
   const user = await stackServerApp.getUser()
@@ -205,13 +206,13 @@ export const config = {
 
 ```tsx
 import {
-  SignIn,           // Login form completo
-  SignUp,           // Signup form completo
-  UserButton,       // Avatar + dropdown menu
+  SignIn, // Login form completo
+  SignUp, // Signup form completo
+  UserButton, // Avatar + dropdown menu
   OAuthButtonGroup, // Botones OAuth (Google, GitHub, etc.)
-  MagicLinkSignIn,  // Login sin password
-  CredentialSignIn  // Email + password
-} from "@stackframe/stack"
+  MagicLinkSignIn, // Login sin password
+  CredentialSignIn, // Email + password
+} from '@stackframe/stack'
 ```
 
 ### Database Schema (Automático)
@@ -333,12 +334,12 @@ npm run db:push
 
 ```typescript
 // auth.config.ts
-import type { NextAuthConfig } from "next-auth"
-import Google from "next-auth/providers/google"
-import GitHub from "next-auth/providers/github"
-import Credentials from "next-auth/providers/credentials"
-import bcrypt from "bcryptjs"
-import { db } from "@/lib/db"
+import type { NextAuthConfig } from 'next-auth'
+import Google from 'next-auth/providers/google'
+import GitHub from 'next-auth/providers/github'
+import Credentials from 'next-auth/providers/credentials'
+import bcrypt from 'bcryptjs'
+import { db } from '@/lib/db'
 
 export default {
   providers: [
@@ -352,12 +353,12 @@ export default {
     }),
     Credentials({
       credentials: {
-        email: { label: "Email", type: "email" },
-        password: { label: "Password", type: "password" }
+        email: { label: 'Email', type: 'email' },
+        password: { label: 'Password', type: 'password' },
       },
       async authorize(credentials) {
         const user = await db.user.findUnique({
-          where: { email: credentials.email as string }
+          where: { email: credentials.email as string },
         })
 
         if (user && bcrypt.compareSync(credentials.password as string, user.password!)) {
@@ -365,22 +366,22 @@ export default {
         }
 
         return null
-      }
-    })
+      },
+    }),
   ],
 } satisfies NextAuthConfig
 ```
 
 ```typescript
 // auth.ts
-import NextAuth from "next-auth"
-import { PrismaAdapter } from "@auth/prisma-adapter"
-import { db } from "@/lib/db"
-import authConfig from "./auth.config"
+import NextAuth from 'next-auth'
+import { PrismaAdapter } from '@auth/prisma-adapter'
+import { db } from '@/lib/db'
+import authConfig from './auth.config'
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   adapter: PrismaAdapter(db),
-  session: { strategy: "jwt" },
+  session: { strategy: 'jwt' },
   ...authConfig,
 })
 ```
@@ -389,7 +390,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 
 ```typescript
 // app/api/auth/[...nextauth]/route.ts
-import { handlers } from "@/auth"
+import { handlers } from '@/auth'
 
 export const { GET, POST } = handlers
 ```
@@ -420,11 +421,11 @@ openssl rand -base64 32
 
 ```tsx
 // app/login/page.tsx
-"use client"
-import { signIn } from "next-auth/react"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+'use client'
+import { signIn } from 'next-auth/react'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 
 export default function LoginPage() {
   return (
@@ -436,7 +437,7 @@ export default function LoginPage() {
         <CardContent className="space-y-4">
           {/* OAuth Buttons */}
           <Button
-            onClick={() => signIn("google", { callbackUrl: "/dashboard" })}
+            onClick={() => signIn('google', { callbackUrl: '/dashboard' })}
             variant="outline"
             className="w-full"
           >
@@ -444,7 +445,7 @@ export default function LoginPage() {
           </Button>
 
           <Button
-            onClick={() => signIn("github", { callbackUrl: "/dashboard" })}
+            onClick={() => signIn('github', { callbackUrl: '/dashboard' })}
             variant="outline"
             className="w-full"
           >
@@ -456,30 +457,20 @@ export default function LoginPage() {
               <span className="w-full border-t" />
             </div>
             <div className="relative flex justify-center text-xs uppercase">
-              <span className="bg-background px-2 text-muted-foreground">
-                O con email
-              </span>
+              <span className="bg-background px-2 text-muted-foreground">O con email</span>
             </div>
           </div>
 
           {/* Credentials Form */}
-          <form action={async (formData) => {
-            "use server"
-            await signIn("credentials", formData)
-          }}>
+          <form
+            action={async (formData) => {
+              'use server'
+              await signIn('credentials', formData)
+            }}
+          >
             <div className="space-y-4">
-              <Input
-                name="email"
-                type="email"
-                placeholder="email@ejemplo.com"
-                required
-              />
-              <Input
-                name="password"
-                type="password"
-                placeholder="Contraseña"
-                required
-              />
+              <Input name="email" type="email" placeholder="email@ejemplo.com" required />
+              <Input name="password" type="password" placeholder="Contraseña" required />
               <Button type="submit" className="w-full">
                 Iniciar Sesión
               </Button>
@@ -496,8 +487,8 @@ export default function LoginPage() {
 
 ```tsx
 // Client Component
-"use client"
-import { useSession, signOut } from "next-auth/react"
+'use client'
+import { useSession, signOut } from 'next-auth/react'
 
 export function UserButton() {
   const { data: session } = useSession()
@@ -515,12 +506,12 @@ export function UserButton() {
 
 ```tsx
 // Server Component
-import { auth } from "@/auth"
+import { auth } from '@/auth'
 
 export default async function DashboardPage() {
   const session = await auth()
 
-  if (!session) redirect("/login")
+  if (!session) redirect('/login')
 
   return <div>Hola, {session.user.name}</div>
 }
@@ -530,10 +521,10 @@ export default async function DashboardPage() {
 
 ```typescript
 // middleware.ts
-export { auth as middleware } from "@/auth"
+export { auth as middleware } from '@/auth'
 
 export const config = {
-  matcher: ["/dashboard/:path*", "/settings/:path*"],
+  matcher: ['/dashboard/:path*', '/settings/:path*'],
 }
 ```
 
@@ -609,7 +600,7 @@ export default function RootLayout({ children }) {
 
 ```tsx
 // app/login/page.tsx
-import { SignIn } from "@clerk/nextjs"
+import { SignIn } from '@clerk/nextjs'
 
 export default function LoginPage() {
   return (
@@ -631,15 +622,15 @@ export default function LoginPage() {
 
 ## 📊 Resumen: ¿Cuál Elegir?
 
-| Escenario                                      | Recomendación |
-| ---------------------------------------------- | ------------- |
-| Ya usas Neon, quieres rapidez                  | Stack Auth    |
-| Necesitas control total, opensource            | NextAuth      |
-| Presupuesto OK, quieres máxima velocidad       | Clerk         |
-| Proyecto complejo con auth custom              | NextAuth      |
-| MVP rápido con usuarios limitados              | Stack Auth    |
-| Enterprise con presupuesto                     | Clerk         |
-| Aprender autenticación a fondo                 | NextAuth      |
+| Escenario                                | Recomendación |
+| ---------------------------------------- | ------------- |
+| Ya usas Neon, quieres rapidez            | Stack Auth    |
+| Necesitas control total, opensource      | NextAuth      |
+| Presupuesto OK, quieres máxima velocidad | Clerk         |
+| Proyecto complejo con auth custom        | NextAuth      |
+| MVP rápido con usuarios limitados        | Stack Auth    |
+| Enterprise con presupuesto               | Clerk         |
+| Aprender autenticación a fondo           | NextAuth      |
 
 ---
 
