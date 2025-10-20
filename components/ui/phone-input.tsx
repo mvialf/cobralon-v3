@@ -67,6 +67,7 @@ function PhoneInput({
       <RPNInput.default
         international={false} // Sin selector internacional
         defaultCountry={defaultCountry}
+        countrySelectComponent={() => null} // Quitar completamente el selector de país (bandera)
         inputComponent={InputComponent}
         value={value}
         onChange={(newValue) => onChange(newValue ?? '')}
