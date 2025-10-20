@@ -330,7 +330,7 @@ Documenta aquí las implementaciones de TU proyecto:
   - Eliminación de 12 archivos de código custom (~2.5KB)
 - **Implementación:** ✅ Completada
   - Instalación de @diceui/combobox via shadcn CLI
-  - Creación de página demo en `/ejemplos` con debounce
+  - Creación de página demo en `/examples` con debounce
   - Configuración de loading states con barra de progreso
   - Traducción de textos a español (defaults en componente base)
   - Eliminación completa de componente autocomplete custom
@@ -338,11 +338,11 @@ Documenta aquí las implementaciones de TU proyecto:
   - `components/autocomplete/*.tsx` (12 archivos)
 - **Archivos creados:**
   - `components/ui/combobox.tsx` - Wrapper de DiceUI con defaults en español
-  - `app/ejemplos/page.tsx` - Demo con debounce (300ms) y loading state
+  - `app/examples/page.tsx` - Demo con debounce (300ms) y loading state
 - **Archivos modificados:**
   - `package.json` - Agregar @diceui/combobox@^1.2.0
   - 8 archivos de documentación actualizados
-- **Validación:** ✅ Build: Success | Component: Working | Demo: http://localhost:3000/ejemplos
+- **Validación:** ✅ Build: Success | Component: Working | Demo: http://localhost:3000/examples
 
 ---
 
@@ -459,26 +459,26 @@ Documenta aquí las implementaciones de TU proyecto:
   - **RUT Input:** Validación chilena con algoritmo módulo 11 (rut.js)
   - Integración completa con React Hook Form + Zod
   - Componentes reutilizables con schemas de validación listos
-  - Páginas demo completas en `/ejemplos` con múltiples casos de uso
+  - Páginas demo completas en `/examples` con múltiples casos de uso
   - Total: ~1,200 líneas de código (componentes + hooks + validaciones + demos)
 - **Implementación:** ✅ Completada
   - **Fase 1: CurrencyInput**
     - Integración con `useConfiguration()` hook
     - Prioridad: props > context > defaults
     - Soporte para override por componente
-    - Página demo: `/ejemplos/currency` con CLP, USD, EUR
+    - Página demo: `/examples/currency` con CLP, USD, EUR
   - **Fase 2: PhoneInput**
     - Componente basado en react-phone-number-input
     - Validación E.164 internacional
     - País default desde configuración global
-    - Página demo: `/ejemplos/phone-input` con validación visual
+    - Página demo: `/examples/phone-input` con validación visual
   - **Fase 3: RUT Input**
     - Componente `RutInput` con formateo automático (12.345.678-9)
     - Hook `useRutInput` para lógica reutilizable
     - Schemas Zod: `rutSchema` y `rutSchemaOptional`
     - Helpers de validación (rutHelpers)
     - Validación con algoritmo módulo 11 (librería rut.js)
-    - Página demo: `/ejemplos/rut-input` con 4 demos interactivos
+    - Página demo: `/examples/rut-input` con 4 demos interactivos
   - **Fase 4: Navegación**
     - Actualización de sidebar con estructura collapsible
     - Nuevas secciones: "Componentes UI" con enlaces organizados
@@ -489,9 +489,9 @@ Documenta aquí las implementaciones de TU proyecto:
   - `components/ui/rut-input.tsx` - Componente RutInput (146 líneas)
   - `hooks/use-rut-input.ts` - Hook de formateo RUT (172 líneas)
   - `lib/rut-validations.ts` - Schemas Zod + helpers (100 líneas)
-  - `app/ejemplos/currency/page.tsx` - Demo CurrencyInput (200 líneas)
-  - `app/ejemplos/phone-input/page.tsx` - Demo PhoneInput (189 líneas)
-  - `app/ejemplos/rut-input/page.tsx` - Demo RUT Input (313 líneas)
+  - `app/examples/currency/page.tsx` - Demo CurrencyInput (200 líneas)
+  - `app/examples/phone-input/page.tsx` - Demo PhoneInput (189 líneas)
+  - `app/examples/rut-input/page.tsx` - Demo RUT Input (313 líneas)
 - **Archivos modificados:**
   - `components/layout/app-sidebar.tsx` - Agregar navegación + estructura collapsible
   - `package.json` - Agregar react-phone-number-input + rut.js
@@ -522,13 +522,13 @@ Documenta aquí las implementaciones de TU proyecto:
     - Mejor organización visual de campos
     - Indicadores visuales de configuración activa
   - **Fase 3:** Integración
-    - Página accesible desde `/configuracion`
+    - Página accesible desde `/settings`
     - Enlace en sidebar bajo "Configuración"
     - Cambios se reflejan inmediatamente en toda la app
 - **Archivos creados:**
-  - `app/configuracion/page.tsx` - Página completa de configuración
+  - `app/settings/page.tsx` - Página completa de configuración
 - **Archivos modificados:**
-  - `app/configuracion/page.tsx` - Refactor completo con useConfiguration
+  - `app/settings/page.tsx` - Refactor completo con useConfiguration
   - `components/layout/app-sidebar.tsx` - Agregar enlace a Configuración
 - **Validación:** ✅ Page: Working | Persistence: OK | Responsive: OK | Build: Success
 
@@ -552,17 +552,17 @@ Documenta aquí las implementaciones de TU proyecto:
   - **Fase 1:** Instalación de componentes
     - Verificar Command component ya instalado (cmdk@1.1.1)
     - Componentes shadcn/ui disponibles: command.tsx, popover.tsx
-  - **Fase 2:** Migración de /configuracion
-    - Reescritura completa de app/configuracion/page.tsx (473 líneas)
+  - **Fase 2:** Migración de /settings
+    - Reescritura completa de app/settings/page.tsx (473 líneas)
     - Reemplazar todos los Combobox con Popover + Command
     - State management: useState para open/close de cada popover
     - Iconos: Check (selected), ChevronsUpDown (trigger)
   - **Fase 3:** Validación con Playwright
     - Test de typing "met" en combobox de Región
     - ✅ Resultado: 3 caracteres visibles, filtrado correcto a "Metropolitana (RM)"
-    - Screenshot: `.playwright-mcp/configuracion-fixed.png`
+    - Screenshot: `.playwright-mcp/settings-fixed.png`
   - **Fase 4:** Migración de ejemplo
-    - Reescritura de app/ejemplos/combobox/page.tsx (136 líneas)
+    - Reescritura de app/examples/combobox/page.tsx (136 líneas)
     - Simplificar ejemplo (remover debounce complexity)
     - Agregar warning sobre migración desde @diceui/combobox
   - **Fase 5:** Cleanup
@@ -570,8 +570,8 @@ Documenta aquí las implementaciones de TU proyecto:
     - Eliminar components/ui/combobox.tsx
     - Actualizar documentación oficial del template
 - **Archivos modificados:**
-  - `app/configuracion/page.tsx` - Reescritura completa (473 líneas)
-  - `app/ejemplos/combobox/page.tsx` - Reescritura completa (136 líneas)
+  - `app/settings/page.tsx` - Reescritura completa (473 líneas)
+  - `app/examples/combobox/page.tsx` - Reescritura completa (136 líneas)
   - `docs/template/components/ui-components.md` - Actualizar sección Combobox con nuevo patrón
   - `package.json` - Remover @diceui/combobox
 - **Archivos eliminados:**
@@ -581,6 +581,93 @@ Documenta aquí las implementaciones de TU proyecto:
 - **Dependencias utilizadas:**
   - `cmdk@^1.1.1` (ya instalado, librería de Vercel)
 - **Validación:** ✅ Playwright: Pass | Typing: Fixed | Filtering: Working | Build: Success
+
+---
+
+### 🌐 Refactor: Rutas en Inglés (Configuración → Settings, Ejemplos → Examples)
+
+- **Status:** ✅ Complete | **Date:** 2025-10-20 | **Impact:** Medium
+- **Problem:** Inconsistencia entre rutas en español (`/configuracion`, `/ejemplos`) vs convenciones internacionales
+- **Root Cause:** Decision inicial de usar español en rutas, pero genera problemas de encoding y escalabilidad
+- **Solution:** Migración completa de rutas a inglés manteniendo labels en español para UI
+- **Benefits:**
+  - ✅ URLs estándar reconocibles internacionalmente (`/settings`, `/examples`)
+  - ✅ Sin problemas de encoding (adiós a `/configuraci%C3%B3n`)
+  - ✅ Mejor preparación para i18n futuro (`/en/settings`, `/es/settings`)
+  - ✅ Consistente con convenciones web y SaaS (GitHub, Linear, Notion)
+  - ✅ Código técnico en inglés, UI en español para usuarios
+- **Implementación:** ✅ Completada
+  - **Fase 1:** Renombrar carpetas físicas
+    - `app/configuracion/` → `app/settings/`
+    - `app/ejemplos/` → `app/examples/`
+  - **Fase 2:** Actualizar navegación
+    - Sidebar: Actualizar todos los `href` a rutas en inglés
+    - Breadcrumbs: Actualizar en 7 páginas de ejemplos
+  - **Fase 3:** Actualizar referencias en código
+    - Links internos en páginas (9 archivos)
+    - Referencias a `/configuracion` en demos de Currency
+  - **Fase 4:** Actualizar documentación
+    - `docs/project/implementation.md` - Replace all rutas
+    - `docs/template/components/ui-components.md` - Actualizar demo link
+- **Archivos renombrados:**
+  - `app/configuracion/` → `app/settings/`
+  - `app/ejemplos/` → `app/examples/`
+- **Archivos modificados:**
+  - `components/layout/app-sidebar.tsx` - Actualizar 7 rutas
+  - `app/examples/page.tsx` - Actualizar 2 hrefs internos
+  - `app/examples/currency-input/page.tsx` - Breadcrumb
+  - `app/examples/rut-input/page.tsx` - Breadcrumb
+  - `app/examples/combobox/page.tsx` - Breadcrumb
+  - `app/examples/currency/page.tsx` - Breadcrumb + 3 links a settings
+  - `app/examples/phone-input/page.tsx` - Breadcrumb
+  - `docs/project/implementation.md` - Replace all referencias
+  - `docs/template/components/ui-components.md` - Link demo
+- **Validación:** ✅ Typecheck: Pass | Lint: Pass (warnings preexistentes) | Build: Pending
+
+---
+
+### 🔧 Refactor: Project Status - Extraer Form + Dialog
+
+- **Status:** ✅ Complete | **Date:** 2025-10-20 | **Impact:** High
+- **Problem:** Código duplicado en dialogs de create/edit (~100 líneas), página muy larga (490 líneas), no seguía patrones del template
+- **Solution:** Extraer formulario y dialogs a componentes reutilizables siguiendo patrones de `docs/template/methodology/patterns.md`
+- **Benefits:**
+  - **-248 líneas** eliminadas de la página (reducción del 50.6%)
+  - **-100 líneas** de duplicación eliminada (form estaba duplicado en create/edit)
+  - **+3 componentes** reutilizables creados
+  - ✅ Validación con React Hook Form + Zod (mejora en UX)
+  - ✅ Consistencia con patrones del template (forms/ + dialogs/)
+  - ✅ Mejor testeabilidad (componentes aislados)
+- **Implementación:** ✅ Completada
+  - **Fase 1:** Crear validations con Zod
+    - Schema `projectStatusSchema` con validación completa
+    - Types: `BadgeColor`, `ProjectStatus`, `ProjectStatusFormValues`
+    - Helpers: `formValuesToPayload()`, `statusToFormValues()`
+  - **Fase 2:** Crear ProjectStatusForm con React Hook Form
+    - Form reutilizable con `forwardRef` para exponer métodos
+    - 3 campos: nombre (Input), tipo (RadioGroup), color (grid)
+    - Integración con Form components de shadcn/ui
+  - **Fase 3:** Crear ProjectStatusDialog con mode
+    - Dialog único con `mode: 'create' | 'edit'`
+    - Maneja POST/PUT según modo automáticamente
+    - Toast de success/error integrado
+    - Callback `onSuccess` para refetch de datos
+  - **Fase 4:** Refactorizar página principal
+    - Eliminar estado del form (formName, formColorId, formType)
+    - Eliminar handlers duplicados (handleCreate, handleEdit, resetForm)
+    - Eliminar 2 dialogs inline (~150 líneas)
+    - Agregar 2 instancias de `<ProjectStatusDialog>` (create + edit)
+    - Mantener Delete AlertDialog inline (decisión arquitectural)
+  - **Fase 5:** Fix render condicional
+    - Edit dialog solo se monta cuando `isEditDialogOpen && selectedStatus`
+    - Evita error de validación con `status` undefined
+- **Archivos creados:**
+  - `lib/validations/project-status-validations.ts` - Schema Zod + types (93 líneas)
+  - `components/forms/settings/project-status-form.tsx` - Form reutilizable (143 líneas)
+  - `components/dialogs/settings/project-status-dialog.tsx` - Dialog con mode (142 líneas)
+- **Archivos modificados:**
+  - `app/settings/project-status/page.tsx` - Refactor completo (490 → 242 líneas)
+- **Validación:** ✅ TypeScript: Pass | Build: Success | Prettier: Applied | Runtime: Working
 
 ---
 
@@ -599,18 +686,20 @@ Documenta aquí las implementaciones de TU proyecto:
 | 9   | Componentes Regionales (Currency/Phone/RUT) | ✅ Complete | 2025-10-19 | High   |
 | 10  | Página de Configuración                     | ✅ Complete | 2025-10-19 | Medium |
 | 11  | Migración @diceui/combobox → Command        | ✅ Complete | 2025-10-19 | High   |
+| 12  | Refactor: Rutas en Inglés                   | ✅ Complete | 2025-10-20 | Medium |
+| 13  | Refactor: Project Status Form + Dialog      | ✅ Complete | 2025-10-20 | High   |
 
 ---
 
 ## Statistics
 
-- **Total Implementaciones:** 11
-- **Completadas:** 11
+- **Total Implementaciones:** 13
+- **Completadas:** 13
 - **En Progreso:** 0
 - **Pendientes:** 0
 
 ---
 
-**Última actualización:** 2025-10-19
+**Última actualización:** 2025-10-20
 
 **Ver metodología:** [documentation.md](../template/methodology/documentation.md)

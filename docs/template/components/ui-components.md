@@ -269,7 +269,7 @@ function ComboboxDemo() {
 - ✅ ARIA compliant
 - ✅ Sin bugs de pérdida de caracteres
 
-**Demo:** Ver [/ejemplos](../../../app/ejemplos/page.tsx) para ejemplo completo con debounce
+**Demo:** Ver [/examples](../../../app/examples/page.tsx) para ejemplo completo con debounce
 
 ## Documentación Completa
 
