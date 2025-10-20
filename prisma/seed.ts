@@ -157,6 +157,29 @@ async function main() {
     statusCompletado, // order: 999 (final)
   })
 
+  // Seed payment methods
+  const paymentMethods = [
+    { name: 'Efectivo', icon: 'Banknote', requiresReference: false, order: 1 },
+    { name: 'Transferencia Bancaria', icon: 'ArrowRightLeft', requiresReference: true, order: 2 },
+    { name: 'Tarjeta de Débito', icon: 'CreditCard', requiresReference: false, order: 3 },
+    { name: 'Tarjeta de Crédito', icon: 'CreditCard', requiresReference: false, order: 4 },
+    { name: 'WebPay', icon: 'Smartphone', requiresReference: true, order: 5 },
+    { name: 'Khipu', icon: 'Smartphone', requiresReference: true, order: 6 },
+    { name: 'Mercado Pago', icon: 'Wallet', requiresReference: true, order: 7 },
+    { name: 'Cheque', icon: 'FileText', requiresReference: true, order: 8 },
+  ]
+
+  for (const method of paymentMethods) {
+    await prisma.paymentMethod.upsert({
+      where: { name: method.name },
+      update: {},
+      create: method,
+    })
+  }
+
+  console.log('✅ Payment methods seed completed')
+  console.log(`📊 Created/Updated ${paymentMethods.length} payment methods`)
+
   console.log('\n🎉 Seed completed successfully!')
 }
 

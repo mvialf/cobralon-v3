@@ -14,6 +14,8 @@ import {
   Phone,
   Users,
   FolderKanban,
+  Wallet,
+  BadgeCheck,
 } from 'lucide-react'
 
 import {
@@ -63,6 +65,11 @@ const navigationItems: NavigationItem[] = [
     icon: FolderKanban,
   },
   {
+    title: 'Pagos',
+    url: '/payments',
+    icon: Wallet,
+  },
+  {
     title: 'Ejemplos',
     url: '/examples',
     icon: FileText,
@@ -101,6 +108,23 @@ const settingsItems: NavigationItem[] = [
     title: 'Configuración',
     url: '/settings',
     icon: Settings,
+    items: [
+      {
+        title: 'General',
+        url: '/settings',
+        icon: Settings,
+      },
+      {
+        title: 'Estados de Proyecto',
+        url: '/settings/project-status',
+        icon: BadgeCheck,
+      },
+      {
+        title: 'Métodos de Pago',
+        url: '/settings/payments',
+        icon: Wallet,
+      },
+    ],
   },
 ]
 
