@@ -180,6 +180,335 @@ async function main() {
   console.log('✅ Payment methods seed completed')
   console.log(`📊 Created/Updated ${paymentMethods.length} payment methods`)
 
+  // Obtener payment methods para usar en pagos
+  const efectivo = await prisma.paymentMethod.findUnique({ where: { name: 'Efectivo' } })
+  const transferencia = await prisma.paymentMethod.findUnique({
+    where: { name: 'Transferencia Bancaria' },
+  })
+  const webpay = await prisma.paymentMethod.findUnique({ where: { name: 'WebPay' } })
+
+  if (!efectivo || !transferencia || !webpay) {
+    throw new Error('Payment methods not found')
+  }
+
+  // ========================================
+  // SEED PROJECTS WITH PAYMENT DATA
+  // ========================================
+
+  console.log('\n🏗️  Seeding projects with payment data...')
+
+  // Cliente 1 (Juan Perez) - 3 proyectos antiguos con balance pendiente
+  const project1 = await prisma.project.upsert({
+    where: { id: 'project-1' },
+    update: {},
+    create: {
+      id: 'project-1',
+      projectNumber: '2024-001',
+      projectName: 'Ventanas Oficina Central',
+      customerId: customer1.id,
+      phone: customer1.phone,
+      street: 'Av. Providencia 1234',
+      apartment: 'Piso 5',
+      comuna: 'Providencia',
+      region: 'Metropolitana de Santiago',
+      projectStatusId: statusEnProgreso.id,
+      date: new Date('2024-06-15'), // Junio 2024 (antiguo)
+      subtotal: 420168.07, // Subtotal para llegar a $500k con IVA
+      taxRate: 19,
+      total: 500000, // Total con IVA
+      totalAmount: 500000, // Monto total acordado
+      currency: 'CLP',
+      windowsCount: 8,
+      squareMeters: 25.5,
+      description: 'Instalación de ventanas termopanel para oficinas',
+    },
+  })
+
+  const project2 = await prisma.project.upsert({
+    where: { id: 'project-2' },
+    update: {},
+    create: {
+      id: 'project-2',
+      projectNumber: '2024-002',
+      projectName: 'Puertas Bodega Norte',
+      customerId: customer1.id,
+      phone: customer1.phone,
+      street: 'Calle Los Aromos 567',
+      apartment: null,
+      comuna: 'Quilicura',
+      region: 'Metropolitana de Santiago',
+      projectStatusId: statusEnProgreso.id,
+      date: new Date('2024-08-20'), // Agosto 2024
+      subtotal: 336134.45,
+      taxRate: 19,
+      total: 400000,
+      totalAmount: 400000,
+      currency: 'CLP',
+      windowsCount: 4,
+      squareMeters: 18.0,
+      description: 'Puertas de seguridad para bodega industrial',
+    },
+  })
+
+  const project3 = await prisma.project.upsert({
+    where: { id: 'project-3' },
+    update: {},
+    create: {
+      id: 'project-3',
+      projectNumber: '2024-003',
+      projectName: 'Ventanas Casa Particular',
+      customerId: customer1.id,
+      phone: customer1.phone,
+      street: 'Pasaje El Roble 89',
+      apartment: null,
+      comuna: 'Las Condes',
+      region: 'Metropolitana de Santiago',
+      projectStatusId: statusPendiente.id,
+      date: new Date('2024-10-10'), // Octubre 2024
+      subtotal: 252100.84,
+      taxRate: 19,
+      total: 300000,
+      totalAmount: 300000,
+      currency: 'CLP',
+      windowsCount: 6,
+      squareMeters: 15.0,
+    },
+  })
+
+  // Cliente 2 (Maria Gonzalez) - 1 proyecto totalmente pagado
+  const project4 = await prisma.project.upsert({
+    where: { id: 'project-4' },
+    update: {},
+    create: {
+      id: 'project-4',
+      projectNumber: '2024-004',
+      projectName: 'Fachada Completa Edificio',
+      customerId: customer2.id,
+      phone: customer2.phone,
+      street: 'Av. Libertador Bernardo O\'Higgins 999',
+      apartment: null,
+      comuna: 'Santiago',
+      region: 'Metropolitana de Santiago',
+      projectStatusId: statusCompletado.id,
+      date: new Date('2024-09-01'), // Septiembre 2024
+      subtotal: 672268.91,
+      taxRate: 19,
+      total: 800000,
+      totalAmount: 800000,
+      currency: 'CLP',
+      windowsCount: 20,
+      squareMeters: 80.0,
+      description: 'Reemplazo completo de fachada de vidrio',
+    },
+  })
+
+  // Cliente 3 (Pedro Sanchez) - 2 proyectos sin pagos
+  const project5 = await prisma.project.upsert({
+    where: { id: 'project-5' },
+    update: {},
+    create: {
+      id: 'project-5',
+      projectNumber: '2024-005',
+      projectName: 'Ventanas Departamento',
+      customerId: customer3.id,
+      phone: customer3.phone,
+      street: 'Calle Nueva 456',
+      apartment: 'Depto 301',
+      comuna: 'Ñuñoa',
+      region: 'Metropolitana de Santiago',
+      projectStatusId: statusPendiente.id,
+      date: new Date('2024-10-25'), // Octubre 2024
+      subtotal: 504201.68,
+      taxRate: 19,
+      total: 600000,
+      totalAmount: 600000,
+      currency: 'CLP',
+      windowsCount: 10,
+      squareMeters: 30.0,
+    },
+  })
+
+  const project6 = await prisma.project.upsert({
+    where: { id: 'project-6' },
+    update: {},
+    create: {
+      id: 'project-6',
+      projectNumber: '2024-006',
+      projectName: 'Puertas Local Comercial',
+      customerId: customer3.id,
+      phone: customer3.phone,
+      street: 'Av. Vicuña Mackenna 2000',
+      apartment: 'Local 5',
+      comuna: 'La Florida',
+      region: 'Metropolitana de Santiago',
+      projectStatusId: statusPendiente.id,
+      date: new Date('2024-11-05'), // Noviembre 2024
+      subtotal: 378151.26,
+      taxRate: 19,
+      total: 450000,
+      totalAmount: 450000,
+      currency: 'CLP',
+      windowsCount: 3,
+      squareMeters: 12.0,
+    },
+  })
+
+  console.log('✅ Projects seed completed')
+  console.log('📊 Created/Updated 6 projects with payment data')
+
+  // ========================================
+  // SEED PAYMENTS WITH ALLOCATIONS
+  // ========================================
+
+  console.log('\n💰 Seeding payments with allocations...')
+
+  // Pago 1 (Cliente 1): $200,000 → Abono parcial a Proyecto #2024-001
+  const payment1 = await prisma.payment.upsert({
+    where: { id: 'payment-1' },
+    update: {},
+    create: {
+      id: 'payment-1',
+      amount: 200000,
+      currency: 'CLP',
+      date: new Date('2024-07-15'),
+      reference: null,
+      notes: 'Primer abono proyecto oficinas',
+      status: 'ACTIVE',
+      customerId: customer1.id,
+      paymentMethodId: efectivo.id,
+      allocations: {
+        create: [
+          {
+            projectId: project1.id,
+            allocatedAmount: 200000, // Abono parcial
+          },
+        ],
+      },
+    },
+  })
+
+  // Pago 2 (Cliente 1): $500,000 → FIFO: Cierra #2024-001 ($300k) + Abono a #2024-002 ($200k)
+  const payment2 = await prisma.payment.upsert({
+    where: { id: 'payment-2' },
+    update: {},
+    create: {
+      id: 'payment-2',
+      amount: 500000,
+      currency: 'CLP',
+      date: new Date('2024-09-10'),
+      reference: 'TRX-98765432',
+      notes: 'Pago que cierra proyecto 001 y abona a 002',
+      status: 'ACTIVE',
+      customerId: customer1.id,
+      paymentMethodId: transferencia.id,
+      allocations: {
+        create: [
+          {
+            projectId: project1.id,
+            allocatedAmount: 300000, // Cierra el balance de 001
+          },
+          {
+            projectId: project2.id,
+            allocatedAmount: 200000, // Abono a 002
+          },
+        ],
+      },
+    },
+  })
+
+  // Pago 3 (Cliente 2): $800,000 → Cierra completamente #2024-004
+  const payment3 = await prisma.payment.upsert({
+    where: { id: 'payment-3' },
+    update: {},
+    create: {
+      id: 'payment-3',
+      amount: 800000,
+      currency: 'CLP',
+      date: new Date('2024-09-15'),
+      reference: 'TRX-11111111',
+      notes: 'Pago completo fachada edificio',
+      status: 'ACTIVE',
+      customerId: customer2.id,
+      paymentMethodId: transferencia.id,
+      allocations: {
+        create: [
+          {
+            projectId: project4.id,
+            allocatedAmount: 800000, // Pago completo
+          },
+        ],
+      },
+    },
+  })
+
+  // Pago 4 (Cliente 1): $100,000 → Abono adicional a #2024-002 (ya tiene $200k, total $300k)
+  const payment4 = await prisma.payment.upsert({
+    where: { id: 'payment-4' },
+    update: {},
+    create: {
+      id: 'payment-4',
+      amount: 100000,
+      currency: 'CLP',
+      date: new Date('2024-10-20'),
+      reference: 'WP-555666777',
+      notes: 'Abono adicional bodega norte',
+      status: 'ACTIVE',
+      customerId: customer1.id,
+      paymentMethodId: webpay.id,
+      allocations: {
+        create: [
+          {
+            projectId: project2.id,
+            allocatedAmount: 100000, // Segundo abono a 002
+          },
+        ],
+      },
+    },
+  })
+
+  // Pago 5 CANCELADO (Cliente 1): $50,000 → Asignado pero luego cancelado
+  const payment5 = await prisma.payment.upsert({
+    where: { id: 'payment-5' },
+    update: {},
+    create: {
+      id: 'payment-5',
+      amount: 50000,
+      currency: 'CLP',
+      date: new Date('2024-10-25'),
+      reference: 'TRX-CANCEL123',
+      notes: 'Pago cancelado por error',
+      status: 'CANCELLED',
+      cancelledAt: new Date('2024-10-26'),
+      cancelledReason: 'Error en transferencia - fondos devueltos',
+      customerId: customer1.id,
+      paymentMethodId: transferencia.id,
+      allocations: {
+        create: [
+          {
+            projectId: project2.id,
+            allocatedAmount: 50000, // No cuenta porque está cancelado
+          },
+        ],
+      },
+    },
+  })
+
+  console.log('✅ Payments seed completed')
+  console.log('📊 Created/Updated 5 payments (4 active, 1 cancelled)')
+
+  console.log('\n📈 Balance summary:')
+  console.log(`  Cliente 1 (${customer1.name}):`)
+  console.log(`    - Proyecto 001: $500k - $500k = $0 (PAGADO)`)
+  console.log(`    - Proyecto 002: $400k - $300k = $100k pendiente`)
+  console.log(`    - Proyecto 003: $300k - $0 = $300k pendiente`)
+  console.log(`    Total pendiente: $400k`)
+  console.log(`  Cliente 2 (${customer2.name}):`)
+  console.log(`    - Proyecto 004: $800k - $800k = $0 (PAGADO)`)
+  console.log(`  Cliente 3 (${customer3.name}):`)
+  console.log(`    - Proyecto 005: $600k - $0 = $600k pendiente`)
+  console.log(`    - Proyecto 006: $450k - $0 = $450k pendiente`)
+  console.log(`    Total pendiente: $1,050k`)
+
   console.log('\n🎉 Seed completed successfully!')
 }
 
