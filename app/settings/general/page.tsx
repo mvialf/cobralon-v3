@@ -20,8 +20,7 @@ import {
   TIMEZONES_DISPONIBLES,
   PRIMER_DIA_OPCIONES,
 } from '@/lib/paises-config'
-import { getRegiones, getComunasByRegion } from '@/lib/regiones-chile'
-import { Input } from '@/components/ui/input'
+import { getRegiones } from '@/lib/regiones-chile'
 import { useConfiguration } from '@/hooks/use-configuration'
 import { cn } from '@/lib/utils'
 
@@ -37,31 +36,17 @@ export default function GeneralSettingsPage() {
   const { configuration, updateConfiguration } = useConfiguration()
 
   // Destructuring para facilitar lectura
-  const { pais, region, ciudad, comuna, modoPersonalizado, idioma, timezone, primerDia } =
-    configuration
+  const { pais, region, modoPersonalizado, idioma, timezone, primerDia } = configuration
 
   // Estados para controlar apertura de popovers
   const [openPais, setOpenPais] = useState(false)
   const [openRegion, setOpenRegion] = useState(false)
-  const [openComuna, setOpenComuna] = useState(false)
   const [openIdioma, setOpenIdioma] = useState(false)
   const [openTimezone, setOpenTimezone] = useState(false)
   const [openPrimerDia, setOpenPrimerDia] = useState(false)
 
-  // Obtener datos de regiones/comunas
+  // Obtener datos de regiones
   const regiones = getRegiones()
-
-  // Extraer código de región del texto seleccionado (ej: "Metropolitana (RM)" → "13")
-  const regionCodigo =
-    regiones.find((r) => `${r.nombre_corto} (${r.numero_romano})` === region)?.codigo || ''
-
-  const comunasDisponibles = regionCodigo ? getComunasByRegion(regionCodigo) : []
-
-  // Handler para cambio de región (limpia comuna)
-  const handleRegionChange = (value: string) => {
-    updateConfiguration({ region: value, comuna: '' })
-    setOpenRegion(false)
-  }
 
   // Handler para activar modo personalizado
   const activarModoPersonalizado = () => {
@@ -162,7 +147,10 @@ export default function GeneralSettingsPage() {
                                   <CommandItem
                                     key={r.codigo}
                                     value={displayText}
-                                    onSelect={handleRegionChange}
+                                    onSelect={(value) => {
+                                      updateConfiguration({ region: value })
+                                      setOpenRegion(false)
+                                    }}
                                   >
                                     <Check
                                       className={cn(
@@ -179,73 +167,6 @@ export default function GeneralSettingsPage() {
                         </Command>
                       </PopoverContent>
                     </Popover>
-                  </div>
-
-                  {/* Ciudad - Input de texto libre */}
-                  <div className="grid flex-1 gap-2">
-                    <Label htmlFor="ciudad">
-                      Ciudad <span className="text-muted-foreground text-xs">(opcional)</span>
-                    </Label>
-                    <Input
-                      id="ciudad"
-                      value={ciudad}
-                      onChange={(e) => updateConfiguration({ ciudad: e.target.value })}
-                    />
-                  </div>
-
-                  {/* Comuna */}
-                  <div className="grid flex-1 gap-2">
-                    <Label>Comuna</Label>
-                    <Popover open={openComuna} onOpenChange={setOpenComuna}>
-                      <PopoverTrigger asChild>
-                        <Button
-                          variant="input-like"
-                          size="input"
-                          role="combobox"
-                          aria-expanded={openComuna}
-                          disabled={!regionCodigo}
-                        >
-                          {comuna ||
-                            (regionCodigo
-                              ? 'Selecciona una comuna...'
-                              : 'Primero selecciona una región')}
-                          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-[250px] p-0">
-                        <Command>
-                          <CommandInput placeholder="Buscar comuna..." />
-                          <CommandList>
-                            <CommandEmpty>No se encontró la comuna</CommandEmpty>
-                            <CommandGroup>
-                              {comunasDisponibles.map((c) => (
-                                <CommandItem
-                                  key={c.codigo}
-                                  value={c.nombre}
-                                  onSelect={(currentValue) => {
-                                    updateConfiguration({ comuna: currentValue })
-                                    setOpenComuna(false)
-                                  }}
-                                >
-                                  <Check
-                                    className={cn(
-                                      'mr-2 h-4 w-4',
-                                      comuna === c.nombre ? 'opacity-100' : 'opacity-0'
-                                    )}
-                                  />
-                                  {c.nombre}
-                                </CommandItem>
-                              ))}
-                            </CommandGroup>
-                          </CommandList>
-                        </Command>
-                      </PopoverContent>
-                    </Popover>
-                    {!regionCodigo && (
-                      <p className="text-muted-foreground text-xs">
-                        Selecciona primero una región para ver las comunas disponibles
-                      </p>
-                    )}
                   </div>
                 </>
               )}

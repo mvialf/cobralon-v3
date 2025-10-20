@@ -14,8 +14,6 @@ export type UserConfiguration = {
   // Ubicación
   pais: string
   region: string
-  ciudad: string
-  comuna: string
 
   // Configuración derivada automáticamente del país
   currency: string
@@ -44,8 +42,6 @@ export type ConfigurationContextType = {
 const DEFAULT_CONFIGURATION: UserConfiguration = {
   pais: 'cl',
   region: '',
-  ciudad: '',
-  comuna: '',
   currency: 'CLP',
   locale: 'es-CL',
   modoPersonalizado: false,
