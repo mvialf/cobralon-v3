@@ -24,17 +24,47 @@ async function main() {
     },
   })
 
-  console.log('✅ Seed completed successfully')
+  console.log('✅ Users seed completed')
   console.log('📊 Created/Updated users:', { user1, user2 })
 
-  // Add more seed data here as needed for your project
-  // Example:
-  // const posts = await prisma.post.createMany({
-  //   data: [
-  //     { title: 'First Post', authorId: user1.id },
-  //     { title: 'Second Post', authorId: user2.id },
-  //   ]
-  // })
+  // Seed customers
+  const customer1 = await prisma.customer.upsert({
+    where: { id: '1' },
+    update: {},
+    create: {
+      id: '1',
+      name: 'Juan Perez',
+      phone: '+56912345678',
+      email: 'juan.perez@ejemplo.com',
+    },
+  })
+
+  const customer2 = await prisma.customer.upsert({
+    where: { id: '2' },
+    update: {},
+    create: {
+      id: '2',
+      name: 'Maria Gonzalez',
+      phone: '+56987654321',
+      email: 'maria.gonzalez@ejemplo.com',
+    },
+  })
+
+  const customer3 = await prisma.customer.upsert({
+    where: { id: '3' },
+    update: {},
+    create: {
+      id: '3',
+      name: 'Pedro Sanchez',
+      phone: '+56955555555',
+      email: 'pedro.sanchez@ejemplo.com',
+    },
+  })
+
+  console.log('✅ Customers seed completed')
+  console.log('📊 Created/Updated customers:', { customer1, customer2, customer3 })
+
+  console.log('\n🎉 Seed completed successfully!')
 }
 
 main()

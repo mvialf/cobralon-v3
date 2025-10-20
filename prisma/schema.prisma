@@ -28,6 +28,18 @@ model User {
   @@index([email])
 }
 
+model Customer {
+  id        String   @id @default(uuid())
+  name      String
+  phone     String   // Teléfono obligatorio
+  email     String?  // Email opcional
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([name])
+  @@index([email])
+}
+
 // Uncomment and customize for your needs:
 //
 // model Post {
