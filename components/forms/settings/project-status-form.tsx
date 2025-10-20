@@ -11,8 +11,6 @@ import {
 } from '@/lib/validations/project-status-validations'
 
 import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import {
   Form,
   FormControl,
@@ -40,7 +38,6 @@ export const ProjectStatusForm = React.forwardRef<ProjectStatusFormHandle, Proje
       defaultValues: {
         name: '',
         colorId: badgeColors[0]?.id || '',
-        type: 'normal',
         ...defaultValues,
       },
     })
@@ -63,42 +60,6 @@ export const ProjectStatusForm = React.forwardRef<ProjectStatusFormHandle, Proje
                 <FormLabel>Nombre del estado</FormLabel>
                 <FormControl>
                   <Input placeholder="Ej: En Revisión" {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
-          {/* Campo: Tipo de estado */}
-          <FormField
-            control={form.control}
-            name="type"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Tipo de estado</FormLabel>
-                <FormControl>
-                  <RadioGroup value={field.value} onValueChange={field.onChange}>
-                    <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="normal" id="type-normal" />
-                      <Label htmlFor="type-normal" className="font-normal">
-                        Normal
-                      </Label>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="initial" id="type-initial" />
-                      <Label htmlFor="type-initial" className="font-normal">
-                        Estado Inicial
-                      </Label>
-                      <span className="text-muted-foreground text-xs">(solo uno permitido)</span>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="final" id="type-final" />
-                      <Label htmlFor="type-final" className="font-normal">
-                        Estado Final
-                      </Label>
-                      <span className="text-muted-foreground text-xs">(solo uno permitido)</span>
-                    </div>
-                  </RadioGroup>
                 </FormControl>
                 <FormMessage />
               </FormItem>

@@ -45,16 +45,23 @@ export function ProjectStatusDialog({
   const formRef = React.useRef<ProjectStatusFormHandle>(null)
   const [isSubmitting, setIsSubmitting] = React.useState(false)
 
-  // Validar que status esté presente en modo edit
+  // Early return si status no está presente en modo edit
+  // Esto previene renders con data incompleta durante race conditions
   if (mode === 'edit' && !status) {
-    throw new Error('ProjectStatusDialog: status es requerido en modo edit')
+    return null
   }
 
   const handleSubmit = async (data: ProjectStatusFormValues) => {
     setIsSubmitting(true)
 
     try {
-      const payload = formValuesToPayload(data)
+      // Determinar isInitial/isFinal según el modo:
+      // - CREATE: Siempre estado normal (isInitial: false, isFinal: false)
+      // - EDIT: Preservar el tipo actual del status
+      const isInitial = mode === 'edit' ? status!.isInitial : false
+      const isFinal = mode === 'edit' ? status!.isFinal : false
+
+      const payload = formValuesToPayload(data, isInitial, isFinal)
 
       const url = mode === 'create' ? '/api/project-status' : `/api/project-status/${status?.id}`
       const method = mode === 'create' ? 'POST' : 'PUT'
@@ -108,7 +115,7 @@ export function ProjectStatusDialog({
           <DialogDescription>
             {mode === 'create'
               ? 'Agrega un nuevo estado para clasificar tus proyectos'
-              : 'Modifica el nombre, color o tipo del estado'}
+              : 'Modifica el nombre o color del estado'}
           </DialogDescription>
         </DialogHeader>
 

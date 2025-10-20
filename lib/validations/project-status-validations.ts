@@ -35,6 +35,8 @@ export type ProjectStatus = {
 
 /**
  * Schema de validación para crear/editar estados de proyecto
+ * Nota: El campo 'type' (isInitial/isFinal) se maneja en la capa del dialog,
+ * no en el formulario, para prevenir creación de estados inicial/final duplicados.
  */
 export const projectStatusSchema = z.object({
   name: z
@@ -43,9 +45,6 @@ export const projectStatusSchema = z.object({
     .max(50, 'El nombre no puede exceder 50 caracteres')
     .trim(),
   colorId: z.string().uuid('Debe seleccionar un color válido'),
-  type: z.enum(['normal', 'initial', 'final'], {
-    required_error: 'Debe seleccionar un tipo de estado',
-  }),
 })
 
 /**
@@ -70,23 +69,30 @@ export type UpdateProjectStatusPayload = CreateProjectStatusPayload
 
 /**
  * Helper para convertir form values a API payload
+ * @param values - Valores del formulario (nombre + color)
+ * @param isInitial - Si el estado es inicial (determinado por el dialog)
+ * @param isFinal - Si el estado es final (determinado por el dialog)
  */
-export function formValuesToPayload(values: ProjectStatusFormValues): CreateProjectStatusPayload {
+export function formValuesToPayload(
+  values: ProjectStatusFormValues,
+  isInitial: boolean,
+  isFinal: boolean
+): CreateProjectStatusPayload {
   return {
     name: values.name,
     colorId: values.colorId,
-    isInitial: values.type === 'initial',
-    isFinal: values.type === 'final',
+    isInitial,
+    isFinal,
   }
 }
 
 /**
  * Helper para convertir ProjectStatus a form values
+ * Nota: Solo retorna nombre + color. El tipo (isInitial/isFinal) se preserva en el dialog.
  */
 export function statusToFormValues(status: ProjectStatus): ProjectStatusFormValues {
   return {
     name: status.name,
     colorId: status.colorId,
-    type: status.isInitial ? 'initial' : status.isFinal ? 'final' : 'normal',
   }
 }
