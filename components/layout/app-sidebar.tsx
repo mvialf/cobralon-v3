@@ -12,6 +12,7 @@ import {
   CreditCard,
   Coins,
   Phone,
+  Users,
 } from 'lucide-react'
 
 import {
@@ -49,6 +50,11 @@ const navigationItems: NavigationItem[] = [
     title: 'Panel Principal',
     url: '/',
     icon: Home,
+  },
+  {
+    title: 'Clientes',
+    url: '/customer',
+    icon: Users,
   },
   {
     title: 'Ejemplos',

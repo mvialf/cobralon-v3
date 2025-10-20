@@ -14,9 +14,10 @@ interface PageHeaderProps {
     label: string
     href?: string
   }>
+  action?: React.ReactNode
 }
 
-export function PageHeader({ title, description, breadcrumbs }: PageHeaderProps) {
+export function PageHeader({ title, description, breadcrumbs, action }: PageHeaderProps) {
   return (
     <div className="flex flex-col gap-4 pb-6">
       {/* Breadcrumbs */}
@@ -39,10 +40,13 @@ export function PageHeader({ title, description, breadcrumbs }: PageHeaderProps)
         </Breadcrumb>
       )}
 
-      {/* Title and description */}
-      <div className="flex flex-col gap-2">
-        <h1 className="text-3xl font-bold tracking-tight text-balance">{title}</h1>
-        {description && <p className="text-muted-foreground text-pretty">{description}</p>}
+      {/* Title, description and action button */}
+      <div className="flex items-start justify-between gap-4">
+        <div className="flex flex-col gap-2 flex-1">
+          <h1 className="text-3xl font-bold tracking-tight text-balance">{title}</h1>
+          {description && <p className="text-muted-foreground text-pretty">{description}</p>}
+        </div>
+        {action && <div className="flex-shrink-0">{action}</div>}
       </div>
     </div>
   )

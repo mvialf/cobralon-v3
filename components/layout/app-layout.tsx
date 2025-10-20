@@ -14,6 +14,7 @@ interface AppLayoutProps {
     label: string
     href?: string
   }>
+  action?: React.ReactNode
 }
 
 export function AppLayout({
@@ -21,6 +22,7 @@ export function AppLayout({
   pageTitle = 'Dashboard',
   pageDescription,
   breadcrumbs,
+  action,
 }: AppLayoutProps) {
   return (
     <div className="min-h-screen w-full">
@@ -32,7 +34,12 @@ export function AppLayout({
         <SidebarInset>
           <div className="p-6">
             {/* Page header with breadcrumbs */}
-            <PageHeader title={pageTitle} description={pageDescription} breadcrumbs={breadcrumbs} />
+            <PageHeader
+              title={pageTitle}
+              description={pageDescription}
+              breadcrumbs={breadcrumbs}
+              action={action}
+            />
 
             {/* Page content */}
             <div className="space-y-6">{children}</div>
