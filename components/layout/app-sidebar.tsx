@@ -13,6 +13,7 @@ import {
   Coins,
   Phone,
   Users,
+  FolderKanban,
 } from 'lucide-react'
 
 import {
@@ -55,6 +56,11 @@ const navigationItems: NavigationItem[] = [
     title: 'Clientes',
     url: '/customer',
     icon: Users,
+  },
+  {
+    title: 'Proyectos',
+    url: '/projects',
+    icon: FolderKanban,
   },
   {
     title: 'Ejemplos',
