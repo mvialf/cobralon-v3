@@ -4,9 +4,6 @@ import { useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useQuery } from '@tanstack/react-query'
-import { Calendar as CalendarIcon } from 'lucide-react'
-import { format } from 'date-fns'
-import { es } from 'date-fns/locale'
 
 import {
   paymentToProjectSchema,
@@ -15,11 +12,9 @@ import {
 } from '@/lib/validations/payment-validations'
 import { formatCurrency } from '@/lib/format'
 import { useDebounce } from '@/hooks/use-debounce'
-import { cn } from '@/lib/utils'
 
 import { Combobox } from '@/components/ui/combobox'
 import { Button } from '@/components/ui/button'
-import { Calendar } from '@/components/ui/calendar'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import {
   Form,
@@ -29,8 +24,8 @@ import {
   FormLabel,
   FormMessage,
 } from '@/components/ui/form'
+import { FormGrid } from '@/components/ui/form-grid'
 import { Input } from '@/components/ui/input'
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import {
   Select,
   SelectContent,
@@ -49,9 +44,10 @@ interface PaymentToProjectFormProps {
  * Formulario para "Pago a Proyecto" (1:1)
  *
  * Flujo simplificado donde:
- * 1. Usuario busca y selecciona un proyecto
- * 2. customerId y currency se derivan automáticamente
+ * 1. Usuario busca y selecciona un proyecto (combobox muestra cliente + proyecto)
+ * 2. customerId y currency se derivan automáticamente del proyecto
  * 3. 100% del monto se asigna al proyecto
+ * 4. Validación de monto vs balance se hace en submit con form.setError()
  */
 export function PaymentToProjectForm({
   onSubmit,
@@ -63,9 +59,6 @@ export function PaymentToProjectForm({
 
   // State para proyecto seleccionado
   const [selectedProject, setSelectedProject] = useState<ProjectWithBalance | null>(null)
-
-  // State para error de monto > balance
-  const [amountError, setAmountError] = useState<string | null>(null)
 
   // Form setup
   const form = useForm<PaymentToProjectFormValues>({
@@ -92,7 +85,9 @@ export function PaymentToProjectForm({
   })
 
   // Fetch payment methods
-  const { data: paymentMethods = [] } = useQuery({
+  const { data: paymentMethods = [] } = useQuery<
+    Array<{ id: string; name: string; requiresReference: boolean }>
+  >({
     queryKey: ['payment-methods'],
     queryFn: async () => {
       const res = await fetch('/api/payment-methods')
@@ -104,7 +99,7 @@ export function PaymentToProjectForm({
 
   // Encontrar método seleccionado (para validar reference)
   const selectedMethodId = form.watch('paymentMethodId')
-  const selectedMethod = paymentMethods.find((m: any) => m.id === selectedMethodId)
+  const selectedMethod = paymentMethods.find((m) => m.id === selectedMethodId)
 
   // Cuando cambia el proyecto seleccionado
   const watchedProjectId = form.watch('projectId')
@@ -113,25 +108,11 @@ export function PaymentToProjectForm({
       const project = projects.find((p: ProjectWithBalance) => p.id === watchedProjectId)
       if (project) {
         setSelectedProject(project)
-        // Reset amount error cuando cambia de proyecto
-        setAmountError(null)
       }
     } else {
       setSelectedProject(null)
     }
   }, [watchedProjectId, projects])
-
-  // Validación de monto onBlur
-  const handleAmountBlur = () => {
-    const amount = form.getValues('amount')
-    if (selectedProject && amount > selectedProject.balance) {
-      setAmountError(
-        `El monto no puede ser mayor al balance pendiente (${formatCurrency(selectedProject.balance, selectedProject.currency)})`
-      )
-    } else {
-      setAmountError(null)
-    }
-  }
 
   // Submit handler
   const handleSubmit = (values: PaymentToProjectFormValues) => {
@@ -142,9 +123,9 @@ export function PaymentToProjectForm({
 
     // Validar monto <= balance
     if (values.amount > selectedProject.balance) {
-      setAmountError(
-        `El monto no puede ser mayor al balance pendiente (${formatCurrency(selectedProject.balance, selectedProject.currency)})`
-      )
+      form.setError('amount', {
+        message: `El monto no puede ser mayor al balance pendiente (${formatCurrency(selectedProject.balance, selectedProject.currency)})`,
+      })
       return
     }
 
@@ -206,15 +187,7 @@ export function PaymentToProjectForm({
           )}
         />
 
-        {/* 2. Cliente (readonly, auto-derivado) */}
-        {selectedProject && (
-          <div className="space-y-2">
-            <FormLabel>Cliente</FormLabel>
-            <Input value={selectedProject.customer.name} readOnly className="bg-muted" />
-          </div>
-        )}
-
-        {/* 3. Card: Balance Pendiente */}
+        {/* 2. Card: Balance Pendiente */}
         {selectedProject && (
           <Card>
             <CardHeader>
@@ -232,78 +205,53 @@ export function PaymentToProjectForm({
           </Card>
         )}
 
-        {/* 4. Monto del Pago */}
-        <FormField
-          control={form.control}
-          name="amount"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Monto del Pago *</FormLabel>
-              <FormControl>
-                <Input
-                  type="number"
-                  step="0.01"
-                  placeholder="0.00"
-                  {...field}
-                  onChange={(e) => {
-                    field.onChange(e.target.value)
-                    setAmountError(null) // Clear error on change
-                  }}
-                  onBlur={() => {
-                    field.onBlur()
-                    handleAmountBlur()
-                  }}
-                  disabled={!selectedProject}
-                />
-              </FormControl>
-              {amountError && <p className="text-sm font-medium text-destructive">{amountError}</p>}
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
-        {/* 5. Fecha */}
-        <FormField
-          control={form.control}
-          name="date"
-          render={({ field }) => (
-            <FormItem className="flex flex-col">
-              <FormLabel>Fecha del Pago *</FormLabel>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <FormControl>
-                    <Button
-                      variant="input-like"
-                      size="input"
-                      className={cn(
-                        'w-full justify-start text-left font-normal',
-                        !field.value && 'text-muted-foreground'
-                      )}
-                    >
-                      <CalendarIcon className="mr-2 h-4 w-4" />
-                      {field.value
-                        ? format(field.value, 'PPP', { locale: es })
-                        : 'Seleccionar fecha'}
-                    </Button>
-                  </FormControl>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
-                  <Calendar
-                    mode="single"
-                    selected={field.value}
-                    onSelect={field.onChange}
-                    disabled={(date) => date > new Date() || date < new Date('1900-01-01')}
-                    initialFocus
-                    locale={es}
+        <FormGrid columns={2}>
+          {/* Monto del Pago */}
+          <FormField
+            control={form.control}
+            name="amount"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Monto del Pago *</FormLabel>
+                <FormControl>
+                  <Input
+                    type="number"
+                    step="0.01"
+                    placeholder="0.00"
+                    {...field}
+                    disabled={!selectedProject}
                   />
-                </PopoverContent>
-              </Popover>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
 
-        {/* 6. Método de Pago */}
+          {/* Fecha */}
+          <FormField
+            control={form.control}
+            name="date"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Fecha del Pago *</FormLabel>
+                <FormControl>
+                  <Input
+                    type="date"
+                    value={
+                      field.value instanceof Date
+                        ? field.value.toISOString().split('T')[0]
+                        : field.value
+                    }
+                    onChange={(e) => field.onChange(new Date(e.target.value))}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </FormGrid>
+
+        {/* 3. Método de Pago */}
         <FormField
           control={form.control}
           name="paymentMethodId"
@@ -317,7 +265,7 @@ export function PaymentToProjectForm({
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
-                  {paymentMethods.map((method: any) => (
+                  {paymentMethods.map((method) => (
                     <SelectItem key={method.id} value={method.id}>
                       {method.name}
                     </SelectItem>
@@ -329,7 +277,7 @@ export function PaymentToProjectForm({
           )}
         />
 
-        {/* 7. Referencia (condicional) */}
+        {/* 4. Referencia (condicional) */}
         {selectedMethod && (
           <FormField
             control={form.control}
@@ -355,7 +303,7 @@ export function PaymentToProjectForm({
           />
         )}
 
-        {/* 8. Notas (opcional) */}
+        {/* 5. Notas (opcional) */}
         <FormField
           control={form.control}
           name="notes"
@@ -377,7 +325,7 @@ export function PaymentToProjectForm({
 
         {/* Submit button */}
         <div className="flex justify-end gap-2 pt-4">
-          <Button type="submit" disabled={isSubmitting || !selectedProject || !!amountError}>
+          <Button type="submit" disabled={isSubmitting || !selectedProject}>
             {isSubmitting ? 'Registrando...' : 'Registrar Pago'}
           </Button>
         </div>
