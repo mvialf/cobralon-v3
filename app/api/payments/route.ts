@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { Decimal } from '@prisma/client/runtime/library'
+import { AllocationInput, PaymentWhereInput } from '@/types/api'
 
 /**
  * GET /api/payments
@@ -30,7 +31,7 @@ export async function GET(request: Request) {
     const skip = (page - 1) * limit
 
     // Construir filtro dinámico
-    const where: any = {}
+    const where: PaymentWhereInput = {}
 
     if (customerId) {
       where.customerId = customerId
@@ -202,7 +203,7 @@ export async function POST(request: Request) {
     }
 
     // Verificar que no haya projectIds duplicados
-    const projectIds = allocations.map((a: any) => a.projectId)
+    const projectIds = allocations.map((a: AllocationInput) => a.projectId)
     if (new Set(projectIds).size !== projectIds.length) {
       return NextResponse.json(
         { error: 'No puede asignar el mismo proyecto dos veces' },
@@ -245,7 +246,7 @@ export async function POST(request: Request) {
     }
 
     // Verificar que la suma de allocations sea igual al amount (con tolerancia de decimales)
-    const totalAllocated = allocations.reduce((sum: number, a: any) => sum + a.allocatedAmount, 0)
+    const totalAllocated = allocations.reduce((sum: number, a: AllocationInput) => sum + a.allocatedAmount, 0)
     if (Math.abs(totalAllocated - amount) >= 0.01) {
       return NextResponse.json(
         { error: 'La suma de los montos asignados debe ser igual al monto total del pago' },
@@ -265,7 +266,7 @@ export async function POST(request: Request) {
         notes: notes?.trim() || null,
         status: 'ACTIVE',
         allocations: {
-          create: allocations.map((a: any) => ({
+          create: allocations.map((a: AllocationInput) => ({
             projectId: a.projectId,
             allocatedAmount: new Decimal(a.allocatedAmount),
           })),

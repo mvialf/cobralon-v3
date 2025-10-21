@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { Decimal } from '@prisma/client/runtime/library'
+import { ProjectUpdateInput } from '@/types/api'
 
 /**
  * GET /api/projects/[id]
@@ -92,7 +93,7 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
     }
 
     // Preparar datos para actualizar
-    const updateData: any = {}
+    const updateData: ProjectUpdateInput = {}
 
     if (body.customerId) updateData.customerId = body.customerId
     if (body.projectNumber !== undefined) updateData.projectNumber = body.projectNumber.trim()

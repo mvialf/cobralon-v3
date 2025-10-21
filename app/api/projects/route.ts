@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { Decimal } from '@prisma/client/runtime/library'
+import { ProjectWhereInput } from '@/types/api'
 
 /**
  * GET /api/projects
@@ -23,8 +24,8 @@ export async function GET(request: Request) {
 
     const skip = (page - 1) * limit
 
-    // Construir filtro de b�squeda
-    const where: any = {}
+    // Construir filtro de búsqueda
+    const where: ProjectWhereInput = {}
 
     if (customerId) {
       where.customerId = customerId
