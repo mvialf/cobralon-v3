@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { Row } from '@tanstack/react-table'
 import { AppLayout } from '@/components/layout/app-layout'
 import { NewProjectDialog } from '@/components/dialogs/projects/new-project-dialog'
 import { DataTable } from '@/components/data-table/data-table'
@@ -66,7 +67,7 @@ export default function ProjectsPage() {
   const columns = createColumns({ onProjectDeleted: handleProjectDeleted })
 
   // Función de filtrado global: busca en projectNumber, customer.name y projectName
-  const globalFilterFn = (row: any, _columnId: string, filterValue: string) => {
+  const globalFilterFn = (row: Row<Project>, _columnId: string, filterValue: string) => {
     const project = row.original as Project
     const searchValue = filterValue.toLowerCase()
 

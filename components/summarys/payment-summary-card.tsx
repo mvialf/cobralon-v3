@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import Link from 'next/link'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -31,7 +31,7 @@ export function PaymentSummaryCard({ projectId, totalAmount, currency }: Payment
   >([])
   const [isLoading, setIsLoading] = useState(true)
 
-  const fetchAllocations = async () => {
+  const fetchAllocations = useCallback(async () => {
     try {
       setIsLoading(true)
       // Obtener allocations del proyecto
@@ -56,11 +56,11 @@ export function PaymentSummaryCard({ projectId, totalAmount, currency }: Payment
     } finally {
       setIsLoading(false)
     }
-  }
+  }, [projectId])
 
   useEffect(() => {
     fetchAllocations()
-  }, [projectId])
+  }, [fetchAllocations])
 
   // Calcular balance usando la misma lógica que FIFO
   const { totalPaid, balance, percentPaid } = calculateProjectBalance({

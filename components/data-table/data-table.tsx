@@ -12,6 +12,9 @@ import {
   getPaginationRowModel,
   getSortedRowModel,
   useReactTable,
+  Row,
+  FilterFn,
+  TableMeta,
 } from '@tanstack/react-table'
 
 import {
@@ -32,7 +35,7 @@ interface DataTableProps<TData, TValue> {
   searchKey?: string
   searchPlaceholder?: string
   enableGlobalFilter?: boolean
-  globalFilterFn?: (row: any, columnId: string, filterValue: any) => boolean
+  globalFilterFn?: FilterFn<TData>
   filterableColumns?: {
     id: string
     title: string
@@ -40,7 +43,7 @@ interface DataTableProps<TData, TValue> {
   }[]
   onRowSelectionChange?: (selectedRows: TData[]) => void
   enableRowSelection?: boolean
-  meta?: any
+  meta?: TableMeta<TData>
 }
 
 export function DataTable<TData, TValue>({
@@ -77,7 +80,7 @@ export function DataTable<TData, TValue>({
     onColumnFiltersChange: setColumnFilters,
     onGlobalFilterChange: setGlobalFilter,
     onColumnVisibilityChange: setColumnVisibility,
-    globalFilterFn: globalFilterFn as any,
+    globalFilterFn,
     getCoreRowModel: getCoreRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
     getPaginationRowModel: getPaginationRowModel(),

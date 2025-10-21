@@ -212,7 +212,7 @@ export function ProjectForm({
               <FormItem>
                 <FormLabel>Proyecto *</FormLabel>
                 <FormControl>
-                  <Input {...field} placeholder="PROJ-001" />
+                  <Input {...field} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -229,7 +229,7 @@ export function ProjectForm({
               <FormItem>
                 <FormLabel>Glosa</FormLabel>
                 <FormControl>
-                  <Input {...field} placeholder="Descripción breve del proyecto" />
+                  <Input {...field} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -322,9 +322,6 @@ export function ProjectForm({
                 <FormControl>
                   <CurrencyInput value={field.value} onChange={field.onChange} />
                 </FormControl>
-                <FormDescription>
-                  Moneda: {form.watch('currency') || configuration.currency || 'CLP'}
-                </FormDescription>
                 <FormMessage />
               </FormItem>
             )}
@@ -373,7 +370,6 @@ export function ProjectForm({
                     min="0"
                     {...field}
                     onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
-                    placeholder="0"
                   />
                 </FormControl>
                 <FormMessage />
@@ -395,7 +391,6 @@ export function ProjectForm({
                     min="0"
                     {...field}
                     onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
-                    placeholder="0.00"
                   />
                 </FormControl>
                 <FormMessage />

@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import {
   Table,
   TableBody,
@@ -73,7 +73,7 @@ export function ProjectPaymentsTable({ projectId }: ProjectPaymentsTableProps) {
   const [cancellingPaymentId, setCancellingPaymentId] = useState<string | null>(null)
   const [cancelReason, setCancelReason] = useState('')
 
-  const fetchPayments = async () => {
+  const fetchPayments = useCallback(async () => {
     try {
       setIsLoading(true)
       const response = await fetch(`/api/payments?projectId=${projectId}`)
@@ -116,11 +116,11 @@ export function ProjectPaymentsTable({ projectId }: ProjectPaymentsTableProps) {
     } finally {
       setIsLoading(false)
     }
-  }
+  }, [projectId])
 
   useEffect(() => {
     fetchPayments()
-  }, [projectId])
+  }, [fetchPayments])
 
   const handleCancelPayment = async (paymentId: string) => {
     try {
