@@ -708,7 +708,6 @@ Documenta aquí las implementaciones de TU proyecto:
     - ✅ `components/forms/projects/project-form.tsx` - 2 comboboxes complejos
       - Customer con custom render (nombre + teléfono)
       - Status con StatusBadge component
-    - ✅ `components/forms/payments/payment-form.tsx` - 1 combobox con loading
   - **Fase 5:** Actualizar documentación
     - `docs/template/components/ui-components.md` - Sección completa con ejemplos
     - Props API documentada con TypeScript
@@ -721,7 +720,6 @@ Documenta aquí las implementaciones de TU proyecto:
   - `app/settings/general/page.tsx` - Migrar 5 comboboxes
   - `components/forms/address-fields.tsx` - Migrar 2 comboboxes
   - `components/forms/projects/project-form.tsx` - Migrar 2 comboboxes complejos
-  - `components/forms/payments/payment-form.tsx` - Migrar 1 combobox
   - `docs/template/components/ui-components.md` - Documentación completa
 - **Code Reduction:**
   - **Antes:** ~605 líneas de Popover+Command manual (11 instancias)
@@ -731,36 +729,84 @@ Documenta aquí las implementaciones de TU proyecto:
 
 ---
 
+### 🔄 Migración: Chrome DevTools MCP → Playwright MCP
+
+- **Status:** ✅ Complete | **Date:** 2025-10-21 | **Impact:** High
+- **ADR:** [ADR-010: Playwright MCP](../template/decisions/010-playwright-mcp.md)
+- **Benefits:**
+  - **Tests persistentes:** Claude genera archivos `.spec.ts` versionados en Git (vs conversaciones ad-hoc)
+  - **Multi-browser:** Soporte para Chrome, Firefox, Safari (vs solo Chrome)
+  - **Mejor integración:** Ecosystem completo de Playwright (Inspector, Trace Viewer, Codegen)
+  - **CI/CD ready:** Tests ejecutables en pipelines sin necesidad de Claude
+  - **Debugging superior:** Playwright Inspector + trace viewer + screenshots automáticos
+  - **Cross-browser testing:** Valida en múltiples navegadores simultáneamente
+- **Implementación:** ✅ Completada
+  - **Fase 1:** Deprecar ADR-006 (Chrome DevTools MCP)
+    - Agregar sección de deprecación al ADR-006
+    - Listar ventajas de Playwright MCP sobre Chrome DevTools
+    - Referenciar ADR-010 como decisión actual
+  - **Fase 2:** Crear ADR-010 (Playwright MCP + @playwright/test)
+    - Documento completo (~500 líneas) con análisis exhaustivo
+    - 5 alternativas consideradas y rechazadas con justificación
+    - Consecuencias positivas (7) y negativas (5) documentadas
+    - Ejemplos de código y configuración
+    - Workflow completo y casos de uso
+  - **Fase 3:** Actualizar testing.md completo
+    - Tabla de Stack de Testing: Chrome DevTools → Playwright MCP
+    - Arquitectura de Testing: Nuevo diagrama con Playwright MCP + @playwright/test
+    - Sección 2 completa reescrita: Features, workflow, casos de uso
+    - Sección 3 actualizada: Explicar relación complementaria
+    - Workflow recomendado actualizado
+    - Referencias a ADRs actualizadas (ADR-010 nuevo, ADR-006 deprecado)
+  - **Fase 4:** Eliminar documentación obsoleta
+    - Eliminar `docs/template/guides/chrome-devtools-mcp-testing.md`
+  - **Fase 5:** Documentar implementación
+    - Agregar entrada en `implementation.md` (esta entrada)
+    - Actualizar Quick Reference Index
+    - Actualizar Statistics
+- **Archivos eliminados:**
+  - `docs/template/guides/chrome-devtools-mcp-testing.md` - Guía obsoleta de Chrome DevTools
+- **Archivos creados:**
+  - `docs/template/decisions/010-playwright-mcp.md` - ADR nuevo (500+ líneas)
+- **Archivos modificados:**
+  - `docs/template/decisions/006-chrome-devtools-mcp-experimental.md` - Marcado como deprecado
+  - `docs/template/methodology/testing.md` - Actualización completa (stack, arquitectura, secciones)
+  - `docs/project/implementation.md` - Esta entrada
+- **Validación:** ✅ Docs: Updated | References: Fixed | Consistency: OK
+
+---
+
 ## Quick Reference Index
 
-| #   | Implementación                              | Status      | Fecha      | Impact |
-| --- | ------------------------------------------- | ----------- | ---------- | ------ |
-| 1   | Setup Inicial del Template                  | ✅ Complete | 2025-01-13 | High   |
-| 2   | Sistema Completo de Testing + Linting       | ✅ Complete | 2025-01-13 | High   |
-| 3   | Migración Next.js 15 + React 19 + ESLint 9  | ✅ Complete | 2025-10-17 | High   |
-| 4   | Database Layer con Prisma + Neon            | ✅ Complete | 2025-01-17 | High   |
-| 5   | Migración Autocomplete → Combobox           | ✅ Complete | 2025-10-19 | Medium |
-| 6   | Documentación de Autenticación              | ✅ Complete | 2025-10-19 | Medium |
-| 7   | Refactor Layout (3 → 2 Capas)               | ✅ Complete | 2025-10-18 | Medium |
-| 8   | Sistema Configuración Global                | ✅ Complete | 2025-10-19 | High   |
-| 9   | Componentes Regionales (Currency/Phone/RUT) | ✅ Complete | 2025-10-19 | High   |
-| 10  | Página de Configuración                     | ✅ Complete | 2025-10-19 | Medium |
-| 11  | Migración @diceui/combobox → Command        | ✅ Complete | 2025-10-19 | High   |
-| 12  | Refactor: Rutas en Inglés                   | ✅ Complete | 2025-10-20 | Medium |
-| 13  | Refactor: Project Status Form + Dialog      | ✅ Complete | 2025-10-20 | High   |
-| 14  | Componente Reutilizable: Combobox Wrapper   | ✅ Complete | 2025-10-20 | High   |
+| #   | Implementación                                  | Status      | Fecha      | Impact |
+| --- | ----------------------------------------------- | ----------- | ---------- | ------ |
+| 1   | Setup Inicial del Template                      | ✅ Complete | 2025-01-13 | High   |
+| 2   | Sistema Completo de Testing + Linting           | ✅ Complete | 2025-01-13 | High   |
+| 3   | Migración Next.js 15 + React 19 + ESLint 9      | ✅ Complete | 2025-10-17 | High   |
+| 4   | Database Layer con Prisma + Neon                | ✅ Complete | 2025-01-17 | High   |
+| 5   | Migración Autocomplete → Combobox               | ✅ Complete | 2025-10-19 | Medium |
+| 6   | Documentación de Autenticación                  | ✅ Complete | 2025-10-19 | Medium |
+| 7   | Refactor Layout (3 → 2 Capas)                   | ✅ Complete | 2025-10-18 | Medium |
+| 8   | Sistema Configuración Global                    | ✅ Complete | 2025-10-19 | High   |
+| 9   | Componentes Regionales (Currency/Phone/RUT)     | ✅ Complete | 2025-10-19 | High   |
+| 10  | Página de Configuración                         | ✅ Complete | 2025-10-19 | Medium |
+| 11  | Migración @diceui/combobox → Command            | ✅ Complete | 2025-10-19 | High   |
+| 12  | Refactor: Rutas en Inglés                       | ✅ Complete | 2025-10-20 | Medium |
+| 13  | Refactor: Project Status Form + Dialog          | ✅ Complete | 2025-10-20 | High   |
+| 14  | Componente Reutilizable: Combobox Wrapper       | ✅ Complete | 2025-10-20 | High   |
+| 15  | Migración: Chrome DevTools MCP → Playwright MCP | ✅ Complete | 2025-10-21 | High   |
 
 ---
 
 ## Statistics
 
-- **Total Implementaciones:** 14
-- **Completadas:** 14
+- **Total Implementaciones:** 15
+- **Completadas:** 15
 - **En Progreso:** 0
 - **Pendientes:** 0
 
 ---
 
-**Última actualización:** 2025-10-20
+**Última actualización:** 2025-10-21
 
 **Ver metodología:** [documentation.md](../template/methodology/documentation.md)

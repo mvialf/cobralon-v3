@@ -73,69 +73,6 @@ export const paymentAllocationSchema = z.object({
 })
 
 /**
- * Schema de validación para crear un pago
- */
-export const paymentSchema = z
-  .object({
-    customerId: z.string().uuid('Debe seleccionar un cliente válido'),
-    amount: z.coerce
-      .number()
-      .positive('El monto debe ser mayor a 0')
-      .multipleOf(0.01, 'El monto debe tener máximo 2 decimales'),
-    currency: z.string().min(3, 'Moneda inválida').max(3, 'Moneda inválida'),
-    date: z.date({
-      required_error: 'La fecha es obligatoria',
-      invalid_type_error: 'Fecha inválida',
-    }),
-    paymentMethodId: z.string().uuid('Debe seleccionar un método de pago válido'),
-    reference: z
-      .string()
-      .max(100, 'La referencia no puede exceder 100 caracteres')
-      .trim()
-      .optional()
-      .nullable(),
-    notes: z
-      .string()
-      .max(500, 'Las notas no pueden exceder 500 caracteres')
-      .trim()
-      .optional()
-      .nullable(),
-    allocations: z
-      .array(paymentAllocationSchema)
-      .min(1, 'Debe asignar el pago a al menos un proyecto')
-      .refine(
-        (allocations) => {
-          // No duplicados de projectId
-          const projectIds = allocations.map((a) => a.projectId)
-          return new Set(projectIds).size === projectIds.length
-        },
-        { message: 'No puede asignar el mismo proyecto dos veces' }
-      ),
-  })
-  .refine(
-    (data) => {
-      // Suma de allocations debe ser igual al monto total
-      const totalAllocated = data.allocations.reduce((sum, a) => sum + a.allocatedAmount, 0)
-      return Math.abs(totalAllocated - data.amount) < 0.01 // Tolerance para decimales
-    },
-    {
-      message: 'La suma de los montos asignados debe ser igual al monto total del pago',
-      path: ['allocations'],
-    }
-  )
-
-/**
- * Alias para usar en formularios (más explícito)
- */
-export const paymentFormSchema = paymentSchema
-
-/**
- * Type inferido del schema (para formularios)
- */
-export type PaymentFormValues = z.infer<typeof paymentSchema>
-export type PaymentFormData = PaymentFormValues // Alias alternativo
-
-/**
  * Type para el payload de creación (API)
  */
 export type CreatePaymentPayload = {
@@ -150,22 +87,6 @@ export type CreatePaymentPayload = {
     projectId: string
     allocatedAmount: number
   }>
-}
-
-/**
- * Helper para convertir form values a API payload
- */
-export function formValuesToPayload(values: PaymentFormValues): CreatePaymentPayload {
-  return {
-    customerId: values.customerId,
-    amount: values.amount,
-    currency: values.currency,
-    date: values.date,
-    paymentMethodId: values.paymentMethodId,
-    reference: values.reference || null,
-    notes: values.notes || null,
-    allocations: values.allocations,
-  }
 }
 
 /**
@@ -275,6 +196,7 @@ export type ProjectWithBalance = {
   totalAmount: number
   currency: string
   balance: number
+  createdAt: Date // Para ordenamiento FIFO
   customer: {
     id: string
     name: string
@@ -305,4 +227,174 @@ export function paymentToProjectToPayload(
       },
     ],
   }
+}
+
+// ============================================================================
+// SCHEMA PARA "PAGO A CLIENTE" (1:N)
+// ============================================================================
+
+/**
+ * Schema para "Pago a Cliente" (1:N)
+ *
+ * Flujo donde el usuario:
+ * 1. Selecciona un cliente
+ * 2. Ingresa el monto total del pago
+ * 3. Distribuye el monto entre múltiples proyectos (FIFO o manual)
+ * 4. La suma de allocations debe ser exactamente igual al monto total
+ */
+export const paymentToCustomerSchema = z
+  .object({
+    // Cliente seleccionado (required)
+    customerId: z
+      .string({
+        required_error: 'Debe seleccionar un cliente',
+      })
+      .uuid('ID de cliente inválido'),
+
+    // Monto total del pago
+    amount: z.coerce
+      .number({
+        required_error: 'El monto es obligatorio',
+        invalid_type_error: 'El monto debe ser un número',
+      })
+      .positive('El monto debe ser mayor a 0')
+      .multipleOf(0.01, 'El monto debe tener máximo 2 decimales'),
+
+    // Fecha del pago
+    date: z.date({
+      required_error: 'La fecha es obligatoria',
+      invalid_type_error: 'Fecha inválida',
+    }),
+
+    // Método de pago
+    paymentMethodId: z
+      .string({
+        required_error: 'Debe seleccionar un método de pago',
+      })
+      .uuid('ID de método de pago inválido'),
+
+    // Referencia (opcional, pero requerida si el método lo exige)
+    reference: z
+      .string()
+      .max(100, 'La referencia no puede exceder 100 caracteres')
+      .trim()
+      .optional()
+      .nullable(),
+
+    // Notas adicionales (opcional)
+    notes: z
+      .string()
+      .max(500, 'Las notas no pueden exceder 500 caracteres')
+      .trim()
+      .optional()
+      .nullable(),
+
+    // Asignaciones a proyectos (array de allocations)
+    allocations: z
+      .array(
+        z.object({
+          projectId: z.string().uuid('ID de proyecto inválido'),
+          allocatedAmount: z.coerce
+            .number()
+            .positive('El monto asignado debe ser mayor a 0')
+            .multipleOf(0.01, 'El monto debe tener máximo 2 decimales'),
+        })
+      )
+      .min(1, 'Debe asignar el pago a al menos un proyecto')
+      .refine(
+        (allocations) => {
+          // No duplicados de projectId
+          const projectIds = allocations.map((a) => a.projectId)
+          return new Set(projectIds).size === projectIds.length
+        },
+        { message: 'No puede asignar el mismo proyecto dos veces' }
+      ),
+  })
+  .refine(
+    (data) => {
+      // Suma de allocations debe ser igual al monto total
+      const totalAllocated = data.allocations.reduce((sum, a) => sum + a.allocatedAmount, 0)
+      return Math.abs(totalAllocated - data.amount) < 0.01 // Tolerance para decimales
+    },
+    {
+      message: 'La suma de los montos asignados debe ser igual al monto total del pago',
+      path: ['allocations'],
+    }
+  )
+
+/**
+ * Type inferido para el formulario de Pago a Cliente
+ */
+export type PaymentToCustomerFormValues = z.infer<typeof paymentToCustomerSchema>
+
+/**
+ * Helper para convertir form values de "Pago a Cliente" a payload de API
+ *
+ * Transforma el schema simplificado 1:N al schema completo del API
+ */
+export function paymentToCustomerToPayload(
+  values: PaymentToCustomerFormValues,
+  currency: string // ← Derivado del primer proyecto (todos deben tener la misma)
+): CreatePaymentPayload {
+  return {
+    customerId: values.customerId,
+    amount: values.amount,
+    currency, // ← Derivada de los proyectos
+    date: values.date,
+    paymentMethodId: values.paymentMethodId,
+    reference: values.reference || null,
+    notes: values.notes || null,
+    allocations: values.allocations,
+  }
+}
+
+/**
+ * Calcula distribución FIFO (First In First Out) de un pago
+ *
+ * Distribuye el monto total entre los proyectos ordenados por fecha de creación,
+ * priorizando los proyectos más antiguos primero.
+ *
+ * @param projects - Array de proyectos con balance pendiente
+ * @param totalAmount - Monto total a distribuir
+ * @returns Array de allocations con projectId y allocatedAmount
+ *
+ * @example
+ * const projects = [
+ *   { id: '1', createdAt: new Date('2024-06-01'), balance: 300000 },
+ *   { id: '2', createdAt: new Date('2024-08-01'), balance: 400000 },
+ * ]
+ * calculateFIFO(projects, 500000)
+ * // => [
+ * //   { projectId: '1', allocatedAmount: 300000 }, // Cierra proyecto 1
+ * //   { projectId: '2', allocatedAmount: 200000 }, // Abono parcial proyecto 2
+ * // ]
+ */
+export function calculateFIFO(
+  projects: ProjectWithBalance[],
+  totalAmount: number
+): Array<{ projectId: string; allocatedAmount: number }> {
+  // 1. Ordenar proyectos por fecha de creación (más antiguo primero)
+  const sorted = [...projects].sort(
+    (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+  )
+
+  // 2. Distribuir el monto total
+  let remaining = totalAmount
+  const allocations: Array<{ projectId: string; allocatedAmount: number }> = []
+
+  for (const project of sorted) {
+    if (remaining <= 0) break
+
+    // Asignar el mínimo entre el balance pendiente y el monto restante
+    const toAllocate = Math.min(remaining, project.balance)
+
+    allocations.push({
+      projectId: project.id,
+      allocatedAmount: toAllocate,
+    })
+
+    remaining -= toAllocate
+  }
+
+  return allocations
 }

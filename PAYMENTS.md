@@ -434,149 +434,7 @@ Luego valida en DB:
 
 ## 🎨 Componentes UI
 
-### 1. PaymentForm
-
-**Archivo:** `components/forms/payments/payment-form.tsx`
-
-Formulario completo para crear un pago con **2 modos de operación**.
-
-#### Props:
-
-```typescript
-interface PaymentFormProps {
-  customerId: string // Cliente fijo
-  customerName: string // Para mostrar
-  onSubmit: (data: PaymentFormData) => void | Promise<void>
-  isSubmitting?: boolean
-  defaultValues?: Partial<PaymentFormData>
-}
-```
-
-#### Modo 1: Simple (1:1)
-
-**Uso:** Pago completo a un solo proyecto.
-
-```
-┌────────────────────────────────────┐
-│ Pago Simple (1:1)                  │
-├────────────────────────────────────┤
-│ Proyecto         Balance   Acción  │
-│ #2024-001        $300k   [Selec.]  │
-│ #2024-002        $400k   [Selec.]  │
-│ #2024-003        $200k   [Selec.]  │
-└────────────────────────────────────┘
-
-Usuario:
-  1. Ingresa monto: $300,000
-  2. Click "Seleccionar" en #2024-001
-
-Resultado:
-  allocations = [
-    { projectId: '2024-001', allocatedAmount: 300000 }
-  ]
-```
-
-#### Modo 2: Distribuir (1:N)
-
-**Uso:** Distribuir pago entre múltiples proyectos.
-
-```
-┌────────────────────────────────────┐
-│ Distribuir (1:N)  [Calcular FIFO]  │
-├────────────────────────────────────┤
-│ Proyecto   Balance   Monto Asig.  │
-│ #2024-001  $300k     $300k    [X]  │
-│ #2024-002  $400k     $200k    [X]  │
-├────────────────────────────────────┤
-│ Total pago:      $500,000          │
-│ Total asignado:  $500,000 ✅       │
-│ Diferencia:      $0                │
-└────────────────────────────────────┘
-
-Opciones:
-  A. Click "Calcular FIFO" → distribución automática
-  B. Editar manualmente cada monto
-  C. Eliminar filas con [X]
-
-Validación en tiempo real:
-  ✅ Verde: suma = monto total
-  ❌ Rojo: suma ≠ monto total (muestra diferencia)
-```
-
-#### Campos del Formulario:
-
-| Campo          | Tipo     | Requerido   | Validación                  |
-| -------------- | -------- | ----------- | --------------------------- |
-| Cliente        | readonly | -           | Automático del prop         |
-| Monto del Pago | number   | Sí          | > 0, max 2 decimales        |
-| Fecha del Pago | date     | Sí          | Fecha válida                |
-| Método de Pago | select   | Sí          | UUID válido                 |
-| Referencia     | text     | Condicional | Si method.requiresReference |
-| Allocations    | array    | Sí          | Min 1, suma = monto         |
-| Notas          | textarea | No          | Max 500 caracteres          |
-
-#### Validación con Zod:
-
-```typescript
-// lib/validations/payment-validations.ts
-
-const paymentSchema = z
-  .object({
-    customerId: z.string().uuid(),
-    amount: z.coerce.number().positive().multipleOf(0.01),
-    currency: z.string().min(3).max(3),
-    date: z.date(),
-    paymentMethodId: z.string().uuid(),
-    reference: z.string().max(100).trim().optional().nullable(),
-    notes: z.string().max(500).trim().optional().nullable(),
-    allocations: z.array(paymentAllocationSchema).min(1).refine(/* no duplicados */),
-  })
-  .refine(/* suma = amount */)
-```
-
----
-
-### 2. PaymentDialog
-
-**Archivo:** `components/dialogs/payments/payment-dialog.tsx`
-
-Modal wrapper que contiene el `PaymentForm`.
-
-#### Props:
-
-```typescript
-interface PaymentDialogProps {
-  customerId: string
-  customerName: string
-  onSuccess?: () => void
-  children: React.ReactNode // Trigger button
-}
-```
-
-#### Uso:
-
-```tsx
-<PaymentDialog customerId={customer.id} customerName={customer.name} onSuccess={refetchData}>
-  <Button>
-    <Plus className="mr-2 h-4 w-4" />
-    Registrar Pago
-  </Button>
-</PaymentDialog>
-```
-
-#### Flujo Interno:
-
-```
-1. Click en trigger → Abre dialog
-2. Usuario completa formulario
-3. Submit → POST /api/payments
-4. Success → Toast + onSuccess() + Cierra dialog
-5. Error → Toast error + Mantiene dialog abierto
-```
-
----
-
-### 3. PaymentSummaryCard
+### 1. PaymentSummaryCard
 
 **Archivo:** `components/summarys/payment-summary-card.tsx`
 
@@ -587,8 +445,6 @@ Card con resumen financiero de un proyecto.
 ```typescript
 interface PaymentSummaryCardProps {
   projectId: string
-  customerId: string
-  customerName: string
   totalAmount: number | null
   currency: string
 }
@@ -1166,18 +1022,11 @@ allocations = [
 | `lib/validations/payment-validations.ts` | Schemas Zod, calculateProjectBalance() | 1-203  |
 | `lib/payment-fifo.ts`                    | calculateFIFO(), helpers de balance    | 1-138  |
 
-### Componentes UI - Forms
-
-| Archivo                                      | Descripción                            | Líneas |
-| -------------------------------------------- | -------------------------------------- | ------ |
-| `components/forms/payments/payment-form.tsx` | Form con 2 modos (Simple + Distribuir) | 1-602  |
-
 ### Componentes UI - Dialogs
 
-| Archivo                                                  | Descripción                   | Líneas |
-| -------------------------------------------------------- | ----------------------------- | ------ |
-| `components/dialogs/payments/payment-dialog.tsx`         | Modal wrapper para crear pago | -      |
-| `components/dialogs/payments/payment-details-dialog.tsx` | Modal para ver detalles       | -      |
+| Archivo                                                  | Descripción             | Líneas |
+| -------------------------------------------------------- | ----------------------- | ------ |
+| `components/dialogs/payments/payment-details-dialog.tsx` | Modal para ver detalles | -      |
 
 ### Componentes UI - Tables & Cards
 

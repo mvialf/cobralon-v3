@@ -205,8 +205,6 @@ export default async function ProjectDetailPage({ params }: ProjectDetailPagePro
           {/* Resumen de Pagos */}
           <PaymentSummaryCard
             projectId={project.id}
-            customerId={project.customer.id}
-            customerName={project.customer.name}
             totalAmount={project.totalAmount}
             currency={project.currency}
           />

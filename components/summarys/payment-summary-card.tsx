@@ -1,18 +1,16 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import Link from 'next/link'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Progress } from '@/components/ui/progress'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Plus } from 'lucide-react'
-import { PaymentDialog } from '@/components/dialogs/payments/payment-dialog'
 import { calculateProjectBalance } from '@/lib/payment-fifo'
 
 interface PaymentSummaryCardProps {
   projectId: string
-  customerId: string
-  customerName: string
   totalAmount: number | null
   currency: string
 }
@@ -27,13 +25,7 @@ interface PaymentSummaryCardProps {
  * - Progreso visual con barra
  * - Botón para registrar nuevo pago
  */
-export function PaymentSummaryCard({
-  projectId,
-  customerId,
-  customerName,
-  totalAmount,
-  currency,
-}: PaymentSummaryCardProps) {
+export function PaymentSummaryCard({ projectId, totalAmount, currency }: PaymentSummaryCardProps) {
   const [allocations, setAllocations] = useState<
     Array<{ allocatedAmount: number; payment?: { status: string } }>
   >([])
@@ -107,16 +99,12 @@ export function PaymentSummaryCard({
           <CardTitle>Resumen de Pagos</CardTitle>
           <CardDescription>Estado financiero del proyecto</CardDescription>
         </div>
-        <PaymentDialog
-          customerId={customerId}
-          customerName={customerName}
-          onSuccess={fetchAllocations}
-        >
+        <Link href="/payments">
           <Button size="sm">
             <Plus className="mr-2 h-4 w-4" />
             Registrar Pago
           </Button>
-        </PaymentDialog>
+        </Link>
       </CardHeader>
       <CardContent className="space-y-4">
         {/* Total del Proyecto */}
