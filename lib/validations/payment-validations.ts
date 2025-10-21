@@ -200,3 +200,109 @@ export function calculateProjectBalance(project: {
     isFullyPaid,
   }
 }
+
+// ============================================================================
+// SCHEMAS ESPECÍFICOS PARA FLUJOS SIMPLIFICADOS
+// ============================================================================
+
+/**
+ * Schema para "Pago a Proyecto" (1:1)
+ *
+ * Flujo simplificado donde el usuario:
+ * 1. Busca y selecciona un proyecto
+ * 2. El customerId y currency se derivan automáticamente
+ * 3. El monto se asigna 100% al proyecto seleccionado
+ */
+export const paymentToProjectSchema = z.object({
+  // Proyecto seleccionado (required)
+  projectId: z
+    .string({
+      required_error: 'Debe seleccionar un proyecto',
+    })
+    .uuid('ID de proyecto inválido'),
+
+  // Monto del pago
+  amount: z.coerce
+    .number({
+      required_error: 'El monto es obligatorio',
+      invalid_type_error: 'El monto debe ser un número',
+    })
+    .positive('El monto debe ser mayor a 0')
+    .multipleOf(0.01, 'El monto debe tener máximo 2 decimales'),
+
+  // Fecha del pago
+  date: z.date({
+    required_error: 'La fecha es obligatoria',
+    invalid_type_error: 'Fecha inválida',
+  }),
+
+  // Método de pago
+  paymentMethodId: z
+    .string({
+      required_error: 'Debe seleccionar un método de pago',
+    })
+    .uuid('ID de método de pago inválido'),
+
+  // Referencia (opcional, pero requerida si el método lo exige)
+  reference: z
+    .string()
+    .max(100, 'La referencia no puede exceder 100 caracteres')
+    .trim()
+    .optional()
+    .nullable(),
+
+  // Notas adicionales (opcional)
+  notes: z
+    .string()
+    .max(500, 'Las notas no pueden exceder 500 caracteres')
+    .trim()
+    .optional()
+    .nullable(),
+})
+
+/**
+ * Type inferido para el formulario de Pago a Proyecto
+ */
+export type PaymentToProjectFormValues = z.infer<typeof paymentToProjectSchema>
+
+/**
+ * Type para proyecto con balance calculado (usado en search)
+ */
+export type ProjectWithBalance = {
+  id: string
+  projectNumber: string
+  projectName: string | null
+  totalAmount: number
+  currency: string
+  balance: number
+  customer: {
+    id: string
+    name: string
+  }
+}
+
+/**
+ * Helper para convertir form values de "Pago a Proyecto" a payload de API
+ *
+ * Transforma el schema simplificado 1:1 al schema completo del API
+ */
+export function paymentToProjectToPayload(
+  values: PaymentToProjectFormValues,
+  project: ProjectWithBalance
+): CreatePaymentPayload {
+  return {
+    customerId: project.customer.id, // ← Derivado del proyecto
+    amount: values.amount,
+    currency: project.currency, // ← Derivado del proyecto
+    date: values.date,
+    paymentMethodId: values.paymentMethodId,
+    reference: values.reference || null,
+    notes: values.notes || null,
+    allocations: [
+      {
+        projectId: values.projectId,
+        allocatedAmount: values.amount, // ← 100% del monto (1:1)
+      },
+    ],
+  }
+}

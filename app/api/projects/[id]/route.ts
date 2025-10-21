@@ -3,6 +3,50 @@ import { prisma } from '@/lib/db'
 import { Decimal } from '@prisma/client/runtime/library'
 
 /**
+ * GET /api/projects/[id]
+ *
+ * Obtiene un proyecto específico por ID con sus relaciones
+ */
+export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
+  try {
+    const { id } = await params
+
+    const project = await prisma.project.findUnique({
+      where: { id },
+      include: {
+        customer: {
+          select: {
+            id: true,
+            name: true,
+            phone: true,
+          },
+        },
+        projectStatus: {
+          select: {
+            id: true,
+            name: true,
+            color: {
+              select: {
+                bgClass: true,
+              },
+            },
+          },
+        },
+      },
+    })
+
+    if (!project) {
+      return NextResponse.json({ error: 'Proyecto no encontrado' }, { status: 404 })
+    }
+
+    return NextResponse.json(project)
+  } catch (error) {
+    console.error('Error fetching project:', error)
+    return NextResponse.json({ error: 'Error al obtener el proyecto' }, { status: 500 })
+  }
+}
+
+/**
  * PUT /api/projects/[id]
  *
  * Actualiza un proyecto existente

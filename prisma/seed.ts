@@ -29,10 +29,10 @@ async function main() {
 
   // Seed customers
   const customer1 = await prisma.customer.upsert({
-    where: { id: '1' },
+    where: { id: '23fe7dbd-8ddf-4fa5-b565-4e6bbf1c2d3b' },
     update: {},
     create: {
-      id: '1',
+      id: '23fe7dbd-8ddf-4fa5-b565-4e6bbf1c2d3b',
       name: 'Juan Perez',
       phone: '+56912345678',
       email: 'juan.perez@ejemplo.com',
@@ -40,10 +40,10 @@ async function main() {
   })
 
   const customer2 = await prisma.customer.upsert({
-    where: { id: '2' },
+    where: { id: '8f01b08d-a4c5-418c-b624-3d2f5359b29c' },
     update: {},
     create: {
-      id: '2',
+      id: '8f01b08d-a4c5-418c-b624-3d2f5359b29c',
       name: 'Maria Gonzalez',
       phone: '+56987654321',
       email: 'maria.gonzalez@ejemplo.com',
@@ -51,10 +51,10 @@ async function main() {
   })
 
   const customer3 = await prisma.customer.upsert({
-    where: { id: '3' },
+    where: { id: '5aed8825-106f-4054-b564-5bd42028085e' },
     update: {},
     create: {
-      id: '3',
+      id: '5aed8825-106f-4054-b564-5bd42028085e',
       name: 'Pedro Sanchez',
       phone: '+56955555555',
       email: 'pedro.sanchez@ejemplo.com',
@@ -199,10 +199,10 @@ async function main() {
 
   // Cliente 1 (Juan Perez) - 3 proyectos antiguos con balance pendiente
   const project1 = await prisma.project.upsert({
-    where: { id: 'project-1' },
+    where: { id: 'b048e142-9cd1-4fd5-834b-51c865d41048' },
     update: {},
     create: {
-      id: 'project-1',
+      id: 'b048e142-9cd1-4fd5-834b-51c865d41048',
       projectNumber: '2024-001',
       projectName: 'Ventanas Oficina Central',
       customerId: customer1.id,
@@ -225,10 +225,10 @@ async function main() {
   })
 
   const project2 = await prisma.project.upsert({
-    where: { id: 'project-2' },
+    where: { id: 'a95e768c-fc22-4a4a-91b6-f0f55d318efa' },
     update: {},
     create: {
-      id: 'project-2',
+      id: 'a95e768c-fc22-4a4a-91b6-f0f55d318efa',
       projectNumber: '2024-002',
       projectName: 'Puertas Bodega Norte',
       customerId: customer1.id,
@@ -251,10 +251,10 @@ async function main() {
   })
 
   const project3 = await prisma.project.upsert({
-    where: { id: 'project-3' },
+    where: { id: '9304ab76-5508-4c1f-a612-59bbf030b5cb' },
     update: {},
     create: {
-      id: 'project-3',
+      id: '9304ab76-5508-4c1f-a612-59bbf030b5cb',
       projectNumber: '2024-003',
       projectName: 'Ventanas Casa Particular',
       customerId: customer1.id,
@@ -277,15 +277,15 @@ async function main() {
 
   // Cliente 2 (Maria Gonzalez) - 1 proyecto totalmente pagado
   const project4 = await prisma.project.upsert({
-    where: { id: 'project-4' },
+    where: { id: '4de213f6-ccf5-4d66-ac32-37cdb0487e16' },
     update: {},
     create: {
-      id: 'project-4',
+      id: '4de213f6-ccf5-4d66-ac32-37cdb0487e16',
       projectNumber: '2024-004',
       projectName: 'Fachada Completa Edificio',
       customerId: customer2.id,
       phone: customer2.phone,
-      street: 'Av. Libertador Bernardo O\'Higgins 999',
+      street: "Av. Libertador Bernardo O'Higgins 999",
       apartment: null,
       comuna: 'Santiago',
       region: 'Metropolitana de Santiago',
@@ -304,10 +304,10 @@ async function main() {
 
   // Cliente 3 (Pedro Sanchez) - 2 proyectos sin pagos
   const project5 = await prisma.project.upsert({
-    where: { id: 'project-5' },
+    where: { id: '2f2d9ccf-9fb4-468c-893d-7933c1f9d914' },
     update: {},
     create: {
-      id: 'project-5',
+      id: '2f2d9ccf-9fb4-468c-893d-7933c1f9d914',
       projectNumber: '2024-005',
       projectName: 'Ventanas Departamento',
       customerId: customer3.id,
@@ -329,10 +329,10 @@ async function main() {
   })
 
   const project6 = await prisma.project.upsert({
-    where: { id: 'project-6' },
+    where: { id: '4931d40a-8e54-4671-a9c8-456ca9334340' },
     update: {},
     create: {
-      id: 'project-6',
+      id: '4931d40a-8e54-4671-a9c8-456ca9334340',
       projectNumber: '2024-006',
       projectName: 'Puertas Local Comercial',
       customerId: customer3.id,
@@ -364,10 +364,10 @@ async function main() {
 
   // Pago 1 (Cliente 1): $200,000 → Abono parcial a Proyecto #2024-001
   const payment1 = await prisma.payment.upsert({
-    where: { id: 'payment-1' },
+    where: { id: '7b8a6d79-2e10-4ae3-b45a-fa06d5fa38b8' },
     update: {},
     create: {
-      id: 'payment-1',
+      id: '7b8a6d79-2e10-4ae3-b45a-fa06d5fa38b8',
       amount: 200000,
       currency: 'CLP',
       date: new Date('2024-07-15'),
@@ -389,10 +389,10 @@ async function main() {
 
   // Pago 2 (Cliente 1): $500,000 → FIFO: Cierra #2024-001 ($300k) + Abono a #2024-002 ($200k)
   const payment2 = await prisma.payment.upsert({
-    where: { id: 'payment-2' },
+    where: { id: 'e2a0d0dc-d5ad-4cbb-af6f-025b13121a6c' },
     update: {},
     create: {
-      id: 'payment-2',
+      id: 'e2a0d0dc-d5ad-4cbb-af6f-025b13121a6c',
       amount: 500000,
       currency: 'CLP',
       date: new Date('2024-09-10'),
@@ -418,10 +418,10 @@ async function main() {
 
   // Pago 3 (Cliente 2): $800,000 → Cierra completamente #2024-004
   const payment3 = await prisma.payment.upsert({
-    where: { id: 'payment-3' },
+    where: { id: '2b2d5846-de72-42d2-bc61-3041302498cc' },
     update: {},
     create: {
-      id: 'payment-3',
+      id: '2b2d5846-de72-42d2-bc61-3041302498cc',
       amount: 800000,
       currency: 'CLP',
       date: new Date('2024-09-15'),
@@ -443,10 +443,10 @@ async function main() {
 
   // Pago 4 (Cliente 1): $100,000 → Abono adicional a #2024-002 (ya tiene $200k, total $300k)
   const payment4 = await prisma.payment.upsert({
-    where: { id: 'payment-4' },
+    where: { id: 'b168368d-40d1-4503-8f2a-7133beab3eed' },
     update: {},
     create: {
-      id: 'payment-4',
+      id: 'b168368d-40d1-4503-8f2a-7133beab3eed',
       amount: 100000,
       currency: 'CLP',
       date: new Date('2024-10-20'),
@@ -468,10 +468,10 @@ async function main() {
 
   // Pago 5 CANCELADO (Cliente 1): $50,000 → Asignado pero luego cancelado
   const payment5 = await prisma.payment.upsert({
-    where: { id: 'payment-5' },
+    where: { id: '941ea1aa-1cea-4bee-948b-a6ca96430574' },
     update: {},
     create: {
-      id: 'payment-5',
+      id: '941ea1aa-1cea-4bee-948b-a6ca96430574',
       amount: 50000,
       currency: 'CLP',
       date: new Date('2024-10-25'),
