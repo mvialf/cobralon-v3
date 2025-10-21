@@ -1,0 +1,982 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>User Flow - Sistema de Pagos Cobralon</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+      .flow-step {
+        position: relative;
+        padding: 1.5rem;
+        background: white;
+        border-radius: 0.5rem;
+        box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1);
+        transition: all 0.2s;
+      }
+      .flow-step:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+      }
+      .flow-connector {
+        height: 2rem;
+        width: 2px;
+        background: linear-gradient(to bottom, #06b6d4, #0891b2);
+        margin: 0 auto;
+      }
+      .flow-icon {
+        width: 3rem;
+        height: 3rem;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: bold;
+        font-size: 1.25rem;
+      }
+      .tab-button {
+        transition: all 0.2s;
+      }
+      .tab-button.active {
+        background: linear-gradient(to right, #06b6d4, #0891b2);
+        color: white;
+      }
+      .code-block {
+        background: #1e293b;
+        color: #e2e8f0;
+        padding: 1rem;
+        border-radius: 0.375rem;
+        font-family: 'Courier New', monospace;
+        font-size: 0.875rem;
+        overflow-x: auto;
+      }
+    </style>
+  </head>
+  <body class="bg-gradient-to-br from-slate-50 to-slate-100 min-h-screen">
+    <!-- Header -->
+    <header class="bg-white shadow-md sticky top-0 z-50">
+      <div class="max-w-7xl mx-auto px-4 py-6">
+        <h1 class="text-3xl font-bold bg-gradient-to-r from-cyan-600 to-cyan-800 bg-clip-text text-transparent">
+          User Flow - Sistema de Pagos
+        </h1>
+        <p class="text-slate-600 mt-1">Visualización de flujos de usuario del sistema de gestión de pagos</p>
+      </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="max-w-7xl mx-auto px-4 py-8">
+      <!-- Tabs Navigation -->
+      <div class="bg-white rounded-lg shadow-md p-2 mb-8">
+        <div class="flex flex-wrap gap-2">
+          <button onclick="showFlow(1)" id="tab-1" class="tab-button active flex-1 min-w-[200px] px-4 py-3 rounded-md font-medium">
+            🎯 Pago Simple (1:1)
+          </button>
+          <button onclick="showFlow(2)" id="tab-2" class="tab-button flex-1 min-w-[200px] px-4 py-3 rounded-md font-medium hover:bg-slate-100">
+            🔄 Pago FIFO Automático
+          </button>
+          <button onclick="showFlow(3)" id="tab-3" class="tab-button flex-1 min-w-[200px] px-4 py-3 rounded-md font-medium hover:bg-slate-100">
+            ❌ Anulación de Pago
+          </button>
+          <button onclick="showFlow(4)" id="tab-4" class="tab-button flex-1 min-w-[200px] px-4 py-3 rounded-md font-medium hover:bg-slate-100">
+            ✏️ Corrección Manual
+          </button>
+        </div>
+      </div>
+
+      <!-- Flow 1: Pago Simple -->
+      <div id="flow-1" class="flow-container">
+        <div class="bg-white rounded-lg shadow-lg p-8 mb-6">
+          <h2 class="text-2xl font-bold text-slate-800 mb-4">Flujo 1: Pago Simple a un Proyecto</h2>
+          <p class="text-slate-600 mb-6">Proceso completo para registrar un pago a un único proyecto.</p>
+
+          <!-- Flow Steps -->
+          <div class="space-y-4">
+            <!-- Step 1 -->
+            <div class="flow-step border-l-4 border-cyan-500">
+              <div class="flex items-start gap-4">
+                <div class="flow-icon bg-gradient-to-br from-cyan-500 to-cyan-600 text-white">1</div>
+                <div class="flex-1">
+                  <h3 class="font-bold text-lg text-slate-800">Usuario inicia acción</h3>
+                  <p class="text-slate-600 mt-1">Click en "Registrar Pago" desde la página del proyecto</p>
+                  <div class="mt-2 text-sm text-slate-500">
+                    📍 Ubicación: <code class="bg-slate-100 px-2 py-1 rounded">PaymentSummaryCard → Button</code>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="flow-connector"></div>
+
+            <!-- Step 2 -->
+            <div class="flow-step border-l-4 border-cyan-500">
+              <div class="flex items-start gap-4">
+                <div class="flow-icon bg-gradient-to-br from-cyan-500 to-cyan-600 text-white">2</div>
+                <div class="flex-1">
+                  <h3 class="font-bold text-lg text-slate-800">PaymentDialog se abre</h3>
+                  <p class="text-slate-600 mt-1">Modal con PaymentForm en modo "Simple"</p>
+                  <div class="mt-2 p-3 bg-slate-50 rounded">
+                    <p class="text-sm font-medium text-slate-700">Props iniciales:</p>
+                    <ul class="text-sm text-slate-600 mt-1 list-disc list-inside">
+                      <li>customerId: del proyecto</li>
+                      <li>customerName: para display</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="flow-connector"></div>
+
+            <!-- Step 3 -->
+            <div class="flow-step border-l-4 border-cyan-500">
+              <div class="flex items-start gap-4">
+                <div class="flow-icon bg-gradient-to-br from-cyan-500 to-cyan-600 text-white">3</div>
+                <div class="flex-1">
+                  <h3 class="font-bold text-lg text-slate-800">Usuario completa formulario</h3>
+                  <p class="text-slate-600 mt-1">Ingresa datos del pago en modo Simple</p>
+                  <div class="mt-3 space-y-2">
+                    <div class="flex items-center gap-2 text-sm">
+                      <span class="w-6 h-6 rounded-full bg-green-100 text-green-700 flex items-center justify-center font-bold">✓</span>
+                      <span>Monto: <strong>$300,000</strong></span>
+                    </div>
+                    <div class="flex items-center gap-2 text-sm">
+                      <span class="w-6 h-6 rounded-full bg-green-100 text-green-700 flex items-center justify-center font-bold">✓</span>
+                      <span>Método: <strong>Transferencia</strong></span>
+                    </div>
+                    <div class="flex items-center gap-2 text-sm">
+                      <span class="w-6 h-6 rounded-full bg-green-100 text-green-700 flex items-center justify-center font-bold">✓</span>
+                      <span>Referencia: <strong>TRX-123456</strong></span>
+                    </div>
+                    <div class="flex items-center gap-2 text-sm">
+                      <span class="w-6 h-6 rounded-full bg-green-100 text-green-700 flex items-center justify-center font-bold">✓</span>
+                      <span>Click en proyecto: <strong>#2024-001</strong></span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="flow-connector"></div>
+
+            <!-- Step 4 -->
+            <div class="flow-step border-l-4 border-cyan-500">
+              <div class="flex items-start gap-4">
+                <div class="flow-icon bg-gradient-to-br from-cyan-500 to-cyan-600 text-white">4</div>
+                <div class="flex-1">
+                  <h3 class="font-bold text-lg text-slate-800">Submit del formulario</h3>
+                  <p class="text-slate-600 mt-1">POST /api/payments con payload validado</p>
+                  <div class="code-block mt-3">
+POST /api/payments
+Body: {
+  customerId: "abc-123",
+  amount: 300000,
+  currency: "CLP",
+  date: "2024-11-05",
+  paymentMethodId: "xyz-789",
+  reference: "TRX-123456",
+  allocations: [
+    {
+      projectId: "2024-001",
+      allocatedAmount: 300000
+    }
+  ]
+}
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="flow-connector"></div>
+
+            <!-- Step 5 -->
+            <div class="flow-step border-l-4 border-amber-500">
+              <div class="flex items-start gap-4">
+                <div class="flow-icon bg-gradient-to-br from-amber-500 to-amber-600 text-white">5</div>
+                <div class="flex-1">
+                  <h3 class="font-bold text-lg text-slate-800">Validaciones API (14 checks)</h3>
+                  <p class="text-slate-600 mt-1">Sistema ejecuta validaciones automáticas</p>
+                  <div class="mt-3 grid grid-cols-1 md:grid-cols-2 gap-2">
+                    <div class="text-sm p-2 bg-green-50 rounded border border-green-200">✅ customerId: UUID válido</div>
+                    <div class="text-sm p-2 bg-green-50 rounded border border-green-200">✅ amount > 0</div>
+                    <div class="text-sm p-2 bg-green-50 rounded border border-green-200">✅ currency: 3 letras</div>
+                    <div class="text-sm p-2 bg-green-50 rounded border border-green-200">✅ Customer existe en DB</div>
+                    <div class="text-sm p-2 bg-green-50 rounded border border-green-200">✅ PaymentMethod existe</div>
+                    <div class="text-sm p-2 bg-green-50 rounded border border-green-200">✅ Proyecto existe y pertenece al cliente</div>
+                    <div class="text-sm p-2 bg-green-50 rounded border border-green-200">✅ Suma allocations = amount</div>
+                    <div class="text-sm p-2 bg-green-50 rounded border border-green-200">✅ Reference provisto (requerido)</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="flow-connector"></div>
+
+            <!-- Step 6 -->
+            <div class="flow-step border-l-4 border-green-500">
+              <div class="flex items-start gap-4">
+                <div class="flow-icon bg-gradient-to-br from-green-500 to-green-600 text-white">6</div>
+                <div class="flex-1">
+                  <h3 class="font-bold text-lg text-slate-800">✅ Success - Pago creado</h3>
+                  <p class="text-slate-600 mt-1">Payment y PaymentAllocation creados en DB</p>
+                  <div class="mt-3 p-4 bg-green-50 border border-green-200 rounded">
+                    <p class="font-medium text-green-800">Entidades creadas:</p>
+                    <ul class="mt-2 space-y-1 text-sm text-green-700">
+                      <li>→ <strong>Payment</strong>: $300,000 (status: ACTIVE)</li>
+                      <li>→ <strong>PaymentAllocation</strong>: $300,000 → Proyecto #2024-001</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="flow-connector"></div>
+
+            <!-- Step 7 -->
+            <div class="flow-step border-l-4 border-blue-500">
+              <div class="flex items-start gap-4">
+                <div class="flow-icon bg-gradient-to-br from-blue-500 to-blue-600 text-white">7</div>
+                <div class="flex-1">
+                  <h3 class="font-bold text-lg text-slate-800">Toast + Refetch</h3>
+                  <p class="text-slate-600 mt-1">Feedback al usuario y actualización de UI</p>
+                  <div class="mt-3 space-y-2">
+                    <div class="p-3 bg-blue-50 border border-blue-200 rounded">
+                      <p class="text-sm font-medium text-blue-800">🎉 Toast: "Pago registrado exitosamente"</p>
+                    </div>
+                    <div class="p-3 bg-slate-50 border border-slate-200 rounded">
+                      <p class="text-sm font-medium text-slate-700">onSuccess() ejecutado:</p>
+                      <ul class="text-sm text-slate-600 mt-1 list-disc list-inside">
+                        <li>PaymentSummaryCard refetch → Balance actualizado</li>
+                        <li>ProjectPaymentsTable refetch → Nuevo pago visible</li>
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Final State -->
+            <div class="mt-6 p-6 bg-gradient-to-br from-cyan-50 to-blue-50 rounded-lg border-2 border-cyan-200">
+              <h4 class="font-bold text-lg text-cyan-900 mb-3">🎯 Estado Final del Proyecto</h4>
+              <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div class="p-3 bg-white rounded shadow-sm">
+                  <p class="text-xs text-slate-500 uppercase">Total Proyecto</p>
+                  <p class="text-xl font-bold text-slate-800">$500,000</p>
+                </div>
+                <div class="p-3 bg-white rounded shadow-sm">
+                  <p class="text-xs text-slate-500 uppercase">Total Pagado</p>
+                  <p class="text-xl font-bold text-green-600">$300,000</p>
+                </div>
+                <div class="p-3 bg-white rounded shadow-sm">
+                  <p class="text-xs text-slate-500 uppercase">Balance Pendiente</p>
+                  <p class="text-xl font-bold text-amber-600">$200,000</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Flow 2: FIFO Automático -->
+      <div id="flow-2" class="flow-container hidden">
+        <div class="bg-white rounded-lg shadow-lg p-8 mb-6">
+          <h2 class="text-2xl font-bold text-slate-800 mb-4">Flujo 2: Pago con FIFO Automático</h2>
+          <p class="text-slate-600 mb-6">Distribución automática de un pago entre múltiples proyectos usando algoritmo FIFO.</p>
+
+          <!-- Context Box -->
+          <div class="mb-6 p-4 bg-blue-50 border-l-4 border-blue-500 rounded">
+            <p class="font-medium text-blue-900">Contexto inicial:</p>
+            <p class="text-sm text-blue-700 mt-2">Cliente tiene 3 proyectos pendientes ordenados por fecha (más antiguo primero):</p>
+            <div class="mt-3 space-y-2">
+              <div class="flex justify-between text-sm bg-white p-2 rounded">
+                <span><strong>#2024-001</strong> (Jun)</span>
+                <span class="text-amber-600 font-medium">Balance: $300,000</span>
+              </div>
+              <div class="flex justify-between text-sm bg-white p-2 rounded">
+                <span><strong>#2024-002</strong> (Ago)</span>
+                <span class="text-amber-600 font-medium">Balance: $400,000</span>
+              </div>
+              <div class="flex justify-between text-sm bg-white p-2 rounded">
+                <span><strong>#2024-003</strong> (Oct)</span>
+                <span class="text-amber-600 font-medium">Balance: $300,000</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Flow Steps -->
+          <div class="space-y-4">
+            <!-- Step 1 -->
+            <div class="flow-step border-l-4 border-purple-500">
+              <div class="flex items-start gap-4">
+                <div class="flow-icon bg-gradient-to-br from-purple-500 to-purple-600 text-white">1</div>
+                <div class="flex-1">
+                  <h3 class="font-bold text-lg text-slate-800">Usuario abre PaymentDialog</h3>
+                  <p class="text-slate-600 mt-1">Selecciona modo "Distribuir (1:N)" en el formulario</p>
+                </div>
+              </div>
+            </div>
+            <div class="flow-connector"></div>
+
+            <!-- Step 2 -->
+            <div class="flow-step border-l-4 border-purple-500">
+              <div class="flex items-start gap-4">
+                <div class="flow-icon bg-gradient-to-br from-purple-500 to-purple-600 text-white">2</div>
+                <div class="flex-1">
+                  <h3 class="font-bold text-lg text-slate-800">Ingresa monto y método</h3>
+                  <div class="mt-3 space-y-2">
+                    <div class="flex items-center gap-2 text-sm">
+                      <span class="w-6 h-6 rounded-full bg-green-100 text-green-700 flex items-center justify-center font-bold">✓</span>
+                      <span>Monto: <strong>$500,000</strong></span>
+                    </div>
+                    <div class="flex items-center gap-2 text-sm">
+                      <span class="w-6 h-6 rounded-full bg-green-100 text-green-700 flex items-center justify-center font-bold">✓</span>
+                      <span>Método: <strong>Efectivo</strong></span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="flow-connector"></div>
+
+            <!-- Step 3 -->
+            <div class="flow-step border-l-4 border-purple-500">
+              <div class="flex items-start gap-4">
+                <div class="flow-icon bg-gradient-to-br from-purple-500 to-purple-600 text-white">3</div>
+                <div class="flex-1">
+                  <h3 class="font-bold text-lg text-slate-800">Click "Calcular FIFO"</h3>
+                  <p class="text-slate-600 mt-1">Sistema ejecuta algoritmo FIFO automáticamente</p>
+                  <div class="code-block mt-3">
+calculateFIFO(500000, [
+  { id: '#2024-001', balance: 300000, date: 'Jun' },
+  { id: '#2024-002', balance: 400000, date: 'Ago' },
+  { id: '#2024-003', balance: 300000, date: 'Oct' }
+])
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="flow-connector"></div>
+
+            <!-- Step 4: FIFO Algorithm -->
+            <div class="flow-step border-l-4 border-indigo-500">
+              <div class="flex items-start gap-4">
+                <div class="flow-icon bg-gradient-to-br from-indigo-500 to-indigo-600 text-white">4</div>
+                <div class="flex-1">
+                  <h3 class="font-bold text-lg text-slate-800">Algoritmo FIFO ejecuta</h3>
+                  <p class="text-slate-600 mt-1">Distribución automática por antigüedad</p>
+                  <div class="mt-4 space-y-3">
+                    <!-- Iteration 1 -->
+                    <div class="p-4 bg-indigo-50 rounded border border-indigo-200">
+                      <p class="font-medium text-indigo-900">Step 1: Proyecto más antiguo (#2024-001)</p>
+                      <div class="mt-2 space-y-1 text-sm text-indigo-700">
+                        <p>→ Balance: $300,000</p>
+                        <p>→ Remaining: $500,000</p>
+                        <p>→ <strong>Asignar: $300,000</strong> (cierra completo ✅)</p>
+                        <p>→ Remaining after: <strong>$200,000</strong></p>
+                      </div>
+                    </div>
+                    <!-- Iteration 2 -->
+                    <div class="p-4 bg-indigo-50 rounded border border-indigo-200">
+                      <p class="font-medium text-indigo-900">Step 2: Segundo proyecto (#2024-002)</p>
+                      <div class="mt-2 space-y-1 text-sm text-indigo-700">
+                        <p>→ Balance: $400,000</p>
+                        <p>→ Remaining: $200,000</p>
+                        <p>→ <strong>Asignar: $200,000</strong> (abono parcial ⚠️)</p>
+                        <p>→ Remaining after: <strong>$0</strong></p>
+                      </div>
+                    </div>
+                    <!-- Iteration 3 -->
+                    <div class="p-4 bg-slate-100 rounded border border-slate-300">
+                      <p class="font-medium text-slate-700">Step 3: Tercer proyecto (#2024-003)</p>
+                      <div class="mt-2 space-y-1 text-sm text-slate-600">
+                        <p>→ Remaining: $0</p>
+                        <p>→ <strong>Skip</strong> (sin fondos disponibles)</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="flow-connector"></div>
+
+            <!-- Step 5 -->
+            <div class="flow-step border-l-4 border-purple-500">
+              <div class="flex items-start gap-4">
+                <div class="flow-icon bg-gradient-to-br from-purple-500 to-purple-600 text-white">5</div>
+                <div class="flex-1">
+                  <h3 class="font-bold text-lg text-slate-800">Tabla muestra allocations calculadas</h3>
+                  <p class="text-slate-600 mt-1">Usuario puede editar manualmente si lo desea</p>
+                  <div class="mt-3 overflow-x-auto">
+                    <table class="min-w-full border border-slate-200 text-sm">
+                      <thead class="bg-slate-100">
+                        <tr>
+                          <th class="border px-4 py-2 text-left">Proyecto</th>
+                          <th class="border px-4 py-2 text-right">Balance</th>
+                          <th class="border px-4 py-2 text-right">Monto Asignado</th>
+                          <th class="border px-4 py-2 text-center">Estado</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr>
+                          <td class="border px-4 py-2">#2024-001</td>
+                          <td class="border px-4 py-2 text-right">$300,000</td>
+                          <td class="border px-4 py-2 text-right font-bold text-green-600">$300,000</td>
+                          <td class="border px-4 py-2 text-center">✅ Completo</td>
+                        </tr>
+                        <tr>
+                          <td class="border px-4 py-2">#2024-002</td>
+                          <td class="border px-4 py-2 text-right">$400,000</td>
+                          <td class="border px-4 py-2 text-right font-bold text-amber-600">$200,000</td>
+                          <td class="border px-4 py-2 text-center">⚠️ Parcial</td>
+                        </tr>
+                        <tr class="bg-slate-50">
+                          <td class="border px-4 py-2" colspan="2"><strong>Total Pago</strong></td>
+                          <td class="border px-4 py-2 text-right font-bold text-cyan-600">$500,000</td>
+                          <td class="border px-4 py-2 text-center text-green-600 font-bold">✅ OK</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="flow-connector"></div>
+
+            <!-- Step 6 -->
+            <div class="flow-step border-l-4 border-purple-500">
+              <div class="flex items-start gap-4">
+                <div class="flow-icon bg-gradient-to-br from-purple-500 to-purple-600 text-white">6</div>
+                <div class="flex-1">
+                  <h3 class="font-bold text-lg text-slate-800">Submit → POST /api/payments</h3>
+                  <div class="code-block mt-3">
+POST /api/payments
+Body: {
+  customerId: "customer-1",
+  amount: 500000,
+  currency: "CLP",
+  date: "2024-09-10",
+  paymentMethodId: "efectivo-id",
+  allocations: [
+    { projectId: "2024-001", allocatedAmount: 300000 },
+    { projectId: "2024-002", allocatedAmount: 200000 }
+  ]
+}
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="flow-connector"></div>
+
+            <!-- Step 7 -->
+            <div class="flow-step border-l-4 border-green-500">
+              <div class="flex items-start gap-4">
+                <div class="flow-icon bg-gradient-to-br from-green-500 to-green-600 text-white">7</div>
+                <div class="flex-1">
+                  <h3 class="font-bold text-lg text-slate-800">✅ Success - 2 allocations creadas</h3>
+                  <div class="mt-3 p-4 bg-green-50 border border-green-200 rounded">
+                    <p class="font-medium text-green-800">Entidades creadas:</p>
+                    <ul class="mt-2 space-y-1 text-sm text-green-700">
+                      <li>→ <strong>Payment</strong>: $500,000 (status: ACTIVE)</li>
+                      <li>→ <strong>PaymentAllocation</strong>: $300,000 → #2024-001</li>
+                      <li>→ <strong>PaymentAllocation</strong>: $200,000 → #2024-002</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Final State -->
+            <div class="mt-6 p-6 bg-gradient-to-br from-purple-50 to-indigo-50 rounded-lg border-2 border-purple-200">
+              <h4 class="font-bold text-lg text-purple-900 mb-3">🎯 Estado Final de Proyectos</h4>
+              <div class="space-y-3">
+                <div class="p-3 bg-white rounded shadow-sm flex justify-between items-center">
+                  <span class="font-medium">#2024-001</span>
+                  <span class="text-green-600 font-bold">Balance: $0 (Pagado completo ✅)</span>
+                </div>
+                <div class="p-3 bg-white rounded shadow-sm flex justify-between items-center">
+                  <span class="font-medium">#2024-002</span>
+                  <span class="text-amber-600 font-bold">Balance: $200,000 (Pendiente)</span>
+                </div>
+                <div class="p-3 bg-white rounded shadow-sm flex justify-between items-center">
+                  <span class="font-medium">#2024-003</span>
+                  <span class="text-amber-600 font-bold">Balance: $300,000 (Sin cambios)</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Flow 3: Anulación de Pago -->
+      <div id="flow-3" class="flow-container hidden">
+        <div class="bg-white rounded-lg shadow-lg p-8 mb-6">
+          <h2 class="text-2xl font-bold text-slate-800 mb-4">Flujo 3: Anulación de Pago</h2>
+          <p class="text-slate-600 mb-6">Proceso de soft delete de un pago con auditoría completa.</p>
+
+          <!-- Context Box -->
+          <div class="mb-6 p-4 bg-red-50 border-l-4 border-red-500 rounded">
+            <p class="font-medium text-red-900">Caso de uso:</p>
+            <p class="text-sm text-red-700 mt-2">Se detectó un pago duplicado que debe ser anulado. El sistema mantiene auditoría completa.</p>
+          </div>
+
+          <!-- Flow Steps -->
+          <div class="space-y-4">
+            <!-- Step 1 -->
+            <div class="flow-step border-l-4 border-red-500">
+              <div class="flex items-start gap-4">
+                <div class="flow-icon bg-gradient-to-br from-red-500 to-red-600 text-white">1</div>
+                <div class="flex-1">
+                  <h3 class="font-bold text-lg text-slate-800">Usuario identifica error</h3>
+                  <p class="text-slate-600 mt-1">En ProjectPaymentsTable encuentra pago incorrecto</p>
+                  <div class="mt-3 p-3 bg-red-50 rounded border border-red-200">
+                    <p class="text-sm font-medium text-red-800">Pago erróneo detectado:</p>
+                    <ul class="mt-2 space-y-1 text-sm text-red-700">
+                      <li>→ ID: payment-5</li>
+                      <li>→ Monto: $50,000</li>
+                      <li>→ Fecha: 25/Oct/2024</li>
+                      <li>→ Referencia: TRX-CANCEL123</li>
+                      <li>→ Status: <strong>ACTIVE</strong></li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="flow-connector"></div>
+
+            <!-- Step 2 -->
+            <div class="flow-step border-l-4 border-red-500">
+              <div class="flex items-start gap-4">
+                <div class="flow-icon bg-gradient-to-br from-red-500 to-red-600 text-white">2</div>
+                <div class="flex-1">
+                  <h3 class="font-bold text-lg text-slate-800">Click botón "Anular"</h3>
+                  <p class="text-slate-600 mt-1">Solo visible si status === 'ACTIVE'</p>
+                  <div class="mt-2 text-sm text-slate-500">
+                    📍 Ubicación: <code class="bg-slate-100 px-2 py-1 rounded">ProjectPaymentsTable → Action Button</code>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="flow-connector"></div>
+
+            <!-- Step 3 -->
+            <div class="flow-step border-l-4 border-red-500">
+              <div class="flex items-start gap-4">
+                <div class="flow-icon bg-gradient-to-br from-red-500 to-red-600 text-white">3</div>
+                <div class="flex-1">
+                  <h3 class="font-bold text-lg text-slate-800">AlertDialog se abre</h3>
+                  <p class="text-slate-600 mt-1">Confirmación con detalles del pago y textarea para razón</p>
+                  <div class="mt-3 p-4 bg-slate-50 rounded border border-slate-200">
+                    <p class="font-medium text-slate-800 text-center mb-3">⚠️ ¿Anular este pago?</p>
+                    <p class="text-sm text-slate-600 text-center mb-4">Esta acción no se puede deshacer.</p>
+                    <div class="space-y-2 text-sm">
+                      <p><strong>Monto:</strong> $50,000</p>
+                      <p><strong>Método:</strong> Transferencia</p>
+                      <p><strong>Fecha:</strong> 25/Oct/2024</p>
+                    </div>
+                    <div class="mt-4">
+                      <label class="block text-sm font-medium text-slate-700 mb-1">Razón de anulación (opcional):</label>
+                      <textarea class="w-full border border-slate-300 rounded p-2 text-sm" rows="2" placeholder="Ej: Pago duplicado - error de ingreso"></textarea>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="flow-connector"></div>
+
+            <!-- Step 4 -->
+            <div class="flow-step border-l-4 border-red-500">
+              <div class="flex items-start gap-4">
+                <div class="flow-icon bg-gradient-to-br from-red-500 to-red-600 text-white">4</div>
+                <div class="flex-1">
+                  <h3 class="font-bold text-lg text-slate-800">Usuario confirma anulación</h3>
+                  <p class="text-slate-600 mt-1">Ingresa razón y click "Anular Pago"</p>
+                  <div class="code-block mt-3">
+POST /api/payments/payment-5/cancel
+Body: {
+  reason: "Error en transferencia - fondos devueltos"
+}
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="flow-connector"></div>
+
+            <!-- Step 5 -->
+            <div class="flow-step border-l-4 border-amber-500">
+              <div class="flex items-start gap-4">
+                <div class="flow-icon bg-gradient-to-br from-amber-500 to-amber-600 text-white">5</div>
+                <div class="flex-1">
+                  <h3 class="font-bold text-lg text-slate-800">API ejecuta soft delete</h3>
+                  <p class="text-slate-600 mt-1">UPDATE (no DELETE) - mantiene auditoría</p>
+                  <div class="code-block mt-3">
+UPDATE payment
+SET
+  status = 'CANCELLED',
+  cancelledAt = NOW(),
+  cancelledReason = 'Error en transferencia - fondos devueltos'
+WHERE id = 'payment-5'
+
+-- ❗ NO se elimina PaymentAllocation
+-- calculateProjectBalance() ignorará este allocation
+                  </div>
+                  <div class="mt-3 p-3 bg-amber-50 rounded border border-amber-200">
+                    <p class="text-sm font-medium text-amber-800">⚠️ Importante:</p>
+                    <ul class="mt-1 text-sm text-amber-700 list-disc list-inside">
+                      <li>No hard delete - registro permanece en DB</li>
+                      <li>PaymentAllocation NO se elimina</li>
+                      <li>Auditoría completa mantenida</li>
+                      <li>Cambio es irreversible (no hay "reactivar")</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="flow-connector"></div>
+
+            <!-- Step 6 -->
+            <div class="flow-step border-l-4 border-green-500">
+              <div class="flex items-start gap-4">
+                <div class="flow-icon bg-gradient-to-br from-green-500 to-green-600 text-white">6</div>
+                <div class="flex-1">
+                  <h3 class="font-bold text-lg text-slate-800">✅ Success - Toast + Refetch</h3>
+                  <div class="mt-3 space-y-2">
+                    <div class="p-3 bg-green-50 border border-green-200 rounded">
+                      <p class="text-sm font-medium text-green-800">🎉 Toast: "Pago anulado exitosamente"</p>
+                    </div>
+                    <div class="p-3 bg-slate-50 border border-slate-200 rounded">
+                      <p class="text-sm font-medium text-slate-700">Refetch payments ejecutado</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="flow-connector"></div>
+
+            <!-- Step 7 -->
+            <div class="flow-step border-l-4 border-blue-500">
+              <div class="flex items-start gap-4">
+                <div class="flow-icon bg-gradient-to-br from-blue-500 to-blue-600 text-white">7</div>
+                <div class="flex-1">
+                  <h3 class="font-bold text-lg text-slate-800">UI actualiza automáticamente</h3>
+                  <p class="text-slate-600 mt-1">Cambios visuales en tabla y balance</p>
+                  <div class="mt-3 space-y-3">
+                    <div class="p-3 bg-blue-50 rounded border border-blue-200">
+                      <p class="text-sm font-medium text-blue-800">ProjectPaymentsTable:</p>
+                      <ul class="mt-2 space-y-1 text-sm text-blue-700">
+                        <li>→ Badge cambia: <span class="bg-green-100 text-green-700 px-2 py-0.5 rounded">Activo</span> → <span class="bg-red-100 text-red-700 px-2 py-0.5 rounded">Anulado</span></li>
+                        <li>→ Botón "Anular" desaparece</li>
+                        <li>→ Tooltip muestra cancelReason</li>
+                      </ul>
+                    </div>
+                    <div class="p-3 bg-blue-50 rounded border border-blue-200">
+                      <p class="text-sm font-medium text-blue-800">PaymentSummaryCard:</p>
+                      <ul class="mt-2 space-y-1 text-sm text-blue-700">
+                        <li>→ <code>calculateProjectBalance()</code> ejecuta</li>
+                        <li>→ Ignora allocation de pago CANCELLED</li>
+                        <li>→ Balance aumenta automáticamente</li>
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Final State Comparison -->
+            <div class="mt-6 p-6 bg-gradient-to-br from-red-50 to-pink-50 rounded-lg border-2 border-red-200">
+              <h4 class="font-bold text-lg text-red-900 mb-3">🔄 Comparación Antes/Después</h4>
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <p class="font-medium text-slate-700 mb-2">Antes (con pago erróneo):</p>
+                  <div class="space-y-2">
+                    <div class="p-2 bg-white rounded text-sm">
+                      <p class="text-slate-600">Total pagado:</p>
+                      <p class="font-bold text-slate-800">$350,000</p>
+                      <p class="text-xs text-slate-500">(200k + 100k + 50k)</p>
+                    </div>
+                    <div class="p-2 bg-white rounded text-sm">
+                      <p class="text-slate-600">Balance pendiente:</p>
+                      <p class="font-bold text-red-600">$50,000</p>
+                    </div>
+                  </div>
+                </div>
+                <div>
+                  <p class="font-medium text-slate-700 mb-2">Después (corregido):</p>
+                  <div class="space-y-2">
+                    <div class="p-2 bg-white rounded text-sm">
+                      <p class="text-slate-600">Total pagado:</p>
+                      <p class="font-bold text-green-600">$300,000</p>
+                      <p class="text-xs text-slate-500">(200k + 100k)</p>
+                    </div>
+                    <div class="p-2 bg-white rounded text-sm">
+                      <p class="text-slate-600">Balance pendiente:</p>
+                      <p class="font-bold text-green-600">$100,000 ✅</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Flow 4: Corrección Manual -->
+      <div id="flow-4" class="flow-container hidden">
+        <div class="bg-white rounded-lg shadow-lg p-8 mb-6">
+          <h2 class="text-2xl font-bold text-slate-800 mb-4">Flujo 4: Corrección Manual de Distribución</h2>
+          <p class="text-slate-600 mb-6">Usuario prefiere distribución diferente a la sugerida por FIFO.</p>
+
+          <!-- Context Box -->
+          <div class="mb-6 p-4 bg-purple-50 border-l-4 border-purple-500 rounded">
+            <p class="font-medium text-purple-900">Escenario:</p>
+            <p class="text-sm text-purple-700 mt-2">FIFO sugiere una distribución, pero el usuario tiene preferencia estratégica diferente.</p>
+          </div>
+
+          <!-- Flow Steps -->
+          <div class="space-y-4">
+            <!-- Step 1 -->
+            <div class="flow-step border-l-4 border-violet-500">
+              <div class="flex items-start gap-4">
+                <div class="flow-icon bg-gradient-to-br from-violet-500 to-violet-600 text-white">1</div>
+                <div class="flex-1">
+                  <h3 class="font-bold text-lg text-slate-800">Modo "Distribuir (1:N)"</h3>
+                  <p class="text-slate-600 mt-1">Usuario ingresa monto del pago</p>
+                  <div class="mt-2 flex items-center gap-2 text-sm">
+                    <span class="w-6 h-6 rounded-full bg-green-100 text-green-700 flex items-center justify-center font-bold">✓</span>
+                    <span>Monto: <strong>$400,000</strong></span>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="flow-connector"></div>
+
+            <!-- Step 2 -->
+            <div class="flow-step border-l-4 border-violet-500">
+              <div class="flex items-start gap-4">
+                <div class="flow-icon bg-gradient-to-br from-violet-500 to-violet-600 text-white">2</div>
+                <div class="flex-1">
+                  <h3 class="font-bold text-lg text-slate-800">Click "Calcular FIFO"</h3>
+                  <p class="text-slate-600 mt-1">Sistema genera sugerencia automática</p>
+                  <div class="mt-3 p-4 bg-indigo-50 rounded border border-indigo-200">
+                    <p class="font-medium text-indigo-900">FIFO sugiere:</p>
+                    <div class="mt-2 space-y-2 text-sm">
+                      <div class="flex justify-between bg-white p-2 rounded">
+                        <span>#2024-001</span>
+                        <span class="font-bold text-indigo-700">$300,000</span>
+                      </div>
+                      <div class="flex justify-between bg-white p-2 rounded">
+                        <span>#2024-002</span>
+                        <span class="font-bold text-indigo-700">$100,000</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="flow-connector"></div>
+
+            <!-- Step 3 -->
+            <div class="flow-step border-l-4 border-amber-500">
+              <div class="flex items-start gap-4">
+                <div class="flow-icon bg-gradient-to-br from-amber-500 to-amber-600 text-white">3</div>
+                <div class="flex-1">
+                  <h3 class="font-bold text-lg text-slate-800">❌ Usuario prefiere otra distribución</h3>
+                  <p class="text-slate-600 mt-1">Edita manualmente los montos asignados</p>
+                  <div class="mt-3 p-3 bg-amber-50 rounded border border-amber-200">
+                    <p class="text-sm font-medium text-amber-800">Razón del cambio:</p>
+                    <p class="text-sm text-amber-700 mt-1">"Quiero abonar más al proyecto #2024-002 porque es más urgente"</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="flow-connector"></div>
+
+            <!-- Step 4 -->
+            <div class="flow-step border-l-4 border-violet-500">
+              <div class="flex items-start gap-4">
+                <div class="flow-icon bg-gradient-to-br from-violet-500 to-violet-600 text-white">4</div>
+                <div class="flex-1">
+                  <h3 class="font-bold text-lg text-slate-800">Edición manual de montos</h3>
+                  <p class="text-slate-600 mt-1">Usuario modifica allocations directamente en tabla</p>
+                  <div class="mt-3 overflow-x-auto">
+                    <table class="min-w-full border border-slate-200 text-sm">
+                      <thead class="bg-slate-100">
+                        <tr>
+                          <th class="border px-4 py-2 text-left">Proyecto</th>
+                          <th class="border px-4 py-2 text-right">Balance</th>
+                          <th class="border px-4 py-2 text-right">Monto Asignado</th>
+                          <th class="border px-4 py-2"></th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr>
+                          <td class="border px-4 py-2">#2024-001</td>
+                          <td class="border px-4 py-2 text-right">$300,000</td>
+                          <td class="border px-4 py-2">
+                            <input type="number" value="150000" class="w-full text-right border rounded px-2 py-1" />
+                          </td>
+                          <td class="border px-4 py-2 text-center">
+                            <button class="text-red-600 hover:text-red-800">✕</button>
+                          </td>
+                        </tr>
+                        <tr>
+                          <td class="border px-4 py-2">#2024-002</td>
+                          <td class="border px-4 py-2 text-right">$400,000</td>
+                          <td class="border px-4 py-2">
+                            <input type="number" value="250000" class="w-full text-right border rounded px-2 py-1" />
+                          </td>
+                          <td class="border px-4 py-2 text-center">
+                            <button class="text-red-600 hover:text-red-800">✕</button>
+                          </td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="flow-connector"></div>
+
+            <!-- Step 5 -->
+            <div class="flow-step border-l-4 border-green-500">
+              <div class="flex items-start gap-4">
+                <div class="flow-icon bg-gradient-to-br from-green-500 to-green-600 text-white">5</div>
+                <div class="flex-1">
+                  <h3 class="font-bold text-lg text-slate-800">Validación en tiempo real</h3>
+                  <p class="text-slate-600 mt-1">Sistema verifica que suma = monto total</p>
+                  <div class="mt-3 p-4 bg-green-50 rounded border border-green-200">
+                    <div class="space-y-2 text-sm">
+                      <div class="flex justify-between">
+                        <span class="text-slate-700">Total del pago:</span>
+                        <span class="font-bold">$400,000</span>
+                      </div>
+                      <div class="flex justify-between">
+                        <span class="text-slate-700">Total asignado:</span>
+                        <span class="font-bold text-green-600">$400,000</span>
+                      </div>
+                      <div class="flex justify-between items-center pt-2 border-t border-green-200">
+                        <span class="text-slate-700 font-medium">Diferencia:</span>
+                        <span class="font-bold text-green-600 flex items-center gap-1">
+                          $0 ✅
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="mt-3 p-3 bg-blue-50 rounded border border-blue-200">
+                    <p class="text-sm text-blue-800">
+                      💡 Si hubiera diferencia, mostraría error rojo y deshabilitaría Submit
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="flow-connector"></div>
+
+            <!-- Step 6 -->
+            <div class="flow-step border-l-4 border-violet-500">
+              <div class="flex items-start gap-4">
+                <div class="flow-icon bg-gradient-to-br from-violet-500 to-violet-600 text-white">6</div>
+                <div class="flex-1">
+                  <h3 class="font-bold text-lg text-slate-800">Submit con distribución manual</h3>
+                  <div class="code-block mt-3">
+POST /api/payments
+Body: {
+  customerId: "customer-1",
+  amount: 400000,
+  currency: "CLP",
+  date: "2024-11-05",
+  paymentMethodId: "transferencia-id",
+  reference: "TRX-MANUAL-123",
+  allocations: [
+    { projectId: "2024-001", allocatedAmount: 150000 },
+    { projectId: "2024-002", allocatedAmount: 250000 }
+  ]
+}
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="flow-connector"></div>
+
+            <!-- Step 7 -->
+            <div class="flow-step border-l-4 border-green-500">
+              <div class="flex items-start gap-4">
+                <div class="flow-icon bg-gradient-to-br from-green-500 to-green-600 text-white">7</div>
+                <div class="flex-1">
+                  <h3 class="font-bold text-lg text-slate-800">✅ Allocations creadas según preferencia</h3>
+                  <p class="text-slate-600 mt-1">Sistema respeta distribución manual del usuario</p>
+                  <div class="mt-3 p-4 bg-green-50 border border-green-200 rounded">
+                    <p class="font-medium text-green-800">Resultado:</p>
+                    <ul class="mt-2 space-y-1 text-sm text-green-700">
+                      <li>→ Pago registrado con distribución <strong>manual</strong> (no FIFO)</li>
+                      <li>→ Usuario tiene control total sobre asignación</li>
+                      <li>→ Sistema solo valida que suma sea correcta</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Final State -->
+            <div class="mt-6 p-6 bg-gradient-to-br from-violet-50 to-purple-50 rounded-lg border-2 border-violet-200">
+              <h4 class="font-bold text-lg text-violet-900 mb-3">🎯 Estado Final (Distribución Manual)</h4>
+              <div class="space-y-3">
+                <div class="p-3 bg-white rounded shadow-sm flex justify-between items-center">
+                  <div>
+                    <p class="font-medium">#2024-001</p>
+                    <p class="text-xs text-slate-500">Balance original: $300,000</p>
+                  </div>
+                  <div class="text-right">
+                    <p class="font-bold text-violet-600">Abonado: $150,000</p>
+                    <p class="text-xs text-amber-600">Pendiente: $150,000</p>
+                  </div>
+                </div>
+                <div class="p-3 bg-white rounded shadow-sm flex justify-between items-center">
+                  <div>
+                    <p class="font-medium">#2024-002</p>
+                    <p class="text-xs text-slate-500">Balance original: $400,000</p>
+                  </div>
+                  <div class="text-right">
+                    <p class="font-bold text-violet-600">Abonado: $250,000</p>
+                    <p class="text-xs text-amber-600">Pendiente: $150,000</p>
+                  </div>
+                </div>
+                <div class="mt-4 p-3 bg-violet-100 rounded">
+                  <p class="text-sm text-violet-800 font-medium">
+                    💡 Diferencia vs FIFO: Proyecto #2024-002 recibió más fondos según prioridad estratégica del usuario
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-white shadow-md mt-12">
+      <div class="max-w-7xl mx-auto px-4 py-6 text-center text-slate-600">
+        <p>Sistema de Pagos Cobralon - Documentación de User Flows</p>
+        <p class="text-sm mt-1">Basado en <code class="bg-slate-100 px-2 py-1 rounded text-xs">PAYMENTS.md</code></p>
+      </div>
+    </footer>
+
+    <script>
+      function showFlow(flowNumber) {
+        // Hide all flows
+        document.querySelectorAll('.flow-container').forEach((flow) => {
+          flow.classList.add('hidden')
+        })
+
+        // Remove active class from all tabs
+        document.querySelectorAll('.tab-button').forEach((tab) => {
+          tab.classList.remove('active')
+          tab.classList.add('hover:bg-slate-100')
+        })
+
+        // Show selected flow
+        document.getElementById(`flow-${flowNumber}`).classList.remove('hidden')
+
+        // Add active class to selected tab
+        const activeTab = document.getElementById(`tab-${flowNumber}`)
+        activeTab.classList.add('active')
+        activeTab.classList.remove('hover:bg-slate-100')
+      }
+
+      // Initialize with first flow visible
+      showFlow(1)
+    </script>
+  </body>
+</html>
