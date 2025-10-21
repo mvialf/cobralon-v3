@@ -671,6 +671,66 @@ Documenta aquí las implementaciones de TU proyecto:
 
 ---
 
+### 🔄 Componente Reutilizable: Combobox Wrapper
+
+- **Status:** ✅ Complete | **Date:** 2025-10-20 | **Impact:** High
+- **Problem:** Código duplicado masivo - 11 implementaciones manuales de Popover+Command (~605 líneas total), violación del principio DRY, mantención difícil
+- **Root Cause:** Decisión previa de NO crear wrapper para evitar sobre-abstracción, pero escala del proyecto justificó refactor
+- **Solution:** Crear componente Combobox genérico (`<T>`) que encapsula el patrón Popover+Command con API simple
+- **Benefits:**
+  - **-207 líneas** de código eliminadas (~34% de reducción)
+  - **+1 componente** reutilizable con TypeScript generics para type-safety
+  - ✅ API consistente: `value`, `onValueChange`, `options` (como PhoneInput/CurrencyInput)
+  - ✅ Loading state integrado (no más `loadingCustomers && "Cargando..."`)
+  - ✅ Custom rendering con `renderOption` escape hatch
+  - ✅ Sin estado `open`/`setOpen` manual (manejado internamente)
+  - ✅ Compatibilidad React 19 (basado en cmdk, no @diceui/combobox buggy)
+  - ✅ Mejor DX: intellisense completo, menos imports, menos boilerplate
+- **Implementación:** ✅ Completada
+  - **Fase 1:** Análisis de casos de uso
+    - Identificar 11 comboboxes con patrón repetido
+    - Categorizar por complejidad: simples (5), loading (3), custom render (3)
+    - Calcular duplicación: ~605 líneas en 6 archivos
+  - **Fase 2:** Diseño de API
+    - TypeScript Generics `<T>` para type-safety completo
+    - Props requeridas mínimas: value, onValueChange, options, getters
+    - Props opcionales: loading, renderOption, modal, contentWidth
+    - Sin integración useConfiguration (portabilidad)
+  - **Fase 3:** Crear componente base
+    - `components/ui/combobox.tsx` (234 líneas con JSDoc completo)
+    - Estado interno para open/close (no expuesto al consumidor)
+    - Trigger con loading state automático
+    - Integración con cmdk para filtrado
+  - **Fase 4:** Migración progresiva (6 archivos)
+    - ✅ `app/examples/combobox/page.tsx` - Demo simple (89→45 líneas, -49%)
+    - ✅ `app/settings/general/page.tsx` - 5 comboboxes (eliminar estado open/close)
+    - ✅ `components/forms/address-fields.tsx` - 2 comboboxes (región + comuna)
+    - ✅ `components/forms/projects/project-form.tsx` - 2 comboboxes complejos
+      - Customer con custom render (nombre + teléfono)
+      - Status con StatusBadge component
+    - ✅ `components/forms/payments/payment-form.tsx` - 1 combobox con loading
+  - **Fase 5:** Actualizar documentación
+    - `docs/template/components/ui-components.md` - Sección completa con ejemplos
+    - Props API documentada con TypeScript
+    - Referencias a ejemplos reales en el código
+    - Nota histórica sobre migración
+- **Archivos creados:**
+  - `components/ui/combobox.tsx` - Componente genérico (234 líneas con docs)
+- **Archivos modificados:**
+  - `app/examples/combobox/page.tsx` - Migrar a wrapper (89→45 líneas)
+  - `app/settings/general/page.tsx` - Migrar 5 comboboxes
+  - `components/forms/address-fields.tsx` - Migrar 2 comboboxes
+  - `components/forms/projects/project-form.tsx` - Migrar 2 comboboxes complejos
+  - `components/forms/payments/payment-form.tsx` - Migrar 1 combobox
+  - `docs/template/components/ui-components.md` - Documentación completa
+- **Code Reduction:**
+  - **Antes:** ~605 líneas de Popover+Command manual (11 instancias)
+  - **Después:** ~398 líneas (234 Combobox component + 164 usos simplificados)
+  - **Eliminadas:** ~207 líneas (-34%)
+- **Validación:** ✅ TypeScript: Pass | Build: Pending | Prettier: Applied | Migrations: Complete
+
+---
+
 ## Quick Reference Index
 
 | #   | Implementación                              | Status      | Fecha      | Impact |
@@ -688,13 +748,14 @@ Documenta aquí las implementaciones de TU proyecto:
 | 11  | Migración @diceui/combobox → Command        | ✅ Complete | 2025-10-19 | High   |
 | 12  | Refactor: Rutas en Inglés                   | ✅ Complete | 2025-10-20 | Medium |
 | 13  | Refactor: Project Status Form + Dialog      | ✅ Complete | 2025-10-20 | High   |
+| 14  | Componente Reutilizable: Combobox Wrapper   | ✅ Complete | 2025-10-20 | High   |
 
 ---
 
 ## Statistics
 
-- **Total Implementaciones:** 13
-- **Completadas:** 13
+- **Total Implementaciones:** 14
+- **Completadas:** 14
 - **En Progreso:** 0
 - **Pendientes:** 0
 

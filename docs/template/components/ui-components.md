@@ -186,90 +186,145 @@ import { DataTable } from "@/components/data-table"
 />
 ```
 
-### Combobox (Command + Popover)
+### Combobox
 
-**Ubicación:** Patrón que combina [command.tsx](../../../components/ui/command.tsx) + [popover.tsx](../../../components/ui/popover.tsx)
+**Ubicación:** [combobox.tsx](../../../components/ui/combobox.tsx) (wrapper sobre Command + Popover)
 
-Componente de selección con búsqueda. Usa el patrón oficial de shadcn/ui basado en cmdk (Vercel).
+Componente reutilizable de selección con búsqueda. Wrapper type-safe que encapsula el patrón oficial de shadcn/ui (Command + Popover).
 
-**Instalación:**
+**Características:**
 
-```bash
-npx shadcn@latest add command popover
-```
+- ✅ TypeScript Generics (`<T>`) para type-safety completo
+- ✅ API simple: `value`, `onValueChange`, `options`
+- ✅ Loading state integrado
+- ✅ Custom rendering con `renderOption`
+- ✅ Búsqueda automática (sin prop `manualFiltering`)
+- ✅ Compatible con React 19 + Next.js 15
+- ✅ Basado en cmdk (Vercel) - estable y mantenido
+- ✅ Sin bugs de pérdida de caracteres (issue resuelto)
+- ✅ ARIA compliant
 
 **Uso Básico:**
 
 ```tsx
-import { useState } from 'react'
-import { Check, ChevronsUpDown } from 'lucide-react'
-import { Button } from '@/components/ui/button'
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from '@/components/ui/command'
-import { cn } from '@/lib/utils'
+import { Combobox } from '@/components/ui/combobox'
 
-function ComboboxDemo() {
-  const [open, setOpen] = useState(false)
+const frameworks = [
+  { value: 'next', label: 'Next.js' },
+  { value: 'react', label: 'React' },
+  { value: 'vue', label: 'Vue' },
+]
+
+function Demo() {
   const [value, setValue] = useState('')
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>
-        <Button variant="outline" role="combobox" aria-expanded={open}>
-          {value ? items.find((item) => item.value === value)?.label : 'Select...'}
-          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-        </Button>
-      </PopoverTrigger>
-      <PopoverContent className="w-[200px] p-0">
-        <Command>
-          <CommandInput placeholder="Search..." />
-          <CommandList>
-            <CommandEmpty>No results found.</CommandEmpty>
-            <CommandGroup>
-              {items.map((item) => (
-                <CommandItem
-                  key={item.value}
-                  value={item.value}
-                  onSelect={(currentValue) => {
-                    setValue(currentValue === value ? '' : currentValue)
-                    setOpen(false)
-                  }}
-                >
-                  <Check
-                    className={cn(
-                      'mr-2 h-4 w-4',
-                      value === item.value ? 'opacity-100' : 'opacity-0'
-                    )}
-                  />
-                  {item.label}
-                </CommandItem>
-              ))}
-            </CommandGroup>
-          </CommandList>
-        </Command>
-      </PopoverContent>
-    </Popover>
+    <Combobox
+      value={value}
+      onValueChange={setValue}
+      options={frameworks}
+      getOptionValue={(item) => item.value}
+      getOptionLabel={(item) => item.label}
+      placeholder="Select framework..."
+      searchPlaceholder="Search framework..."
+      emptyMessage="No framework found."
+      contentWidth="300px"
+    />
   )
 }
 ```
 
-**Features:**
+**Con React Hook Form:**
 
-- ✅ Búsqueda en tiempo real
-- ✅ Basado en cmdk (Vercel)
-- ✅ Compatible con React 19 + Next.js 15
-- ✅ Teclado accesible (flechas, Enter, Esc)
-- ✅ ARIA compliant
-- ✅ Sin bugs de pérdida de caracteres
+```tsx
+<FormField
+  control={form.control}
+  name="customerId"
+  render={({ field }) => (
+    <FormItem className="flex flex-col">
+      <FormLabel>Cliente *</FormLabel>
+      <FormControl>
+        <Combobox
+          value={field.value}
+          onValueChange={field.onChange}
+          options={customers}
+          getOptionValue={(c) => c.id}
+          getOptionLabel={(c) => c.name}
+          placeholder="Seleccionar cliente"
+          loading={loadingCustomers}
+          modal
+        />
+      </FormControl>
+      <FormMessage />
+    </FormItem>
+  )}
+/>
+```
 
-**Demo:** Ver [/examples](../../../app/examples/page.tsx) para ejemplo completo con debounce
+**Con Custom Rendering:**
+
+```tsx
+<Combobox
+  value={value}
+  onValueChange={setValue}
+  options={customers}
+  getOptionValue={(c) => c.id}
+  getOptionLabel={(c) => c.name}
+  renderOption={(customer) => (
+    <div className="flex flex-col">
+      <span>{customer.name}</span>
+      <span className="text-xs text-muted-foreground">{customer.phone}</span>
+    </div>
+  )}
+  loading={isLoading}
+  contentWidth="400px"
+/>
+```
+
+**Props API:**
+
+```typescript
+interface ComboboxProps<T> {
+  // Required
+  value: string
+  onValueChange: (value: string) => void
+  options: T[]
+  getOptionValue: (option: T) => string
+  getOptionLabel: (option: T) => string
+
+  // Customization
+  renderOption?: (option: T, isSelected: boolean) => React.ReactNode
+
+  // Text
+  placeholder?: string
+  searchPlaceholder?: string
+  emptyMessage?: string
+
+  // State
+  disabled?: boolean
+  loading?: boolean
+  loadingText?: string
+
+  // Style
+  className?: string
+  contentWidth?: string
+
+  // Advanced
+  modal?: boolean
+  onOpenChange?: (open: boolean) => void
+}
+```
+
+**Ejemplos en el código:**
+
+- Simple: [app/examples/combobox/page.tsx](../../../app/examples/combobox/page.tsx)
+- Con loading: [components/forms/projects/project-form.tsx](../../../components/forms/projects/project-form.tsx:167-185) (Customer)
+- Custom render: [components/forms/projects/project-form.tsx](../../../components/forms/projects/project-form.tsx:249-264) (Status con Badge)
+- Múltiples: [app/settings/general/page.tsx](../../../app/settings/general/page.tsx) (5 comboboxes)
+
+**Nota Histórica:**
+
+Este componente reemplazó la composición manual de `Popover + Command` que se usaba anteriormente. La migración eliminó ~605 líneas de código duplicado en 11 implementaciones (~34% de reducción).
 
 ## Documentación Completa
 
