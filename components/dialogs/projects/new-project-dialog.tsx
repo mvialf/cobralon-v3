@@ -1,18 +1,21 @@
 'use client'
 
-import { useState } from 'react'
+import * as React from 'react'
 import { Plus } from 'lucide-react'
 import { ProjectForm } from '@/components/forms/projects/project-form'
 import { type ProjectFormData } from '@/lib/validations/project-validations'
 import { Button } from '@/components/ui/button'
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from '@/components/ui/dialog'
+  ScrollableDialog,
+  ScrollableDialogBody,
+  ScrollableDialogClose,
+  ScrollableDialogContent,
+  ScrollableDialogDescription,
+  ScrollableDialogFooter,
+  ScrollableDialogHeader,
+  ScrollableDialogTitle,
+  ScrollableDialogTrigger,
+} from '@/components/ui/scrollable-dialog'
 import { toast } from 'sonner'
 
 interface NewProjectDialogProps {
@@ -20,8 +23,8 @@ interface NewProjectDialogProps {
 }
 
 export function NewProjectDialog({ onProjectCreated }: NewProjectDialogProps) {
-  const [open, setOpen] = useState(false)
-  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [open, setOpen] = React.useState(false)
+  const [isSubmitting, setIsSubmitting] = React.useState(false)
 
   const handleSubmit = async (data: ProjectFormData) => {
     setIsSubmitting(true)
@@ -58,22 +61,43 @@ export function NewProjectDialog({ onProjectCreated }: NewProjectDialogProps) {
   }
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
+    <ScrollableDialog open={open} onOpenChange={setOpen}>
+      <ScrollableDialogTrigger asChild>
         <Button>
           <Plus className="mr-2 h-4 w-4" />
           Nuevo Proyecto
         </Button>
-      </DialogTrigger>
-      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-[700px]">
-        <DialogHeader>
-          <DialogTitle>Nuevo Proyecto</DialogTitle>
-          <DialogDescription>
-            Ingresa los datos del nuevo proyecto. Haz clic en guardar cuando termines.
-          </DialogDescription>
-        </DialogHeader>
-        <ProjectForm onSubmit={handleSubmit} isSubmitting={isSubmitting} />
-      </DialogContent>
-    </Dialog>
+      </ScrollableDialogTrigger>
+      <ScrollableDialogContent className="sm:max-w-[700px]">
+        <ScrollableDialogHeader>
+          <ScrollableDialogTitle>Nuevo Proyecto</ScrollableDialogTitle>
+        </ScrollableDialogHeader>
+        <ScrollableDialogBody>
+          <ScrollableDialogDescription asChild>
+            <div className="space-y-6">
+              <p className="text-sm text-muted-foreground">
+                Ingresa los datos del nuevo proyecto. Haz clic en guardar cuando termines.
+              </p>
+              <ProjectForm
+                onSubmit={handleSubmit}
+                isSubmitting={isSubmitting}
+                showSubmitButton={false}
+                formId="new-project-form"
+              />
+            </div>
+          </ScrollableDialogDescription>
+        </ScrollableDialogBody>
+        <ScrollableDialogFooter>
+          <ScrollableDialogClose asChild>
+            <Button variant="outline" disabled={isSubmitting}>
+              Cancelar
+            </Button>
+          </ScrollableDialogClose>
+          <Button type="submit" form="new-project-form" disabled={isSubmitting}>
+            {isSubmitting ? 'Guardando...' : 'Guardar Proyecto'}
+          </Button>
+        </ScrollableDialogFooter>
+      </ScrollableDialogContent>
+    </ScrollableDialog>
   )
 }

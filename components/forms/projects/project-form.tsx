@@ -31,6 +31,15 @@ interface ProjectFormProps {
   onSubmit: (data: ProjectFormData) => void | Promise<void>
   isSubmitting?: boolean
   defaultValues?: Partial<ProjectFormData>
+  /**
+   * Si es true, muestra el botón de submit dentro del form
+   * @default true
+   */
+  showSubmitButton?: boolean
+  /**
+   * ID opcional del form para submitear desde un botón externo
+   */
+  formId?: string
 }
 
 interface Customer {
@@ -47,7 +56,13 @@ interface ProjectStatus {
   }
 }
 
-export function ProjectForm({ onSubmit, isSubmitting, defaultValues }: ProjectFormProps) {
+export function ProjectForm({
+  onSubmit,
+  isSubmitting,
+  defaultValues,
+  showSubmitButton = true,
+  formId,
+}: ProjectFormProps) {
   const { configuration } = useConfiguration()
 
   const [customers, setCustomers] = React.useState<Customer[]>([])
@@ -154,7 +169,7 @@ export function ProjectForm({ onSubmit, isSubmitting, defaultValues }: ProjectFo
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(handleFormSubmit)} className="space-y-6">
+      <form id={formId} onSubmit={form.handleSubmit(handleFormSubmit)} className="space-y-6">
         <FormGrid columns="3-1">
           {/* Cliente - Combobox */}
           <FormField
@@ -404,11 +419,13 @@ export function ProjectForm({ onSubmit, isSubmitting, defaultValues }: ProjectFo
           )}
         />
 
-        <div className="flex justify-end gap-2">
-          <Button type="submit" disabled={isSubmitting}>
-            {isSubmitting ? 'Guardando...' : 'Guardar Proyecto'}
-          </Button>
-        </div>
+        {showSubmitButton && (
+          <div className="flex justify-end gap-2">
+            <Button type="submit" disabled={isSubmitting}>
+              {isSubmitting ? 'Guardando...' : 'Guardar Proyecto'}
+            </Button>
+          </div>
+        )}
       </form>
     </Form>
   )
