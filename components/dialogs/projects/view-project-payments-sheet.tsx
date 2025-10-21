@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import {
   Sheet,
   SheetContent,
@@ -35,13 +35,7 @@ export function ViewProjectPaymentsSheet({
   const [project, setProject] = useState<ProjectPaymentData | null>(null)
   const [isLoading, setIsLoading] = useState(false)
 
-  useEffect(() => {
-    if (open && projectId) {
-      fetchProjectPaymentData()
-    }
-  }, [open, projectId])
-
-  const fetchProjectPaymentData = async () => {
+  const fetchProjectPaymentData = useCallback(async () => {
     try {
       setIsLoading(true)
       const response = await fetch(`/api/projects/${projectId}`)
@@ -61,7 +55,13 @@ export function ViewProjectPaymentsSheet({
     } finally {
       setIsLoading(false)
     }
-  }
+  }, [projectId])
+
+  useEffect(() => {
+    if (open && projectId) {
+      fetchProjectPaymentData()
+    }
+  }, [open, projectId, fetchProjectPaymentData])
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>

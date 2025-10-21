@@ -1,17 +1,12 @@
 'use client'
 
-import { useEffect, useState } from 'react'
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-} from '@/components/ui/sheet'
+import { useCallback, useEffect, useState } from 'react'
+import { Sheet, SheetContent } from '@/components/ui/sheet'
 import { Separator } from '@/components/ui/separator'
 import { Badge } from '@/components/ui/badge'
 import { StatusBadge } from '@/components/ui/status-badge'
 import { Skeleton } from '@/components/ui/skeleton'
+import { ProjectNameSummary } from '@/components/summarys/project-name-summary'
 import { cn } from '@/lib/utils'
 
 interface ViewProjectDetailsSheetProps {
@@ -62,13 +57,7 @@ export function ViewProjectDetailsSheet({
   const [project, setProject] = useState<ProjectDetails | null>(null)
   const [isLoading, setIsLoading] = useState(false)
 
-  useEffect(() => {
-    if (open && projectId) {
-      fetchProject()
-    }
-  }, [open, projectId])
-
-  const fetchProject = async () => {
+  const fetchProject = useCallback(async () => {
     try {
       setIsLoading(true)
       const response = await fetch(`/api/projects/${projectId}`)
@@ -84,7 +73,13 @@ export function ViewProjectDetailsSheet({
     } finally {
       setIsLoading(false)
     }
-  }
+  }, [projectId])
+
+  useEffect(() => {
+    if (open && projectId) {
+      fetchProject()
+    }
+  }, [open, projectId, fetchProject])
 
   const formatCurrency = (amount: number, currency: string) =>
     new Intl.NumberFormat('es-CL', {
@@ -103,15 +98,19 @@ export function ViewProjectDetailsSheet({
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="right" className="w-full sm:max-w-2xl overflow-y-auto">
-        <SheetHeader>
-          <SheetTitle>
-            {isLoading ? 'Cargando...' : `Proyecto ${project?.projectNumber || ''}`}
-          </SheetTitle>
-          <SheetDescription>
-            {project?.projectName || project?.customer.name || 'Detalles del proyecto'}
-          </SheetDescription>
-        </SheetHeader>
+      <SheetContent side="right" className="w-full px-6 sm:max-w-2xl overflow-y-auto">
+        {isLoading ? (
+          <div className="text-sm text-muted-foreground py-4">Cargando...</div>
+        ) : (
+          project && (
+            <ProjectNameSummary
+              projectNumber={project.projectNumber}
+              customerName={project.customer.name}
+              projectName={project.projectName}
+              className="py-4"
+            />
+          )
+        )}
 
         {isLoading ? (
           <div className="space-y-6 py-6">
@@ -128,11 +127,6 @@ export function ViewProjectDetailsSheet({
                 Información General
               </h3>
               <div className="grid gap-4 sm:grid-cols-2">
-                <DataField label="Número de Proyecto" value={project.projectNumber} />
-                {project.projectName && (
-                  <DataField label="Nombre del Proyecto" value={project.projectName} />
-                )}
-                <DataField label="Cliente" value={project.customer.name} />
                 <DataField label="Teléfono" value={project.customer.phone} />
 
                 <div>
@@ -148,7 +142,6 @@ export function ViewProjectDetailsSheet({
                 </div>
 
                 <DataField label="Fecha" value={formatDate(project.date)} />
-                <DataField label="Moneda" value={project.currency} />
               </div>
             </div>
 
