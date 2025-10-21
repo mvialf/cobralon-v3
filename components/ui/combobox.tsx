@@ -4,7 +4,6 @@ import * as React from 'react'
 import { Check, ChevronsUpDown } from 'lucide-react'
 
 import { cn } from '@/lib/utils'
-import { Button } from '@/components/ui/button'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import {
   Command,
@@ -188,20 +187,29 @@ export function Combobox<T>({
   return (
     <Popover open={open} onOpenChange={handleOpenChange} modal={modal}>
       <PopoverTrigger asChild>
-        <Button
+        <button
+          type="button"
           id={id}
-          variant="input-like"
-          size="input"
           role="combobox"
           aria-expanded={open}
           aria-label={ariaLabel}
           aria-describedby={ariaDescribedBy}
-          className={cn('w-full justify-between', !value && 'text-muted-foreground', className)}
           disabled={disabled || loading}
+          className={cn(
+            // Estilos base de Input
+            'flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-base shadow-sm transition-colors',
+            'placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring',
+            'disabled:cursor-not-allowed disabled:opacity-50 md:text-sm',
+            'aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive',
+            // Estilos específicos de Combobox
+            'justify-between items-center text-left',
+            !value && 'text-muted-foreground',
+            className
+          )}
         >
-          {triggerLabel}
+          <span className="truncate">{triggerLabel}</span>
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-        </Button>
+        </button>
       </PopoverTrigger>
       <PopoverContent className="p-0" style={{ width: contentWidth }}>
         <Command shouldFilter={!disableFiltering}>
