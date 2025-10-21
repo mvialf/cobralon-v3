@@ -16,6 +16,7 @@ import {
   FolderKanban,
   Wallet,
   BadgeCheck,
+  ScrollText,
 } from 'lucide-react'
 
 import {
@@ -98,6 +99,11 @@ const navigationItems: NavigationItem[] = [
         title: 'RUT Input',
         url: '/examples/rut-input',
         icon: CreditCard,
+      },
+      {
+        title: 'Scrollable Dialog',
+        url: '/examples/scrollable-dialog',
+        icon: ScrollText,
       },
     ],
   },
