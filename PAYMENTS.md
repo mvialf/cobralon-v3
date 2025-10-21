@@ -136,7 +136,7 @@ PaymentMethod (1) ──→ (N) Payment
 ### 1. Cálculo de Balance de Proyecto
 
 **Función:** `calculateProjectBalance()`
-**Archivo:** `lib/validations/payment-validations.ts:174-202`
+**Archivo:** [lib/validations/payment-validations.ts:95-123](lib/validations/payment-validations.ts#L95-L123)
 
 ```typescript
 function calculateProjectBalance(project: {
@@ -185,13 +185,76 @@ Resultado:
 
 ---
 
-### 2. Distribución FIFO (First In First Out)
+### 2. Schemas de Validación: Dos Flujos Principales
 
-**Función:** `calculateFIFO()`
-**Archivo:** `lib/payment-fifo.ts:52-90`
+El sistema se divide en **dos flujos separados** para simplificar UX:
+
+#### A. Pago a Proyecto (1:1) - Flujo Simplificado
+
+**Schema:** `paymentToProjectSchema`
+**Archivo:** [lib/validations/payment-validations.ts:137-182](lib/validations/payment-validations.ts#L137-L182)
 
 ```typescript
-function calculateFIFO(totalAmount: number, projects: ProjectWithBalance[]): FIFOAllocation[]
+{
+  projectId: string       // ← Proyecto seleccionado
+  amount: number
+  date: Date
+  paymentMethodId: string
+  reference?: string | null
+  notes?: string | null
+  // customerId y currency se derivan del proyecto seleccionado
+  // allocations se genera automáticamente (100% al proyecto)
+}
+```
+
+**Helper de conversión:** `paymentToProjectToPayload()`
+**Archivo:** [lib/validations/payment-validations.ts:211-230](lib/validations/payment-validations.ts#L211-L230)
+
+Convierte el schema simplificado al payload completo del API, derivando `customerId` y `currency` del proyecto seleccionado.
+
+---
+
+#### B. Pago a Cliente (1:N) - Flujo con FIFO
+
+**Schema:** `paymentToCustomerSchema`
+**Archivo:** [lib/validations/payment-validations.ts:245-323](lib/validations/payment-validations.ts#L245-L323)
+
+```typescript
+{
+  customerId: string      // ← Cliente seleccionado
+  amount: number
+  date: Date
+  paymentMethodId: string
+  reference?: string | null
+  notes?: string | null
+  allocations: Array<{    // ← Distribución manual o FIFO
+    projectId: string
+    allocatedAmount: number
+  }>
+}
+```
+
+**Validaciones del schema:**
+
+- Min 1 allocation
+- No duplicados de `projectId`
+- Suma de `allocatedAmount` = `amount` total (tolerancia 0.01)
+
+**Helper de conversión:** `paymentToCustomerToPayload()`
+**Archivo:** [lib/validations/payment-validations.ts:335-349](lib/validations/payment-validations.ts#L335-L349)
+
+---
+
+### 3. Distribución FIFO (First In First Out)
+
+**Función:** `calculateFIFO()`
+**Archivo:** [lib/validations/payment-validations.ts:372-400](lib/validations/payment-validations.ts#L372-L400)
+
+```typescript
+function calculateFIFO(
+  projects: ProjectWithBalance[],
+  totalAmount: number
+): Array<{ projectId: string; allocatedAmount: number }>
 ```
 
 #### Algoritmo:
@@ -233,19 +296,23 @@ Resultado:
 
 ---
 
-### 3. Validación de Suma de Allocations
+### 4. Validación de Suma de Allocations
 
-**Función:** `validateAllocationsSum()`
-**Archivo:** `lib/payment-fifo.ts:99-105`
+**Integrada en:** `paymentToCustomerSchema` (Zod refine)
+**Archivo:** [lib/validations/payment-validations.ts:313-323](lib/validations/payment-validations.ts#L313-L323)
 
 ```typescript
-function validateAllocationsSum(
-  totalAmount: number,
-  allocations: Array<{ allocatedAmount: number }>
-): boolean {
-  const sum = allocations.reduce((acc, a) => acc + a.allocatedAmount, 0)
-  return Math.abs(sum - totalAmount) < 0.01 // ← Tolerancia para decimales
-}
+.refine(
+  (data) => {
+    // Suma de allocations debe ser igual al monto total
+    const totalAllocated = data.allocations.reduce((sum, a) => sum + a.allocatedAmount, 0)
+    return Math.abs(totalAllocated - data.amount) < 0.01 // ← Tolerancia para decimales
+  },
+  {
+    message: 'La suma de los montos asignados debe ser igual al monto total del pago',
+    path: ['allocations'],
+  }
+)
 ```
 
 **Por qué 0.01 de tolerancia?**
@@ -265,7 +332,7 @@ Math.abs(500.0 - (200.0 + 100.0 + 200.0)) < 0.01 // true
 
 ### 1. GET /api/payments
 
-**Archivo:** `app/api/payments/route.ts:19-124`
+**Archivo:** [app/api/payments/route.ts](app/api/payments/route.ts)
 
 #### Query Parameters:
 
@@ -301,9 +368,106 @@ GET /api/payments?customerId=abc-123&status=ACTIVE&limit=20
 
 ---
 
-### 2. POST /api/payments
+### 2. GET /api/payments/search-projects
 
-**Archivo:** `app/api/payments/route.ts:141-313`
+**Archivo:** [app/api/payments/search-projects/route.ts](app/api/payments/search-projects/route.ts)
+
+**Propósito:** Búsqueda de proyectos para asignar pagos (usado en "Pago a Proyecto")
+
+#### Query Parameters:
+
+| Parámetro | Tipo   | Default | Descripción                       |
+| --------- | ------ | ------- | --------------------------------- |
+| `q`       | string | -       | Término de búsqueda (min 2 chars) |
+| `limit`   | number | 20      | Máximo de resultados (max: 50)    |
+
+#### Búsqueda en:
+
+- `projectNumber` (ej: "2024-089")
+- `projectName` (ej: "Ampliación bodega")
+- `customer.name` (ej: "Juan Pérez")
+
+#### Filtros automáticos:
+
+- Solo proyectos con `totalAmount > 0`
+- Solo proyectos con `balance > 0` (calcula balance en tiempo real)
+- Solo cuenta pagos `status = 'ACTIVE'`
+
+#### Response:
+
+```typescript
+Array<{
+  id: string
+  projectNumber: string
+  projectName: string | null
+  totalAmount: number
+  currency: string
+  balance: number // ← Calculado dinámicamente
+  createdAt: Date // ← Para FIFO
+  customer: {
+    id: string
+    name: string
+  }
+}>
+```
+
+#### Ejemplo:
+
+```bash
+GET /api/payments/search-projects?q=2024&limit=10
+```
+
+---
+
+### 3. GET /api/payments/customer-projects
+
+**Archivo:** [app/api/payments/customer-projects/route.ts](app/api/payments/customer-projects/route.ts)
+
+**Propósito:** Obtener proyectos de un cliente para distribución FIFO (usado en "Pago a Cliente")
+
+#### Query Parameters:
+
+| Parámetro    | Tipo   | Required | Descripción      |
+| ------------ | ------ | -------- | ---------------- |
+| `customerId` | string | ✅ Sí    | UUID del cliente |
+
+#### Validaciones:
+
+- `customerId` es requerido y debe ser UUID válido
+- Verifica que el cliente existe (404 si no)
+- Solo retorna proyectos con `totalAmount > 0` y `balance > 0`
+
+#### Response:
+
+```typescript
+Array<{
+  id: string
+  projectNumber: string
+  projectName: string | null
+  totalAmount: number
+  currency: string
+  balance: number // ← Calculado dinámicamente
+  createdAt: Date // ← Para FIFO (ordenado ASC)
+  customer: {
+    id: string
+    name: string
+  }
+}>
+```
+
+**Importante:** Proyectos ordenados por `createdAt ASC` (más antiguos primero) para facilitar FIFO.
+
+#### Ejemplo:
+
+```bash
+GET /api/payments/customer-projects?customerId=abc-123
+```
+
+---
+
+### 4. POST /api/payments
+
+**Archivo:** [app/api/payments/route.ts](app/api/payments/route.ts)
 
 #### Request Body:
 
@@ -380,9 +544,9 @@ Luego valida en DB:
 
 ---
 
-### 3. POST /api/payments/[id]/cancel
+### 5. POST /api/payments/[id]/cancel
 
-**Archivo:** `app/api/payments/[id]/cancel/route.ts:19-90`
+**Archivo:** [app/api/payments/[id]/cancel/route.ts](app/api/payments/[id]/cancel/route.ts)
 
 **Anula un pago (soft delete).**
 
@@ -434,9 +598,194 @@ Luego valida en DB:
 
 ## 🎨 Componentes UI
 
-### 1. PaymentSummaryCard
+### Arquitectura de Componentes
 
-**Archivo:** `components/summarys/payment-summary-card.tsx`
+El sistema sigue los patrones del template (ver [docs/template/methodology/patterns.md](docs/template/methodology/patterns.md)):
+
+- **Dialogs:** `components/dialogs/payments/`
+- **Forms:** `components/forms/payments/`
+- **Tables:** `components/tables/`
+- **Summaries:** `components/summarys/`
+
+---
+
+### 1. Dialogs de Registro
+
+#### A. PaymentToProjectDialog (Pago a Proyecto 1:1)
+
+**Archivo:** [components/dialogs/payments/payment-to-project-dialog.tsx](components/dialogs/payments/payment-to-project-dialog.tsx)
+
+**Propósito:** Dialog para flujo simplificado de pago a un solo proyecto.
+
+**Props:**
+
+```typescript
+{
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  onSuccess?: () => void  // Callback para refetch
+}
+```
+
+**Características:**
+
+- Dialog reutilizable con estado de apertura/cierre externo
+- Maneja submit del formulario
+- POST a `/api/payments` con payload generado automáticamente
+- Toast de success/error
+- Callback `onSuccess` para refetch de datos
+- Router refresh automático
+
+**Componente interno:** [PaymentToProjectForm](#b-paymenttoprojectform)
+
+---
+
+#### B. PaymentToCustomerDialog (Pago a Cliente 1:N)
+
+**Archivo:** [components/dialogs/payments/payment-to-customer-dialog.tsx](components/dialogs/payments/payment-to-customer-dialog.tsx)
+
+**Propósito:** Dialog para flujo avanzado con distribución FIFO o manual.
+
+**Props:**
+
+```typescript
+{
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  onSuccess?: () => void
+}
+```
+
+**Características:**
+
+- Dialog para flujo complejo (FIFO + manual)
+- Valida que suma de allocations = monto total
+- Soporta tabs: FIFO automático vs Manual
+- POST a `/api/payments` con allocations completas
+- Router refresh + callback
+
+**Componente interno:** [PaymentToCustomerForm](#c-paymenttocustomerform)
+
+---
+
+#### C. PaymentDetailsDialog
+
+**Archivo:** [components/dialogs/payments/payment-details-dialog.tsx](components/dialogs/payments/payment-details-dialog.tsx)
+
+**Propósito:** Ver detalles completos de un pago existente.
+
+**Props:**
+
+```typescript
+{
+  payment: Payment | null
+  open: boolean
+  onOpenChange: (open: boolean) => void
+}
+```
+
+**Muestra:**
+
+- Información del pago (monto, fecha, método, referencia)
+- Customer info
+- Lista de allocations a proyectos
+- Status (ACTIVE/CANCELLED) con badge
+- Razón de cancelación (si aplica)
+
+---
+
+### 2. Formularios
+
+#### A. PaymentToProjectForm (1:1)
+
+**Archivo:** [components/forms/payments/payment-to-project-form.tsx](components/forms/payments/payment-to-project-form.tsx)
+
+**Schema:** `paymentToProjectSchema`
+
+**Campos:**
+
+1. **Proyecto** (Combobox con búsqueda)
+   - API: `/api/payments/search-projects?q={search}`
+   - Busca por projectNumber, projectName, customer.name
+   - Muestra: projectNumber + balance pendiente
+   - Debounce 300ms
+
+2. **Monto** (CurrencyInput)
+   - Currency derivada del proyecto seleccionado
+   - Validación: > 0, max 2 decimales
+   - Muestra balance del proyecto
+
+3. **Fecha** (DatePicker)
+   - Default: hoy
+   - Formato: es-CL
+
+4. **Método de Pago** (Select)
+   - Carga desde `/api/payment-methods`
+   - Muestra icon si tiene
+
+5. **Referencia** (Input opcional)
+   - Requerida si `method.requiresReference`
+   - Max 100 caracteres
+
+6. **Notas** (Textarea opcional)
+   - Max 500 caracteres
+
+**Features:**
+
+- Validación con React Hook Form + Zod
+- Auto-derivación de customerId y currency
+- Submit expone `(values, project)` al parent
+- Loading state integrado
+
+---
+
+#### B. PaymentToCustomerForm (1:N)
+
+**Archivo:** [components/forms/payments/payment-to-customer-form.tsx](components/forms/payments/payment-to-customer-form.tsx)
+
+**Schema:** `paymentToCustomerSchema`
+
+**Campos básicos:**
+
+1. **Cliente** (Combobox con búsqueda)
+   - API: Búsqueda de customers
+   - Al seleccionar → fetch proyectos: `/api/payments/customer-projects?customerId={id}`
+
+2. **Monto** (CurrencyInput)
+3. **Fecha** (DatePicker)
+4. **Método de Pago** (Select)
+5. **Referencia** (Input opcional)
+6. **Notas** (Textarea opcional)
+
+**Sección de Distribución (Tabs):**
+
+**Tab 1: FIFO Automático**
+
+- Botón "Calcular FIFO"
+- Ejecuta `calculateFIFO(projects, amount)`
+- Muestra tabla readonly con distribución sugerida
+- Columnas: Proyecto, Monto Asignado, Estado (Completo/Parcial)
+
+**Tab 2: Distribución Manual**
+
+- Tabla editable para asignar montos
+- Columnas: Proyecto, Balance, Monto Asignado
+- Botones: + Agregar Proyecto, 🗑️ Eliminar
+- Muestra total asignado vs monto total
+- Validación en tiempo real
+
+**Validación:**
+
+- Suma de allocations = monto total (tolerancia 0.01)
+- No proyectos duplicados
+- Todos los proyectos del mismo customer
+- Todos los proyectos con misma currency
+
+---
+
+### 3. PaymentSummaryCard
+
+**Archivo:** [components/summarys/payment-summary-card.tsx](components/summarys/payment-summary-card.tsx)
 
 Card con resumen financiero de un proyecto.
 
@@ -500,7 +849,7 @@ useEffect(() => {
 
 ### 4. ProjectPaymentsTable
 
-**Archivo:** `components/tables/project-payments-table.tsx`
+**Archivo:** [components/tables/project-payments-table.tsx](components/tables/project-payments-table.tsx)
 
 Tabla con historial de pagos de un proyecto específico.
 
@@ -558,7 +907,7 @@ interface ProjectPaymentsTableProps {
 
 ### 5. Página Principal: /payments
 
-**Archivo:** `app/payments/page.tsx`
+**Archivo:** [app/payments/page.tsx](app/payments/page.tsx)
 
 Vista de todos los pagos del sistema.
 
@@ -570,6 +919,9 @@ Vista de todos los pagos del sistema.
 - ✅ Filtro por método de pago
 - ✅ Columnas: Fecha, Cliente, Método, Monto, Estado, Acciones
 - ✅ Click en fila → PaymentDetailsDialog
+- ✅ **Dropdown "Registrar Pago"** con 2 opciones:
+  - "Pago a Proyecto" → Abre `PaymentToProjectDialog`
+  - "Pago a Cliente" → Abre `PaymentToCustomerDialog`
 
 #### Fetch:
 
@@ -585,34 +937,49 @@ useEffect(() => {
 
 ## 🔄 Flujos de Uso
 
-### Flujo 1: Pago Simple a un Proyecto
+### Flujo 1: Pago a Proyecto (1:1) - Flujo Simplificado
 
 ```
-Usuario → Click "Registrar Pago" en proyecto
+Usuario → Click "Registrar Pago" → "Pago a Proyecto"
       ↓
-PaymentDialog se abre
+PaymentToProjectDialog se abre
       ↓
-PaymentForm (modo Simple)
+PaymentToProjectForm renderizado
       ↓
-1. Ingresa monto: $300,000
-2. Selecciona método: "Transferencia"
-3. Ingresa referencia: "TRX-123456"
-4. Click en proyecto #2024-001
+1. Usuario busca proyecto: "2024"
+   → API: GET /api/payments/search-projects?q=2024
+   → Muestra proyectos con balance > 0
       ↓
-Submit form
+2. Selecciona "2024-001" (balance: $300,000)
+   → customerId y currency se derivan automáticamente
       ↓
-POST /api/payments
-  Body: {
-    customerId: "abc-123",
-    amount: 300000,
-    currency: "CLP",
+3. Ingresa monto: $200,000
+   → Validación: No puede exceder balance
+      ↓
+4. Selecciona fecha: Hoy
+      ↓
+5. Selecciona método: "Transferencia"
+   → Campo referencia se vuelve requerido (requiresReference: true)
+      ↓
+6. Ingresa referencia: "TRX-123456"
+      ↓
+7. Click "Registrar Pago"
+      ↓
+Submit → Helper convierte a payload completo:
+  paymentToProjectToPayload(values, project) → {
+    customerId: "abc-123",        // ← Derivado del proyecto
+    amount: 200000,
+    currency: "CLP",              // ← Derivado del proyecto
     date: "2024-11-05",
     paymentMethodId: "xyz-789",
     reference: "TRX-123456",
+    notes: null,
     allocations: [
-      { projectId: "2024-001", allocatedAmount: 300000 }
+      { projectId: "2024-001", allocatedAmount: 200000 }  // ← 100% del monto
     ]
   }
+      ↓
+POST /api/payments
       ↓
 Validaciones API (14 checks)
       ↓
@@ -620,51 +987,108 @@ Validaciones API (14 checks)
       ↓
 Toast: "Pago registrado exitosamente"
       ↓
-onSuccess() → Refetch data
+Dialog cierra → onSuccess() → Refetch data → Router refresh
       ↓
-PaymentSummaryCard actualiza balance
+PaymentSummaryCard actualiza balance:
+  - totalAmount: $300,000
+  - totalPaid: $200,000 ✅
+  - balance: $100,000
 ProjectPaymentsTable muestra nuevo pago
 ```
 
 ---
 
-### Flujo 2: Pago con FIFO Automático
+### Flujo 2: Pago a Cliente (1:N) - FIFO Automático
 
 ```
-Usuario → Click "Registrar Pago"
+Usuario → Click "Registrar Pago" → "Pago a Cliente"
       ↓
-PaymentDialog (modo Distribuir)
+PaymentToCustomerDialog se abre
       ↓
-1. Ingresa monto: $500,000
-2. Selecciona método: "Efectivo"
-3. Click "Calcular FIFO"
+PaymentToCustomerForm renderizado
       ↓
-Sistema ejecuta calculateFIFO():
+1. Usuario busca cliente: "Juan"
+   → API: Búsqueda de customers
+   → Muestra resultados con debounce 300ms
       ↓
-Proyectos ordenados por fecha:
-  #2024-001 (Jun): balance $300k
-  #2024-002 (Ago): balance $400k
-  #2024-003 (Oct): balance $300k
+2. Selecciona "Juan Pérez"
+   → Trigger: GET /api/payments/customer-projects?customerId=abc-123
+   → Retorna proyectos con balance > 0 ordenados por createdAt ASC
+   → Resultado:
+     - #2024-001 (Jun): balance $300k
+     - #2024-002 (Ago): balance $400k
+     - #2024-003 (Oct): balance $300k
       ↓
-Distribución:
-  $300k → #2024-001 (cierra)
-  $200k → #2024-002 (abono)
-  $0    → #2024-003 (skip)
+3. Ingresa monto: $500,000
       ↓
-Tabla muestra allocations calculadas
-Usuario puede editarlas manualmente
+4. Selecciona fecha: Hoy
       ↓
-Validación visual:
-  Total asignado: $500,000 ✅
-  Diferencia: $0
+5. Selecciona método: "Efectivo"
       ↓
-Submit → POST /api/payments
+6. Tab "FIFO Automático" (default)
       ↓
-✅ Success → 2 allocations creadas
+7. Click "Calcular FIFO"
+   → Frontend ejecuta:
+      calculateFIFO(projects, 500000)
+      ↓
+      Distribución FIFO:
+        Step 1: $300k → #2024-001 (cierra completo)
+        Step 2: $200k → #2024-002 (abono parcial)
+        Step 3: Skip #2024-003 (remaining = 0)
+      ↓
+      Resultado:
+        allocations = [
+          { projectId: '2024-001', allocatedAmount: 300000 },
+          { projectId: '2024-002', allocatedAmount: 200000 }
+        ]
+      ↓
+8. Tabla muestra distribución FIFO sugerida:
+   ┌────────────────────────────────────────┐
+   │ Proyecto    Monto Asig.   Estado      │
+   ├────────────────────────────────────────┤
+   │ #2024-001   $300,000      ✅ Completo │
+   │ #2024-002   $200,000      ⚠️ Parcial  │
+   └────────────────────────────────────────┘
+
+   Resumen:
+   Total asignado: $500,000 ✅
+   Diferencia: $0
+      ↓
+9. Usuario puede:
+   - Aceptar distribución FIFO → Submit
+   - O cambiar a tab "Manual" para editar
+      ↓
+10. Click "Registrar Pago"
+      ↓
+Submit → Helper convierte:
+  paymentToCustomerToPayload(values, "CLP") → {
+    customerId: "abc-123",
+    amount: 500000,
+    currency: "CLP",          // ← Derivada del primer proyecto
+    date: "2024-11-05",
+    paymentMethodId: "efectivo-id",
+    reference: null,
+    notes: null,
+    allocations: [
+      { projectId: "2024-001", allocatedAmount: 300000 },
+      { projectId: "2024-002", allocatedAmount: 200000 }
+    ]
+  }
+      ↓
+POST /api/payments
+      ↓
+Validaciones API (14 checks)
+      ↓
+✅ Success → Payment creado con 2 allocations
+      ↓
+Toast: "Pago registrado exitosamente"
+      ↓
+Dialog cierra → Router refresh
       ↓
 Balances actualizados:
-  #2024-001: $0 (pagado completo)
-  #2024-002: $200k (pendiente)
+  #2024-001: balance = $0 (pagado completo) ✅
+  #2024-002: balance = $200k (pendiente)
+  #2024-003: balance = $300k (sin cambios)
 ```
 
 ---
@@ -716,31 +1140,61 @@ PaymentSummaryCard recalcula:
 
 ---
 
-### Flujo 4: Corrección Manual de Distribución
+### Flujo 4: Pago a Cliente (1:N) - Distribución Manual
 
 ```
-Usuario → Modo "Distribuir (1:N)"
+Usuario → Click "Registrar Pago" → "Pago a Cliente"
       ↓
-1. Ingresa monto: $400,000
-2. Click "Calcular FIFO"
+PaymentToCustomerDialog → PaymentToCustomerForm
       ↓
-FIFO sugiere:
-  $300k → #2024-001
-  $100k → #2024-002
+1. Selecciona cliente: "Juan Pérez"
+   → Carga proyectos con balance:
+     - #2024-001 (Jun): balance $300k
+     - #2024-002 (Ago): balance $400k
+     - #2024-003 (Oct): balance $300k
       ↓
-❌ Usuario prefiere otra distribución
+2. Ingresa monto: $400,000
       ↓
-Edita manualmente:
-  $150k → #2024-001
-  $250k → #2024-002
+3. Selecciona método: "Transferencia"
       ↓
-Validación en tiempo real:
-  Total asignado: $400,000
-  Diferencia: $0 ✅
+4. Cambia a tab "Distribución Manual"
       ↓
-Submit → POST /api/payments
+5. Click "Calcular FIFO" (opcional)
+   → FIFO sugiere:
+     - $300k → #2024-001
+     - $100k → #2024-002
       ↓
-✅ Allocations creadas según edición manual
+6. ❌ Usuario prefiere otra distribución
+   → Edita manualmente en tabla:
+
+   ┌──────────────────────────────────────────────┐
+   │ Proyecto    Balance    Monto Asignado  [X]  │
+   ├──────────────────────────────────────────────┤
+   │ #2024-001   $300k      [$150,000]      🗑️   │
+   │ #2024-002   $400k      [$250,000]      🗑️   │
+   └──────────────────────────────────────────────┘
+
+   [+ Agregar Proyecto]
+
+   Resumen:
+   Total asignado: $400,000 ✅
+   Diferencia: $0
+      ↓
+7. Validación en tiempo real (Zod refine):
+   - Suma = monto total ✅
+   - No duplicados ✅
+   - Todos del mismo customer ✅
+   - Misma currency ✅
+      ↓
+8. Click "Registrar Pago"
+      ↓
+Submit → POST /api/payments con allocations editadas
+      ↓
+✅ Success → 2 allocations creadas según distribución manual
+      ↓
+Balances actualizados:
+  #2024-001: balance = $150k (abono parcial)
+  #2024-002: balance = $150k (abono parcial)
 ```
 
 ---
@@ -1003,44 +1457,56 @@ allocations = [
 
 ### Base de Datos
 
-| Archivo                | Descripción                                       | Líneas  |
-| ---------------------- | ------------------------------------------------- | ------- |
-| `prisma/schema.prisma` | Modelos Payment, PaymentAllocation, PaymentMethod | 140-210 |
-| `prisma/seed.ts`       | Datos de ejemplo con FIFO real                    | 359-498 |
+| Archivo                                                | Descripción                                       | Líneas  |
+| ------------------------------------------------------ | ------------------------------------------------- | ------- |
+| [prisma/schema.prisma](prisma/schema.prisma#L140-L210) | Modelos Payment, PaymentAllocation, PaymentMethod | 140-210 |
+| [prisma/seed.ts](prisma/seed.ts)                       | Datos de ejemplo con FIFO real                    | 359-498 |
 
 ### API Routes
 
-| Archivo                                 | Endpoints     | Líneas |
-| --------------------------------------- | ------------- | ------ |
-| `app/api/payments/route.ts`             | GET, POST     | 1-313  |
-| `app/api/payments/[id]/cancel/route.ts` | POST (anular) | 1-90   |
+| Archivo                                                                                    | Endpoints | Descripción                       |
+| ------------------------------------------------------------------------------------------ | --------- | --------------------------------- |
+| [app/api/payments/route.ts](app/api/payments/route.ts)                                     | GET, POST | Lista de pagos + crear pago       |
+| [app/api/payments/search-projects/route.ts](app/api/payments/search-projects/route.ts)     | GET       | Búsqueda de proyectos con balance |
+| [app/api/payments/customer-projects/route.ts](app/api/payments/customer-projects/route.ts) | GET       | Proyectos de un cliente (FIFO)    |
+| [app/api/payments/[id]/cancel/route.ts](app/api/payments/[id]/cancel/route.ts)             | POST      | Anular pago (soft delete)         |
 
 ### Lógica de Negocio
 
-| Archivo                                  | Funciones                              | Líneas |
-| ---------------------------------------- | -------------------------------------- | ------ |
-| `lib/validations/payment-validations.ts` | Schemas Zod, calculateProjectBalance() | 1-203  |
-| `lib/payment-fifo.ts`                    | calculateFIFO(), helpers de balance    | 1-138  |
+| Archivo                                                                          | Funciones                                                                                 |
+| -------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
+| [lib/validations/payment-validations.ts](lib/validations/payment-validations.ts) | Schemas Zod (2 flujos), calculateProjectBalance(), calculateFIFO(), helpers de conversión |
+
+**Nota:** El archivo `lib/payment-fifo.ts` fue eliminado. Su lógica está ahora integrada en `payment-validations.ts`.
 
 ### Componentes UI - Dialogs
 
-| Archivo                                                  | Descripción             | Líneas |
-| -------------------------------------------------------- | ----------------------- | ------ |
-| `components/dialogs/payments/payment-details-dialog.tsx` | Modal para ver detalles | -      |
+| Archivo                                                                                                                  | Descripción                            |
+| ------------------------------------------------------------------------------------------------------------------------ | -------------------------------------- |
+| [components/dialogs/payments/payment-to-project-dialog.tsx](components/dialogs/payments/payment-to-project-dialog.tsx)   | Dialog "Pago a Proyecto" (1:1)         |
+| [components/dialogs/payments/payment-to-customer-dialog.tsx](components/dialogs/payments/payment-to-customer-dialog.tsx) | Dialog "Pago a Cliente" (1:N) con FIFO |
+| [components/dialogs/payments/payment-details-dialog.tsx](components/dialogs/payments/payment-details-dialog.tsx)         | Ver detalles de un pago                |
+
+### Componentes UI - Forms
+
+| Archivo                                                                                                          | Descripción                          |
+| ---------------------------------------------------------------------------------------------------------------- | ------------------------------------ |
+| [components/forms/payments/payment-to-project-form.tsx](components/forms/payments/payment-to-project-form.tsx)   | Formulario flujo 1:1 simplificado    |
+| [components/forms/payments/payment-to-customer-form.tsx](components/forms/payments/payment-to-customer-form.tsx) | Formulario flujo 1:N con FIFO/Manual |
 
 ### Componentes UI - Tables & Cards
 
-| Archivo                                        | Descripción                     | Líneas |
-| ---------------------------------------------- | ------------------------------- | ------ |
-| `components/summarys/payment-summary-card.tsx` | Resumen financiero del proyecto | 1-173  |
-| `components/tables/project-payments-table.tsx` | Historial de pagos + anular     | 1-337  |
+| Archivo                                                                                      | Descripción                     |
+| -------------------------------------------------------------------------------------------- | ------------------------------- |
+| [components/summarys/payment-summary-card.tsx](components/summarys/payment-summary-card.tsx) | Resumen financiero del proyecto |
+| [components/tables/project-payments-table.tsx](components/tables/project-payments-table.tsx) | Historial de pagos + anular     |
 
 ### Páginas
 
-| Archivo                    | Ruta        | Descripción             |
-| -------------------------- | ----------- | ----------------------- | ----- |
-| `app/payments/page.tsx`    | `/payments` | Lista completa de pagos | 1-120 |
-| `app/payments/columns.tsx` | -           | Columnas de DataTable   | -     |
+| Archivo                                              | Ruta        | Descripción                                      |
+| ---------------------------------------------------- | ----------- | ------------------------------------------------ |
+| [app/payments/page.tsx](app/payments/page.tsx)       | `/payments` | Lista completa de pagos con dropdown de registro |
+| [app/payments/columns.tsx](app/payments/columns.tsx) | -           | Columnas de DataTable                            |
 
 ---
 
@@ -1200,5 +1666,40 @@ Para preguntas o problemas:
 
 ---
 
-**Última actualización:** 2024-11-05
-**Versión:** 1.0.0
+**Última actualización:** 2025-10-21
+**Versión:** 2.0.0
+
+## 📝 Historial de Cambios
+
+### v2.0.0 (2025-10-21)
+
+**Refactor arquitectural completo:**
+
+- ✅ **Separación en 2 flujos principales:**
+  - "Pago a Proyecto" (1:1) - Flujo simplificado con auto-derivación de datos
+  - "Pago a Cliente" (1:N) - Flujo con FIFO automático o distribución manual
+
+- ✅ **Nuevos endpoints API:**
+  - `GET /api/payments/search-projects` - Búsqueda de proyectos con balance
+  - `GET /api/payments/customer-projects` - Proyectos de un cliente ordenados para FIFO
+
+- ✅ **Schemas de validación separados:**
+  - `paymentToProjectSchema` con helpers de conversión
+  - `paymentToCustomerSchema` con validación integrada de suma
+
+- ✅ **Nuevos componentes:**
+  - `PaymentToProjectDialog` + `PaymentToProjectForm`
+  - `PaymentToCustomerDialog` + `PaymentToCustomerForm`
+
+- ✅ **Consolidación de lógica:**
+  - Eliminado `lib/payment-fifo.ts`
+  - `calculateFIFO()` integrado en `payment-validations.ts`
+
+- ✅ **Página de pagos mejorada:**
+  - Dropdown "Registrar Pago" con 2 opciones
+  - UX simplificada según flujo de uso
+
+### v1.0.0 (2024-11-05)
+
+- Implementación inicial del sistema de pagos
+- Soporte básico para 1:N con FIFO manual
