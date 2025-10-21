@@ -3,60 +3,55 @@ import { prisma } from '@/lib/db'
 import { calculateProjectBalance } from '@/lib/validations/payment-validations'
 
 /**
- * GET /api/payments/search-projects
+ * GET /api/payments/customer-projects
  *
- * Busca proyectos para registro de pagos.
- * Solo retorna proyectos con totalAmount > 0 y balance > 0.
+ * Obtiene todos los proyectos de un cliente que tienen balance pendiente.
+ * Utilizado para el formulario "Pago a Cliente (1:N)".
  *
  * Query params:
- * - q: término de búsqueda (min 2 caracteres)
- * - limit: máximo de resultados (default: 20, max: 50)
+ * - customerId: UUID del cliente (requerido)
  *
- * Búsqueda en:
- * - projectNumber (ej: "2024-089")
- * - projectName (ej: "Ampliación bodega")
- * - customer.name (ej: "Juan Pérez")
+ * Retorna:
+ * - Array de proyectos con balance > 0
+ * - Ordenados por createdAt ASC (más antiguos primero, para FIFO)
+ * - Incluye: id, projectNumber, projectName, totalAmount, currency, balance, createdAt, customer
+ *
+ * Validaciones:
+ * - customerId es requerido y debe ser UUID válido
+ * - Solo retorna proyectos con totalAmount > 0 y balance > 0
+ * - Solo cuenta pagos activos (status = 'ACTIVE')
  */
 export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url)
-    const q = searchParams.get('q') || ''
-    const limit = Math.min(Number(searchParams.get('limit')) || 20, 50)
+    const customerId = searchParams.get('customerId')
 
-    // Validar término de búsqueda
-    if (q.length < 2) {
-      return NextResponse.json(
-        { error: 'El término de búsqueda debe tener al menos 2 caracteres' },
-        { status: 400 }
-      )
+    // Validar customerId
+    if (!customerId) {
+      return NextResponse.json({ error: 'El parámetro customerId es requerido' }, { status: 400 })
     }
 
-    // Buscar proyectos
+    // Validar formato UUID (simple regex)
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+    if (!uuidRegex.test(customerId)) {
+      return NextResponse.json({ error: 'customerId debe ser un UUID válido' }, { status: 400 })
+    }
+
+    // Verificar que el cliente existe
+    const customer = await prisma.customer.findUnique({
+      where: { id: customerId },
+      select: { id: true, name: true },
+    })
+
+    if (!customer) {
+      return NextResponse.json({ error: 'Cliente no encontrado' }, { status: 404 })
+    }
+
+    // Buscar proyectos del cliente
     const projects = await prisma.project.findMany({
       where: {
+        customerId,
         totalAmount: { gt: 0 }, // Solo proyectos con monto definido
-        OR: [
-          {
-            projectNumber: {
-              contains: q,
-              mode: 'insensitive',
-            },
-          },
-          {
-            projectName: {
-              contains: q,
-              mode: 'insensitive',
-            },
-          },
-          {
-            customer: {
-              name: {
-                contains: q,
-                mode: 'insensitive',
-              },
-            },
-          },
-        ],
       },
       include: {
         customer: {
@@ -81,9 +76,8 @@ export async function GET(req: NextRequest) {
           },
         },
       },
-      take: limit,
       orderBy: {
-        createdAt: 'desc', // Más recientes primero
+        createdAt: 'asc', // ← Más antiguos primero (para FIFO)
       },
     })
 
@@ -105,7 +99,7 @@ export async function GET(req: NextRequest) {
           totalAmount: Number(project.totalAmount),
           currency: project.currency,
           balance,
-          createdAt: project.createdAt, // Para FIFO (si se necesita)
+          createdAt: project.createdAt, // ← Para FIFO
           customer: {
             id: project.customer.id,
             name: project.customer.name,
@@ -117,7 +111,7 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json(projectsWithBalance)
   } catch (error) {
-    console.error('Error searching projects:', error)
-    return NextResponse.json({ error: 'Error al buscar proyectos' }, { status: 500 })
+    console.error('Error fetching customer projects:', error)
+    return NextResponse.json({ error: 'Error al obtener proyectos del cliente' }, { status: 500 })
   }
 }

@@ -8,6 +8,7 @@ import { DataTable } from '@/components/data-table'
 import { createColumns, type Payment } from './columns'
 import { PaymentDetailsDialog } from '@/components/dialogs/payments/payment-details-dialog'
 import { PaymentToProjectDialog } from '@/components/dialogs/payments/payment-to-project-dialog'
+import { PaymentToCustomerDialog } from '@/components/dialogs/payments/payment-to-customer-dialog'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Button } from '@/components/ui/button'
 import {
@@ -24,6 +25,7 @@ export default function PaymentsPage() {
   const [selectedPayment, setSelectedPayment] = useState<Payment | null>(null)
   const [isDetailsDialogOpen, setIsDetailsDialogOpen] = useState(false)
   const [isPaymentToProjectDialogOpen, setIsPaymentToProjectDialogOpen] = useState(false)
+  const [isPaymentToCustomerDialogOpen, setIsPaymentToCustomerDialogOpen] = useState(false)
 
   const fetchPayments = async () => {
     try {
@@ -98,7 +100,9 @@ export default function PaymentsPage() {
                 <DropdownMenuItem onClick={() => setIsPaymentToProjectDialogOpen(true)}>
                   Pago a Proyecto (1:1)
                 </DropdownMenuItem>
-                <DropdownMenuItem disabled>Pago a Cliente (N:1)</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setIsPaymentToCustomerDialogOpen(true)}>
+                  Pago a Cliente (1:N)
+                </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
@@ -147,6 +151,13 @@ export default function PaymentsPage() {
       <PaymentToProjectDialog
         open={isPaymentToProjectDialogOpen}
         onOpenChange={setIsPaymentToProjectDialogOpen}
+        onSuccess={fetchPayments}
+      />
+
+      {/* Modal de registro de pago a cliente */}
+      <PaymentToCustomerDialog
+        open={isPaymentToCustomerDialogOpen}
+        onOpenChange={setIsPaymentToCustomerDialogOpen}
         onSuccess={fetchPayments}
       />
     </AppLayout>
