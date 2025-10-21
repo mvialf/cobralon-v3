@@ -1,7 +1,8 @@
 'use client'
 
+import { useState } from 'react'
 import { type ColumnDef } from '@tanstack/react-table'
-import { MoreHorizontal, Pencil, Trash2 } from 'lucide-react'
+import { MoreHorizontal, Pencil, Trash2, Eye, Receipt } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
   DropdownMenu,
@@ -13,6 +14,8 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { StatusBadge } from '@/components/ui/status-badge'
 import { ProjectNameSummary } from '@/components/summarys/project-name-summary'
+import { ViewProjectDetailsSheet } from '@/components/dialogs/projects/view-project-details-sheet'
+import { ViewProjectPaymentsSheet } from '@/components/dialogs/projects/view-project-payments-sheet'
 import { toast } from 'sonner'
 
 export interface Project {
@@ -91,61 +94,108 @@ export const createColumns = ({ onProjectDeleted }: ColumnsProps = {}): ColumnDe
   },
   {
     id: 'actions',
-    cell: ({ row }) => {
-      const project = row.original
-
-      const handleDelete = async () => {
-        if (!confirm(`¿Estás seguro de eliminar el proyecto ${project.projectNumber}?`)) {
-          return
-        }
-
-        try {
-          const response = await fetch(`/api/projects/${project.id}`, {
-            method: 'DELETE',
-          })
-
-          if (!response.ok) {
-            const error = await response.json()
-            throw new Error(error.error || 'Error al eliminar proyecto')
-          }
-
-          toast.success('Proyecto eliminado exitosamente')
-          onProjectDeleted?.()
-        } catch (error) {
-          console.error('Error al eliminar proyecto:', error)
-          toast.error(error instanceof Error ? error.message : 'Error al eliminar proyecto')
-        }
-      }
-
-      return (
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" className="h-8 w-8 p-0">
-              <span className="sr-only">Abrir menu</span>
-              <MoreHorizontal className="h-4 w-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuLabel>Acciones</DropdownMenuLabel>
-            <DropdownMenuItem
-              onClick={() =>
-                navigator.clipboard.writeText(`${project.customer.name} - ${project.projectNumber}`)
-              }
-            >
-              Copiar información
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem>
-              <Pencil className="mr-2 h-4 w-4" />
-              Editar
-            </DropdownMenuItem>
-            <DropdownMenuItem className="text-destructive" onClick={handleDelete}>
-              <Trash2 className="mr-2 h-4 w-4" />
-              Eliminar
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      )
-    },
+    cell: ({ row }) => (
+      <ProjectActionsCell project={row.original} onProjectDeleted={onProjectDeleted} />
+    ),
   },
 ]
+
+/**
+ * Componente de acciones para cada fila de la tabla de proyectos
+ */
+function ProjectActionsCell({
+  project,
+  onProjectDeleted,
+}: {
+  project: Project
+  onProjectDeleted?: () => void
+}) {
+  const [detailsOpen, setDetailsOpen] = useState(false)
+  const [paymentsOpen, setPaymentsOpen] = useState(false)
+
+  const handleDelete = async () => {
+    if (!confirm(`¿Estás seguro de eliminar el proyecto ${project.projectNumber}?`)) {
+      return
+    }
+
+    try {
+      const response = await fetch(`/api/projects/${project.id}`, {
+        method: 'DELETE',
+      })
+
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.error || 'Error al eliminar proyecto')
+      }
+
+      toast.success('Proyecto eliminado exitosamente')
+      onProjectDeleted?.()
+    } catch (error) {
+      console.error('Error al eliminar proyecto:', error)
+      toast.error(error instanceof Error ? error.message : 'Error al eliminar proyecto')
+    }
+  }
+
+  return (
+    <>
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button variant="ghost" className="h-8 w-8 p-0">
+            <span className="sr-only">Abrir menu</span>
+            <MoreHorizontal className="h-4 w-4" />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end">
+          <DropdownMenuLabel>Acciones</DropdownMenuLabel>
+
+          {/* Ver detalles */}
+          <DropdownMenuItem onClick={() => setDetailsOpen(true)}>
+            <Eye className="mr-2 h-4 w-4" />
+            Ver detalles
+          </DropdownMenuItem>
+
+          {/* Ver pagos */}
+          <DropdownMenuItem onClick={() => setPaymentsOpen(true)}>
+            <Receipt className="mr-2 h-4 w-4" />
+            Ver pagos
+          </DropdownMenuItem>
+
+          <DropdownMenuSeparator />
+
+          <DropdownMenuItem
+            onClick={() =>
+              navigator.clipboard.writeText(`${project.customer.name} - ${project.projectNumber}`)
+            }
+          >
+            Copiar información
+          </DropdownMenuItem>
+
+          <DropdownMenuSeparator />
+
+          <DropdownMenuItem>
+            <Pencil className="mr-2 h-4 w-4" />
+            Editar
+          </DropdownMenuItem>
+
+          <DropdownMenuItem className="text-destructive" onClick={handleDelete}>
+            <Trash2 className="mr-2 h-4 w-4" />
+            Eliminar
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+
+      {/* Sheets */}
+      <ViewProjectDetailsSheet
+        projectId={project.id}
+        open={detailsOpen}
+        onOpenChange={setDetailsOpen}
+      />
+
+      <ViewProjectPaymentsSheet
+        projectId={project.id}
+        open={paymentsOpen}
+        onOpenChange={setPaymentsOpen}
+      />
+    </>
+  )
+}
