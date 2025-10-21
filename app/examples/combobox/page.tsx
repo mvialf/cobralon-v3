@@ -1,20 +1,9 @@
 'use client'
 
 import { useState } from 'react'
-import { Check, ChevronsUpDown } from 'lucide-react'
 
 import { AppLayout } from '@/components/layout/app-layout'
-import { Button } from '@/components/ui/button'
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from '@/components/ui/command'
-import { cn } from '@/lib/utils'
+import { Combobox } from '@/components/ui/combobox'
 
 const tricks = [
   { label: 'Kickflip', value: 'kickflip' },
@@ -28,53 +17,21 @@ const tricks = [
 ]
 
 function ComboboxDemo() {
-  const [open, setOpen] = useState(false)
   const [value, setValue] = useState('')
 
   return (
     <div className="mx-auto w-full max-w-md">
-      <Popover open={open} onOpenChange={setOpen}>
-        <PopoverTrigger asChild>
-          <Button
-            variant="input-like"
-            size="input"
-            role="combobox"
-            aria-expanded={open}
-            className="w-full"
-          >
-            {value ? tricks.find((trick) => trick.value === value)?.label : 'Select trick...'}
-            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-          </Button>
-        </PopoverTrigger>
-        <PopoverContent className="w-[400px] p-0">
-          <Command>
-            <CommandInput placeholder="Search trick..." />
-            <CommandList>
-              <CommandEmpty>No trick found.</CommandEmpty>
-              <CommandGroup>
-                {tricks.map((trick) => (
-                  <CommandItem
-                    key={trick.value}
-                    value={trick.value}
-                    onSelect={(currentValue) => {
-                      setValue(currentValue === value ? '' : currentValue)
-                      setOpen(false)
-                    }}
-                  >
-                    <Check
-                      className={cn(
-                        'mr-2 h-4 w-4',
-                        value === trick.value ? 'opacity-100' : 'opacity-0'
-                      )}
-                    />
-                    {trick.label}
-                  </CommandItem>
-                ))}
-              </CommandGroup>
-            </CommandList>
-          </Command>
-        </PopoverContent>
-      </Popover>
+      <Combobox
+        value={value}
+        onValueChange={setValue}
+        options={tricks}
+        getOptionValue={(trick) => trick.value}
+        getOptionLabel={(trick) => trick.label}
+        placeholder="Select trick..."
+        searchPlaceholder="Search trick..."
+        emptyMessage="No trick found."
+        contentWidth="400px"
+      />
 
       {value && (
         <div className="mt-4 rounded-lg border bg-muted/40 p-4">

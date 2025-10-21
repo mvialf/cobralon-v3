@@ -3,7 +3,7 @@
 import * as React from 'react'
 import { useForm, useFieldArray } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { Check, ChevronsUpDown, Calculator, Trash2 } from 'lucide-react'
+import { Calculator, Trash2 } from 'lucide-react'
 
 import { paymentFormSchema, type PaymentFormData } from '@/lib/validations/payment-validations'
 import { calculateFIFO, calculateProjectBalance } from '@/lib/payment-fifo'
@@ -13,9 +13,9 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { CurrencyInput } from '@/components/ui/currency-input'
+import { Combobox } from '@/components/ui/combobox'
 import { FormGrid } from '@/components/ui/form-grid'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import {
   Table,
   TableBody,
@@ -24,14 +24,6 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from '@/components/ui/command'
 import {
   Form,
   FormControl,
@@ -79,7 +71,6 @@ export function PaymentForm({
 }: PaymentFormProps) {
   const [paymentMethods, setPaymentMethods] = React.useState<PaymentMethod[]>([])
   const [loadingMethods, setLoadingMethods] = React.useState(true)
-  const [openMethodCombobox, setOpenMethodCombobox] = React.useState(false)
 
   const [projects, setProjects] = React.useState<ProjectWithBalance[]>([])
   const [loadingProjects, setLoadingProjects] = React.useState(true)
@@ -101,7 +92,7 @@ export function PaymentForm({
     },
   })
 
-  const { fields, append, remove, update } = useFieldArray({
+  const { fields, append, remove } = useFieldArray({
     control: form.control,
     name: 'allocations',
   })
@@ -272,58 +263,21 @@ export function PaymentForm({
             render={({ field }) => (
               <FormItem className="flex flex-col">
                 <FormLabel>Método de Pago *</FormLabel>
-                <Popover
-                  open={openMethodCombobox}
-                  onOpenChange={setOpenMethodCombobox}
-                  modal={true}
-                >
-                  <PopoverTrigger asChild>
-                    <FormControl>
-                      <Button
-                        variant="input-like"
-                        size="input"
-                        role="combobox"
-                        className={cn('w-full', !field.value && 'text-muted-foreground')}
-                        disabled={loadingMethods}
-                      >
-                        {loadingMethods
-                          ? 'Cargando...'
-                          : field.value
-                            ? selectedMethod?.name
-                            : 'Seleccionar método'}
-                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                      </Button>
-                    </FormControl>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-[300px] p-0">
-                    <Command>
-                      <CommandInput placeholder="Buscar método..." />
-                      <CommandList>
-                        <CommandEmpty>No se encontraron métodos</CommandEmpty>
-                        <CommandGroup>
-                          {paymentMethods.map((method) => (
-                            <CommandItem
-                              key={method.id}
-                              value={method.name}
-                              onSelect={() => {
-                                form.setValue('paymentMethodId', method.id)
-                                setOpenMethodCombobox(false)
-                              }}
-                            >
-                              <Check
-                                className={cn(
-                                  'mr-2 h-4 w-4',
-                                  method.id === field.value ? 'opacity-100' : 'opacity-0'
-                                )}
-                              />
-                              {method.name}
-                            </CommandItem>
-                          ))}
-                        </CommandGroup>
-                      </CommandList>
-                    </Command>
-                  </PopoverContent>
-                </Popover>
+                <FormControl>
+                  <Combobox
+                    value={field.value}
+                    onValueChange={field.onChange}
+                    options={paymentMethods}
+                    getOptionValue={(method) => method.id}
+                    getOptionLabel={(method) => method.name}
+                    placeholder="Seleccionar método"
+                    searchPlaceholder="Buscar método..."
+                    emptyMessage="No se encontraron métodos"
+                    contentWidth="300px"
+                    loading={loadingMethods}
+                    modal
+                  />
+                </FormControl>
                 <FormMessage />
               </FormItem>
             )}

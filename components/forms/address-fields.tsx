@@ -2,22 +2,11 @@
 
 import * as React from 'react'
 import { Control } from 'react-hook-form'
-import { Check, ChevronsUpDown } from 'lucide-react'
 
-import { cn } from '@/lib/utils'
 import { getRegiones, getComunasByRegion } from '@/lib/regiones-chile'
 
-import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from '@/components/ui/command'
+import { Combobox } from '@/components/ui/combobox'
 import { FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form'
 
 interface AddressFieldsProps {
@@ -31,9 +20,6 @@ interface AddressFieldsProps {
  * Incluye: calle, casa/dpto, comuna, región
  */
 export function AddressFields({ control, defaultRegion }: AddressFieldsProps) {
-  const [openRegion, setOpenRegion] = React.useState(false)
-  const [openComuna, setOpenComuna] = React.useState(false)
-
   const regiones = getRegiones()
 
   // Watch región para filtrar comunas
@@ -93,53 +79,25 @@ export function AddressFields({ control, defaultRegion }: AddressFieldsProps) {
           render={({ field }) => (
             <FormItem className="flex flex-col w-full">
               <FormLabel>Región *</FormLabel>
-              <Popover open={openRegion} onOpenChange={setOpenRegion}>
-                <PopoverTrigger asChild>
-                  <FormControl>
-                    <Button
-                      variant="input-like"
-                      size="input"
-                      role="combobox"
-                      className={cn('w-full', !field.value && 'text-muted-foreground')}
-                    >
-                      {field.value || 'Selecciona una región...'}
-                      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                    </Button>
-                  </FormControl>
-                </PopoverTrigger>
-                <PopoverContent className="w-[300px] p-0">
-                  <Command>
-                    <CommandInput placeholder="Buscar región..." />
-                    <CommandList>
-                      <CommandEmpty>No se encontró la región</CommandEmpty>
-                      <CommandGroup>
-                        {regiones.map((r) => {
-                          const displayText = `${r.nombre_corto} (${r.numero_romano})`
-                          return (
-                            <CommandItem
-                              key={r.codigo}
-                              value={displayText}
-                              onSelect={(value) => {
-                                field.onChange(value)
-                                setSelectedRegion(value)
-                                setOpenRegion(false)
-                              }}
-                            >
-                              <Check
-                                className={cn(
-                                  'mr-2 h-4 w-4',
-                                  field.value === displayText ? 'opacity-100' : 'opacity-0'
-                                )}
-                              />
-                              {displayText}
-                            </CommandItem>
-                          )
-                        })}
-                      </CommandGroup>
-                    </CommandList>
-                  </Command>
-                </PopoverContent>
-              </Popover>
+              <FormControl>
+                <Combobox
+                  value={field.value}
+                  onValueChange={(value) => {
+                    field.onChange(value)
+                    setSelectedRegion(value)
+                  }}
+                  options={regiones.map((r) => ({
+                    codigo: r.codigo,
+                    displayText: `${r.nombre_corto} (${r.numero_romano})`,
+                  }))}
+                  getOptionValue={(r) => r.displayText}
+                  getOptionLabel={(r) => r.displayText}
+                  placeholder="Selecciona una región..."
+                  searchPlaceholder="Buscar región..."
+                  emptyMessage="No se encontró la región"
+                  contentWidth="300px"
+                />
+              </FormControl>
               <FormMessage />
             </FormItem>
           )}
@@ -152,53 +110,22 @@ export function AddressFields({ control, defaultRegion }: AddressFieldsProps) {
           render={({ field }) => (
             <FormItem className="flex flex-col w-full">
               <FormLabel>Comuna *</FormLabel>
-              <Popover open={openComuna} onOpenChange={setOpenComuna}>
-                <PopoverTrigger asChild>
-                  <FormControl>
-                    <Button
-                      variant="input-like"
-                      size="input"
-                      role="combobox"
-                      className={cn('w-full', !field.value && 'text-muted-foreground')}
-                      disabled={!regionCodigo}
-                    >
-                      {field.value ||
-                        (regionCodigo
-                          ? 'Selecciona una comuna...'
-                          : 'Primero selecciona una región')}
-                      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                    </Button>
-                  </FormControl>
-                </PopoverTrigger>
-                <PopoverContent className="w-[300px] p-0">
-                  <Command>
-                    <CommandInput placeholder="Buscar comuna..." />
-                    <CommandList>
-                      <CommandEmpty>No se encontró la comuna</CommandEmpty>
-                      <CommandGroup>
-                        {comunasDisponibles.map((c) => (
-                          <CommandItem
-                            key={c.codigo}
-                            value={c.nombre}
-                            onSelect={(value) => {
-                              field.onChange(value)
-                              setOpenComuna(false)
-                            }}
-                          >
-                            <Check
-                              className={cn(
-                                'mr-2 h-4 w-4',
-                                field.value === c.nombre ? 'opacity-100' : 'opacity-0'
-                              )}
-                            />
-                            {c.nombre}
-                          </CommandItem>
-                        ))}
-                      </CommandGroup>
-                    </CommandList>
-                  </Command>
-                </PopoverContent>
-              </Popover>
+              <FormControl>
+                <Combobox
+                  value={field.value}
+                  onValueChange={field.onChange}
+                  options={comunasDisponibles}
+                  getOptionValue={(c) => c.nombre}
+                  getOptionLabel={(c) => c.nombre}
+                  placeholder={
+                    regionCodigo ? 'Selecciona una comuna...' : 'Primero selecciona una región'
+                  }
+                  searchPlaceholder="Buscar comuna..."
+                  emptyMessage="No se encontró la comuna"
+                  contentWidth="300px"
+                  disabled={!regionCodigo}
+                />
+              </FormControl>
               <FormMessage />
             </FormItem>
           )}

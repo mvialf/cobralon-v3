@@ -1,20 +1,11 @@
 'use client'
 
-import { useState } from 'react'
-import { Check, ChevronsUpDown, Settings2, RotateCcw } from 'lucide-react'
+import { Settings2, RotateCcw } from 'lucide-react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from '@/components/ui/command'
+import { Combobox } from '@/components/ui/combobox'
 import {
   IDIOMAS_DISPONIBLES,
   TIMEZONES_DISPONIBLES,
@@ -22,7 +13,6 @@ import {
 } from '@/lib/paises-config'
 import { getRegiones } from '@/lib/regiones-chile'
 import { useConfiguration } from '@/hooks/use-configuration'
-import { cn } from '@/lib/utils'
 
 const paises = [
   {
@@ -37,13 +27,6 @@ export default function GeneralSettingsPage() {
 
   // Destructuring para facilitar lectura
   const { pais, region, modoPersonalizado, idioma, timezone, primerDia } = configuration
-
-  // Estados para controlar apertura de popovers
-  const [openPais, setOpenPais] = useState(false)
-  const [openRegion, setOpenRegion] = useState(false)
-  const [openIdioma, setOpenIdioma] = useState(false)
-  const [openTimezone, setOpenTimezone] = useState(false)
-  const [openPrimerDia, setOpenPrimerDia] = useState(false)
 
   // Obtener datos de regiones
   const regiones = getRegiones()
@@ -74,47 +57,17 @@ export default function GeneralSettingsPage() {
               {/* Selector de País */}
               <div className="grid flex-1 gap-2">
                 <Label>País</Label>
-                <Popover open={openPais} onOpenChange={setOpenPais}>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant="input-like"
-                      size="input"
-                      role="combobox"
-                      aria-expanded={openPais}
-                    >
-                      {pais ? paises.find((p) => p.value === pais)?.label : 'Selecciona un país...'}
-                      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-[200px] p-0">
-                    <Command>
-                      <CommandInput placeholder="Buscar país..." />
-                      <CommandList>
-                        <CommandEmpty>No se encontró el país</CommandEmpty>
-                        <CommandGroup>
-                          {paises.map((p) => (
-                            <CommandItem
-                              key={p.value}
-                              value={p.value}
-                              onSelect={(currentValue) => {
-                                updateConfiguration({ pais: currentValue })
-                                setOpenPais(false)
-                              }}
-                            >
-                              <Check
-                                className={cn(
-                                  'mr-2 h-4 w-4',
-                                  pais === p.value ? 'opacity-100' : 'opacity-0'
-                                )}
-                              />
-                              {p.label}
-                            </CommandItem>
-                          ))}
-                        </CommandGroup>
-                      </CommandList>
-                    </Command>
-                  </PopoverContent>
-                </Popover>
+                <Combobox
+                  value={pais}
+                  onValueChange={(value) => updateConfiguration({ pais: value })}
+                  options={paises}
+                  getOptionValue={(p) => p.value}
+                  getOptionLabel={(p) => p.label}
+                  placeholder="Selecciona un país..."
+                  searchPlaceholder="Buscar país..."
+                  emptyMessage="No se encontró el país"
+                  contentWidth="200px"
+                />
               </div>
 
               {/* Ubicación - Solo visible si país es Chile */}
@@ -123,50 +76,20 @@ export default function GeneralSettingsPage() {
                   {/* Región */}
                   <div className="grid flex-1 gap-2">
                     <Label>Región</Label>
-                    <Popover open={openRegion} onOpenChange={setOpenRegion}>
-                      <PopoverTrigger asChild>
-                        <Button
-                          variant="input-like"
-                          size="input"
-                          role="combobox"
-                          aria-expanded={openRegion}
-                        >
-                          {region || 'Selecciona una región...'}
-                          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-[250px] p-0">
-                        <Command>
-                          <CommandInput placeholder="Buscar región..." />
-                          <CommandList>
-                            <CommandEmpty>No se encontró la región</CommandEmpty>
-                            <CommandGroup>
-                              {regiones.map((r) => {
-                                const displayText = `${r.nombre_corto} (${r.numero_romano})`
-                                return (
-                                  <CommandItem
-                                    key={r.codigo}
-                                    value={displayText}
-                                    onSelect={(value) => {
-                                      updateConfiguration({ region: value })
-                                      setOpenRegion(false)
-                                    }}
-                                  >
-                                    <Check
-                                      className={cn(
-                                        'mr-2 h-4 w-4',
-                                        region === displayText ? 'opacity-100' : 'opacity-0'
-                                      )}
-                                    />
-                                    {displayText}
-                                  </CommandItem>
-                                )
-                              })}
-                            </CommandGroup>
-                          </CommandList>
-                        </Command>
-                      </PopoverContent>
-                    </Popover>
+                    <Combobox
+                      value={region}
+                      onValueChange={(value) => updateConfiguration({ region: value })}
+                      options={regiones.map((r) => ({
+                        codigo: r.codigo,
+                        displayText: `${r.nombre_corto} (${r.numero_romano})`,
+                      }))}
+                      getOptionValue={(r) => r.displayText}
+                      getOptionLabel={(r) => r.displayText}
+                      placeholder="Selecciona una región..."
+                      searchPlaceholder="Buscar región..."
+                      emptyMessage="No se encontró la región"
+                      contentWidth="250px"
+                    />
                   </div>
                 </>
               )}
@@ -229,143 +152,49 @@ export default function GeneralSettingsPage() {
                   {/* Idioma */}
                   <div className="grid flex-1 gap-2">
                     <Label>Idioma</Label>
-                    <Popover open={openIdioma} onOpenChange={setOpenIdioma}>
-                      <PopoverTrigger asChild>
-                        <Button
-                          variant="input-like"
-                          size="input"
-                          role="combobox"
-                          aria-expanded={openIdioma}
-                        >
-                          {idioma || 'Selecciona un idioma...'}
-                          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-[200px] p-0">
-                        <Command>
-                          <CommandInput placeholder="Buscar idioma..." />
-                          <CommandList>
-                            <CommandEmpty>No se encontró el idioma</CommandEmpty>
-                            <CommandGroup>
-                              {IDIOMAS_DISPONIBLES.map((lang) => (
-                                <CommandItem
-                                  key={lang.value}
-                                  value={lang.label}
-                                  onSelect={(currentValue) => {
-                                    updateConfiguration({ idioma: currentValue })
-                                    setOpenIdioma(false)
-                                  }}
-                                >
-                                  <Check
-                                    className={cn(
-                                      'mr-2 h-4 w-4',
-                                      idioma === lang.label ? 'opacity-100' : 'opacity-0'
-                                    )}
-                                  />
-                                  {lang.label}
-                                </CommandItem>
-                              ))}
-                            </CommandGroup>
-                          </CommandList>
-                        </Command>
-                      </PopoverContent>
-                    </Popover>
+                    <Combobox
+                      value={idioma}
+                      onValueChange={(value) => updateConfiguration({ idioma: value })}
+                      options={IDIOMAS_DISPONIBLES}
+                      getOptionValue={(lang) => lang.label}
+                      getOptionLabel={(lang) => lang.label}
+                      placeholder="Selecciona un idioma..."
+                      searchPlaceholder="Buscar idioma..."
+                      emptyMessage="No se encontró el idioma"
+                      contentWidth="200px"
+                    />
                   </div>
 
                   {/* Zona Horaria */}
                   <div className="grid flex-1 gap-2">
                     <Label>Zona horaria</Label>
-                    <Popover open={openTimezone} onOpenChange={setOpenTimezone}>
-                      <PopoverTrigger asChild>
-                        <Button
-                          variant="input-like"
-                          size="input"
-                          role="combobox"
-                          aria-expanded={openTimezone}
-                        >
-                          {timezone
-                            ? TIMEZONES_DISPONIBLES.find((tz) => tz.value === timezone)?.label
-                            : 'Selecciona una zona horaria...'}
-                          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-[300px] p-0">
-                        <Command>
-                          <CommandInput placeholder="Buscar zona horaria..." />
-                          <CommandList>
-                            <CommandEmpty>No se encontró la zona horaria</CommandEmpty>
-                            <CommandGroup>
-                              {TIMEZONES_DISPONIBLES.map((tz) => (
-                                <CommandItem
-                                  key={tz.value}
-                                  value={tz.value}
-                                  onSelect={(currentValue) => {
-                                    updateConfiguration({ timezone: currentValue })
-                                    setOpenTimezone(false)
-                                  }}
-                                >
-                                  <Check
-                                    className={cn(
-                                      'mr-2 h-4 w-4',
-                                      timezone === tz.value ? 'opacity-100' : 'opacity-0'
-                                    )}
-                                  />
-                                  {tz.label}
-                                </CommandItem>
-                              ))}
-                            </CommandGroup>
-                          </CommandList>
-                        </Command>
-                      </PopoverContent>
-                    </Popover>
+                    <Combobox
+                      value={timezone}
+                      onValueChange={(value) => updateConfiguration({ timezone: value })}
+                      options={TIMEZONES_DISPONIBLES}
+                      getOptionValue={(tz) => tz.value}
+                      getOptionLabel={(tz) => tz.label}
+                      placeholder="Selecciona una zona horaria..."
+                      searchPlaceholder="Buscar zona horaria..."
+                      emptyMessage="No se encontró la zona horaria"
+                      contentWidth="300px"
+                    />
                   </div>
 
                   {/* Primer Día de la Semana */}
                   <div className="grid flex-1 gap-2">
                     <Label>Primer día de la semana</Label>
-                    <Popover open={openPrimerDia} onOpenChange={setOpenPrimerDia}>
-                      <PopoverTrigger asChild>
-                        <Button
-                          variant="input-like"
-                          size="input"
-                          role="combobox"
-                          aria-expanded={openPrimerDia}
-                        >
-                          {primerDia
-                            ? PRIMER_DIA_OPCIONES.find((dia) => dia.value === primerDia)?.label
-                            : 'Selecciona el primer día...'}
-                          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-[200px] p-0">
-                        <Command>
-                          <CommandInput placeholder="Buscar día..." />
-                          <CommandList>
-                            <CommandEmpty>No se encontró la opción</CommandEmpty>
-                            <CommandGroup>
-                              {PRIMER_DIA_OPCIONES.map((dia) => (
-                                <CommandItem
-                                  key={dia.value}
-                                  value={dia.value}
-                                  onSelect={(currentValue) => {
-                                    updateConfiguration({ primerDia: currentValue })
-                                    setOpenPrimerDia(false)
-                                  }}
-                                >
-                                  <Check
-                                    className={cn(
-                                      'mr-2 h-4 w-4',
-                                      primerDia === dia.value ? 'opacity-100' : 'opacity-0'
-                                    )}
-                                  />
-                                  {dia.label}
-                                </CommandItem>
-                              ))}
-                            </CommandGroup>
-                          </CommandList>
-                        </Command>
-                      </PopoverContent>
-                    </Popover>
+                    <Combobox
+                      value={primerDia}
+                      onValueChange={(value) => updateConfiguration({ primerDia: value })}
+                      options={PRIMER_DIA_OPCIONES}
+                      getOptionValue={(dia) => dia.value}
+                      getOptionLabel={(dia) => dia.label}
+                      placeholder="Selecciona el primer día..."
+                      searchPlaceholder="Buscar día..."
+                      emptyMessage="No se encontró la opción"
+                      contentWidth="200px"
+                    />
                   </div>
                 </div>
               )}
