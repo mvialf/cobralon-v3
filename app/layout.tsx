@@ -4,6 +4,7 @@ import { GeistMono } from 'geist/font/mono'
 import { Analytics } from '@vercel/analytics/next'
 import { ThemeProvider } from '@/components/theme-provider'
 import { ConfigurationProvider } from '@/lib/contexts/configuration-context'
+import { QueryProvider } from '@/components/providers/query-provider'
 import './globals.css'
 
 export const metadata: Metadata = {
@@ -29,7 +30,9 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          <ConfigurationProvider>{children}</ConfigurationProvider>
+          <QueryProvider>
+            <ConfigurationProvider>{children}</ConfigurationProvider>
+          </QueryProvider>
         </ThemeProvider>
         <Analytics />
       </body>
