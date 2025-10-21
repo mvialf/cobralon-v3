@@ -4,22 +4,22 @@ Estrategia de testing implementada en este template.
 
 ## Stack de Testing
 
-| Nivel                | Herramienta                           | Estado                       | Propósito                 |
-| -------------------- | ------------------------------------- | ---------------------------- | ------------------------- |
-| **Unit/Integration** | Vitest 3.2.4 + Testing Library 16.3.0 | ✅ Implementado              | Componentes, hooks, utils |
-| **E2E Exploratory**  | Chrome DevTools MCP                   | 🔬 Experimental              | Debugging con Claude      |
-| **E2E Regression**   | Playwright                            | 📋 Recomendado (no incluido) | CI/CD, cross-browser      |
-| **Code Quality**     | ESLint 8 + Prettier                   | ✅ Implementado              | Linting y formatting      |
+| Nivel                | Herramienta                           | Estado                 | Propósito                        |
+| -------------------- | ------------------------------------- | ---------------------- | -------------------------------- |
+| **Unit/Integration** | Vitest 3.2.4 + Testing Library 16.3.0 | ✅ Implementado        | Componentes, hooks, utils        |
+| **E2E con IA**       | Playwright MCP                        | ✅ Implementado        | Testing con Claude, genera tests |
+| **E2E Tradicional**  | @playwright/test                      | 📋 Recomendado agregar | CI/CD, cross-browser, regression |
+| **Code Quality**     | ESLint 9 + Prettier                   | ✅ Implementado        | Linting y formatting             |
 
 ## Arquitectura de Testing
 
 ```
 ┌─────────────────────────────────────────┐
-│     E2E Testing (Chrome DevTools MCP)   │  ← Exploración manual
-│     Status: Experimental                │
+│     E2E Testing (Playwright MCP)        │  ← Testing con Claude
+│     Status: Implementado ✅             │     (genera tests .spec.ts)
 ├─────────────────────────────────────────┤
-│     E2E Testing (Playwright)            │  ← Regression, CI/CD
-│     Status: Recomendado (no incluido)   │
+│     E2E Testing (@playwright/test)      │  ← Regression, CI/CD
+│     Status: Recomendado agregar 📋      │     (ejecuta tests)
 ├─────────────────────────────────────────┤
 │     Integration Tests (Vitest)          │  ← Flujos multi-component
 │     Status: Implementado ✅             │
@@ -158,71 +158,136 @@ jsdom no es un browser real:
 
 ---
 
-## 2. Chrome DevTools MCP (Experimental)
+## 2. Playwright MCP (Implementado)
 
-### Estado: 🔬 Experimental
+### Estado: ✅ Implementado
 
-Chrome DevTools MCP permite a Claude Code controlar un navegador Chrome para testing exploratorio.
+Playwright MCP permite a Claude Code escribir, ejecutar y debuggear tests E2E usando Playwright. A diferencia de Chrome DevTools MCP (deprecado), Playwright MCP **genera tests persistentes** (.spec.ts) que se versionan en Git.
 
 ### Instalación
 
-**NO incluido por defecto.** Instalación manual:
-
-```bash
-npm install -g @modelcontextprotocol/server-chrome-devtools
-```
-
-Configurar en `~/.config/Claude Code/mcp_settings.json`.
-
-### Casos de Uso
-
-✅ **USAR para:**
-
-- Debugging de bugs reportados
-- Exploración de features nuevas
-- Performance debugging
-- Generación de screenshots
-
-❌ **NO USAR para:**
-
-- Regression testing (usar Playwright)
-- CI/CD pipelines
-- Cross-browser testing
-
-### Documentación
-
-Ver guía completa: [Chrome DevTools MCP Testing](../guides/chrome-devtools-mcp-testing.md)
-
----
-
-## 3. Playwright (Recomendado, no incluido)
-
-### Estado: 📋 Recomendado para proyectos serios
-
-Para proyectos que requieren E2E testing robusto y automatizado:
+Playwright MCP ya está incluido en el proyecto vía MCP configuration. Solo necesitas tener `@playwright/test` instalado:
 
 ```bash
 npm install -D @playwright/test
 npx playwright install
 ```
 
-### Cuándo Agregar Playwright
+### Características Clave
+
+**✅ Tests Persistentes**
+
+- Claude genera archivos `.spec.ts` versionados en Git
+- Tests reutilizables y ejecutables sin Claude
+- Code review posible
+
+**✅ Multi-Browser**
+
+- Soporte para Chrome, Firefox, Safari
+- Tests en mobile devices
+- Cross-browser validation
+
+**✅ Ecosystem Completo**
+
+- Playwright Inspector para debugging
+- Trace viewer para análisis post-mortem
+- Screenshots y videos automáticos
+- UI mode para desarrollo
+
+**✅ CI/CD Ready**
+
+- Tests ejecutables en pipelines
+- Headless mode
+- Paralelización automática
+
+### Workflow con Claude
+
+```
+Usuario: "Claude, crea test E2E para el flujo de login"
+
+Claude (usa Playwright MCP):
+1. Navega por la app
+2. Escribe tests/e2e/login.spec.ts
+3. Ejecuta y valida
+4. Test guardado en Git ✅
+
+Resultado:
+  tests/e2e/login.spec.ts
+  - test('login exitoso', async ({ page }) => { ... })
+  - ✅ PASS
+```
+
+### Casos de Uso
+
+✅ **USAR Playwright MCP (con Claude) para:**
+
+- Generar tests iniciales rápidamente
+- Debugging interactivo de tests
+- Exploración de bugs con IA
+- Generar screenshots/evidencia
+
+✅ **USAR @playwright/test (sin Claude) para:**
+
+- CI/CD regression testing
+- Pre-commit hooks
+- Desarrollo local (test --ui)
+- Cross-browser validation
+
+❌ **Ventajas vs Chrome DevTools MCP (deprecado):**
+
+| Aspecto         | Chrome DevTools MCP | Playwright MCP             |
+| --------------- | ------------------- | -------------------------- |
+| Tests persisten | ❌ No               | ✅ Sí (.spec.ts)           |
+| Multi-browser   | ❌ Solo Chrome      | ✅ Chrome, Firefox, Safari |
+| CI/CD           | ❌ No               | ✅ Sí                      |
+| Ecosystem       | ⚠️ Limitado         | ✅ Completo                |
+
+### Documentación
+
+Ver decisión completa: [ADR-010: Playwright MCP](../decisions/010-playwright-mcp.md)
+
+---
+
+## 3. @playwright/test (Complementario a Playwright MCP)
+
+### Estado: 📋 Recomendado agregar
+
+`@playwright/test` es la librería tradicional de Playwright que **complementa** Playwright MCP. Mientras Playwright MCP genera tests con ayuda de Claude, `@playwright/test` los ejecuta de forma independiente.
+
+```bash
+npm install -D @playwright/test
+npx playwright install
+```
+
+### Relación con Playwright MCP
+
+```
+Playwright MCP          @playwright/test
+     ↓                        ↓
+Claude genera          Tests ejecutan
+tests .spec.ts    →    sin necesidad de Claude
+     ↓                        ↓
+Versionados en Git  →  CI/CD pipelines
+```
+
+### Cuándo Agregar @playwright/test
 
 Agregar cuando:
 
-- El proyecto tiene flujos críticos de negocio
-- Necesitas tests en CI/CD
-- Requieres cross-browser testing
-- Necesitas tests de regression automatizados
+- ✅ Tienes tests generados por Playwright MCP que quieres ejecutar en CI/CD
+- ✅ El proyecto tiene flujos críticos de negocio
+- ✅ Necesitas regression testing automatizado
+- ✅ Requieres cross-browser testing
+- ✅ Quieres usar herramientas standalone (codegen, UI mode, trace viewer)
 
-### Ventajas vs Chrome DevTools MCP
+### Ventajas de @playwright/test
 
 - ✅ Multi-browser (Chrome, Firefox, Safari)
-- ✅ Headless execution
+- ✅ Headless execution (CI/CD)
 - ✅ Parallel test execution
 - ✅ Auto-waiting y retry logic
-- ✅ CI/CD friendly
-- ✅ Tests como código (persistentes)
+- ✅ Tests ejecutables sin Claude
+- ✅ Ecosystem completo (Inspector, Trace Viewer, Codegen)
 
 ---
 
@@ -377,9 +442,10 @@ graph TD
 
 1. **Implementar feature**
 2. **Escribir unit tests** (Vitest)
-3. **Verificar con Claude** (Chrome DevTools MCP)
-4. **Si se encuentra bug** → Escribir test de regression (Playwright)
-5. **Deploy con confianza**
+3. **Verificar con Claude** (Playwright MCP - genera tests E2E)
+4. **Si se encuentra bug** → Test ya fue generado por Playwright MCP
+5. **CI/CD ejecuta** (@playwright/test - regression automática)
+6. **Deploy con confianza**
 
 ---
 
@@ -419,17 +485,22 @@ npm run build             # Build (fails on errors)
 ## Decisiones Arquitecturales
 
 - [ADR-005: Vitest + Testing Library](../decisions/005-vitest-testing-library.md)
-- [ADR-006: Chrome DevTools MCP Experimental](../decisions/006-chrome-devtools-mcp-experimental.md)
+- [ADR-010: Playwright MCP + @playwright/test](../decisions/010-playwright-mcp.md)
 - [ADR-007: ESLint + Prettier](../decisions/007-eslint-prettier.md)
+- [ADR-006: Chrome DevTools MCP (❌ Deprecado)](../decisions/006-chrome-devtools-mcp-experimental.md)
 
 ---
 
 ## Próximos Pasos
 
 - [ ] Agregar coverage thresholds en vitest.config.ts
-- [ ] Configurar GitHub Actions para CI/CD
-- [ ] Considerar agregar Playwright para E2E regression
+- [ ] Configurar GitHub Actions para CI/CD con Playwright
+- [ ] Crear primeros tests E2E con Playwright MCP:
+  - Flujo de login
+  - Crear proyecto
+  - Sistema de pagos
+- [ ] Integrar @playwright/test en CI/CD pipeline
 
 ---
 
-**Última actualización:** 2025-01-13
+**Última actualización:** 2025-10-21

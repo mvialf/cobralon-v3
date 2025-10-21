@@ -136,7 +136,7 @@ Usar **Vitest 1.6.0** como test runner + **React Testing Library 16.2.0** para t
    - **Mitigación:**
      - Mocks configurados en [vitest.setup.ts](../../../vitest.setup.ts)
      - Documentado en [vitest.config.ts](../../../vitest.config.ts#L10-L15)
-     - Para tests complejos de UI, usar Chrome DevTools MCP o Playwright
+     - Para tests complejos de UI, usar Playwright MCP o @playwright/test
 
 3. **Breaking Changes Ocasionales**
    - Vitest tiene releases mayores frecuentes (actualmente v3.x)
@@ -292,7 +292,7 @@ describe('cn utility', () => {
 
 ```
 ┌─────────────────────────────────────┐
-│   E2E Tests (Chrome DevTools MCP)   │  ← Exploración manual
+│   E2E Tests (Playwright MCP)        │  ← Testing con Claude
 ├─────────────────────────────────────┤
 │   Integration Tests (Vitest)        │  ← Flujos multi-component
 ├─────────────────────────────────────┤

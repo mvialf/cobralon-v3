@@ -2,9 +2,29 @@
 
 ## Estado
 
-**Experimental / Aceptado para Uso Limitado**
+**❌ DEPRECADO**
 
-**Fecha:** 2025-01-13
+**Fecha original:** 2025-01-13
+**Fecha de deprecación:** 2025-10-21
+
+## ⚠️ Este ADR está Deprecado
+
+**Razón del reemplazo:**
+
+Chrome DevTools MCP ha sido reemplazado por **Playwright MCP** que ofrece ventajas superiores:
+
+- ✅ **Tests persistentes:** Genera archivos `.spec.ts` versionados en Git
+- ✅ **Multi-browser:** Chrome, Firefox, Safari (no solo Chrome)
+- ✅ **Mejor integración:** Ecosystem completo de Playwright
+- ✅ **CI/CD friendly:** Tests ejecutables sin necesidad de Claude
+- ✅ **Debugging superior:** Playwright Inspector + trace viewer
+- ✅ **Cross-browser testing:** Valida en múltiples navegadores
+
+**Ver decisión actual:** [ADR-010: Playwright MCP + @playwright/test](010-playwright-mcp.md)
+
+---
+
+## Contenido Histórico (Solo Referencia)
 
 ## Contexto
 
