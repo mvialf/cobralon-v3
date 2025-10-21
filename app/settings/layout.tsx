@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Globe, ListTodo } from 'lucide-react'
+import { Globe, ListTodo, CreditCard } from 'lucide-react'
 import { AppLayout } from '@/components/layout/app-layout'
 import { cn } from '@/lib/utils'
 
@@ -25,6 +25,12 @@ const settingsSections: SettingsSection[] = [
     href: '/settings/project-status',
     icon: ListTodo,
     description: 'Gestionar estados de proyectos',
+  },
+  {
+    title: 'Métodos de Pago',
+    href: '/settings/payments',
+    icon: CreditCard,
+    description: 'Configurar métodos de pago disponibles',
   },
 ]
 

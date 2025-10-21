@@ -46,11 +46,11 @@ http://localhost:3000
 - **React Testing Library 16.3.0** - Testing centrado en el usuario
 - **ESLint 8.57.1** - Linting con reglas estrictas
 - **Prettier 3.4.2** - Formateo automático de código
-- **Chrome DevTools MCP** - E2E testing experimental
+- **Playwright MCP** - E2E testing con IA (genera tests persistentes)
 
 ### Documentación Completa
 
-- **ADRs** (Architecture Decision Records) - 7 decisiones documentadas
+- **ADRs** (Architecture Decision Records) - 10 decisiones documentadas (9 activas + 1 deprecada)
 - **Implementation Log** - Timeline de cambios significativos
 - **Testing Guides** - Estrategia completa de testing
 - **Component Guides** - Documentación de cada componente
@@ -225,9 +225,11 @@ Configurado con CSS variables en `app/globals.css`:
 3. **[ADR-003: shadcn/ui New York Style](docs/template/decisions/003-shadcn-ui-new-york.md)**
 4. **[ADR-004: Sistema de Layout 2 Capas](docs/template/decisions/004-layout-system-dos-capas.md)**
 5. **[ADR-005: Vitest + Testing Library](docs/template/decisions/005-vitest-testing-library.md)**
-6. **[ADR-006: Chrome DevTools MCP](docs/template/decisions/006-chrome-devtools-mcp-experimental.md)**
-7. **[ADR-007: ESLint + Prettier](docs/template/decisions/007-eslint-prettier.md)**
-8. **[ADR-008: Prisma + Neon](docs/template/decisions/008-prisma-neon.md)**
+6. **[ADR-007: ESLint + Prettier](docs/template/decisions/007-eslint-prettier.md)**
+7. **[ADR-008: Prisma + Neon PostgreSQL](docs/template/decisions/008-prisma-neon.md)**
+8. **[ADR-009: No Incluir Autenticación por Defecto](docs/template/decisions/009-authentication-options.md)**
+9. **[ADR-010: Playwright MCP + @playwright/test](docs/template/decisions/010-playwright-mcp.md)**
+10. **[ADR-006: Chrome DevTools MCP (❌ Deprecado)](docs/template/decisions/006-chrome-devtools-mcp-experimental.md)**
 
 ## ⚠️ Notas Importantes
 

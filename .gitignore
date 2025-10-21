@@ -33,4 +33,11 @@ next-env.d.ts
 
 # firebase
 firebase-debug.log
-firebase-debug.*.log.playwright-mcp/
+firebase-debug.*.log
+
+# playwright
+.playwright-mcp/
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache/

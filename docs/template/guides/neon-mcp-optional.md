@@ -60,7 +60,7 @@ Edita `.claude/settings.local.json` y agrega `"neon"` a la lista:
 
 ```json
 {
-  "enabledMcpjsonServers": ["firebase", "shadcn", "chrome-devtools", "neon"]
+  "enabledMcpjsonServers": ["firebase", "shadcn", "playwright", "neon"]
 }
 ```
 
