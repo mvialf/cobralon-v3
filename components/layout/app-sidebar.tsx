@@ -17,6 +17,7 @@ import {
   Wallet,
   BadgeCheck,
   ScrollText,
+  FileEdit,
 } from 'lucide-react'
 
 import {
@@ -104,6 +105,11 @@ const navigationItems: NavigationItem[] = [
         title: 'Scrollable Dialog',
         url: '/examples/scrollable-dialog',
         icon: ScrollText,
+      },
+      {
+        title: 'Dialog con Formulario',
+        url: '/examples/form-dialog',
+        icon: FileEdit,
       },
     ],
   },

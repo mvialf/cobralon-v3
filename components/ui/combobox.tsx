@@ -184,6 +184,8 @@ export function Combobox<T>({
     return placeholder
   }, [loading, loadingText, selectedOption, getOptionLabel, placeholder])
 
+  const listboxId = `${id}-listbox`
+
   return (
     <Popover open={open} onOpenChange={handleOpenChange} modal={modal}>
       <PopoverTrigger asChild>
@@ -192,6 +194,7 @@ export function Combobox<T>({
           id={id}
           role="combobox"
           aria-expanded={open}
+          aria-controls={listboxId}
           aria-label={ariaLabel}
           aria-describedby={ariaDescribedBy}
           disabled={disabled || loading}
@@ -214,7 +217,7 @@ export function Combobox<T>({
       <PopoverContent className="p-0" style={{ width: contentWidth }}>
         <Command shouldFilter={!disableFiltering}>
           <CommandInput placeholder={searchPlaceholder} onValueChange={onSearchChange} />
-          <CommandList>
+          <CommandList id={listboxId}>
             <CommandEmpty>{emptyMessage}</CommandEmpty>
             <CommandGroup>
               {options.map((option) => {

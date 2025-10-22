@@ -12,7 +12,6 @@ import {
   getPaginationRowModel,
   getSortedRowModel,
   useReactTable,
-  Row,
   FilterFn,
   TableMeta,
 } from '@tanstack/react-table'
