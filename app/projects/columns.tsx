@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { type ColumnDef } from '@tanstack/react-table'
 import { MoreHorizontal, Pencil, Trash2, Eye, Receipt } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -26,6 +27,7 @@ export interface Project {
   projectStatus: {
     id: string
     name: string
+    isFinal?: boolean // Indica si es un estado final (ej: Completado)
     color: {
       bgClass: string
     }
@@ -82,6 +84,24 @@ export const createColumns = ({ onProjectDeleted }: ColumnsProps = {}): ColumnDe
     },
   },
   {
+    id: 'projectState',
+    accessorFn: (row) => {
+      // Calcular estado del proyecto: Activo vs Finalizado
+      const isFullyPaid = row.balance === 0
+      const hasFinalStatus = row.projectStatus?.isFinal ?? false
+      return isFullyPaid && hasFinalStatus ? 'Finalizado' : 'Activo'
+    },
+    header: 'Estado Proyecto',
+    cell: ({ row }) => {
+      const state = row.getValue('projectState') as string
+      const variant = state === 'Finalizado' ? 'success' : 'default'
+      return <Badge variant={variant}>{state}</Badge>
+    },
+    filterFn: (row, id, value) => {
+      return value.includes(row.getValue(id))
+    },
+  },
+  {
     accessorKey: 'total',
     header: 'Total',
     cell: ({ row }) => {
@@ -115,13 +135,38 @@ export const createColumns = ({ onProjectDeleted }: ColumnsProps = {}): ColumnDe
     header: 'Total Pagado',
     cell: ({ row }) => {
       const totalPaid = row.original.totalPaid
+      const total = row.original.total
+
+      // Calcular porcentaje pagado
+      const percentPaid = total > 0 ? Math.round((totalPaid / total) * 100) : 0
+
+      // Determinar color del badge según porcentaje
+      let badgeVariant: 'success' | 'default' | 'secondary' | 'destructive' | 'outline' = 'default'
+
+      if (percentPaid === 100) {
+        badgeVariant = 'success'
+      } else if (percentPaid >= 67) {
+        badgeVariant = 'default'
+      } else if (percentPaid >= 34) {
+        badgeVariant = 'secondary'
+      } else {
+        badgeVariant = 'destructive'
+      }
+
       // Formatear como moneda CLP (sin decimales)
-      return new Intl.NumberFormat('es-CL', {
+      const formattedAmount = new Intl.NumberFormat('es-CL', {
         style: 'currency',
         currency: 'CLP',
         minimumFractionDigits: 0,
         maximumFractionDigits: 0,
       }).format(totalPaid)
+
+      return (
+        <div className="flex items-center gap-2">
+          <span>{formattedAmount}</span>
+          <Badge variant={badgeVariant}>{percentPaid}%</Badge>
+        </div>
+      )
     },
   },
   {
