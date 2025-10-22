@@ -306,9 +306,7 @@ export function ProjectForm({
           />
         </FormGrid>
 
-        <FormGrid columns={2}>
-          <AddressFields control={form.control} defaultRegion={configuration.region} />
-        </FormGrid>
+        <AddressFields control={form.control} defaultRegion={configuration.region} />
 
         <FormGrid columns={3}>
           {/* Subtotal */}

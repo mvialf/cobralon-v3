@@ -43,11 +43,7 @@ export function AddressFields({ control, defaultRegion }: AddressFieldsProps) {
             <FormItem className="col-span-5 w-full">
               <FormLabel>Calle y numeración *</FormLabel>
               <FormControl>
-                <Input
-                  {...field}
-                  placeholder="Av. Libertador Bernardo O'Higgins 123"
-                  className="w-full"
-                />
+                <Input {...field} className="w-full" />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -62,7 +58,7 @@ export function AddressFields({ control, defaultRegion }: AddressFieldsProps) {
             <FormItem className="col-span-1 w-full">
               <FormLabel>Casa/Depto</FormLabel>
               <FormControl>
-                <Input {...field} placeholder="Depto 405" className="w-full" />
+                <Input {...field} className="w-full" />
               </FormControl>
               <FormMessage />
             </FormItem>
