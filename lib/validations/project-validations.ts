@@ -1,9 +1,9 @@
 import { z } from 'zod'
 
 /**
- * Schema de validación para proyectos
+ * Schema base compartido (campos de entrada del usuario)
  */
-export const projectSchema = z.object({
+const projectBaseSchema = z.object({
   // Relación con customer
   customerId: z.string().min(1, 'El cliente es requerido'),
 
@@ -21,7 +21,7 @@ export const projectSchema = z.object({
   region: z.string().min(1, 'La región es obligatoria'),
 
   // Estado y fecha
-  projectStatusId: z.string().optional(), // FK a ProjectStatus (opcional)
+  projectStatusId: z.string().min(1, 'El estado del proyecto es requerido'), // FK a ProjectStatus (obligatorio)
   date: z.date({
     required_error: 'La fecha de ingreso es requerida',
   }),
@@ -41,14 +41,6 @@ export const projectSchema = z.object({
     .min(0, 'El impuesto no puede ser negativo')
     .max(100, 'El impuesto no puede ser mayor a 100')
     .default(19),
-
-  // Total y moneda (para sistema de pagos)
-  totalAmount: z
-    .number({
-      invalid_type_error: 'El monto total debe ser un número',
-    })
-    .positive('El monto total debe ser mayor a 0')
-    .optional(), // Calculado automáticamente en el form
 
   currency: z.string().length(3, 'La moneda debe ser un código de 3 letras').default('CLP'),
 
@@ -72,7 +64,23 @@ export const projectSchema = z.object({
   description: z.string().optional(),
 })
 
-export type ProjectFormData = z.infer<typeof projectSchema>
+/**
+ * Schema para el formulario (sin totalAmount - se calcula después de validación)
+ */
+export const projectFormSchema = projectBaseSchema
+
+export type ProjectFormData = z.infer<typeof projectFormSchema>
+
+/**
+ * Schema completo con totalAmount (usado en API y operaciones con DB)
+ */
+export const projectSchema = projectBaseSchema.extend({
+  totalAmount: z
+    .number({
+      invalid_type_error: 'El monto total debe ser un número',
+    })
+    .positive('El monto total debe ser mayor a 0'),
+})
 
 /**
  * Schema para crear proyecto (usado en API)

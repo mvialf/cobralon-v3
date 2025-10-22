@@ -140,6 +140,10 @@ function FormMessage({ className, ...props }: React.ComponentProps<'p'>) {
   )
 }
 
+function FormRoot({ className, ...props }: React.ComponentProps<'form'>) {
+  return <form data-slot="form-root" className={cn('space-y-6', className)} {...props} />
+}
+
 export {
   useFormField,
   Form,
@@ -149,4 +153,5 @@ export {
   FormDescription,
   FormMessage,
   FormField,
+  FormRoot,
 }

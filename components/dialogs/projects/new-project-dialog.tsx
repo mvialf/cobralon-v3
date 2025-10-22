@@ -2,7 +2,7 @@
 
 import * as React from 'react'
 import { Plus } from 'lucide-react'
-import { ProjectForm } from '@/components/forms/projects/project-form'
+import { ProjectForm, ProjectFormHandle } from '@/components/forms/projects/project-form'
 import { type ProjectFormData } from '@/lib/validations/project-validations'
 import { Button } from '@/components/ui/button'
 import {
@@ -25,6 +25,7 @@ interface NewProjectDialogProps {
 export function NewProjectDialog({ onProjectCreated }: NewProjectDialogProps) {
   const [open, setOpen] = React.useState(false)
   const [isSubmitting, setIsSubmitting] = React.useState(false)
+  const formRef = React.useRef<ProjectFormHandle>(null)
 
   const handleSubmit = async (data: ProjectFormData) => {
     setIsSubmitting(true)
@@ -79,10 +80,10 @@ export function NewProjectDialog({ onProjectCreated }: NewProjectDialogProps) {
                 Ingresa los datos del nuevo proyecto. Haz clic en guardar cuando termines.
               </p>
               <ProjectForm
+                ref={formRef}
                 onSubmit={handleSubmit}
                 isSubmitting={isSubmitting}
                 showSubmitButton={false}
-                formId="new-project-form"
               />
             </div>
           </ScrollableDialogDescription>
@@ -93,7 +94,7 @@ export function NewProjectDialog({ onProjectCreated }: NewProjectDialogProps) {
               Cancelar
             </Button>
           </ScrollableDialogClose>
-          <Button type="submit" form="new-project-form" disabled={isSubmitting}>
+          <Button onClick={() => formRef.current?.submit()} disabled={isSubmitting}>
             {isSubmitting ? 'Guardando...' : 'Guardar Proyecto'}
           </Button>
         </ScrollableDialogFooter>
