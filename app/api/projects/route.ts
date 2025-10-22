@@ -81,8 +81,21 @@ export async function GET(request: Request) {
       prisma.project.count({ where }),
     ])
 
+    // Calcular totalPaid para cada proyecto (solo pagos ACTIVE)
+    const projectsWithTotalPaid = projects.map((project) => {
+      const totalPaid = project.paymentAllocations.reduce((sum, alloc) => {
+        const isActive = alloc.payment.status === 'ACTIVE'
+        return sum + (isActive ? Number(alloc.allocatedAmount) : 0)
+      }, 0)
+
+      return {
+        ...project,
+        totalPaid,
+      }
+    })
+
     return NextResponse.json({
-      projects,
+      projects: projectsWithTotalPaid,
       pagination: {
         page,
         limit,

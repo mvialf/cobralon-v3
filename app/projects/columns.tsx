@@ -22,6 +22,7 @@ export interface Project {
   id: string
   projectNumber: string
   projectName: string | null
+  date: Date | string // Fecha de ingreso del proyecto
   projectStatus: {
     id: string
     name: string
@@ -30,6 +31,7 @@ export interface Project {
     }
   } | null
   total: number // Decimal se convierte a number en JSON
+  totalPaid: number // Total pagado (solo pagos ACTIVE)
   customer: {
     id: string
     name: string
@@ -90,6 +92,59 @@ export const createColumns = ({ onProjectDeleted }: ColumnsProps = {}): ColumnDe
         minimumFractionDigits: 0,
         maximumFractionDigits: 0,
       }).format(total)
+    },
+  },
+  {
+    accessorKey: 'date',
+    header: 'Fecha Ingreso',
+    cell: ({ row }) => {
+      const date = row.original.date
+      // Convertir a Date si es string
+      const dateObj = typeof date === 'string' ? new Date(date) : date
+      // Formatear en español (dd/mm/yyyy)
+      return new Intl.DateTimeFormat('es-CL', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+      }).format(dateObj)
+    },
+  },
+  {
+    accessorKey: 'totalPaid',
+    header: 'Total Pagado',
+    cell: ({ row }) => {
+      const totalPaid = row.original.totalPaid
+      // Formatear como moneda CLP (sin decimales)
+      return new Intl.NumberFormat('es-CL', {
+        style: 'currency',
+        currency: 'CLP',
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 0,
+      }).format(totalPaid)
+    },
+  },
+  {
+    id: 'balance',
+    header: 'Saldo',
+    cell: ({ row }) => {
+      const total = row.original.total
+      const totalPaid = row.original.totalPaid
+      const balance = total - totalPaid
+
+      // Color: rojo si deuda, verde si pagado completamente
+      const colorClass =
+        balance > 0.01 ? 'text-destructive font-medium' : 'text-green-600 font-medium'
+
+      return (
+        <span className={colorClass}>
+          {new Intl.NumberFormat('es-CL', {
+            style: 'currency',
+            currency: 'CLP',
+            minimumFractionDigits: 0,
+            maximumFractionDigits: 0,
+          }).format(balance)}
+        </span>
+      )
     },
   },
   {
