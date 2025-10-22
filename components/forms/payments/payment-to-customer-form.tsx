@@ -264,7 +264,7 @@ export function PaymentToCustomerForm({
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
+      <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-3">
         {/* 1. Buscar Cliente (Combobox) */}
         <FormField
           control={form.control}

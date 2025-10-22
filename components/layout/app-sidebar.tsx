@@ -111,6 +111,11 @@ const navigationItems: NavigationItem[] = [
         url: '/examples/form-dialog',
         icon: FileEdit,
       },
+      {
+        title: 'Project Dialog',
+        url: '/examples/project-dialog',
+        icon: FolderKanban,
+      },
     ],
   },
 ]
