@@ -20,7 +20,7 @@ export default function ProjectsPage() {
   const [projects, setProjects] = useState<Project[]>([])
   const [statuses, setStatuses] = useState<ProjectStatus[]>([])
   const [isLoading, setIsLoading] = useState(true)
-  const [projectState, setProjectState] = useState<'active' | 'completed' | 'all'>('active') // Default: solo activos
+  const [projectState, setProjectState] = useState<'Activo' | 'Finalizado' | 'all'>('Activo') // Default: solo activos
 
   const fetchProjects = useCallback(async () => {
     try {
@@ -104,6 +104,7 @@ export default function ProjectsPage() {
 
   // Opciones para el filtro de Estado del Proyecto (Activo/Finalizado)
   const projectStateFilterOptions = [
+    { label: 'Todos', value: 'all' },
     { label: 'Activos', value: 'Activo' },
     { label: 'Finalizados', value: 'Finalizado' },
   ]
@@ -116,20 +117,6 @@ export default function ProjectsPage() {
       action={<NewProjectDialog onProjectCreated={handleProjectCreated} />}
     >
       <div className="space-y-4">
-        {/* Selector de vista: Activos / Finalizados / Todos */}
-        <div className="flex items-center gap-2">
-          <span className="text-sm font-medium">Ver proyectos:</span>
-          <select
-            value={projectState}
-            onChange={(e) => setProjectState(e.target.value as 'active' | 'completed' | 'all')}
-            className="h-9 rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-          >
-            <option value="active">Activos</option>
-            <option value="completed">Finalizados</option>
-            <option value="all">Todos</option>
-          </select>
-        </div>
-
         {isLoading ? (
           <div className="flex items-center justify-center h-64">
             <div className="text-muted-foreground">Cargando proyectos...</div>
@@ -152,6 +139,11 @@ export default function ProjectsPage() {
                 id: 'projectState',
                 title: 'Estado Proyecto',
                 options: projectStateFilterOptions,
+                onFilterChange: (values) => {
+                  // Si hay selección, usar el primer valor; si no, 'all'
+                  const newState = values.length > 0 ? values[0] : 'all'
+                  setProjectState(newState as 'Activo' | 'Finalizado' | 'all')
+                },
               },
             ]}
           />

@@ -25,6 +25,7 @@ interface DataTableToolbarProps<TData> {
     id: string
     title: string
     options: { label: string; value: string }[]
+    onFilterChange?: (values: string[]) => void
   }[]
 }
 
@@ -68,6 +69,7 @@ export function DataTableToolbar<TData>({
                 column={tableColumn}
                 title={column.title}
                 options={column.options}
+                onFilterChange={column.onFilterChange}
               />
             )
           )

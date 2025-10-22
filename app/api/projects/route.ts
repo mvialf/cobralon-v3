@@ -14,9 +14,9 @@ import { calculateProjectBalance } from '@/lib/validations/payment-validations'
  *   - limit: registros por p�gina (default: 10, max: 100)
  *   - search: buscar por nombre de proyecto, n�mero o cliente
  *   - customerId: filtrar por cliente espec�fico
- *   - projectState: "active" (default), "completed", "all"
- *       - "active": Proyectos no finalizados (status.isFinal = false OR balance > 0)
- *       - "completed": Proyectos finalizados (status.isFinal = true AND balance = 0)
+ *   - projectState: "Activo" (default), "Finalizado", "all"
+ *       - "Activo": Proyectos no finalizados (status.isFinal = false OR balance > 0)
+ *       - "Finalizado": Proyectos finalizados (status.isFinal = true AND balance = 0)
  *       - "all": Todos los proyectos
  */
 export async function GET(request: Request) {
@@ -26,7 +26,7 @@ export async function GET(request: Request) {
     const limit = Math.min(parseInt(searchParams.get('limit') || '10'), 100)
     const search = searchParams.get('search') || ''
     const customerId = searchParams.get('customerId') || ''
-    const projectState = searchParams.get('projectState') || 'active' // active, completed, all
+    const projectState = searchParams.get('projectState') || 'Activo' // Default: solo activos
 
     const skip = (page - 1) * limit
 
@@ -48,10 +48,10 @@ export async function GET(request: Request) {
 
     // Pre-filtro server-side por projectStatus.isFinal
     // Esto optimiza la query reduciendo la carga inicial
-    if (projectState === 'active') {
+    if (projectState === 'Activo') {
       // Activos: Solo traer proyectos que NO están en estado final
       where.projectStatus = { isFinal: false }
-    } else if (projectState === 'completed') {
+    } else if (projectState === 'Finalizado') {
       // Finalizados: Solo traer proyectos en estado final
       where.projectStatus = { isFinal: true }
     }
@@ -122,10 +122,10 @@ export async function GET(request: Request) {
       const isFullyPaid = project.balance === 0
       const hasFinaleStatus = project.projectStatus?.isFinal ?? false
 
-      if (projectState === 'active') {
+      if (projectState === 'Activo') {
         // Activo: No está finalizado O tiene deuda pendiente
         return !hasFinaleStatus || !isFullyPaid
-      } else if (projectState === 'completed') {
+      } else if (projectState === 'Finalizado') {
         // Finalizado: Status final Y completamente pagado
         return hasFinaleStatus && isFullyPaid
       }

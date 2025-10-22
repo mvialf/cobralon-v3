@@ -39,6 +39,7 @@ interface DataTableProps<TData, TValue> {
     id: string
     title: string
     options: { label: string; value: string }[]
+    onFilterChange?: (values: string[]) => void
   }[]
   onRowSelectionChange?: (selectedRows: TData[]) => void
   enableRowSelection?: boolean
