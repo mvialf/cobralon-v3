@@ -95,7 +95,7 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
     // Preparar datos para actualizar
     const updateData: ProjectUpdateInput = {}
 
-    if (body.customerId) updateData.customerId = body.customerId
+    if (body.customerId) updateData.customer = { connect: { id: body.customerId } }
     if (body.projectNumber !== undefined) updateData.projectNumber = body.projectNumber.trim()
     if (body.projectName !== undefined) updateData.projectName = body.projectName?.trim() || null
     if (body.phone !== undefined) updateData.phone = body.phone.trim()
@@ -103,8 +103,11 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
     if (body.apartment !== undefined) updateData.apartment = body.apartment?.trim() || null
     if (body.comuna !== undefined) updateData.comuna = body.comuna.trim()
     if (body.region !== undefined) updateData.region = body.region.trim()
-    if (body.projectStatusId !== undefined)
-      updateData.projectStatusId = body.projectStatusId || null
+    if (body.projectStatusId !== undefined) {
+      updateData.projectStatus = body.projectStatusId
+        ? { connect: { id: body.projectStatusId } }
+        : { disconnect: true }
+    }
     if (body.date !== undefined) updateData.date = new Date(body.date)
     if (body.subtotal !== undefined) updateData.subtotal = new Decimal(body.subtotal)
     if (body.taxRate !== undefined) updateData.taxRate = new Decimal(body.taxRate)
