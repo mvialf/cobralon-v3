@@ -9,6 +9,18 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { Plus } from 'lucide-react'
 import { calculateProjectBalance } from '@/lib/payment-fifo'
 
+interface AllocationFromAPI {
+  allocatedAmount: number
+  project: {
+    id: string
+  }
+}
+
+interface PaymentFromAPI {
+  status: string
+  allocations: AllocationFromAPI[]
+}
+
 interface PaymentSummaryCardProps {
   projectId: string
   totalAmount: number | null
@@ -41,10 +53,10 @@ export function PaymentSummaryCard({ projectId, totalAmount, currency }: Payment
       const data = await response.json()
 
       // Extraer allocations de este proyecto
-      const projectAllocations = data.payments.flatMap((payment: any) =>
+      const projectAllocations = data.payments.flatMap((payment: PaymentFromAPI) =>
         payment.allocations
-          .filter((alloc: any) => alloc.project.id === projectId)
-          .map((alloc: any) => ({
+          .filter((alloc: AllocationFromAPI) => alloc.project.id === projectId)
+          .map((alloc: AllocationFromAPI) => ({
             allocatedAmount: alloc.allocatedAmount,
             payment: { status: payment.status },
           }))

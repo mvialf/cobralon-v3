@@ -33,6 +33,36 @@ interface ProjectPaymentsTableProps {
   projectId: string
 }
 
+interface AllocationFromAPI {
+  id: string
+  allocatedAmount: number
+  project: {
+    id: string
+  }
+}
+
+interface PaymentFromAPI {
+  id: string
+  amount: number
+  currency: string
+  date: string
+  reference: string | null
+  notes: string | null
+  status: string
+  cancelledAt: string | null
+  cancelledReason: string | null
+  paymentMethod: {
+    id: string
+    name: string
+    icon: string | null
+  }
+  customer: {
+    id: string
+    name: string
+  }
+  allocations: AllocationFromAPI[]
+}
+
 interface PaymentAllocation {
   id: string
   allocatedAmount: number
@@ -82,10 +112,10 @@ export function ProjectPaymentsTable({ projectId }: ProjectPaymentsTableProps) {
       const data = await response.json()
 
       // Extraer allocations de este proyecto con toda la info del pago
-      const projectAllocations = data.payments.flatMap((payment: any) =>
+      const projectAllocations = data.payments.flatMap((payment: PaymentFromAPI) =>
         payment.allocations
-          .filter((alloc: any) => alloc.project.id === projectId)
-          .map((alloc: any) => ({
+          .filter((alloc: AllocationFromAPI) => alloc.project.id === projectId)
+          .map((alloc: AllocationFromAPI) => ({
             id: alloc.id,
             allocatedAmount: alloc.allocatedAmount,
             payment: {

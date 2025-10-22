@@ -246,7 +246,10 @@ export async function POST(request: Request) {
     }
 
     // Verificar que la suma de allocations sea igual al amount (con tolerancia de decimales)
-    const totalAllocated = allocations.reduce((sum: number, a: AllocationInput) => sum + a.allocatedAmount, 0)
+    const totalAllocated = allocations.reduce(
+      (sum: number, a: AllocationInput) => sum + a.allocatedAmount,
+      0
+    )
     if (Math.abs(totalAllocated - amount) >= 0.01) {
       return NextResponse.json(
         { error: 'La suma de los montos asignados debe ser igual al monto total del pago' },

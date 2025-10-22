@@ -50,6 +50,19 @@ import {
   TableRow,
 } from '@/components/ui/table'
 
+interface PaymentMethod {
+  id: string
+  name: string
+  requiresReference?: boolean
+}
+
+interface Customer {
+  id: string
+  name: string
+  email?: string
+  phone?: string
+}
+
 interface PaymentToCustomerFormProps {
   onSubmit: (data: PaymentToCustomerFormValues, currency: string) => void | Promise<void>
   isSubmitting?: boolean
@@ -151,7 +164,7 @@ export function PaymentToCustomerForm({
   // Encontrar método seleccionado (para validar reference)
   const selectedMethodId = form.watch('paymentMethodId')
   const selectedMethod = useMemo(
-    () => paymentMethods.find((m: any) => m.id === selectedMethodId),
+    () => paymentMethods.find((m: PaymentMethod) => m.id === selectedMethodId),
     [paymentMethods, selectedMethodId]
   )
 
@@ -260,7 +273,7 @@ export function PaymentToCustomerForm({
             <FormItem>
               <FormLabel>Cliente *</FormLabel>
               <FormControl>
-                <Combobox<any>
+                <Combobox<Customer>
                   value={field.value}
                   onValueChange={(value) => {
                     field.onChange(value)
@@ -298,7 +311,7 @@ export function PaymentToCustomerForm({
             </CardHeader>
             <CardContent>
               <p className="font-medium">
-                {customersData?.find((c: any) => c.id === selectedCustomerId)?.name}
+                {customersData?.find((c: Customer) => c.id === selectedCustomerId)?.name}
               </p>
               {loadingProjects && (
                 <p className="text-sm text-muted-foreground mt-2">Cargando proyectos...</p>
@@ -395,7 +408,7 @@ export function PaymentToCustomerForm({
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
-                  {paymentMethods.map((method: any) => (
+                  {paymentMethods.map((method: PaymentMethod) => (
                     <SelectItem key={method.id} value={method.id}>
                       {method.name}
                     </SelectItem>
@@ -439,7 +452,10 @@ export function PaymentToCustomerForm({
             <FormLabel>Distribución del Pago</FormLabel>
 
             {/* Tabs: FIFO vs Manual */}
-            <Tabs value={distributionMode} onValueChange={(v) => setDistributionMode(v as any)}>
+            <Tabs
+              value={distributionMode}
+              onValueChange={(v) => setDistributionMode(v as 'fifo' | 'manual')}
+            >
               <TabsList className="grid w-full grid-cols-2">
                 <TabsTrigger value="fifo">FIFO Automático</TabsTrigger>
                 <TabsTrigger value="manual">Distribución Manual</TabsTrigger>

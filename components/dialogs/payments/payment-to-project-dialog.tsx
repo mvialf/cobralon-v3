@@ -76,10 +76,10 @@ export function PaymentToProjectDialog({
 
       // Refresh para actualizar data
       router.refresh()
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error submitting payment:', error)
       toast.error('Error al registrar el pago', {
-        description: error.message || 'Ocurrió un error inesperado',
+        description: error instanceof Error ? error.message : 'Ocurrió un error inesperado',
       })
     } finally {
       setIsSubmitting(false)
