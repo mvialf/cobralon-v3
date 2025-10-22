@@ -626,48 +626,61 @@ Documenta aquí las implementaciones de TU proyecto:
 
 ---
 
-### 🔧 Refactor: Project Status - Extraer Form + Dialog
+### 🎨 Sistema Completo de Project Status
 
 - **Status:** ✅ Complete | **Date:** 2025-10-20 | **Impact:** High
-- **Problem:** Código duplicado en dialogs de create/edit (~100 líneas), página muy larga (490 líneas), no seguía patrones del template
-- **Solution:** Extraer formulario y dialogs a componentes reutilizables siguiendo patrones de `docs/template/methodology/patterns.md`
+- **Problem:** Gestión de estados de proyectos con campo de texto libre, sin validación ni estructura
+- **Solution:** Implementar módulo completo de gestión de estados configurables con CRUD, validación y drag & drop
 - **Benefits:**
-  - **-248 líneas** eliminadas de la página (reducción del 50.6%)
-  - **-100 líneas** de duplicación eliminada (form estaba duplicado en create/edit)
-  - **+3 componentes** reutilizables creados
-  - ✅ Validación con React Hook Form + Zod (mejora en UX)
-  - ✅ Consistencia con patrones del template (forms/ + dialogs/)
-  - ✅ Mejor testeabilidad (componentes aislados)
-- **Implementación:** ✅ Completada
-  - **Fase 1:** Crear validations con Zod
-    - Schema `projectStatusSchema` con validación completa
-    - Types: `BadgeColor`, `ProjectStatus`, `ProjectStatusFormValues`
+  - ✅ Estados configurables desde UI (no hardcoded)
+  - ✅ CRUD completo con validación Zod
+  - ✅ Drag & drop para reordenar (UX moderna)
+  - ✅ Colores personalizables (BadgeColor reutilizable)
+  - ✅ Flags especiales: isInitial, isFinal para workflow
+  - ✅ Migración automática desde campo legacy
+  - ✅ Protección de datos (restrict onDelete)
+  - ✅ Componentes reutilizables siguiendo patrones del template
+- **Implementación:** ✅ Completada (commit `81f3fd4`)
+  - **Fase 1:** Modelos Prisma
+    - `BadgeColor`: 7 colores predefinidos con clases Tailwind
+    - `ProjectStatus`: Estados con nombre, color, orden, flags
+    - Migración desde `projectStatusLegacy` (String → relación FK)
+  - **Fase 2:** API Endpoints (4 endpoints)
+    - `GET/POST /api/badge-colors` - Listar colores disponibles
+    - `GET/POST /api/project-status` - CRUD estados
+    - `PUT/DELETE /api/project-status/[id]` - Editar/eliminar
+    - `POST /api/project-status/reorder` - Drag & drop reordering
+  - **Fase 3:** Componentes UI (4 componentes)
+    - `StatusBadge` - Badge reutilizable con color dinámico
+    - `ProjectStatusForm` - Formulario con React Hook Form + Zod
+    - `ProjectStatusDialog` - Dialog modal create/edit
+    - `SortableStatusItem` - Item draggable con @dnd-kit
+  - **Fase 4:** Validaciones y Types
+    - `projectStatusSchema` - Validación Zod completa
     - Helpers: `formValuesToPayload()`, `statusToFormValues()`
-  - **Fase 2:** Crear ProjectStatusForm con React Hook Form
-    - Form reutilizable con `forwardRef` para exponer métodos
-    - 3 campos: nombre (Input), tipo (RadioGroup), color (grid)
-    - Integración con Form components de shadcn/ui
-  - **Fase 3:** Crear ProjectStatusDialog con mode
-    - Dialog único con `mode: 'create' | 'edit'`
-    - Maneja POST/PUT según modo automáticamente
-    - Toast de success/error integrado
-    - Callback `onSuccess` para refetch de datos
-  - **Fase 4:** Refactorizar página principal
-    - Eliminar estado del form (formName, formColorId, formType)
-    - Eliminar handlers duplicados (handleCreate, handleEdit, resetForm)
-    - Eliminar 2 dialogs inline (~150 líneas)
-    - Agregar 2 instancias de `<ProjectStatusDialog>` (create + edit)
-    - Mantener Delete AlertDialog inline (decisión arquitectural)
-  - **Fase 5:** Fix render condicional
-    - Edit dialog solo se monta cuando `isEditDialogOpen && selectedStatus`
-    - Evita error de validación con `status` undefined
+  - **Fase 5:** Integración
+    - `ProjectForm` actualizado: Combobox de estados
+    - Seed data: 6 estados iniciales
 - **Archivos creados:**
-  - `lib/validations/project-status-validations.ts` - Schema Zod + types (93 líneas)
-  - `components/forms/settings/project-status-form.tsx` - Form reutilizable (143 líneas)
-  - `components/dialogs/settings/project-status-dialog.tsx` - Dialog con mode (142 líneas)
+  - `prisma/schema.prisma` - +52 líneas (modelos BadgeColor, ProjectStatus)
+  - `app/api/badge-colors/route.ts` - API colores (97 líneas)
+  - `app/api/project-status/route.ts` - API CRUD (177 líneas)
+  - `app/api/project-status/[id]/route.ts` - API edit/delete (186 líneas)
+  - `app/api/project-status/reorder/route.ts` - API reorder (213 líneas)
+  - `lib/validations/project-status-validations.ts` - Schema Zod (93 líneas)
+  - `components/forms/settings/project-status-form.tsx` - Form (142 líneas)
+  - `components/dialogs/settings/project-status-dialog.tsx` - Dialog (141 líneas)
+  - `components/settings/sortable-status-item.tsx` - Draggable item (104 líneas)
+  - `components/ui/status-badge.tsx` - Badge reutilizable (54 líneas)
 - **Archivos modificados:**
-  - `app/settings/project-status/page.tsx` - Refactor completo (490 → 242 líneas)
-- **Validación:** ✅ TypeScript: Pass | Build: Success | Prettier: Applied | Runtime: Working
+  - `components/forms/projects/project-form.tsx` - Combobox de estados
+  - `prisma/seed.ts` - Seed de BadgeColors y ProjectStatus
+- **Dependencias agregadas:**
+  - `@dnd-kit/core@^6.3.1`
+  - `@dnd-kit/modifiers@^9.0.0`
+  - `@dnd-kit/sortable@^10.0.0`
+  - `@dnd-kit/utilities@^3.2.2`
+- **Validación:** ✅ TypeScript: Pass | Build: Success | Drag & Drop: Working | API: Tested
 
 ---
 
@@ -776,6 +789,44 @@ Documenta aquí las implementaciones de TU proyecto:
 
 ---
 
+### 🔧 Migración: next lint → ESLint CLI Standalone
+
+- **Status:** ✅ Complete | **Date:** 2025-10-22 | **Impact:** Medium
+- **Problem:** `next lint` deprecado en Next.js 16, necesario migrar al ESLint CLI standalone
+- **Root Cause:** Next.js está removiendo comandos integrados de linting en favor del ESLint CLI estándar
+- **Solution:** Migración completa a `eslint .` manteniendo toda la configuración existente
+- **Benefits:**
+  - ✅ Preparación para Next.js 16 (futuro-proof)
+  - ✅ Mayor control sobre configuración de lint
+  - ✅ Independencia de comandos de Next.js
+  - ✅ Mejor portabilidad del proyecto
+  - ✅ Eliminación de deprecation warning
+  - ✅ Mismo comportamiento que antes (0 errores, solo warnings esperados)
+- **Implementación:** ✅ Completada
+  - **Fase 1:** Ejecutar codemod oficial
+    - Ejecutar `npx @next/codemod@canary next-lint-to-eslint-cli . --force`
+    - Scripts actualizados en package.json: `next lint` → `eslint .`
+    - Codemod intentó modificar eslint.config.mjs (generó imports incompatibles con ESM)
+  - **Fase 2:** Corregir configuración ESLint
+    - Revertir cambios en eslint.config.mjs generados por codemod
+    - Mantener uso de FlatCompat (compatibilidad con configs CommonJS de Next.js)
+    - Agregar configuración de `ignores` para excluir .next, node_modules, etc.
+  - **Fase 3:** Validar migración
+    - `npm run lint`: ✅ 0 errores, 14 warnings (aceptables)
+    - `npm run lint:fix`: ✅ Auto-fix de prettier warnings
+    - `npm run typecheck`: ✅ Pass
+    - `npm run build`: ✅ Success (9.8s)
+- **Archivos modificados:**
+  - `package.json` - Scripts actualizados:
+    - `"lint": "next lint"` → `"lint": "eslint ."`
+    - `"lint:fix": "next lint --fix"` → `"lint:fix": "eslint --fix ."`
+  - `eslint.config.mjs` - Agregar sección de ignores:
+    - `.next/**`, `node_modules/**`, `out/**`, `build/**`
+    - `next-env.d.ts`, `.playwright-mcp/**`, `coverage/**`
+- **Validación:** ✅ Lint: 0 errors | TypeCheck: Pass | Build: Success
+
+---
+
 ## Quick Reference Index
 
 | #   | Implementación                                  | Status      | Fecha      | Impact |
@@ -792,21 +843,24 @@ Documenta aquí las implementaciones de TU proyecto:
 | 10  | Página de Configuración                         | ✅ Complete | 2025-10-19 | Medium |
 | 11  | Migración @diceui/combobox → Command            | ✅ Complete | 2025-10-19 | High   |
 | 12  | Refactor: Rutas en Inglés                       | ✅ Complete | 2025-10-20 | Medium |
-| 13  | Refactor: Project Status Form + Dialog          | ✅ Complete | 2025-10-20 | High   |
+| 13  | Sistema Completo de Project Status              | ✅ Complete | 2025-10-20 | High   |
 | 14  | Componente Reutilizable: Combobox Wrapper       | ✅ Complete | 2025-10-20 | High   |
 | 15  | Migración: Chrome DevTools MCP → Playwright MCP | ✅ Complete | 2025-10-21 | High   |
+| 16  | Migración: next lint → ESLint CLI               | ✅ Complete | 2025-10-22 | Medium |
 
 ---
 
 ## Statistics
 
-- **Total Implementaciones:** 15
-- **Completadas:** 15
+- **Total Implementaciones:** 16
+- **Completadas:** 16
 - **En Progreso:** 0
 - **Pendientes:** 0
 
 ---
 
-**Última actualización:** 2025-10-21
+**Última actualización:** 2025-10-22
+
+**Nota:** Entrada #13 corregida el 2025-10-22 tras investigación con git-searcher - información previa sobre "refactor 490→242 líneas" era incorrecta.
 
 **Ver metodología:** [documentation.md](../template/methodology/documentation.md)
