@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { Decimal } from '@prisma/client/runtime/library'
 import { ProjectWhereInput } from '@/types/api'
+import { calculateProjectBalance } from '@/lib/validations/payment-validations'
 
 /**
  * GET /api/projects
@@ -81,21 +82,25 @@ export async function GET(request: Request) {
       prisma.project.count({ where }),
     ])
 
-    // Calcular totalPaid para cada proyecto (solo pagos ACTIVE)
-    const projectsWithTotalPaid = projects.map((project) => {
-      const totalPaid = project.paymentAllocations.reduce((sum, alloc) => {
-        const isActive = alloc.payment.status === 'ACTIVE'
-        return sum + (isActive ? Number(alloc.allocatedAmount) : 0)
-      }, 0)
+    // Calcular totalPaid y balance para cada proyecto usando helper compartido
+    const projectsWithCalculations = projects.map((project) => {
+      const { totalPaid, balance } = calculateProjectBalance({
+        totalAmount: Number(project.total),
+        allocations: project.paymentAllocations.map((alloc) => ({
+          allocatedAmount: Number(alloc.allocatedAmount),
+          payment: { status: alloc.payment.status },
+        })),
+      })
 
       return {
         ...project,
         totalPaid,
+        balance,
       }
     })
 
     return NextResponse.json({
-      projects: projectsWithTotalPaid,
+      projects: projectsWithCalculations,
       pagination: {
         page,
         limit,

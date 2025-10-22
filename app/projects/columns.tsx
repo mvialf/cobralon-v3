@@ -31,7 +31,8 @@ export interface Project {
     }
   } | null
   total: number // Decimal se convierte a number en JSON
-  totalPaid: number // Total pagado (solo pagos ACTIVE)
+  totalPaid: number // Total pagado (solo pagos ACTIVE) - calculado en backend
+  balance: number // Saldo pendiente (total - totalPaid) - calculado en backend
   customer: {
     id: string
     name: string
@@ -124,12 +125,10 @@ export const createColumns = ({ onProjectDeleted }: ColumnsProps = {}): ColumnDe
     },
   },
   {
-    id: 'balance',
+    accessorKey: 'balance',
     header: 'Saldo',
     cell: ({ row }) => {
-      const total = row.original.total
-      const totalPaid = row.original.totalPaid
-      const balance = total - totalPaid
+      const balance = row.original.balance
 
       // Color: rojo si deuda, verde si pagado completamente
       const colorClass =
