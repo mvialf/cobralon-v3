@@ -114,14 +114,30 @@ export const createColumns = ({ onProjectDeleted }: ColumnsProps = {}): ColumnDe
     accessorKey: 'totalPaid',
     header: 'Total Pagado',
     cell: ({ row }) => {
-      const totalPaid = row.original.totalPaid
-      // Formatear como moneda CLP (sin decimales)
-      return new Intl.NumberFormat('es-CL', {
-        style: 'currency',
-        currency: 'CLP',
-        minimumFractionDigits: 0,
-        maximumFractionDigits: 0,
-      }).format(totalPaid)
+      const { totalPaid, total } = row.original
+      const percentPaid = total > 0 ? (totalPaid / total) * 100 : 0
+
+      return (
+        <div className="space-y-1">
+          {/* Monto principal */}
+          <div>
+            {new Intl.NumberFormat('es-CL', {
+              style: 'currency',
+              currency: 'CLP',
+              minimumFractionDigits: 0,
+              maximumFractionDigits: 0,
+            }).format(totalPaid)}
+          </div>
+
+          {/* Barra de progreso sutil */}
+          <div className="h-1 w-full bg-muted rounded-full overflow-hidden">
+            <div
+              className="h-full bg-primary/40 transition-all"
+              style={{ width: `${percentPaid}%` }}
+            />
+          </div>
+        </div>
+      )
     },
   },
   {
