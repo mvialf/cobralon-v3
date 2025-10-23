@@ -10,13 +10,13 @@
 
 ### Problemas Identificados
 
-| Issue | Severity | Location | Impact |
-|-------|----------|----------|--------|
-| **N+1 Query Problem** | 🔴 High | `GET /api/projects` (línea 87-96) | ~N queries extra por página |
+| Issue                     | Severity  | Location                            | Impact                                  |
+| ------------------------- | --------- | ----------------------------------- | --------------------------------------- |
+| **N+1 Query Problem**     | 🔴 High   | `GET /api/projects` (línea 87-96)   | ~N queries extra por página             |
 | **Client-side Filtering** | 🟡 Medium | `GET /api/projects` (línea 121-134) | Paginación incorrecta + desperdicio RAM |
-| **Overfetching** | 🟡 Medium | Todas las APIs | Traer campos no usados |
-| **Missing Indexes** | 🟠 Medium | Varias tablas | Scans completos en WHERE |
-| **No Query Strategy** | 🟡 Medium | Todas las relaciones | No usa `relationLoadStrategy: 'join'` |
+| **Overfetching**          | 🟡 Medium | Todas las APIs                      | Traer campos no usados                  |
+| **Missing Indexes**       | 🟠 Medium | Varias tablas                       | Scans completos en WHERE                |
+| **No Query Strategy**     | 🟡 Medium | Todas las relaciones                | No usa `relationLoadStrategy: 'join'`   |
 
 ### Beneficios Esperados
 
@@ -117,6 +117,7 @@ const [projects, _total] = await Promise.all([
 ```
 
 **Resultado:**
+
 - Antes: 1 + N queries (ej: 1 + 50 = 51 queries)
 - Después: 1-2 queries totales (~96% reducción)
 
@@ -142,6 +143,7 @@ const filteredProjects = projectsWithCalculations.filter((project) => {
 ```
 
 **Issues:**
+
 1. **Paginación rota:** El `total` viene de DB, pero filtras en memoria
 2. **Desperdicio de recursos:** Traes N registros para descartar algunos
 3. **Inconsistencia:** `page=2` puede tener 0 resultados si todos se filtraron
@@ -180,7 +182,7 @@ export async function updateProjectBalance(projectId: string) {
 
   const { totalPaid } = calculateProjectBalance({
     totalAmount: Number(project.total),
-    allocations: project.paymentAllocations.map(a => ({
+    allocations: project.paymentAllocations.map((a) => ({
       allocatedAmount: Number(a.allocatedAmount),
       payment: { status: a.payment.status },
     })),
@@ -235,9 +237,7 @@ const projects = await prisma.project.findMany({
 })
 
 // Filtrar y limitar a lo pedido
-const filtered = projectsWithCalculations
-  .filter(/* lógica de filtrado */)
-  .slice(0, limit) // ← Tomar solo lo necesario
+const filtered = projectsWithCalculations.filter(/* lógica de filtrado */).slice(0, limit) // ← Tomar solo lo necesario
 
 return {
   projects: filtered,
@@ -502,6 +502,7 @@ CREATE INDEX idx_allocation_project_payment
 ### When You Have 1,000 Projects
 
 **Current setup is OK**, pero implementa:
+
 - ✅ `relationLoadStrategy: 'join'`
 - ✅ `select` optimization
 - ✅ Índices compuestos
@@ -509,6 +510,7 @@ CREATE INDEX idx_allocation_project_payment
 ### When You Have 10,000 Projects
 
 **Add:**
+
 1. **Cursor-based Pagination** (más eficiente que offset)
 
 ```typescript
@@ -523,7 +525,9 @@ export async function getProjectsCursor(
     take: limit + 1, // +1 para saber si hay más
     cursor: cursor ? { id: cursor } : undefined,
     orderBy: { createdAt: 'desc' },
-    select: { /* campos */ },
+    select: {
+      /* campos */
+    },
   })
 
   const hasMore = projects.length > limit
@@ -559,6 +563,7 @@ REFRESH MATERIALIZED VIEW CONCURRENTLY project_balances;
 ### When You Have 100,000+ Projects
 
 **Add:**
+
 1. **Database Partitioning** por fecha
 2. **Read Replicas** (Neon Pro tier)
 3. **Prisma Accelerate** (caching layer)
@@ -631,7 +636,9 @@ async function testQueries() {
   await prisma.project.findMany({
     relationLoadStrategy: 'join',
     take: 50,
-    select: { /* optimized */ },
+    select: {
+      /* optimized */
+    },
   })
   console.timeEnd('GET projects with joins')
 
