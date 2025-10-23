@@ -60,7 +60,6 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
           select: {
             id: true,
             name: true,
-            requiresReference: true,
             icon: true,
           },
         },

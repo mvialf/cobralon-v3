@@ -70,6 +70,18 @@ const navigationItems: NavigationItem[] = [
     title: 'Pagos',
     url: '/payments',
     icon: Wallet,
+    items: [
+      {
+        title: 'Todos los Pagos',
+        url: '/payments',
+        icon: Wallet,
+      },
+      {
+        title: 'Cuotas Comercio',
+        url: '/payments/installments',
+        icon: BadgeCheck,
+      },
+    ],
   },
   {
     title: 'Ejemplos',

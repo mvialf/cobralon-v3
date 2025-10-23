@@ -53,6 +53,8 @@ import {
 interface PaymentMethod {
   id: string
   name: string
+  hasInstallments: boolean
+  maxInstallments: number | null
 }
 
 interface Customer {
@@ -161,6 +163,12 @@ export function PaymentToCustomerForm({
 
   // Watch amount para calcular FIFO
   const watchedAmount = form.watch('amount')
+
+  // Watch payment method para mostrar campo de cuotas
+  const watchedPaymentMethodId = form.watch('paymentMethodId')
+  const selectedPaymentMethod = paymentMethods.find(
+    (m: PaymentMethod) => m.id === watchedPaymentMethodId
+  )
 
   // Actualizar customerProjects cuando se cargan
   useEffect(() => {
@@ -384,7 +392,14 @@ export function PaymentToCustomerForm({
           render={({ field }) => (
             <FormItem>
               <FormLabel>Método de Pago *</FormLabel>
-              <Select onValueChange={field.onChange} value={field.value}>
+              <Select
+                onValueChange={(value) => {
+                  field.onChange(value)
+                  // Reset cuotas si cambia el método
+                  form.setValue('selectedInstallments', null)
+                }}
+                value={field.value}
+              >
                 <FormControl>
                   <SelectTrigger>
                     <SelectValue placeholder="Seleccionar método" />
@@ -402,6 +417,41 @@ export function PaymentToCustomerForm({
             </FormItem>
           )}
         />
+
+        {/* 5.5. Número de Cuotas (condicional) */}
+        {selectedPaymentMethod?.hasInstallments && (
+          <FormField
+            control={form.control}
+            name="selectedInstallments"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Número de Cuotas</FormLabel>
+                <Select
+                  onValueChange={(value) => field.onChange(value === '1' ? null : Number(value))}
+                  value={field.value?.toString() || '1'}
+                >
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Seleccionar cuotas" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    <SelectItem value="1">1 cuota (contado)</SelectItem>
+                    {Array.from(
+                      { length: (selectedPaymentMethod?.maxInstallments || 2) - 1 },
+                      (_, i) => i + 2
+                    ).map((num) => (
+                      <SelectItem key={num} value={num.toString()}>
+                        {num} cuotas sin interés
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        )}
 
         {/* 6. Sección de Allocations (solo si hay proyectos) */}
         {selectedCustomerId && customerProjects.length > 0 && watchedAmount > 0 && (

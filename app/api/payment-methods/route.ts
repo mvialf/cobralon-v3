@@ -45,7 +45,7 @@ export async function POST(request: Request) {
       )
     }
 
-    const { name, requiresReference, icon } = validation.data
+    const { name, icon } = validation.data
 
     // Validar que no exista un método con el mismo nombre
     const existing = await prisma.paymentMethod.findUnique({
@@ -67,7 +67,6 @@ export async function POST(request: Request) {
     const paymentMethod = await prisma.paymentMethod.create({
       data: {
         name,
-        requiresReference,
         icon: icon || null,
         order: newOrder,
         active: true,

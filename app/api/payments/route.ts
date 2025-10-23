@@ -81,7 +81,6 @@ export async function GET(request: Request) {
             select: {
               id: true,
               name: true,
-              requiresReference: true,
               icon: true,
             },
           },
@@ -143,8 +142,17 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     const body = await request.json()
-    const { customerId, amount, currency, date, paymentMethodId, reference, notes, allocations } =
-      body
+    const {
+      customerId,
+      amount,
+      currency,
+      date,
+      paymentMethodId,
+      reference,
+      notes,
+      allocations,
+      selectedInstallments,
+    } = body
 
     // Validaciones básicas
     if (!customerId || typeof customerId !== 'string') {
@@ -193,14 +201,6 @@ export async function POST(request: Request) {
 
     if (!paymentMethod) {
       return NextResponse.json({ error: 'El método de pago no existe' }, { status: 404 })
-    }
-
-    // Verificar que se provee reference si es requerido
-    if (paymentMethod.requiresReference && (!reference || reference.trim().length === 0)) {
-      return NextResponse.json(
-        { error: `El método de pago "${paymentMethod.name}" requiere una referencia` },
-        { status: 400 }
-      )
     }
 
     // Verificar que no haya projectIds duplicados
@@ -259,15 +259,18 @@ export async function POST(request: Request) {
     }
 
     // Crear el pago con sus allocations en una transacción
+    const paymentDate = new Date(date)
+
     const payment = await prisma.payment.create({
       data: {
         customerId,
         amount: new Decimal(amount),
         currency,
-        date: new Date(date),
+        date: paymentDate,
         paymentMethodId,
         reference: reference?.trim() || null,
         notes: notes?.trim() || null,
+        selectedInstallments: selectedInstallments || null,
         status: 'ACTIVE',
         allocations: {
           create: allocations.map((a: AllocationInput) => ({
@@ -275,6 +278,40 @@ export async function POST(request: Request) {
             allocatedAmount: new Decimal(a.allocatedAmount),
           })),
         },
+        // Crear installments automáticamente si aplica
+        installments:
+          selectedInstallments && selectedInstallments > 1
+            ? {
+                create: Array.from({ length: selectedInstallments }, (_, i) => {
+                  const installmentNumber = i + 1
+                  const isLastInstallment = installmentNumber === selectedInstallments
+
+                  // Calcular monto de la cuota
+                  // Dividir el total entre el número de cuotas, redondeando a 2 decimales
+                  const baseInstallmentAmount =
+                    Math.floor((amount / selectedInstallments) * 100) / 100
+                  // Calcular el total de las cuotas base (todas menos la última)
+                  const totalBase = baseInstallmentAmount * (selectedInstallments - 1)
+                  // La última cuota absorbe la diferencia (centavos restantes)
+                  const lastInstallmentAmount = amount - totalBase
+
+                  // Calcular fecha de vencimiento
+                  // Primera cuota: día 0 (fecha del pago)
+                  // Subsecuentes: cada 30 días
+                  const dueDate = new Date(paymentDate)
+                  dueDate.setDate(dueDate.getDate() + (installmentNumber - 1) * 30)
+
+                  return {
+                    installmentNumber,
+                    amount: new Decimal(
+                      isLastInstallment ? lastInstallmentAmount : baseInstallmentAmount
+                    ),
+                    dueDate,
+                    status: 'pending',
+                  }
+                }),
+              }
+            : undefined,
       },
       include: {
         customer: {
@@ -288,7 +325,6 @@ export async function POST(request: Request) {
           select: {
             id: true,
             name: true,
-            requiresReference: true,
             icon: true,
           },
         },
@@ -305,6 +341,19 @@ export async function POST(request: Request) {
                 currency: true,
               },
             },
+          },
+        },
+        installments: {
+          select: {
+            id: true,
+            installmentNumber: true,
+            amount: true,
+            dueDate: true,
+            paidDate: true,
+            status: true,
+          },
+          orderBy: {
+            installmentNumber: 'asc',
           },
         },
       },

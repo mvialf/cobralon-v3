@@ -166,14 +166,13 @@ export default function PaymentMethodsSettingsPage() {
               <TableRow>
                 <TableHead>Nombre</TableHead>
                 <TableHead>Estado</TableHead>
-                <TableHead>Requiere Referencia</TableHead>
                 <TableHead className="text-right">Acciones</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {methods.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={4} className="text-center text-muted-foreground">
+                  <TableCell colSpan={3} className="text-center text-muted-foreground">
                     No hay métodos de pago configurados
                   </TableCell>
                 </TableRow>
@@ -194,7 +193,6 @@ export default function PaymentMethodsSettingsPage() {
                         </Badge>
                       )}
                     </TableCell>
-                    <TableCell>{method.requiresReference ? 'Sí' : 'No'}</TableCell>
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-2">
                         <Button

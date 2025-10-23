@@ -85,7 +85,14 @@ export function PaymentToProjectForm({
   })
 
   // Fetch payment methods
-  const { data: paymentMethods = [] } = useQuery<Array<{ id: string; name: string }>>({
+  const { data: paymentMethods = [] } = useQuery<
+    Array<{
+      id: string
+      name: string
+      hasInstallments: boolean
+      maxInstallments: number | null
+    }>
+  >({
     queryKey: ['payment-methods'],
     queryFn: async () => {
       const res = await fetch('/api/payment-methods')
@@ -107,6 +114,10 @@ export function PaymentToProjectForm({
       setSelectedProject(null)
     }
   }, [watchedProjectId, projects])
+
+  // Watch payment method para mostrar campo de cuotas
+  const watchedPaymentMethodId = form.watch('paymentMethodId')
+  const selectedPaymentMethod = paymentMethods.find((m) => m.id === watchedPaymentMethodId)
 
   // Submit handler
   const handleSubmit = (values: PaymentToProjectFormValues) => {
@@ -244,7 +255,14 @@ export function PaymentToProjectForm({
           render={({ field }) => (
             <FormItem>
               <FormLabel>Método de Pago *</FormLabel>
-              <Select onValueChange={field.onChange} value={field.value}>
+              <Select
+                onValueChange={(value) => {
+                  field.onChange(value)
+                  // Reset cuotas si cambia el método
+                  form.setValue('selectedInstallments', null)
+                }}
+                value={field.value}
+              >
                 <FormControl>
                   <SelectTrigger>
                     <SelectValue placeholder="Seleccionar método" />
@@ -262,6 +280,41 @@ export function PaymentToProjectForm({
             </FormItem>
           )}
         />
+
+        {/* 3.5. Número de Cuotas (condicional) */}
+        {selectedPaymentMethod?.hasInstallments && (
+          <FormField
+            control={form.control}
+            name="selectedInstallments"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Número de Cuotas</FormLabel>
+                <Select
+                  onValueChange={(value) => field.onChange(value === '1' ? null : Number(value))}
+                  value={field.value?.toString() || '1'}
+                >
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Seleccionar cuotas" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    <SelectItem value="1">1 cuota (contado)</SelectItem>
+                    {Array.from(
+                      { length: (selectedPaymentMethod?.maxInstallments || 2) - 1 },
+                      (_, i) => i + 2
+                    ).map((num) => (
+                      <SelectItem key={num} value={num.toString()}>
+                        {num} cuotas sin interés
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        )}
 
         {/* 4. Notas (opcional) */}
         <FormField

@@ -37,11 +37,15 @@ export const PaymentMethodForm = React.forwardRef<PaymentMethodFormHandle, Payme
       resolver: zodResolver(paymentMethodSchema),
       defaultValues: {
         name: '',
-        requiresReference: false,
         icon: null,
+        hasInstallments: false,
+        maxInstallments: null,
         ...defaultValues,
       },
     })
+
+    // Watch hasInstallments para mostrar/ocultar maxInstallments
+    const hasInstallments = form.watch('hasInstallments')
 
     // Exponer métodos al parent via ref
     React.useImperativeHandle(ref, () => ({
@@ -67,26 +71,6 @@ export const PaymentMethodForm = React.forwardRef<PaymentMethodFormHandle, Payme
             )}
           />
 
-          {/* Campo: Requiere Referencia */}
-          <FormField
-            control={form.control}
-            name="requiresReference"
-            render={({ field }) => (
-              <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
-                <FormControl>
-                  <Checkbox checked={field.value} onCheckedChange={field.onChange} />
-                </FormControl>
-                <div className="space-y-1 leading-none">
-                  <FormLabel>Requiere número de referencia</FormLabel>
-                  <FormDescription>
-                    Si está activado, el formulario pedirá un número de transacción o comprobante al
-                    registrar pagos con este método.
-                  </FormDescription>
-                </div>
-              </FormItem>
-            )}
-          />
-
           {/* Campo: Icono (opcional) */}
           <FormField
             control={form.control}
@@ -108,6 +92,65 @@ export const PaymentMethodForm = React.forwardRef<PaymentMethodFormHandle, Payme
               </FormItem>
             )}
           />
+
+          {/* Campo: Cuotas sin interés */}
+          <FormField
+            control={form.control}
+            name="hasInstallments"
+            render={({ field }) => (
+              <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
+                <FormControl>
+                  <Checkbox
+                    checked={field.value}
+                    onCheckedChange={(checked) => {
+                      field.onChange(checked)
+                      // Si se desmarca, limpiar maxInstallments
+                      if (!checked) {
+                        form.setValue('maxInstallments', null)
+                      }
+                    }}
+                  />
+                </FormControl>
+                <div className="space-y-1 leading-none">
+                  <FormLabel>¿Ofrece cuotas sin interés?</FormLabel>
+                  <FormDescription>
+                    Permite que los clientes paguen en cuotas a través de este método
+                  </FormDescription>
+                </div>
+              </FormItem>
+            )}
+          />
+
+          {/* Campo: Máximo de cuotas (condicional) */}
+          {hasInstallments && (
+            <FormField
+              control={form.control}
+              name="maxInstallments"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Número máximo de cuotas</FormLabel>
+                  <FormControl>
+                    <Input
+                      type="number"
+                      min={2}
+                      max={36}
+                      placeholder="Ej: 6"
+                      {...field}
+                      value={field.value || ''}
+                      onChange={(e) => {
+                        const value = e.target.value === '' ? null : Number(e.target.value)
+                        field.onChange(value)
+                      }}
+                    />
+                  </FormControl>
+                  <FormDescription>
+                    Los clientes podrán elegir desde 1 hasta este número de cuotas
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          )}
         </div>
       </Form>
     )

@@ -6,7 +6,6 @@ import { z } from 'zod'
 export type PaymentMethodInfo = {
   id: string
   name: string
-  requiresReference: boolean
 }
 
 /**
@@ -49,6 +48,7 @@ export type Payment = {
   date: Date
   reference: string | null
   notes: string | null
+  selectedInstallments: number | null
   status: string
   cancelledAt: Date | null
   cancelledReason: string | null
@@ -83,6 +83,7 @@ export type CreatePaymentPayload = {
   paymentMethodId: string
   reference: string | null
   notes: string | null
+  selectedInstallments?: number | null
   allocations: Array<{
     projectId: string
     allocatedAmount: number
@@ -164,6 +165,14 @@ export const paymentToProjectSchema = z.object({
     })
     .uuid('ID de método de pago inválido'),
 
+  // Cuotas sin interés (opcional)
+  selectedInstallments: z.coerce
+    .number()
+    .int('Debe ser un número entero')
+    .min(1, 'Mínimo 1 cuota')
+    .optional()
+    .nullable(),
+
   // Notas adicionales (opcional)
   notes: z
     .string()
@@ -212,6 +221,7 @@ export function paymentToProjectToPayload(
     paymentMethodId: values.paymentMethodId,
     reference: null,
     notes: values.notes || null,
+    selectedInstallments: values.selectedInstallments || null,
     allocations: [
       {
         projectId: values.projectId,
@@ -264,6 +274,14 @@ export const paymentToCustomerSchema = z
         required_error: 'Debe seleccionar un método de pago',
       })
       .uuid('ID de método de pago inválido'),
+
+    // Cuotas sin interés (opcional)
+    selectedInstallments: z.coerce
+      .number()
+      .int('Debe ser un número entero')
+      .min(1, 'Mínimo 1 cuota')
+      .optional()
+      .nullable(),
 
     // Notas adicionales (opcional)
     notes: z
@@ -328,6 +346,7 @@ export function paymentToCustomerToPayload(
     paymentMethodId: values.paymentMethodId,
     reference: null,
     notes: values.notes || null,
+    selectedInstallments: values.selectedInstallments || null,
     allocations: values.allocations,
   }
 }

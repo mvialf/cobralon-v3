@@ -95,7 +95,6 @@ model PaymentMethod {
   id                String   @id @default(uuid())
   name              String   @unique            // "Efectivo", "Transferencia"
   active            Boolean  @default(true)
-  requiresReference Boolean  @default(false)    // ← Si necesita N° referencia
   icon              String?                     // Nombre de icono Lucide
   order             Int      @default(0)
 
@@ -478,7 +477,7 @@ GET /api/payments/customer-projects?customerId=abc-123
   currency: string,          // "CLP", "USD", etc. (3 letras)
   date: string,              // ISO date string
   paymentMethodId: string,   // UUID del método
-  reference?: string,        // Requerido si method.requiresReference
+  reference?: string,        // Opcional: N° transacción, comprobante, etc.
   notes?: string,
   allocations: Array<{
     projectId: string,       // UUID del proyecto
@@ -500,12 +499,11 @@ GET /api/payments/customer-projects?customerId=abc-123
 Luego valida en DB:
 7. ✅ Customer existe
 8. ✅ PaymentMethod existe
-9. ✅ Reference provisto si method.requiresReference
-10. ✅ No hay projectIds duplicados en allocations
-11. ✅ Todos los proyectos existen
-12. ✅ Todos los proyectos pertenecen al customerId
-13. ✅ Todos los proyectos tienen misma currency
-14. ✅ Suma de allocations = amount (tolerancia 0.01)
+9. ✅ No hay projectIds duplicados en allocations
+10. ✅ Todos los proyectos existen
+11. ✅ Todos los proyectos pertenecen al customerId
+12. ✅ Todos los proyectos tienen misma currency
+13. ✅ Suma de allocations = amount (tolerancia 0.01)
 ```
 
 #### Response Success (201):
@@ -518,7 +516,7 @@ Luego valida en DB:
   date: string,
   // ... resto de campos
   customer: { id, name, phone },
-  paymentMethod: { id, name, requiresReference, icon },
+  paymentMethod: { id, name, icon },
   allocations: Array<{
     id: string,
     allocatedAmount: number,
@@ -724,7 +722,7 @@ El sistema sigue los patrones del template (ver [docs/template/methodology/patte
    - Muestra icon si tiene
 
 5. **Referencia** (Input opcional)
-   - Requerida si `method.requiresReference`
+   - Siempre opcional: N° transacción, comprobante, etc.
    - Max 100 caracteres
 
 6. **Notas** (Textarea opcional)
@@ -959,9 +957,8 @@ PaymentToProjectForm renderizado
 4. Selecciona fecha: Hoy
       ↓
 5. Selecciona método: "Transferencia"
-   → Campo referencia se vuelve requerido (requiresReference: true)
       ↓
-6. Ingresa referencia: "TRX-123456"
+6. Ingresa referencia: "TRX-123456" (opcional)
       ↓
 7. Click "Registrar Pago"
       ↓
@@ -1617,6 +1614,965 @@ total === sum // false ❌
 // Con tolerancia:
 Math.abs(total - sum) < 0.01 // true ✅
 ```
+
+---
+
+## 💳 Sistema de Cuotas Comercio (Installments)
+
+### Visión General
+
+El sistema de cuotas comercio permite a los comerciantes ofrecer a sus clientes **pagos en cuotas sin interés** (2 a 36 cuotas). Cuando un cliente realiza un pago, puede optar por dividirlo en cuotas que se marcarán automáticamente como pagadas según su fecha de vencimiento.
+
+**Características principales:**
+
+- ✅ Cuotas sin interés (2-36 cuotas configurables por método de pago)
+- ✅ Cálculo automático de montos con remainder en última cuota
+- ✅ Primera cuota vence el día 0 (fecha de compra)
+- ✅ Cuotas subsiguientes cada 30 días
+- ✅ Marca automática de cuotas pagadas vía Vercel Cron Job
+- ✅ Vista global de todas las cuotas con filtros
+- ✅ Bloqueo de edición de pagos con cuotas
+
+---
+
+### Arquitectura de Base de Datos
+
+#### Modelo PaymentMethod (extendido)
+
+```prisma
+model PaymentMethod {
+  id              String   @id @default(uuid())
+  name            String   @unique
+  active          Boolean  @default(true)
+  icon            String?
+  order           Int      @default(0)
+
+  // ✨ NUEVO: Soporte para cuotas
+  hasInstallments Boolean  @default(false)  // Permite cuotas sin interés
+  maxInstallments Int      @default(12)     // Máximo de cuotas (2-36)
+
+  payments        Payment[]
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+```
+
+#### Modelo Payment (extendido)
+
+```prisma
+model Payment {
+  // ... campos existentes ...
+
+  // ✨ NUEVO: Número de cuotas seleccionadas
+  selectedInstallments Int?   // null = 1 cuota (contado), 2-36 = cuotas sin interés
+
+  // ✨ NUEVO: Relación con installments
+  installments    Installment[]
+
+  // ... resto de campos ...
+}
+```
+
+#### Modelo Installment (nuevo)
+
+```prisma
+model Installment {
+  id                 String   @id @default(uuid())
+
+  paymentId          String
+  payment            Payment  @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+
+  installmentNumber  Int      // 1, 2, 3, ..., N
+  amount             Decimal  @db.Decimal(12, 2)
+  dueDate            DateTime // Fecha de vencimiento
+  paidDate           DateTime? // Fecha en que se marcó como pagada
+  status             String   @default("pending")  // "pending" | "paid"
+
+  createdAt          DateTime @default(now())
+
+  @@index([paymentId])
+  @@index([status, dueDate])
+}
+```
+
+**Nota importante:** `onDelete: Cascade` asegura que si se elimina un pago, todas sus cuotas se eliminan automáticamente.
+
+---
+
+### Cálculo de Cuotas
+
+#### Algoritmo de División
+
+**Archivo:** [app/api/payments/route.ts:291-315](app/api/payments/route.ts#L291-L315)
+
+```typescript
+// Calcular cuotas con remainder en última cuota
+Array.from({ length: selectedInstallments }, (_, i) => {
+  const installmentNumber = i + 1
+  const isLastInstallment = installmentNumber === selectedInstallments
+
+  // Base: Math.floor para evitar decimales
+  const baseInstallmentAmount = Math.floor((amount / selectedInstallments) * 100) / 100
+
+  // Última cuota absorbe remainder
+  const totalBase = baseInstallmentAmount * (selectedInstallments - 1)
+  const lastInstallmentAmount = amount - totalBase
+
+  // Fecha de vencimiento:
+  // - Primera cuota: día 0 (fecha de compra)
+  // - Siguientes: cada 30 días
+  const dueDate = new Date(paymentDate)
+  dueDate.setDate(dueDate.getDate() + (installmentNumber - 1) * 30)
+
+  return {
+    installmentNumber,
+    amount: new Decimal(isLastInstallment ? lastInstallmentAmount : baseInstallmentAmount),
+    dueDate,
+    status: 'pending',
+  }
+})
+```
+
+#### Ejemplo de Cálculo
+
+```javascript
+// Pago de $100,000 en 3 cuotas
+// Fecha: 2024-11-05
+
+Cálculo:
+  baseAmount = Math.floor((100000 / 3) * 100) / 100 = 33333.33
+  totalBase = 33333.33 * 2 = 66666.66
+  lastAmount = 100000 - 66666.66 = 33333.34  // ← Absorbe remainder
+
+Resultado:
+  Cuota 1: $33,333.33 - Vence: 2024-11-05 (día 0)
+  Cuota 2: $33,333.33 - Vence: 2024-12-05 (día 30)
+  Cuota 3: $33,333.34 - Vence: 2025-01-04 (día 60) ← +$0.01 del remainder
+  ─────────────────
+  Total:   $100,000.00 ✅
+```
+
+---
+
+### API Endpoints
+
+#### 1. GET /api/installments
+
+**Archivo:** [app/api/installments/route.ts](app/api/installments/route.ts)
+
+Obtiene todas las cuotas del sistema con filtros opcionales.
+
+**Query Parameters:**
+
+| Parámetro    | Tipo       | Default | Descripción                   |
+| ------------ | ---------- | ------- | ----------------------------- |
+| `page`       | number     | 1       | Número de página              |
+| `limit`      | number     | 100     | Registros por página (max: 1000) |
+| `status`     | string     | -       | "pending" o "paid"            |
+| `paymentId`  | string     | -       | Filtrar por pago específico   |
+| `customerId` | string     | -       | Filtrar por cliente           |
+| `startDate`  | ISO string | -       | Fecha inicio vencimiento      |
+| `endDate`    | ISO string | -       | Fecha fin vencimiento         |
+
+**Response:**
+
+```typescript
+{
+  installments: Array<{
+    id: string
+    installmentNumber: number
+    amount: number
+    dueDate: string
+    paidDate: string | null
+    status: "pending" | "paid"
+    payment: {
+      id: string
+      amount: number
+      currency: string
+      date: string
+      reference: string | null
+      status: string
+      selectedInstallments: number
+      customer: {
+        id: string
+        name: string
+      }
+      paymentMethod: {
+        id: string
+        name: string
+      }
+      allocations: Array<{
+        id: string
+        allocatedAmount: number
+        project: {
+          id: string
+          projectNumber: string
+          projectName: string | null
+        }
+      }>
+    }
+  }>,
+  pagination: {
+    page: number
+    limit: number
+    total: number
+    totalPages: number
+  }
+}
+```
+
+**Ejemplo:**
+
+```bash
+GET /api/installments?status=pending&limit=50
+```
+
+---
+
+#### 2. PUT /api/payments/[id] (modificado)
+
+**Archivo:** [app/api/payments/[id]/route.ts](app/api/payments/[id]/route.ts)
+
+Ahora **bloquea la edición** de pagos que tienen cuotas.
+
+```typescript
+// Verificar si el pago tiene cuotas
+if (existingPayment.selectedInstallments && existingPayment.selectedInstallments > 1) {
+  return NextResponse.json(
+    {
+      error:
+        'No se puede editar un pago con cuotas. Para modificar, debe cancelar el pago y crear uno nuevo.',
+    },
+    { status: 400 }
+  )
+}
+```
+
+**Razón:** Editar un pago con cuotas podría invalidar las fechas de vencimiento y montos ya calculados. Para modificar, se debe cancelar y recrear.
+
+---
+
+#### 3. DELETE /api/payments/[id] (sin cambios)
+
+**Archivo:** [app/api/payments/[id]/route.ts](app/api/payments/[id]/route.ts)
+
+Gracias a `onDelete: Cascade` en el schema de Prisma, al eliminar un pago se eliminan automáticamente todas sus cuotas.
+
+```prisma
+payment Payment @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+```
+
+---
+
+#### 4. POST /api/cron/mark-installments-paid
+
+**Archivo:** [app/api/cron/mark-installments-paid/route.ts](app/api/cron/mark-installments-paid/route.ts)
+
+Endpoint ejecutado automáticamente por Vercel Cron Jobs diariamente a medianoche.
+
+**Función:** Marca como pagadas todas las cuotas pendientes cuya fecha de vencimiento haya llegado.
+
+**Autenticación:**
+
+```typescript
+const authHeader = request.headers.get('authorization')
+const cronSecret = process.env.CRON_SECRET
+
+if (authHeader !== `Bearer ${cronSecret}`) {
+  return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
+}
+```
+
+**Proceso:**
+
+```typescript
+1. Obtener fecha actual (sin hora)
+   const today = new Date()
+   today.setHours(0, 0, 0, 0)
+
+2. Buscar cuotas pendientes vencidas
+   WHERE status = 'pending' AND dueDate <= today
+
+3. Batch update a todas las cuotas
+   UPDATE installment
+   SET status = 'paid', paidDate = NOW()
+   WHERE id IN (...)
+
+4. Log detallado en consola
+   console.log(`Cuotas marcadas como pagadas: ${result.count}`)
+```
+
+**Response:**
+
+```typescript
+{
+  success: true,
+  message: "X cuota(s) marcada(s) como pagada(s)",
+  installmentsUpdated: number,
+  installments: Array<{
+    id: string,
+    installmentNumber: number,
+    dueDate: Date,
+    customer: string
+  }>,
+  timestamp: string
+}
+```
+
+**Configuración Vercel:**
+
+```json
+// vercel.json
+{
+  "crons": [
+    {
+      "path": "/api/cron/mark-installments-paid",
+      "schedule": "0 0 * * *"  // Diariamente a medianoche UTC
+    }
+  ]
+}
+```
+
+**Variable de entorno requerida:**
+
+```bash
+# .env (solo en producción - Vercel)
+CRON_SECRET="tu-secret-aleatorio-aqui"
+# Generar con: openssl rand -base64 32
+```
+
+---
+
+### Componentes UI
+
+#### 1. Modificación de PaymentMethodForm
+
+**Archivo:** [components/forms/settings/payment-method-form.tsx](components/forms/settings/payment-method-form.tsx)
+
+Se agregaron 2 campos nuevos:
+
+```typescript
+// 5. ¿Permite cuotas?
+<FormField
+  control={form.control}
+  name="hasInstallments"
+  render={({ field }) => (
+    <FormItem className="flex items-center gap-2">
+      <FormControl>
+        <Checkbox
+          checked={field.value}
+          onCheckedChange={field.onChange}
+        />
+      </FormControl>
+      <FormLabel>Permite cuotas sin interés</FormLabel>
+    </FormItem>
+  )}
+/>
+
+// 6. Máximo de cuotas (condicional)
+{watchHasInstallments && (
+  <FormField
+    control={form.control}
+    name="maxInstallments"
+    render={({ field }) => (
+      <FormItem>
+        <FormLabel>Máximo de Cuotas</FormLabel>
+        <Select
+          onValueChange={(value) => field.onChange(Number(value))}
+          value={field.value?.toString()}
+        >
+          <SelectTrigger>
+            <SelectValue placeholder="Seleccionar máximo" />
+          </SelectTrigger>
+          <SelectContent>
+            {[2, 3, 6, 9, 12, 18, 24, 36].map((num) => (
+              <SelectItem key={num} value={num.toString()}>
+                Hasta {num} cuotas
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </FormItem>
+    )}
+  />
+)}
+```
+
+---
+
+#### 2. Modificación de Payment Forms
+
+Ambos formularios de pago fueron actualizados:
+
+**A. PaymentToProjectForm**
+
+**Archivo:** [components/forms/payments/payment-to-project-form.tsx](components/forms/payments/payment-to-project-form.tsx)
+
+**B. PaymentToCustomerForm**
+
+**Archivo:** [components/forms/payments/payment-to-customer-form.tsx](components/forms/payments/payment-to-customer-form.tsx)
+
+**Campo agregado:** Select dinámico de número de cuotas
+
+```typescript
+// 5.5. Número de Cuotas (solo si payment method tiene hasInstallments)
+{selectedPaymentMethod?.hasInstallments && (
+  <FormField
+    control={form.control}
+    name="selectedInstallments"
+    render={({ field }) => (
+      <FormItem>
+        <FormLabel>Número de Cuotas</FormLabel>
+        <Select
+          onValueChange={(value) =>
+            field.onChange(value === '1' ? null : Number(value))
+          }
+          value={field.value?.toString() || '1'}
+        >
+          <SelectTrigger>
+            <SelectValue placeholder="Seleccionar cuotas" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="1">1 cuota (contado)</SelectItem>
+            {Array.from(
+              { length: (selectedPaymentMethod?.maxInstallments || 2) - 1 },
+              (_, i) => i + 2
+            ).map((num) => (
+              <SelectItem key={num} value={num.toString()}>
+                {num} cuotas sin interés
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <FormMessage />
+      </FormItem>
+    )}
+  />
+)}
+```
+
+**Comportamiento:**
+
+- Solo visible si el método de pago seleccionado tiene `hasInstallments = true`
+- Opciones dinámicas basadas en `maxInstallments` del método
+- "1 cuota" guarda `null` en DB (= contado, sin cuotas)
+- "2+ cuotas" guarda el número seleccionado
+
+---
+
+#### 3. Página: /payments/installments
+
+**Archivo:** [app/payments/installments/page.tsx](app/payments/installments/page.tsx)
+
+Vista global de todas las cuotas del sistema.
+
+**Características:**
+
+```
+┌─────────────────────────────────────────────────────────┐
+│ Cuotas Comercio                                         │
+│ Vista global de todas las cuotas de pagos en cuotas    │
+├─────────────────────────────────────────────────────────┤
+│ ┌──────────────┐ ┌──────────────┐ ┌──────────────┐    │
+│ │ Total Cuotas │ │ Pendientes   │ │ Vencidas     │    │
+│ │     245      │ │     87       │ │     12       │    │
+│ │              │ │  $4,350,000  │ │ Requieren    │    │
+│ │              │ │              │ │ atención     │    │
+│ └──────────────┘ └──────────────┘ └──────────────┘    │
+│                                                         │
+│ ┌──────────────┐                                       │
+│ │ Pagadas      │                                       │
+│ │     158      │                                       │
+│ │  $7,900,000  │                                       │
+│ │              │                                       │
+│ └──────────────┘                                       │
+├─────────────────────────────────────────────────────────┤
+│ Todas las Cuotas                                       │
+│ 245 cuotas registradas                                 │
+│                                                         │
+│ [Buscar por cliente...]  [Estado ▼]                   │
+│                                                         │
+│ Vencimiento  Cliente      Proyectos  Cuota  Monto ... │
+│ 15/Nov/2024  Juan Pérez   #2024-001  1/3    $33,333   │
+│ 20/Nov/2024  María López  #2024-002  2/6    $50,000   │
+│ 25/Nov/2024  Pedro Soto   #2024-003  1/2    $100,000  │
+│              ⚠️ Vencido                                │
+└─────────────────────────────────────────────────────────┘
+```
+
+**Statistics Cards:**
+
+1. **Total Cuotas:** Contador total
+2. **Pendientes:** Contador + suma de montos pendientes
+3. **Vencidas:** Cuotas pendientes con `dueDate < hoy` (alerta roja)
+4. **Pagadas:** Contador + suma de montos pagados
+
+**DataTable:**
+
+- Búsqueda por nombre de cliente
+- Filtro por estado (Pendiente/Pagado)
+- Ordenamiento por fecha de vencimiento
+- Indicador visual de cuotas vencidas (texto rojo + "Vencido")
+
+---
+
+#### 4. Columnas de DataTable
+
+**Archivo:** [app/payments/installments/columns.tsx](app/payments/installments/columns.tsx)
+
+Columnas principales:
+
+| Columna         | Descripción                                      | Detalles                     |
+| --------------- | ------------------------------------------------ | ---------------------------- |
+| **Vencimiento** | Fecha de vencimiento                             | Rojo si vencida y pendiente  |
+| **Cliente**     | Nombre del cliente                               | Del payment                  |
+| **Proyectos**   | Lista de proyectos asociados                     | De payment.allocations       |
+| **Cuota**       | X / Total (ej: "2 / 6")                          | installmentNumber / selectedInstallments |
+| **Monto**       | Monto de la cuota                                | Formateado con currency      |
+| **Estado**      | Badge (Pendiente/Pagado)                         | success=paid, secondary=pending |
+| **Fecha Pago**  | Fecha en que se marcó como pagada                | paidDate o "-"               |
+| **Método**      | Método de pago usado                             | Del payment                  |
+| **Acciones**    | Dropdown con opciones                            | Marcar como pagado (TODO)    |
+
+**Código de detección de vencimiento:**
+
+```typescript
+const date = new Date(row.getValue('dueDate'))
+const today = new Date()
+today.setHours(0, 0, 0, 0)
+const dueDate = new Date(date)
+dueDate.setHours(0, 0, 0, 0)
+const isOverdue = dueDate < today && row.original.status === 'pending'
+
+return (
+  <div className={isOverdue ? 'text-red-600 font-medium' : ''}>
+    {date.toLocaleDateString('es-CL')}
+    {isOverdue && <div className="text-xs">Vencido</div>}
+  </div>
+)
+```
+
+---
+
+### Validaciones y Schemas
+
+#### Payment Validations (extendido)
+
+**Archivo:** [lib/validations/payment-validations.ts](lib/validations/payment-validations.ts)
+
+Ambos schemas fueron extendidos:
+
+```typescript
+// paymentToProjectSchema
+{
+  // ... campos existentes ...
+  selectedInstallments: z.number().int().min(2).max(36).nullable().optional(),
+}
+
+// paymentToCustomerSchema
+{
+  // ... campos existentes ...
+  selectedInstallments: z.number().int().min(2).max(36).nullable().optional(),
+}
+```
+
+#### PaymentMethod Validations (extendido)
+
+**Archivo:** [lib/validations/payment-method-validations.ts](lib/validations/payment-method-validations.ts)
+
+```typescript
+export const paymentMethodSchema = z.object({
+  // ... campos existentes ...
+  hasInstallments: z.boolean().default(false),
+  maxInstallments: z.number().int().min(2).max(36).default(12),
+})
+```
+
+---
+
+### Navegación
+
+#### Sidebar
+
+**Archivo:** [components/layout/app-sidebar.tsx](components/layout/app-sidebar.tsx)
+
+El item "Pagos" se convirtió en un grupo collapsible:
+
+```typescript
+{
+  title: 'Pagos',
+  url: '/payments',
+  icon: Wallet,
+  items: [
+    {
+      title: 'Todos los Pagos',
+      url: '/payments',
+      icon: Wallet,
+    },
+    {
+      title: 'Cuotas Comercio',
+      url: '/payments/installments',
+      icon: BadgeCheck,
+    },
+  ],
+}
+```
+
+---
+
+### Flujo de Uso Completo
+
+#### Escenario: Pago en 3 Cuotas
+
+```
+1. Usuario: Registrar pago de $100,000 para proyecto #2024-001
+   ↓
+2. Abre "Pago a Proyecto"
+   ↓
+3. Selecciona proyecto: #2024-001
+   ↓
+4. Ingresa monto: $100,000
+   ↓
+5. Selecciona método de pago: "Tarjeta de Crédito" (hasInstallments: true, max: 12)
+   ↓
+6. Campo "Número de Cuotas" aparece dinámicamente
+   ↓
+7. Selecciona: "3 cuotas sin interés"
+   ↓
+8. Click "Registrar Pago"
+   ↓
+9. API POST /api/payments
+   ↓
+10. Backend crea Payment + 3 Installments:
+
+    Payment {
+      id: "payment-123",
+      amount: 100000,
+      selectedInstallments: 3,
+      date: "2024-11-05",
+      ...
+    }
+
+    Installments (creados automáticamente):
+    [
+      {
+        installmentNumber: 1,
+        amount: 33333.33,
+        dueDate: "2024-11-05",  // Día 0
+        status: "pending"
+      },
+      {
+        installmentNumber: 2,
+        amount: 33333.33,
+        dueDate: "2024-12-05",  // Día 30
+        status: "pending"
+      },
+      {
+        installmentNumber: 3,
+        amount: 33333.34,       // ← +$0.01 remainder
+        dueDate: "2025-01-04",  // Día 60
+        status: "pending"
+      }
+    ]
+    ↓
+11. Toast: "Pago registrado exitosamente"
+    ↓
+12. Usuario navega a /payments/installments
+    ↓
+13. Ve las 3 cuotas en tabla con estado "Pendiente"
+```
+
+#### Escenario: Marca Automática de Cuota Pagada
+
+```
+Fecha: 2024-12-05 00:00 UTC
+   ↓
+Vercel Cron Job ejecuta:
+  POST /api/cron/mark-installments-paid
+  Authorization: Bearer {CRON_SECRET}
+   ↓
+API busca cuotas con:
+  status = 'pending'
+  dueDate <= '2024-12-05'
+   ↓
+Encuentra 15 cuotas vencidas (incluyendo cuota #2 del ejemplo)
+   ↓
+Batch update:
+  UPDATE installment
+  SET status = 'paid', paidDate = NOW()
+  WHERE id IN (...)
+   ↓
+Log en consola:
+  [CRON] Cuotas marcadas como pagadas: 15
+  - Cuota #2 de Juan Pérez - Vencimiento: 05/12/2024
+  - ...
+   ↓
+Response 200:
+  {
+    success: true,
+    message: "15 cuotas marcadas como pagadas",
+    installmentsUpdated: 15,
+    timestamp: "2024-12-05T00:00:00Z"
+  }
+   ↓
+Próximo día, usuario ve:
+  - Cuota #1: ✅ Pagado (marcada anteriormente)
+  - Cuota #2: ✅ Pagado (marcada por cron)
+  - Cuota #3: ⚠️ Pendiente (vence 2025-01-04)
+```
+
+---
+
+### Seguridad
+
+#### Autenticación del Cron Job
+
+```typescript
+// Vercel agrega automáticamente el header:
+Authorization: Bearer {CRON_SECRET}
+
+// Endpoint valida:
+const authHeader = request.headers.get('authorization')
+const cronSecret = process.env.CRON_SECRET
+
+if (!cronSecret) {
+  return NextResponse.json({ error: 'CRON_SECRET no configurado' }, { status: 500 })
+}
+
+if (authHeader !== `Bearer ${cronSecret}`) {
+  return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
+}
+```
+
+**Configuración en Vercel:**
+
+1. Dashboard de Vercel → Settings → Environment Variables
+2. Agregar `CRON_SECRET` con un string aleatorio seguro
+3. Generar con: `openssl rand -base64 32`
+
+**Importante:**
+
+- ❗ Solo necesario en producción (Vercel)
+- ❗ No agregar a `.env.local` (es para Next.js, no para Vercel)
+- ❗ Documentado en `.env.example` con instrucciones
+
+---
+
+### Restricciones de Negocio
+
+#### 1. No Editar Pagos con Cuotas
+
+```typescript
+// PUT /api/payments/[id]
+if (existingPayment.selectedInstallments && existingPayment.selectedInstallments > 1) {
+  return NextResponse.json(
+    { error: 'No se puede editar un pago con cuotas. Debe cancelar y recrear.' },
+    { status: 400 }
+  )
+}
+```
+
+**Razón:** Editar un pago con cuotas invalidaría:
+
+- Fechas de vencimiento ya calculadas
+- Montos de cuotas distribuidos
+- Posibles cuotas ya marcadas como pagadas
+
+**Alternativa:** Cancelar el pago (soft delete) y crear uno nuevo.
+
+#### 2. Cascade Delete
+
+```prisma
+payment Payment @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+```
+
+Al eliminar un pago, **todas sus cuotas se eliminan automáticamente**.
+
+#### 3. Remainder en Última Cuota
+
+```javascript
+// Ejemplo: $100,000 / 3 = $33,333.33 + remainder $0.01
+
+const baseAmount = 33333.33
+const totalBase = 33333.33 * 2 = 66666.66
+const lastAmount = 100000 - 66666.66 = 33333.34  // ← Absorbe $0.01
+
+Resultado:
+  Cuota 1: $33,333.33
+  Cuota 2: $33,333.33
+  Cuota 3: $33,333.34  // ← +$0.01
+  ────────────────────
+  Total:   $100,000.00 ✅
+```
+
+---
+
+### Seed Data
+
+**Archivo:** [prisma/seed.ts](prisma/seed.ts)
+
+El seed incluye:
+
+- **PaymentMethods con cuotas:**
+
+  ```typescript
+  {
+    name: 'Tarjeta de Crédito',
+    hasInstallments: true,
+    maxInstallments: 12,
+  }
+  ```
+
+- **Ejemplos de pagos en cuotas:** (si se descomenta la sección de seed de cuotas)
+
+---
+
+### Archivos Modificados/Creados
+
+#### Modelos y Validaciones
+
+| Archivo                                                                          | Cambios                                        |
+| -------------------------------------------------------------------------------- | ---------------------------------------------- |
+| [prisma/schema.prisma](prisma/schema.prisma)                                     | +2 campos PaymentMethod, +1 campo Payment, +Installment model |
+| [lib/validations/payment-method-validations.ts](lib/validations/payment-method-validations.ts) | +2 campos en schema                            |
+| [lib/validations/payment-validations.ts](lib/validations/payment-validations.ts) | +1 campo en ambos schemas                      |
+
+#### API Routes
+
+| Archivo                                                                                          | Cambios                                        |
+| ------------------------------------------------------------------------------------------------ | ---------------------------------------------- |
+| [app/api/payments/route.ts](app/api/payments/route.ts)                                           | POST: crear installments automáticamente       |
+| [app/api/payments/[id]/route.ts](app/api/payments/[id]/route.ts)                                 | PUT: bloquear edición si tiene cuotas          |
+| [app/api/installments/route.ts](app/api/installments/route.ts)                                   | ✨ Nuevo: GET con filtros                      |
+| [app/api/cron/mark-installments-paid/route.ts](app/api/cron/mark-installments-paid/route.ts)     | ✨ Nuevo: marca cuotas pagadas                 |
+
+#### Componentes UI
+
+| Archivo                                                                                                          | Cambios                                        |
+| ---------------------------------------------------------------------------------------------------------------- | ---------------------------------------------- |
+| [components/forms/settings/payment-method-form.tsx](components/forms/settings/payment-method-form.tsx)           | +2 campos con lógica condicional               |
+| [components/forms/payments/payment-to-project-form.tsx](components/forms/payments/payment-to-project-form.tsx)   | +1 select dinámico de cuotas                   |
+| [components/forms/payments/payment-to-customer-form.tsx](components/forms/payments/payment-to-customer-form.tsx) | +1 select dinámico de cuotas                   |
+| [app/payments/installments/page.tsx](app/payments/installments/page.tsx)                                         | ✨ Nueva: página principal                     |
+| [app/payments/installments/columns.tsx](app/payments/installments/columns.tsx)                                   | ✨ Nueva: columnas DataTable                   |
+
+#### Navegación
+
+| Archivo                                                                      | Cambios                                        |
+| ---------------------------------------------------------------------------- | ---------------------------------------------- |
+| [components/layout/app-sidebar.tsx](components/layout/app-sidebar.tsx)       | Pagos → collapsible con submenu "Cuotas"      |
+
+#### Configuración
+
+| Archivo                      | Cambios                                        |
+| ---------------------------- | ---------------------------------------------- |
+| [vercel.json](vercel.json)   | ✨ Nuevo: config cron job diario               |
+| [.env.example](.env.example) | +sección CRON_SECRET con instrucciones         |
+
+---
+
+### Testing Manual
+
+#### 1. Crear Pago con Cuotas
+
+```bash
+# Configurar método de pago con cuotas:
+1. /settings/payments → Editar "Tarjeta de Crédito"
+2. ✅ Permite cuotas sin interés
+3. Máximo: 12 cuotas
+4. Guardar
+
+# Registrar pago:
+5. /payments → "Registrar Pago" → "Pago a Proyecto"
+6. Proyecto: #2024-001 (balance: $300,000)
+7. Monto: $90,000
+8. Método: Tarjeta de Crédito
+9. Cuotas: 3 cuotas sin interés
+10. Registrar
+
+# Verificar:
+11. Ver en DB que Payment tiene selectedInstallments = 3
+12. Ver 3 Installments creados con:
+    - Cuota 1: $30,000.00 - Vence hoy
+    - Cuota 2: $30,000.00 - Vence en 30 días
+    - Cuota 3: $30,000.00 - Vence en 60 días
+13. Navegar a /payments/installments
+14. Ver 3 cuotas pendientes en tabla
+```
+
+#### 2. Test de Marca Automática
+
+```bash
+# Simular paso de tiempo (en desarrollo):
+1. Modificar dueDate de una cuota en DB para que sea ayer
+   UPDATE installment
+   SET "dueDate" = NOW() - INTERVAL '1 day'
+   WHERE id = 'installment-id'
+
+2. Ejecutar cron job manualmente:
+   curl -X POST http://localhost:3000/api/cron/mark-installments-paid \
+     -H "Authorization: Bearer tu-secret-aqui"
+
+3. Verificar response:
+   {
+     "success": true,
+     "message": "1 cuota marcada como pagada",
+     "installmentsUpdated": 1
+   }
+
+4. Refrescar /payments/installments
+5. Ver cuota con badge "Pagado" ✅
+6. Ver paidDate poblada
+```
+
+#### 3. Test de Restricción de Edición
+
+```bash
+# Intentar editar pago con cuotas:
+1. Buscar payment con selectedInstallments > 1
+2. Intentar PUT /api/payments/{id} con cualquier cambio
+3. Esperado: 400 Bad Request
+   {
+     "error": "No se puede editar un pago con cuotas. Debe cancelar y recrear."
+   }
+```
+
+---
+
+### Limitaciones Conocidas
+
+1. **Marca manual de cuotas:** El botón "Marcar como pagado" en el dropdown de acciones está pendiente (TODO)
+
+2. **Edición de cuotas:** No hay UI para editar una cuota individual. Solo se pueden crear/eliminar (via DELETE de payment completo)
+
+3. **Cancelación de cuotas:** Si se cancela un pago, las cuotas NO se marcan como cancelled. Simplemente se eliminan (cascade delete).
+
+4. **Notificaciones:** No hay sistema de notificaciones cuando una cuota se marca como pagada
+
+---
+
+### Próximas Mejoras Sugeridas
+
+1. **Implementar botón "Marcar como pagado"** manualmente para casos excepcionales
+
+2. **Agregar endpoint PATCH /api/installments/[id]** para ajustes manuales de fechas/montos
+
+3. **Sistema de notificaciones:**
+   - Email cuando se marca cuota como pagada
+   - Alerta de cuotas próximas a vencer (7 días antes)
+
+4. **Dashboard de cuotas:**
+   - Gráfico de cuotas por mes
+   - Proyección de ingresos futuros
+
+5. **Exportar a Excel/PDF:**
+   - Reporte de cuotas pendientes
+   - Historial de cuotas pagadas por cliente
+
+6. **Soft delete de cuotas:**
+   - Si se cancela un pago, marcar cuotas como "cancelled" en vez de eliminarlas
+   - Preservar auditoría completa
 
 ---
 

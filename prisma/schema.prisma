@@ -153,8 +153,11 @@ model PaymentMethod {
   order             Int      @default(0)
 
   // Metadata opcional
-  requiresReference Boolean  @default(false) // Si necesita N° transacción
   icon              String?  // Nombre de icono Lucide
+
+  // Cuotas sin interés
+  hasInstallments   Boolean  @default(false) // ¿Ofrece cuotas comercio?
+  maxInstallments   Int?     // Número máximo de cuotas (requerido si hasInstallments = true)
 
   // Relations
   payments          Payment[]
@@ -173,6 +176,9 @@ model Payment {
   reference       String?  // N° transacción, comprobante, etc.
   notes           String?  @db.Text
 
+  // Cuotas sin interés
+  selectedInstallments Int? // Número de cuotas elegidas (null = pago de contado)
+
   // Status: ACTIVE | CANCELLED (soft delete para auditoría)
   status          String   @default("ACTIVE")
   cancelledAt     DateTime?
@@ -186,6 +192,7 @@ model Payment {
   paymentMethod   PaymentMethod @relation(fields: [paymentMethodId], references: [id], onDelete: Restrict)
 
   allocations     PaymentAllocation[]
+  installments    Installment[]
 
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
@@ -194,6 +201,26 @@ model Payment {
   @@index([paymentMethodId])
   @@index([status])
   @@index([date])
+}
+
+model Installment {
+  id                String   @id @default(uuid())
+
+  // Relación con Payment (cascade delete)
+  paymentId         String
+  payment           Payment  @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+
+  installmentNumber Int      // Número de cuota (1, 2, 3, etc.)
+  amount            Decimal  @db.Decimal(12, 2) // Monto de esta cuota
+  dueDate           DateTime // Fecha de vencimiento (payment.date + 30 * (installmentNumber - 1) días)
+  paidDate          DateTime? // Fecha en que se marcó como pagada (null = pendiente)
+  status            String   @default("pending") // "pending" | "paid"
+
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@index([paymentId])
+  @@index([status, dueDate]) // Para cron job: buscar pending + vencidas
 }
 
 model PaymentAllocation {

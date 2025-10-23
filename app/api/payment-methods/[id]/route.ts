@@ -24,7 +24,7 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
       )
     }
 
-    const { name, requiresReference, icon } = validation.data
+    const { name, icon } = validation.data
 
     // Verificar que el método existe
     const existing = await prisma.paymentMethod.findUnique({
@@ -54,7 +54,6 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
       where: { id },
       data: {
         name,
-        requiresReference,
         icon: icon || null,
       },
       include: {
