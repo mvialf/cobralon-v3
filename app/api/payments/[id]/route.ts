@@ -21,18 +21,12 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
       where: { id },
       select: {
         id: true,
-        status: true,
         selectedInstallments: true,
       },
     })
 
     if (!existingPayment) {
       return NextResponse.json({ error: 'Pago no encontrado' }, { status: 404 })
-    }
-
-    // Verificar que el pago no esté cancelado
-    if (existingPayment.status === 'CANCELLED') {
-      return NextResponse.json({ error: 'No se puede editar un pago cancelado' }, { status: 400 })
     }
 
     // IMPORTANTE: Bloquear edición si el pago tiene cuotas
@@ -112,8 +106,6 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
  * IMPORTANTE:
  * - Los Installments se eliminan automáticamente por cascade delete (configurado en schema.prisma)
  * - Los PaymentAllocations también se eliminan automáticamente por cascade delete
- * - Solo permite eliminar pagos ACTIVOS (no cancelados)
- * - Para pagos cancelados, use este endpoint para eliminarlos definitivamente
  */
 export async function DELETE(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -124,7 +116,6 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ i
       where: { id },
       select: {
         id: true,
-        status: true,
         selectedInstallments: true,
       },
     })

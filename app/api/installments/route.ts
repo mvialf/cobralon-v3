@@ -79,7 +79,6 @@ export async function GET(request: Request) {
               currency: true,
               date: true,
               reference: true,
-              status: true,
               selectedInstallments: true,
               customer: {
                 select: {

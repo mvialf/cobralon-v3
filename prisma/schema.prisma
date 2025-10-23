@@ -183,11 +183,6 @@ model Payment {
   // Cuotas sin interés
   selectedInstallments Int? // Número de cuotas elegidas (null = pago de contado)
 
-  // Status: ACTIVE | CANCELLED (soft delete para auditoría)
-  status          String   @default("ACTIVE")
-  cancelledAt     DateTime?
-  cancelledReason String?  @db.Text
-
   // Relations
   customerId      String
   customer        Customer @relation(fields: [customerId], references: [id], onDelete: Restrict)
@@ -203,7 +198,6 @@ model Payment {
 
   @@index([customerId])
   @@index([paymentMethodId])
-  @@index([status])
   @@index([date])
   @@index([type])
   @@index([type, date(sort: Desc)])

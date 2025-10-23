@@ -49,9 +49,6 @@ export type Payment = {
   reference: string | null
   notes: string | null
   selectedInstallments: number | null
-  status: string
-  cancelledAt: Date | null
-  cancelledReason: string | null
   customerId: string
   paymentMethodId: string
   customer?: CustomerInfo
@@ -96,7 +93,7 @@ export type CreatePaymentPayload = {
  */
 export function calculateProjectBalance(project: {
   totalAmount: number | null
-  allocations?: Array<{ allocatedAmount: number; payment?: { status: string } }>
+  allocations?: Array<{ allocatedAmount: number }>
 }): {
   totalPaid: number
   balance: number
@@ -105,12 +102,8 @@ export function calculateProjectBalance(project: {
 } {
   const totalAmount = project.totalAmount || 0
 
-  // Solo contar pagos activos (no cancelados)
-  const totalPaid =
-    project.allocations?.reduce((sum, alloc) => {
-      const isActive = !alloc.payment || alloc.payment.status === 'ACTIVE'
-      return sum + (isActive ? alloc.allocatedAmount : 0)
-    }, 0) || 0
+  // Sumar todos los pagos asignados al proyecto
+  const totalPaid = project.allocations?.reduce((sum, alloc) => sum + alloc.allocatedAmount, 0) || 0
 
   const balance = totalAmount - totalPaid
   const percentPaid = totalAmount > 0 ? (totalPaid / totalAmount) * 100 : 0

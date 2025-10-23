@@ -13,7 +13,6 @@ import { AllocationInput, PaymentWhereInput } from '@/types/api'
  *   - limit: registros por página (default: 10, max: 100)
  *   - customerId: filtrar por cliente específico
  *   - projectId: filtrar por proyecto específico
- *   - status: filtrar por estado (ACTIVE o CANCELLED)
  *   - startDate: filtrar pagos desde esta fecha (ISO string)
  *   - endDate: filtrar pagos hasta esta fecha (ISO string)
  */
@@ -24,7 +23,6 @@ export async function GET(request: Request) {
     const limit = Math.min(parseInt(searchParams.get('limit') || '10'), 100)
     const customerId = searchParams.get('customerId') || ''
     const projectId = searchParams.get('projectId') || ''
-    const status = searchParams.get('status') || ''
     const startDate = searchParams.get('startDate') || ''
     const endDate = searchParams.get('endDate') || ''
 
@@ -35,10 +33,6 @@ export async function GET(request: Request) {
 
     if (customerId) {
       where.customerId = customerId
-    }
-
-    if (status) {
-      where.status = status
     }
 
     // Filtro de rango de fechas
@@ -295,7 +289,6 @@ export async function POST(request: Request) {
         reference: reference?.trim() || null,
         notes: notes?.trim() || null,
         selectedInstallments: selectedInstallments || null,
-        status: 'ACTIVE',
         allocations: {
           create: allocations.map((a: AllocationInput) => ({
             projectId: a.projectId,

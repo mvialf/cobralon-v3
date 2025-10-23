@@ -373,7 +373,6 @@ async function main() {
       date: new Date('2024-07-15'),
       reference: null,
       notes: 'Primer abono proyecto oficinas',
-      status: 'ACTIVE',
       customerId: customer1.id,
       paymentMethodId: efectivo.id,
       allocations: {
@@ -398,7 +397,6 @@ async function main() {
       date: new Date('2024-09-10'),
       reference: 'TRX-98765432',
       notes: 'Pago que cierra proyecto 001 y abona a 002',
-      status: 'ACTIVE',
       customerId: customer1.id,
       paymentMethodId: transferencia.id,
       allocations: {
@@ -427,7 +425,6 @@ async function main() {
       date: new Date('2024-09-15'),
       reference: 'TRX-11111111',
       notes: 'Pago completo fachada edificio',
-      status: 'ACTIVE',
       customerId: customer2.id,
       paymentMethodId: transferencia.id,
       allocations: {
@@ -452,7 +449,6 @@ async function main() {
       date: new Date('2024-10-20'),
       reference: 'WP-555666777',
       notes: 'Abono adicional bodega norte',
-      status: 'ACTIVE',
       customerId: customer1.id,
       paymentMethodId: webpay.id,
       allocations: {
@@ -466,35 +462,8 @@ async function main() {
     },
   })
 
-  // Pago 5 CANCELADO (Cliente 1): $50,000 → Asignado pero luego cancelado
-  const payment5 = await prisma.payment.upsert({
-    where: { id: '941ea1aa-1cea-4bee-948b-a6ca96430574' },
-    update: {},
-    create: {
-      id: '941ea1aa-1cea-4bee-948b-a6ca96430574',
-      amount: 50000,
-      currency: 'CLP',
-      date: new Date('2024-10-25'),
-      reference: 'TRX-CANCEL123',
-      notes: 'Pago cancelado por error',
-      status: 'CANCELLED',
-      cancelledAt: new Date('2024-10-26'),
-      cancelledReason: 'Error en transferencia - fondos devueltos',
-      customerId: customer1.id,
-      paymentMethodId: transferencia.id,
-      allocations: {
-        create: [
-          {
-            projectId: project2.id,
-            allocatedAmount: 50000, // No cuenta porque está cancelado
-          },
-        ],
-      },
-    },
-  })
-
   console.log('✅ Payments seed completed')
-  console.log('📊 Created/Updated 5 payments (4 active, 1 cancelled)')
+  console.log('📊 Created/Updated 4 payments')
 
   console.log('\n📈 Balance summary:')
   console.log(`  Cliente 1 (${customer1.name}):`)

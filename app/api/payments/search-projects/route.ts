@@ -66,18 +66,8 @@ export async function GET(req: NextRequest) {
           },
         },
         paymentAllocations: {
-          where: {
-            payment: {
-              status: 'ACTIVE', // Solo pagos activos (no cancelados)
-            },
-          },
           select: {
             allocatedAmount: true,
-            payment: {
-              select: {
-                status: true,
-              },
-            },
           },
         },
       },
@@ -94,7 +84,6 @@ export async function GET(req: NextRequest) {
           totalAmount: Number(project.totalAmount),
           allocations: project.paymentAllocations.map((alloc) => ({
             allocatedAmount: Number(alloc.allocatedAmount),
-            payment: { status: alloc.payment.status },
           })),
         })
 

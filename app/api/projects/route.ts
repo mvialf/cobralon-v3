@@ -88,11 +88,6 @@ export async function GET(request: Request) {
           paymentAllocations: {
             select: {
               allocatedAmount: true,
-              payment: {
-                select: {
-                  status: true,
-                },
-              },
             },
           },
         },
@@ -106,7 +101,6 @@ export async function GET(request: Request) {
         totalAmount: Number(project.total),
         allocations: project.paymentAllocations.map((alloc) => ({
           allocatedAmount: Number(alloc.allocatedAmount),
-          payment: { status: alloc.payment.status },
         })),
       })
 
