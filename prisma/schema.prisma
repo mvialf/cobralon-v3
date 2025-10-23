@@ -1,5 +1,6 @@
 generator client {
-  provider = "prisma-client-js"
+  provider        = "prisma-client-js"
+  previewFeatures = ["relationJoins"]
 }
 
 datasource db {
@@ -135,6 +136,10 @@ model Project {
   @@index([projectNumber])
   @@index([projectStatusId])
   @@index([date])
+
+  // Composite indexes for common query patterns
+  @@index([customerId, projectStatusId])
+  @@index([projectStatusId, date(sort: Desc)])
 }
 
 // ========================================

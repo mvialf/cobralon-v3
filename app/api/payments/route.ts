@@ -64,6 +64,7 @@ export async function GET(request: Request) {
     // Obtener pagos y total count
     const [payments, total] = await Promise.all([
       prisma.payment.findMany({
+        relationLoadStrategy: 'join', // ← Fix N+1: Force database-level JOINs
         where,
         skip,
         take: limit,

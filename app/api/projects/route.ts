@@ -60,6 +60,7 @@ export async function GET(request: Request) {
     // Obtener proyectos y total count
     const [projects, _total] = await Promise.all([
       prisma.project.findMany({
+        relationLoadStrategy: 'join', // ← Fix N+1: Force database-level JOINs
         where,
         skip,
         take: limit,
