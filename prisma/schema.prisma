@@ -170,6 +170,10 @@ model PaymentMethod {
 
 model Payment {
   id              String   @id @default(uuid())
+
+  // Tipo de pago: "Project" (1:1) | "Customer" (1:N)
+  type            String   @default("Project") // "Project" | "Customer"
+
   amount          Decimal  @db.Decimal(12, 2) // Monto total del pago
   currency        String   // Moneda del pago (debe coincidir con proyectos)
   date            DateTime // Fecha del pago
@@ -201,6 +205,8 @@ model Payment {
   @@index([paymentMethodId])
   @@index([status])
   @@index([date])
+  @@index([type])
+  @@index([type, date(sort: Desc)])
 }
 
 model Installment {
