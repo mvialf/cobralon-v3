@@ -143,6 +143,7 @@ export async function POST(request: Request) {
   try {
     const body = await request.json()
     const {
+      type,
       customerId,
       amount,
       currency,
@@ -155,6 +156,13 @@ export async function POST(request: Request) {
     } = body
 
     // Validaciones básicas
+    if (!type || (type !== 'Project' && type !== 'Customer')) {
+      return NextResponse.json(
+        { error: 'El tipo de pago debe ser "Project" o "Customer"' },
+        { status: 400 }
+      )
+    }
+
     if (!customerId || typeof customerId !== 'string') {
       return NextResponse.json({ error: 'El cliente es requerido' }, { status: 400 })
     }
@@ -181,6 +189,21 @@ export async function POST(request: Request) {
     if (!allocations || !Array.isArray(allocations) || allocations.length === 0) {
       return NextResponse.json(
         { error: 'Debe asignar el pago a al menos un proyecto' },
+        { status: 400 }
+      )
+    }
+
+    // Validación estricta: type debe coincidir con número de allocations
+    if (type === 'Project' && allocations.length !== 1) {
+      return NextResponse.json(
+        { error: 'Un pago tipo "Project" debe tener exactamente 1 asignación' },
+        { status: 400 }
+      )
+    }
+
+    if (type === 'Customer' && allocations.length < 1) {
+      return NextResponse.json(
+        { error: 'Un pago tipo "Customer" debe tener al menos 1 asignación' },
         { status: 400 }
       )
     }
@@ -263,6 +286,7 @@ export async function POST(request: Request) {
 
     const payment = await prisma.payment.create({
       data: {
+        type, // ← Agregar tipo de pago
         customerId,
         amount: new Decimal(amount),
         currency,

@@ -76,6 +76,7 @@ export const paymentAllocationSchema = z.object({
  * Type para el payload de creación (API)
  */
 export type CreatePaymentPayload = {
+  type: 'Project' | 'Customer' // Tipo de pago
   customerId: string
   amount: number
   currency: string
@@ -214,6 +215,7 @@ export function paymentToProjectToPayload(
   project: ProjectWithBalance
 ): CreatePaymentPayload {
   return {
+    type: 'Project', // ← Tipo 1:1
     customerId: project.customer.id, // ← Derivado del proyecto
     amount: values.amount,
     currency: project.currency, // ← Derivado del proyecto
@@ -339,6 +341,7 @@ export function paymentToCustomerToPayload(
   currency: string // ← Derivado del primer proyecto (todos deben tener la misma)
 ): CreatePaymentPayload {
   return {
+    type: 'Customer', // ← Tipo 1:N
     customerId: values.customerId,
     amount: values.amount,
     currency, // ← Derivada de los proyectos
