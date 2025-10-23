@@ -7,10 +7,9 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
-import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Calendar, User, CreditCard, FileText, DollarSign, FolderOpen, XCircle } from 'lucide-react'
+import { Calendar, User, CreditCard, FileText, DollarSign, FolderOpen } from 'lucide-react'
 
 interface Payment {
   id: string
@@ -19,9 +18,6 @@ interface Payment {
   currency: string
   date: string
   reference: string | null
-  status: string
-  cancelledAt?: string | null
-  cancelledReason?: string | null
   customer: {
     id: string
     name: string
@@ -76,21 +72,12 @@ export function PaymentDetailsDialog({ payment, open, onOpenChange }: PaymentDet
         </DialogHeader>
 
         <div className="space-y-4">
-          {/* Estado y Monto */}
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <DollarSign className="h-5 w-5 text-muted-foreground" />
-              <span className="text-2xl font-bold">
-                {formatCurrency(payment.amount, payment.currency)}
-              </span>
-            </div>
-            {payment.status === 'ACTIVE' ? (
-              <Badge variant="default" className="bg-green-600">
-                Activo
-              </Badge>
-            ) : (
-              <Badge variant="destructive">Anulado</Badge>
-            )}
+          {/* Monto */}
+          <div className="flex items-center gap-2">
+            <DollarSign className="h-5 w-5 text-muted-foreground" />
+            <span className="text-2xl font-bold">
+              {formatCurrency(payment.amount, payment.currency)}
+            </span>
           </div>
 
           <Separator />
@@ -160,36 +147,6 @@ export function PaymentDetailsDialog({ payment, open, onOpenChange }: PaymentDet
               </div>
             </CardContent>
           </Card>
-
-          {/* Información de Cancelación (si aplica) */}
-          {payment.status === 'CANCELLED' && payment.cancelledAt && (
-            <Card className="border-destructive">
-              <CardHeader>
-                <CardTitle className="text-base flex items-center gap-2 text-destructive">
-                  <XCircle className="h-4 w-4" />
-                  Información de Anulación
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-2">
-                <div className="flex items-center gap-2">
-                  <Calendar className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-sm font-medium">Fecha de Anulación:</span>
-                  <span className="text-sm">{formatDate(payment.cancelledAt)}</span>
-                </div>
-                {payment.cancelledReason && (
-                  <div className="flex items-start gap-2">
-                    <FileText className="h-4 w-4 text-muted-foreground mt-0.5" />
-                    <div>
-                      <span className="text-sm font-medium">Razón:</span>
-                      <p className="text-sm text-muted-foreground mt-1">
-                        {payment.cancelledReason}
-                      </p>
-                    </div>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          )}
 
           {/* ID del Pago (para referencia técnica) */}
           <div className="text-xs text-muted-foreground text-center pt-2">ID: {payment.id}</div>

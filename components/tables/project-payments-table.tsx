@@ -11,7 +11,6 @@ import {
 } from '@/components/ui/table'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import {
   AlertDialog,
@@ -24,8 +23,6 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog'
-import { Textarea } from '@/components/ui/textarea'
-import { Label } from '@/components/ui/label'
 import { XCircle } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -48,9 +45,6 @@ interface PaymentFromAPI {
   date: string
   reference: string | null
   notes: string | null
-  status: string
-  cancelledAt: string | null
-  cancelledReason: string | null
   paymentMethod: {
     id: string
     name: string
@@ -73,9 +67,6 @@ interface PaymentAllocation {
     date: string
     reference: string | null
     notes: string | null
-    status: string
-    cancelledAt: string | null
-    cancelledReason: string | null
     paymentMethod: {
       id: string
       name: string
@@ -89,19 +80,17 @@ interface PaymentAllocation {
 }
 
 /**
- * Tabla de pagos de un proyecto con acción de anular
+ * Tabla de pagos de un proyecto
  *
  * Muestra:
  * - Lista de pagos del proyecto (via allocations)
  * - Fecha, método, monto asignado, referencia
- * - Estado (ACTIVE/CANCELLED)
- * - Botón para anular (solo si está ACTIVE)
+ * - Botón para eliminar pagos
  */
 export function ProjectPaymentsTable({ projectId }: ProjectPaymentsTableProps) {
   const [allocations, setAllocations] = useState<PaymentAllocation[]>([])
   const [isLoading, setIsLoading] = useState(true)
-  const [cancellingPaymentId, setCancellingPaymentId] = useState<string | null>(null)
-  const [cancelReason, setCancelReason] = useState('')
+  const [deletingPaymentId, setDeletingPaymentId] = useState<string | null>(null)
 
   const fetchPayments = useCallback(async () => {
     try {
@@ -125,9 +114,6 @@ export function ProjectPaymentsTable({ projectId }: ProjectPaymentsTableProps) {
               date: payment.date,
               reference: payment.reference,
               notes: payment.notes,
-              status: payment.status,
-              cancelledAt: payment.cancelledAt,
-              cancelledReason: payment.cancelledReason,
               paymentMethod: payment.paymentMethod,
               customer: payment.customer,
             },
@@ -152,29 +138,26 @@ export function ProjectPaymentsTable({ projectId }: ProjectPaymentsTableProps) {
     fetchPayments()
   }, [fetchPayments])
 
-  const handleCancelPayment = async (paymentId: string) => {
+  const handleDeletePayment = async (paymentId: string) => {
     try {
-      setCancellingPaymentId(paymentId)
+      setDeletingPaymentId(paymentId)
 
-      const response = await fetch(`/api/payments/${paymentId}/cancel`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ reason: cancelReason.trim() || null }),
+      const response = await fetch(`/api/payments/${paymentId}`, {
+        method: 'DELETE',
       })
 
       if (!response.ok) {
         const error = await response.json()
-        throw new Error(error.error || 'Error al anular pago')
+        throw new Error(error.error || 'Error al eliminar pago')
       }
 
-      toast.success('Pago anulado exitosamente')
-      setCancelReason('')
+      toast.success('Pago eliminado exitosamente')
       fetchPayments() // Refetch data
     } catch (error) {
-      console.error('Error cancelling payment:', error)
-      toast.error(error instanceof Error ? error.message : 'Error al anular pago')
+      console.error('Error deleting payment:', error)
+      toast.error(error instanceof Error ? error.message : 'Error al eliminar pago')
     } finally {
-      setCancellingPaymentId(null)
+      setDeletingPaymentId(null)
     }
   }
 
@@ -243,7 +226,6 @@ export function ProjectPaymentsTable({ projectId }: ProjectPaymentsTableProps) {
               <TableHead>Método</TableHead>
               <TableHead>Monto Asignado</TableHead>
               <TableHead>Referencia</TableHead>
-              <TableHead>Estado</TableHead>
               <TableHead className="text-right">Acciones</TableHead>
             </TableRow>
           </TableHeader>
@@ -262,99 +244,58 @@ export function ProjectPaymentsTable({ projectId }: ProjectPaymentsTableProps) {
                 <TableCell className="max-w-[200px] truncate">
                   {allocation.payment.reference || <span className="text-muted-foreground">-</span>}
                 </TableCell>
-                <TableCell>
-                  {allocation.payment.status === 'ACTIVE' ? (
-                    <Badge variant="default" className="bg-green-600">
-                      Activo
-                    </Badge>
-                  ) : (
-                    <Badge variant="destructive">Anulado</Badge>
-                  )}
-                </TableCell>
                 <TableCell className="text-right">
-                  {allocation.payment.status === 'ACTIVE' ? (
-                    <AlertDialog>
-                      <AlertDialogTrigger asChild>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="text-destructive hover:text-destructive"
-                          disabled={cancellingPaymentId === allocation.payment.id}
-                        >
-                          <XCircle className="mr-2 h-4 w-4" />
-                          Anular
-                        </Button>
-                      </AlertDialogTrigger>
-                      <AlertDialogContent>
-                        <AlertDialogHeader>
-                          <AlertDialogTitle>¿Anular este pago?</AlertDialogTitle>
-                          <AlertDialogDescription>
-                            Esta acción no se puede deshacer. El pago quedará marcado como anulado y
-                            no se contabilizará en el balance del proyecto.
-                          </AlertDialogDescription>
-                        </AlertDialogHeader>
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="text-destructive hover:text-destructive"
+                        disabled={deletingPaymentId === allocation.payment.id}
+                      >
+                        <XCircle className="mr-2 h-4 w-4" />
+                        Eliminar
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>¿Eliminar este pago?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          Esta acción no se puede deshacer. El pago será eliminado permanentemente.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
 
-                        <div className="space-y-4 py-4">
-                          {/* Info del pago */}
-                          <div className="rounded-lg border p-4 space-y-2">
-                            <div className="flex justify-between text-sm">
-                              <span className="text-muted-foreground">Monto:</span>
-                              <span className="font-medium">
-                                {formatCurrency(
-                                  allocation.allocatedAmount,
-                                  allocation.payment.currency
-                                )}
-                              </span>
-                            </div>
-                            <div className="flex justify-between text-sm">
-                              <span className="text-muted-foreground">Método:</span>
-                              <span>{allocation.payment.paymentMethod.name}</span>
-                            </div>
-                            <div className="flex justify-between text-sm">
-                              <span className="text-muted-foreground">Fecha:</span>
-                              <span>{formatDate(allocation.payment.date)}</span>
-                            </div>
-                          </div>
-
-                          {/* Razón de anulación (opcional) */}
-                          <div className="space-y-2">
-                            <Label htmlFor="cancelReason">Razón de anulación (opcional)</Label>
-                            <Textarea
-                              id="cancelReason"
-                              placeholder="Ej: Pago duplicado, error de ingreso..."
-                              value={cancelReason}
-                              onChange={(e) => setCancelReason(e.target.value)}
-                              rows={3}
-                            />
-                          </div>
+                      <div className="rounded-lg border p-4 space-y-2">
+                        <div className="flex justify-between text-sm">
+                          <span className="text-muted-foreground">Monto:</span>
+                          <span className="font-medium">
+                            {formatCurrency(
+                              allocation.allocatedAmount,
+                              allocation.payment.currency
+                            )}
+                          </span>
                         </div>
+                        <div className="flex justify-between text-sm">
+                          <span className="text-muted-foreground">Método:</span>
+                          <span>{allocation.payment.paymentMethod.name}</span>
+                        </div>
+                        <div className="flex justify-between text-sm">
+                          <span className="text-muted-foreground">Fecha:</span>
+                          <span>{formatDate(allocation.payment.date)}</span>
+                        </div>
+                      </div>
 
-                        <AlertDialogFooter>
-                          <AlertDialogCancel onClick={() => setCancelReason('')}>
-                            Cancelar
-                          </AlertDialogCancel>
-                          <AlertDialogAction
-                            onClick={() => handleCancelPayment(allocation.payment.id)}
-                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                          >
-                            Anular Pago
-                          </AlertDialogAction>
-                        </AlertDialogFooter>
-                      </AlertDialogContent>
-                    </AlertDialog>
-                  ) : allocation.payment.cancelledReason ? (
-                    <div
-                      className="text-xs text-muted-foreground"
-                      title={allocation.payment.cancelledReason}
-                    >
-                      Anulado:{' '}
-                      {allocation.payment.cancelledReason.length > 30
-                        ? `${allocation.payment.cancelledReason.substring(0, 30)}...`
-                        : allocation.payment.cancelledReason}
-                    </div>
-                  ) : (
-                    <span className="text-xs text-muted-foreground">-</span>
-                  )}
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                        <AlertDialogAction
+                          onClick={() => handleDeletePayment(allocation.payment.id)}
+                          className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                        >
+                          Eliminar Pago
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
                 </TableCell>
               </TableRow>
             ))}

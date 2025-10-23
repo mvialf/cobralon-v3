@@ -11,7 +11,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { Badge } from '@/components/ui/badge'
 import { StatusBadge } from '@/components/ui/status-badge'
 import { DataTableColumnHeader } from '@/components/data-table'
 import { ProjectNameSummary } from '@/components/summarys/project-name-summary'
@@ -156,26 +155,6 @@ export const createColumns = ({
     },
   },
 
-  // Estado
-  {
-    accessorKey: 'status',
-    header: 'Estado',
-    cell: ({ row }) => {
-      const status = row.getValue('status') as string
-      return status === 'ACTIVE' ? (
-        <Badge variant="default" className="bg-green-600">
-          Activo
-        </Badge>
-      ) : (
-        <Badge variant="destructive">Anulado</Badge>
-      )
-    },
-    filterFn: (row, _id, filterValue) => {
-      const status = row.getValue('status') as string
-      return filterValue.includes(status)
-    },
-  },
-
   // Acciones
   {
     id: 'actions',
@@ -183,32 +162,26 @@ export const createColumns = ({
       const payment = row.original
       const isCustomerPayment = payment.type === 'Customer'
 
-      const handleCancel = async () => {
-        if (!confirm(`¿Estás seguro de anular este pago de ${payment.customer.name}?`)) {
+      const handleDelete = async () => {
+        if (!confirm(`¿Estás seguro de eliminar este pago de ${payment.customer.name}?`)) {
           return
         }
 
         try {
-          const response = await fetch(`/api/payments/${payment.id}/cancel`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              reason: 'Anulado desde interfaz web',
-            }),
+          const response = await fetch(`/api/payments/${payment.id}`, {
+            method: 'DELETE',
           })
 
           if (!response.ok) {
             const error = await response.json()
-            throw new Error(error.error || 'Error al anular pago')
+            throw new Error(error.error || 'Error al eliminar pago')
           }
 
-          toast.success('Pago anulado exitosamente')
+          toast.success('Pago eliminado exitosamente')
           onPaymentUpdated?.()
         } catch (error) {
-          console.error('Error al anular pago:', error)
-          toast.error(error instanceof Error ? error.message : 'Error al anular pago')
+          console.error('Error al eliminar pago:', error)
+          toast.error(error instanceof Error ? error.message : 'Error al eliminar pago')
         }
       }
 
@@ -234,13 +207,11 @@ export const createColumns = ({
               </>
             )}
 
-            {/* Anular pago: disponible para todos */}
-            {payment.status === 'ACTIVE' && (
-              <DropdownMenuItem className="text-destructive" onClick={handleCancel}>
-                <XCircle className="mr-2 h-4 w-4" />
-                Anular pago
-              </DropdownMenuItem>
-            )}
+            {/* Eliminar pago */}
+            <DropdownMenuItem className="text-destructive" onClick={handleDelete}>
+              <XCircle className="mr-2 h-4 w-4" />
+              Eliminar pago
+            </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       )
