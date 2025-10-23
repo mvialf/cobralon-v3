@@ -1765,15 +1765,15 @@ Obtiene todas las cuotas del sistema con filtros opcionales.
 
 **Query Parameters:**
 
-| Parámetro    | Tipo       | Default | Descripción                   |
-| ------------ | ---------- | ------- | ----------------------------- |
-| `page`       | number     | 1       | Número de página              |
+| Parámetro    | Tipo       | Default | Descripción                      |
+| ------------ | ---------- | ------- | -------------------------------- |
+| `page`       | number     | 1       | Número de página                 |
 | `limit`      | number     | 100     | Registros por página (max: 1000) |
-| `status`     | string     | -       | "pending" o "paid"            |
-| `paymentId`  | string     | -       | Filtrar por pago específico   |
-| `customerId` | string     | -       | Filtrar por cliente           |
-| `startDate`  | ISO string | -       | Fecha inicio vencimiento      |
-| `endDate`    | ISO string | -       | Fecha fin vencimiento         |
+| `status`     | string     | -       | "pending" o "paid"               |
+| `paymentId`  | string     | -       | Filtrar por pago específico      |
+| `customerId` | string     | -       | Filtrar por cliente              |
+| `startDate`  | ISO string | -       | Fecha inicio vencimiento         |
+| `endDate`    | ISO string | -       | Fecha fin vencimiento            |
 
 **Response:**
 
@@ -1928,7 +1928,7 @@ if (authHeader !== `Bearer ${cronSecret}`) {
   "crons": [
     {
       "path": "/api/cron/mark-installments-paid",
-      "schedule": "0 0 * * *"  // Diariamente a medianoche UTC
+      "schedule": "0 0 * * *" // Diariamente a medianoche UTC
     }
   ]
 }
@@ -2123,17 +2123,17 @@ Vista global de todas las cuotas del sistema.
 
 Columnas principales:
 
-| Columna         | Descripción                                      | Detalles                     |
-| --------------- | ------------------------------------------------ | ---------------------------- |
-| **Vencimiento** | Fecha de vencimiento                             | Rojo si vencida y pendiente  |
-| **Cliente**     | Nombre del cliente                               | Del payment                  |
-| **Proyectos**   | Lista de proyectos asociados                     | De payment.allocations       |
-| **Cuota**       | X / Total (ej: "2 / 6")                          | installmentNumber / selectedInstallments |
-| **Monto**       | Monto de la cuota                                | Formateado con currency      |
-| **Estado**      | Badge (Pendiente/Pagado)                         | success=paid, secondary=pending |
-| **Fecha Pago**  | Fecha en que se marcó como pagada                | paidDate o "-"               |
-| **Método**      | Método de pago usado                             | Del payment                  |
-| **Acciones**    | Dropdown con opciones                            | Marcar como pagado (TODO)    |
+| Columna         | Descripción                       | Detalles                                 |
+| --------------- | --------------------------------- | ---------------------------------------- |
+| **Vencimiento** | Fecha de vencimiento              | Rojo si vencida y pendiente              |
+| **Cliente**     | Nombre del cliente                | Del payment                              |
+| **Proyectos**   | Lista de proyectos asociados      | De payment.allocations                   |
+| **Cuota**       | X / Total (ej: "2 / 6")           | installmentNumber / selectedInstallments |
+| **Monto**       | Monto de la cuota                 | Formateado con currency                  |
+| **Estado**      | Badge (Pendiente/Pagado)          | success=paid, secondary=pending          |
+| **Fecha Pago**  | Fecha en que se marcó como pagada | paidDate o "-"                           |
+| **Método**      | Método de pago usado              | Del payment                              |
+| **Acciones**    | Dropdown con opciones             | Marcar como pagado (TODO)                |
 
 **Código de detección de vencimiento:**
 
@@ -2432,43 +2432,43 @@ El seed incluye:
 
 #### Modelos y Validaciones
 
-| Archivo                                                                          | Cambios                                        |
-| -------------------------------------------------------------------------------- | ---------------------------------------------- |
-| [prisma/schema.prisma](prisma/schema.prisma)                                     | +2 campos PaymentMethod, +1 campo Payment, +Installment model |
-| [lib/validations/payment-method-validations.ts](lib/validations/payment-method-validations.ts) | +2 campos en schema                            |
-| [lib/validations/payment-validations.ts](lib/validations/payment-validations.ts) | +1 campo en ambos schemas                      |
+| Archivo                                                                                        | Cambios                                                       |
+| ---------------------------------------------------------------------------------------------- | ------------------------------------------------------------- |
+| [prisma/schema.prisma](prisma/schema.prisma)                                                   | +2 campos PaymentMethod, +1 campo Payment, +Installment model |
+| [lib/validations/payment-method-validations.ts](lib/validations/payment-method-validations.ts) | +2 campos en schema                                           |
+| [lib/validations/payment-validations.ts](lib/validations/payment-validations.ts)               | +1 campo en ambos schemas                                     |
 
 #### API Routes
 
-| Archivo                                                                                          | Cambios                                        |
-| ------------------------------------------------------------------------------------------------ | ---------------------------------------------- |
-| [app/api/payments/route.ts](app/api/payments/route.ts)                                           | POST: crear installments automáticamente       |
-| [app/api/payments/[id]/route.ts](app/api/payments/[id]/route.ts)                                 | PUT: bloquear edición si tiene cuotas          |
-| [app/api/installments/route.ts](app/api/installments/route.ts)                                   | ✨ Nuevo: GET con filtros                      |
-| [app/api/cron/mark-installments-paid/route.ts](app/api/cron/mark-installments-paid/route.ts)     | ✨ Nuevo: marca cuotas pagadas                 |
+| Archivo                                                                                      | Cambios                                  |
+| -------------------------------------------------------------------------------------------- | ---------------------------------------- |
+| [app/api/payments/route.ts](app/api/payments/route.ts)                                       | POST: crear installments automáticamente |
+| [app/api/payments/[id]/route.ts](app/api/payments/[id]/route.ts)                             | PUT: bloquear edición si tiene cuotas    |
+| [app/api/installments/route.ts](app/api/installments/route.ts)                               | ✨ Nuevo: GET con filtros                |
+| [app/api/cron/mark-installments-paid/route.ts](app/api/cron/mark-installments-paid/route.ts) | ✨ Nuevo: marca cuotas pagadas           |
 
 #### Componentes UI
 
-| Archivo                                                                                                          | Cambios                                        |
-| ---------------------------------------------------------------------------------------------------------------- | ---------------------------------------------- |
-| [components/forms/settings/payment-method-form.tsx](components/forms/settings/payment-method-form.tsx)           | +2 campos con lógica condicional               |
-| [components/forms/payments/payment-to-project-form.tsx](components/forms/payments/payment-to-project-form.tsx)   | +1 select dinámico de cuotas                   |
-| [components/forms/payments/payment-to-customer-form.tsx](components/forms/payments/payment-to-customer-form.tsx) | +1 select dinámico de cuotas                   |
-| [app/payments/installments/page.tsx](app/payments/installments/page.tsx)                                         | ✨ Nueva: página principal                     |
-| [app/payments/installments/columns.tsx](app/payments/installments/columns.tsx)                                   | ✨ Nueva: columnas DataTable                   |
+| Archivo                                                                                                          | Cambios                          |
+| ---------------------------------------------------------------------------------------------------------------- | -------------------------------- |
+| [components/forms/settings/payment-method-form.tsx](components/forms/settings/payment-method-form.tsx)           | +2 campos con lógica condicional |
+| [components/forms/payments/payment-to-project-form.tsx](components/forms/payments/payment-to-project-form.tsx)   | +1 select dinámico de cuotas     |
+| [components/forms/payments/payment-to-customer-form.tsx](components/forms/payments/payment-to-customer-form.tsx) | +1 select dinámico de cuotas     |
+| [app/payments/installments/page.tsx](app/payments/installments/page.tsx)                                         | ✨ Nueva: página principal       |
+| [app/payments/installments/columns.tsx](app/payments/installments/columns.tsx)                                   | ✨ Nueva: columnas DataTable     |
 
 #### Navegación
 
-| Archivo                                                                      | Cambios                                        |
-| ---------------------------------------------------------------------------- | ---------------------------------------------- |
-| [components/layout/app-sidebar.tsx](components/layout/app-sidebar.tsx)       | Pagos → collapsible con submenu "Cuotas"      |
+| Archivo                                                                | Cambios                                  |
+| ---------------------------------------------------------------------- | ---------------------------------------- |
+| [components/layout/app-sidebar.tsx](components/layout/app-sidebar.tsx) | Pagos → collapsible con submenu "Cuotas" |
 
 #### Configuración
 
-| Archivo                      | Cambios                                        |
-| ---------------------------- | ---------------------------------------------- |
-| [vercel.json](vercel.json)   | ✨ Nuevo: config cron job diario               |
-| [.env.example](.env.example) | +sección CRON_SECRET con instrucciones         |
+| Archivo                      | Cambios                                |
+| ---------------------------- | -------------------------------------- |
+| [vercel.json](vercel.json)   | ✨ Nuevo: config cron job diario       |
+| [.env.example](.env.example) | +sección CRON_SECRET con instrucciones |
 
 ---
 

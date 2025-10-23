@@ -80,6 +80,9 @@
           <button onclick="showFlow(4)" id="tab-4" class="tab-button flex-1 min-w-[200px] px-4 py-3 rounded-md font-medium hover:bg-slate-100">
             ✏️ Corrección Manual
           </button>
+          <button onclick="showFlow(5)" id="tab-5" class="tab-button flex-1 min-w-[200px] px-4 py-3 rounded-md font-medium hover:bg-slate-100">
+            💳 Pago en Cuotas
+          </button>
         </div>
       </div>
 
@@ -994,6 +997,265 @@ Body: {
           </div>
         </div>
       </div>
+
+      <!-- Flow 5: Pago en Cuotas -->
+      <div id="flow-5" class="flow-container hidden">
+        <div class="bg-white rounded-lg shadow-lg p-8 mb-6">
+          <h2 class="text-2xl font-bold text-slate-800 mb-4">Flujo 5: Pago en Cuotas sin Interés</h2>
+          <p class="text-slate-600 mb-6">Sistema de cuotas comercio que divide un pago en múltiples cuotas automáticas.</p>
+
+          <!-- Context Box -->
+          <div class="mb-6 p-4 bg-green-50 border-l-4 border-green-500 rounded">
+            <p class="font-medium text-green-900">Contexto:</p>
+            <p class="text-sm text-green-700 mt-2">El cliente quiere realizar un pago de $300,000 pero dividido en 3 cuotas sin interés.</p>
+            <div class="mt-3 space-y-2">
+              <div class="flex justify-between text-sm bg-white p-2 rounded">
+                <span><strong>Monto total:</strong></span>
+                <span class="text-green-600 font-medium">$300,000</span>
+              </div>
+              <div class="flex justify-between text-sm bg-white p-2 rounded">
+                <span><strong>Número de cuotas:</strong></span>
+                <span class="text-green-600 font-medium">3 cuotas</span>
+              </div>
+              <div class="flex justify-between text-sm bg-white p-2 rounded">
+                <span><strong>Método de pago:</strong></span>
+                <span class="text-green-600 font-medium">Tarjeta (con cuotas habilitadas)</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Flow Steps -->
+          <div class="space-y-4">
+            <!-- Step 1 -->
+            <div class="flow-step border-l-4 border-emerald-500">
+              <div class="flex items-start gap-4">
+                <div class="flow-icon bg-gradient-to-br from-emerald-500 to-emerald-600 text-white">1</div>
+                <div class="flex-1">
+                  <h3 class="font-bold text-lg text-slate-800">Usuario inicia acción</h3>
+                  <p class="text-slate-600 mt-1">Click en Dropdown "Registrar Pago" → Opción "Pago a Proyecto"</p>
+                  <div class="mt-2 text-sm text-slate-500">
+                    📍 Ubicación: <code class="bg-slate-100 px-2 py-1 rounded">PaymentSummaryCard → Dropdown Button</code>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="flow-connector"></div>
+
+            <!-- Step 2 -->
+            <div class="flow-step border-l-4 border-emerald-500">
+              <div class="flex items-start gap-4">
+                <div class="flow-icon bg-gradient-to-br from-emerald-500 to-emerald-600 text-white">2</div>
+                <div class="flex-1">
+                  <h3 class="font-bold text-lg text-slate-800">Seleccionar método de pago</h3>
+                  <p class="text-slate-600 mt-1">Usuario selecciona método con cuotas habilitadas</p>
+                  <div class="mt-3 p-3 bg-emerald-50 rounded border border-emerald-200">
+                    <p class="text-sm font-medium text-emerald-800">Requisitos del método de pago:</p>
+                    <ul class="mt-2 space-y-1 text-sm text-emerald-700">
+                      <li>→ <strong>hasInstallments:</strong> true</li>
+                      <li>→ <strong>maxInstallments:</strong> 12 (hasta 12 cuotas permitidas)</li>
+                      <li>→ Ejemplo: Tarjeta de crédito, WebPay Plus</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="flow-connector"></div>
+
+            <!-- Step 3 -->
+            <div class="flow-step border-l-4 border-emerald-500">
+              <div class="flex items-start gap-4">
+                <div class="flow-icon bg-gradient-to-br from-emerald-500 to-emerald-600 text-white">3</div>
+                <div class="flex-1">
+                  <h3 class="font-bold text-lg text-slate-800">Seleccionar número de cuotas</h3>
+                  <p class="text-slate-600 mt-1">Campo de cuotas aparece dinámicamente al elegir método con cuotas</p>
+                  <div class="mt-3 space-y-2">
+                    <div class="flex items-center gap-2 text-sm">
+                      <span class="w-6 h-6 rounded-full bg-green-100 text-green-700 flex items-center justify-center font-bold">✓</span>
+                      <span>Proyecto: <strong>#2024-001</strong></span>
+                    </div>
+                    <div class="flex items-center gap-2 text-sm">
+                      <span class="w-6 h-6 rounded-full bg-green-100 text-green-700 flex items-center justify-center font-bold">✓</span>
+                      <span>Monto: <strong>$300,000</strong></span>
+                    </div>
+                    <div class="flex items-center gap-2 text-sm">
+                      <span class="w-6 h-6 rounded-full bg-green-100 text-green-700 flex items-center justify-center font-bold">✓</span>
+                      <span>Método: <strong>Tarjeta de Crédito</strong></span>
+                    </div>
+                    <div class="flex items-center gap-2 text-sm">
+                      <span class="w-6 h-6 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center font-bold">💳</span>
+                      <span>Cuotas: <strong>3 cuotas sin interés</strong></span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="flow-connector"></div>
+
+            <!-- Step 4 -->
+            <div class="flow-step border-l-4 border-emerald-500">
+              <div class="flex items-start gap-4">
+                <div class="flow-icon bg-gradient-to-br from-emerald-500 to-emerald-600 text-white">4</div>
+                <div class="flex-1">
+                  <h3 class="font-bold text-lg text-slate-800">Submit del formulario</h3>
+                  <p class="text-slate-600 mt-1">POST /api/payments con selectedInstallments</p>
+                  <div class="code-block mt-3">
+POST /api/payments
+Body: {
+  customerId: "abc-123",
+  amount: 300000,
+  currency: "CLP",
+  date: "2024-11-05",
+  paymentMethodId: "tarjeta-id",
+  reference: "TRX-123456",
+  selectedInstallments: 3,        // ← NUEVO: Número de cuotas
+  allocations: [
+    {
+      projectId: "2024-001",
+      allocatedAmount: 300000
+    }
+  ]
+}
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="flow-connector"></div>
+
+            <!-- Step 5: Algoritmo de división -->
+            <div class="flow-step border-l-4 border-indigo-500">
+              <div class="flex items-start gap-4">
+                <div class="flow-icon bg-gradient-to-br from-indigo-500 to-indigo-600 text-white">5</div>
+                <div class="flex-1">
+                  <h3 class="font-bold text-lg text-slate-800">Sistema calcula cuotas automáticamente</h3>
+                  <p class="text-slate-600 mt-1">Backend ejecuta algoritmo de división con remainder</p>
+                  <div class="code-block mt-3">
+// Algoritmo de cálculo de cuotas
+baseAmount = Math.floor((300000 / 3) * 100) / 100 = 100000.00
+totalBase = 100000.00 * 2 = 200000.00
+lastAmount = 300000 - 200000 = 100000.00  // ← Remainder
+
+Cuota 1: $100,000.00 - Vence: 2024-11-05 (día 0)
+Cuota 2: $100,000.00 - Vence: 2024-12-05 (día 30)
+Cuota 3: $100,000.00 - Vence: 2025-01-04 (día 60)
+         ────────────
+Total:   $300,000.00 ✅
+                  </div>
+                  <div class="mt-3 p-3 bg-indigo-50 rounded border border-indigo-200">
+                    <p class="text-sm font-medium text-indigo-800">⚠️ Importante:</p>
+                    <ul class="mt-1 text-sm text-indigo-700 list-disc list-inside">
+                      <li>Primera cuota vence el día 0 (fecha de compra)</li>
+                      <li>Cuotas siguientes cada 30 días</li>
+                      <li>Última cuota absorbe remainder para suma exacta</li>
+                      <li>Sin intereses (cuota = monto total / n)</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="flow-connector"></div>
+
+            <!-- Step 6 -->
+            <div class="flow-step border-l-4 border-green-500">
+              <div class="flex items-start gap-4">
+                <div class="flow-icon bg-gradient-to-br from-green-500 to-green-600 text-white">6</div>
+                <div class="flex-1">
+                  <h3 class="font-bold text-lg text-slate-800">✅ Success - Payment + Installments creados</h3>
+                  <div class="mt-3 p-4 bg-green-50 border border-green-200 rounded">
+                    <p class="font-medium text-green-800">Entidades creadas:</p>
+                    <ul class="mt-2 space-y-1 text-sm text-green-700">
+                      <li>→ <strong>Payment</strong>: $300,000 (status: ACTIVE, selectedInstallments: 3)</li>
+                      <li>→ <strong>PaymentAllocation</strong>: $300,000 → Proyecto #2024-001</li>
+                      <li>→ <strong>Installment #1</strong>: $100,000 (due: 2024-11-05, status: pending)</li>
+                      <li>→ <strong>Installment #2</strong>: $100,000 (due: 2024-12-05, status: pending)</li>
+                      <li>→ <strong>Installment #3</strong>: $100,000 (due: 2025-01-04, status: pending)</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="flow-connector"></div>
+
+            <!-- Step 7: Cron Job -->
+            <div class="flow-step border-l-4 border-blue-500">
+              <div class="flex items-start gap-4">
+                <div class="flow-icon bg-gradient-to-br from-blue-500 to-blue-600 text-white">7</div>
+                <div class="flex-1">
+                  <h3 class="font-bold text-lg text-slate-800">⏰ Cron Job marca cuotas como pagadas</h3>
+                  <p class="text-slate-600 mt-1">Vercel Cron Job ejecuta diariamente a medianoche</p>
+                  <div class="code-block mt-3">
+POST /api/cron/mark-installments-paid
+Authorization: Bearer {CRON_SECRET}
+
+// Busca cuotas pendientes vencidas
+WHERE status = 'pending' AND dueDate <= TODAY
+
+// Batch update
+UPDATE installment
+SET status = 'paid', paidDate = NOW()
+WHERE id IN (...)
+                  </div>
+                  <div class="mt-3 space-y-2">
+                    <div class="p-3 bg-blue-50 border border-blue-200 rounded">
+                      <p class="text-sm font-medium text-blue-800">📅 Timeline automático:</p>
+                      <ul class="mt-2 space-y-1 text-sm text-blue-700">
+                        <li>→ <strong>2024-11-05:</strong> Cuota 1 marcada como "paid" (día 0)</li>
+                        <li>→ <strong>2024-12-05:</strong> Cuota 2 marcada como "paid" (día 30)</li>
+                        <li>→ <strong>2025-01-04:</strong> Cuota 3 marcada como "paid" (día 60)</li>
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Final State -->
+            <div class="mt-6 p-6 bg-gradient-to-br from-emerald-50 to-green-50 rounded-lg border-2 border-emerald-200">
+              <h4 class="font-bold text-lg text-emerald-900 mb-3">🎯 Vista de Cuotas en Sistema</h4>
+              <div class="overflow-x-auto">
+                <table class="min-w-full border border-slate-200 text-sm">
+                  <thead class="bg-slate-100">
+                    <tr>
+                      <th class="border px-4 py-2 text-left">#</th>
+                      <th class="border px-4 py-2 text-right">Monto</th>
+                      <th class="border px-4 py-2 text-center">Vencimiento</th>
+                      <th class="border px-4 py-2 text-center">Pagada</th>
+                      <th class="border px-4 py-2 text-center">Estado</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td class="border px-4 py-2">1/3</td>
+                      <td class="border px-4 py-2 text-right font-bold">$100,000</td>
+                      <td class="border px-4 py-2 text-center">05/Nov/2024</td>
+                      <td class="border px-4 py-2 text-center">05/Nov/2024</td>
+                      <td class="border px-4 py-2 text-center"><span class="bg-green-100 text-green-700 px-2 py-0.5 rounded">✅ Pagada</span></td>
+                    </tr>
+                    <tr>
+                      <td class="border px-4 py-2">2/3</td>
+                      <td class="border px-4 py-2 text-right font-bold">$100,000</td>
+                      <td class="border px-4 py-2 text-center">05/Dic/2024</td>
+                      <td class="border px-4 py-2 text-center">-</td>
+                      <td class="border px-4 py-2 text-center"><span class="bg-amber-100 text-amber-700 px-2 py-0-5 rounded">⏳ Pendiente</span></td>
+                    </tr>
+                    <tr>
+                      <td class="border px-4 py-2">3/3</td>
+                      <td class="border px-4 py-2 text-right font-bold">$100,000</td>
+                      <td class="border px-4 py-2 text-center">04/Ene/2025</td>
+                      <td class="border px-4 py-2 text-center">-</td>
+                      <td class="border px-4 py-2 text-center"><span class="bg-amber-100 text-amber-700 px-2 py-0.5 rounded">⏳ Pendiente</span></td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+              <div class="mt-4 p-3 bg-emerald-100 rounded">
+                <p class="text-sm text-emerald-800 font-medium">
+                  💡 Nota: El sistema marca automáticamente las cuotas como pagadas cuando llega su fecha de vencimiento. No requiere acción manual.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
     </main>
 
     <!-- Footer -->
@@ -1001,7 +1263,7 @@ Body: {
       <div class="max-w-7xl mx-auto px-4 py-6 text-center text-slate-600">
         <p>Sistema de Pagos Cobralon - Documentación de User Flows</p>
         <p class="text-sm mt-1">Basado en <code class="bg-slate-100 px-2 py-1 rounded text-xs">PAYMENTS.md</code></p>
-        <p class="text-xs mt-2 text-slate-500">Última actualización: <strong>2025-10-22</strong></p>
+        <p class="text-xs mt-2 text-slate-500">Última actualización: <strong>2025-10-23</strong></p>
       </div>
     </footer>
 
