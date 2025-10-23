@@ -25,15 +25,17 @@ async function main() {
         id: true,
         type: true,
         _count: {
-          select: { allocations: true }
-        }
+          select: { allocations: true },
+        },
       },
-      take: 10
+      take: 10,
     })
 
     console.log('\n📋 Muestra de pagos actualizados:')
-    payments.forEach(p => {
-      console.log(`  - ID: ${p.id.slice(0, 8)}... | type: ${p.type} | allocations: ${p._count.allocations}`)
+    payments.forEach((p) => {
+      console.log(
+        `  - ID: ${p.id.slice(0, 8)}... | type: ${p.type} | allocations: ${p._count.allocations}`
+      )
     })
   } catch (error) {
     console.error('❌ Error:', error)

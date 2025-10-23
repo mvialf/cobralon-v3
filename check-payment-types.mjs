@@ -12,13 +12,13 @@ async function main() {
         amount: true,
         date: true,
         customer: {
-          select: { name: true }
+          select: { name: true },
         },
         _count: {
-          select: { allocations: true }
-        }
+          select: { allocations: true },
+        },
       },
-      orderBy: { date: 'desc' }
+      orderBy: { date: 'desc' },
     })
 
     console.log(`\n📊 Total de pagos: ${payments.length}\n`)
@@ -35,12 +35,14 @@ async function main() {
     })
 
     console.log('\n📋 Detalle de pagos:\n')
-    payments.forEach(p => {
+    payments.forEach((p) => {
       const allocCount = p._count.allocations
       const expectedType = allocCount === 1 ? 'Project' : 'Customer'
       const isCorrect = p.type === expectedType ? '✅' : '❌'
 
-      console.log(`${isCorrect} ${p.customer.name.padEnd(20)} | type: ${p.type.padEnd(8)} | allocations: ${allocCount} | expected: ${expectedType}`)
+      console.log(
+        `${isCorrect} ${p.customer.name.padEnd(20)} | type: ${p.type.padEnd(8)} | allocations: ${allocCount} | expected: ${expectedType}`
+      )
     })
   } catch (error) {
     console.error('❌ Error:', error)
