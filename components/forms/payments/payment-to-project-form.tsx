@@ -23,6 +23,7 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
+  FormRoot,
 } from '@/components/ui/form'
 import { FormGrid } from '@/components/ui/form-grid'
 import { Input } from '@/components/ui/input'
@@ -68,7 +69,6 @@ export function PaymentToProjectForm({
       amount: 0,
       date: new Date(),
       paymentMethodId: '',
-      reference: '',
       notes: '',
     },
   })
@@ -85,9 +85,7 @@ export function PaymentToProjectForm({
   })
 
   // Fetch payment methods
-  const { data: paymentMethods = [] } = useQuery<
-    Array<{ id: string; name: string; requiresReference: boolean }>
-  >({
+  const { data: paymentMethods = [] } = useQuery<Array<{ id: string; name: string }>>({
     queryKey: ['payment-methods'],
     queryFn: async () => {
       const res = await fetch('/api/payment-methods')
@@ -96,10 +94,6 @@ export function PaymentToProjectForm({
       return data.paymentMethods || []
     },
   })
-
-  // Encontrar método seleccionado (para validar reference)
-  const selectedMethodId = form.watch('paymentMethodId')
-  const selectedMethod = paymentMethods.find((m) => m.id === selectedMethodId)
 
   // Cuando cambia el proyecto seleccionado
   const watchedProjectId = form.watch('projectId')
@@ -129,20 +123,12 @@ export function PaymentToProjectForm({
       return
     }
 
-    // Validar reference si el método lo requiere
-    if (selectedMethod?.requiresReference && !values.reference) {
-      form.setError('reference', {
-        message: 'Este método de pago requiere una referencia',
-      })
-      return
-    }
-
     onSubmit(values, selectedProject)
   }
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
+      <FormRoot onSubmit={form.handleSubmit(handleSubmit)}>
         {/* 1. Buscar Proyecto (Combobox con server-side search) */}
         <FormField
           control={form.control}
@@ -277,33 +263,7 @@ export function PaymentToProjectForm({
           )}
         />
 
-        {/* 4. Referencia (condicional) */}
-        {selectedMethod && (
-          <FormField
-            control={form.control}
-            name="reference"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Referencia {selectedMethod.requiresReference && '*'}</FormLabel>
-                <FormControl>
-                  <Input
-                    placeholder="Ej: N° de transferencia, comprobante, etc."
-                    {...field}
-                    value={field.value || ''}
-                  />
-                </FormControl>
-                {selectedMethod.requiresReference && (
-                  <p className="text-xs text-muted-foreground">
-                    Este método de pago requiere una referencia
-                  </p>
-                )}
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-        )}
-
-        {/* 5. Notas (opcional) */}
+        {/* 4. Notas (opcional) */}
         <FormField
           control={form.control}
           name="notes"
@@ -329,7 +289,7 @@ export function PaymentToProjectForm({
             {isSubmitting ? 'Registrando...' : 'Registrar Pago'}
           </Button>
         </div>
-      </form>
+      </FormRoot>
     </Form>
   )
 }

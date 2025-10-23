@@ -53,7 +53,6 @@ import {
 interface PaymentMethod {
   id: string
   name: string
-  requiresReference?: boolean
 }
 
 interface Customer {
@@ -108,7 +107,6 @@ export function PaymentToCustomerForm({
       amount: 0,
       date: new Date(),
       paymentMethodId: '',
-      reference: '',
       notes: '',
       allocations: [],
     }),
@@ -160,13 +158,6 @@ export function PaymentToCustomerForm({
 
   // Memoize para evitar re-renders infinitos
   const paymentMethods = useMemo(() => paymentMethodsData || [], [paymentMethodsData])
-
-  // Encontrar método seleccionado (para validar reference)
-  const selectedMethodId = form.watch('paymentMethodId')
-  const selectedMethod = useMemo(
-    () => paymentMethods.find((m: PaymentMethod) => m.id === selectedMethodId),
-    [paymentMethods, selectedMethodId]
-  )
 
   // Watch amount para calcular FIFO
   const watchedAmount = form.watch('amount')
@@ -242,14 +233,6 @@ export function PaymentToCustomerForm({
     if (!isValidSum) {
       form.setError('allocations', {
         message: 'La suma de allocations debe ser igual al monto total',
-      })
-      return
-    }
-
-    // Validar reference si el método lo requiere
-    if (selectedMethod?.requiresReference && !values.reference) {
-      form.setError('reference', {
-        message: 'Este método de pago requiere una referencia',
       })
       return
     }
@@ -420,33 +403,7 @@ export function PaymentToCustomerForm({
           )}
         />
 
-        {/* 6. Referencia (condicional) */}
-        {selectedMethod && (
-          <FormField
-            control={form.control}
-            name="reference"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Referencia {selectedMethod.requiresReference && '*'}</FormLabel>
-                <FormControl>
-                  <Input
-                    placeholder="Ej: N° de transferencia, comprobante, etc."
-                    {...field}
-                    value={field.value || ''}
-                  />
-                </FormControl>
-                {selectedMethod.requiresReference && (
-                  <p className="text-xs text-muted-foreground">
-                    Este método de pago requiere una referencia
-                  </p>
-                )}
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-        )}
-
-        {/* 7. Sección de Allocations (solo si hay proyectos) */}
+        {/* 6. Sección de Allocations (solo si hay proyectos) */}
         {selectedCustomerId && customerProjects.length > 0 && watchedAmount > 0 && (
           <div className="space-y-4">
             <FormLabel>Distribución del Pago</FormLabel>
@@ -591,7 +548,7 @@ export function PaymentToCustomerForm({
           </div>
         )}
 
-        {/* 8. Notas (opcional) */}
+        {/* 7. Notas (opcional) */}
         <FormField
           control={form.control}
           name="notes"

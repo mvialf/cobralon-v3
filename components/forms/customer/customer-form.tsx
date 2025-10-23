@@ -13,6 +13,7 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
+  FormRoot,
 } from '@/components/ui/form'
 
 interface CustomerFormProps {
@@ -37,7 +38,7 @@ export function CustomerForm({
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+      <FormRoot onSubmit={form.handleSubmit(onSubmit)}>
         {/* Nombre */}
         <FormField
           control={form.control}
@@ -86,7 +87,7 @@ export function CustomerForm({
         <Button type="submit" className="w-full">
           {submitLabel}
         </Button>
-      </form>
+      </FormRoot>
     </Form>
   )
 }

@@ -15,6 +15,7 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
+  FormRoot,
 } from '@/components/ui/form'
 
 import {
@@ -58,7 +59,7 @@ export const UserProfileForm = React.forwardRef<UserProfileFormHandle, UserProfi
 
     return (
       <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+        <FormRoot onSubmit={form.handleSubmit(onSubmit)}>
           {/* Información Básica */}
           <div className="space-y-4">
             <h3 className="text-sm font-medium">Información Básica</h3>
@@ -247,7 +248,7 @@ export const UserProfileForm = React.forwardRef<UserProfileFormHandle, UserProfi
               )}
             />
           </div>
-        </form>
+        </FormRoot>
       </Form>
     )
   }

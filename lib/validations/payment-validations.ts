@@ -164,14 +164,6 @@ export const paymentToProjectSchema = z.object({
     })
     .uuid('ID de método de pago inválido'),
 
-  // Referencia (opcional, pero requerida si el método lo exige)
-  reference: z
-    .string()
-    .max(100, 'La referencia no puede exceder 100 caracteres')
-    .trim()
-    .optional()
-    .nullable(),
-
   // Notas adicionales (opcional)
   notes: z
     .string()
@@ -218,7 +210,7 @@ export function paymentToProjectToPayload(
     currency: project.currency, // ← Derivado del proyecto
     date: values.date,
     paymentMethodId: values.paymentMethodId,
-    reference: values.reference || null,
+    reference: null,
     notes: values.notes || null,
     allocations: [
       {
@@ -272,14 +264,6 @@ export const paymentToCustomerSchema = z
         required_error: 'Debe seleccionar un método de pago',
       })
       .uuid('ID de método de pago inválido'),
-
-    // Referencia (opcional, pero requerida si el método lo exige)
-    reference: z
-      .string()
-      .max(100, 'La referencia no puede exceder 100 caracteres')
-      .trim()
-      .optional()
-      .nullable(),
 
     // Notas adicionales (opcional)
     notes: z
@@ -342,7 +326,7 @@ export function paymentToCustomerToPayload(
     currency, // ← Derivada de los proyectos
     date: values.date,
     paymentMethodId: values.paymentMethodId,
-    reference: values.reference || null,
+    reference: null,
     notes: values.notes || null,
     allocations: values.allocations,
   }
