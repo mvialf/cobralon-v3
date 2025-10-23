@@ -4,7 +4,6 @@ interface ProjectNameSummaryProps {
   projectNumber: string
   customerName: string
   projectName?: string | null
-  projectId?: string // Mantener por compatibilidad, pero no se usa
   className?: string
 }
 

@@ -118,9 +118,17 @@ export default function PaymentsPage() {
             <DataTable
               columns={columns}
               data={payments}
-              searchKey="customerName"
-              searchPlaceholder="Buscar por cliente..."
+              searchKey="associated"
+              searchPlaceholder="Buscar por cliente/proyecto..."
               filterableColumns={[
+                {
+                  id: 'type',
+                  title: 'Tipo',
+                  options: [
+                    { label: 'Proyecto', value: 'Project' },
+                    { label: 'Cliente', value: 'Customer' },
+                  ],
+                },
                 {
                   id: 'status',
                   title: 'Estado',

@@ -14,6 +14,7 @@ import { Calendar, User, CreditCard, FileText, DollarSign, FolderOpen, XCircle }
 
 interface Payment {
   id: string
+  type: 'Project' | 'Customer' // ← NUEVO: Tipo de pago
   amount: number
   currency: string
   date: string

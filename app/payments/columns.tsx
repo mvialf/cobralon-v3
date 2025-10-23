@@ -12,11 +12,14 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { Badge } from '@/components/ui/badge'
+import { StatusBadge } from '@/components/ui/status-badge'
 import { DataTableColumnHeader } from '@/components/data-table'
+import { ProjectNameSummary } from '@/components/summarys/project-name-summary'
 import { toast } from 'sonner'
 
 export interface Payment {
   id: string
+  type: 'Project' | 'Customer' // ← NUEVO: Tipo de pago
   amount: number
   currency: string
   date: string
@@ -50,53 +53,66 @@ export const createColumns = ({
   onPaymentUpdated,
   onViewDetails,
 }: ColumnsProps = {}): ColumnDef<Payment>[] => [
+  // Cliente/Proyecto (fusionado)
   {
-    accessorKey: 'date',
-    header: ({ column }) => <DataTableColumnHeader column={column} title="Fecha" />,
-    cell: ({ row }) => {
-      const date = new Date(row.getValue('date'))
-      return date.toLocaleDateString('es-CL', {
-        year: 'numeric',
-        month: 'short',
-        day: 'numeric',
-      })
+    id: 'associated',
+    accessorFn: (row) => {
+      // Para sorting: extraer nombre relevante
+      if (row.type === 'Customer') {
+        return row.customer.name
+      }
+      if (row.type === 'Project' && row.allocations.length === 1) {
+        return row.allocations[0].project.projectName || row.allocations[0].project.projectNumber
+      }
+      return ''
     },
-  },
-  {
-    accessorKey: 'customer.name',
-    id: 'customerName',
-    header: ({ column }) => <DataTableColumnHeader column={column} title="Cliente" />,
-    cell: ({ row }) => <span className="font-medium">{row.original.customer.name}</span>,
-  },
-  {
-    id: 'projects',
-    header: 'Proyectos',
+    header: ({ column }) => <DataTableColumnHeader column={column} title="Cliente/Proyecto" />,
     cell: ({ row }) => {
       const payment = row.original
-      return (
-        <div className="flex flex-col gap-1">
-          {payment.allocations.map((alloc) => (
-            <div key={alloc.id} className="text-sm">
-              <span className="font-medium">{alloc.project.projectNumber}</span>
-              {alloc.project.projectName && (
-                <span className="text-muted-foreground"> - {alloc.project.projectName}</span>
-              )}
-              <span className="ml-2 text-xs text-muted-foreground">
-                (
-                {new Intl.NumberFormat('es-CL', {
-                  style: 'currency',
-                  currency: payment.currency,
-                  minimumFractionDigits: 0,
-                  maximumFractionDigits: 0,
-                }).format(alloc.allocatedAmount)}
-                )
-              </span>
-            </div>
-          ))}
-        </div>
-      )
+
+      // Customer payment → customer name
+      if (payment.type === 'Customer') {
+        return <span className="font-medium">{payment.customer.name}</span>
+      }
+
+      // Project payment 1:1 → ProjectNameSummary
+      if (payment.type === 'Project' && payment.allocations.length === 1) {
+        const project = payment.allocations[0].project
+        return (
+          <ProjectNameSummary
+            projectNumber={project.projectNumber}
+            customerName={payment.customer.name}
+            projectName={project.projectName}
+          />
+        )
+      }
+
+      // Project payment 1:N → vacío
+      return <span className="text-muted-foreground">-</span>
     },
   },
+
+  // Tipo (NUEVO)
+  {
+    accessorKey: 'type',
+    header: 'Tipo',
+    cell: ({ row }) => {
+      const type = row.getValue('type') as 'Project' | 'Customer'
+
+      return (
+        <StatusBadge
+          bgClass={type === 'Project' ? 'bg-blue-500' : 'bg-green-500'}
+          label={type === 'Project' ? 'Proyecto' : 'Cliente'}
+        />
+      )
+    },
+    filterFn: (row, _id, filterValue) => {
+      const type = row.getValue('type') as string
+      return filterValue.includes(type)
+    },
+  },
+
+  // Método de Pago
   {
     accessorKey: 'paymentMethod.name',
     id: 'paymentMethodName',
@@ -107,6 +123,8 @@ export const createColumns = ({
       return filterValue.includes(methodName)
     },
   },
+
+  // Monto
   {
     accessorKey: 'amount',
     header: ({ column }) => (
@@ -123,18 +141,22 @@ export const createColumns = ({
       return <div className="text-right font-semibold">{formatted}</div>
     },
   },
+
+  // Fecha
   {
-    accessorKey: 'reference',
-    header: 'Referencia',
+    accessorKey: 'date',
+    header: ({ column }) => <DataTableColumnHeader column={column} title="Fecha" />,
     cell: ({ row }) => {
-      const ref = row.getValue('reference') as string | null
-      return (
-        <span className={ref ? 'max-w-[150px] truncate' : 'text-muted-foreground'}>
-          {ref || '-'}
-        </span>
-      )
+      const date = new Date(row.getValue('date'))
+      return new Intl.DateTimeFormat('es-CL', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+      }).format(date)
     },
   },
+
+  // Estado
   {
     accessorKey: 'status',
     header: 'Estado',
@@ -153,10 +175,13 @@ export const createColumns = ({
       return filterValue.includes(status)
     },
   },
+
+  // Acciones
   {
     id: 'actions',
     cell: ({ row }) => {
       const payment = row.original
+      const isCustomerPayment = payment.type === 'Customer'
 
       const handleCancel = async () => {
         if (!confirm(`¿Estás seguro de anular este pago de ${payment.customer.name}?`)) {
@@ -197,11 +222,19 @@ export const createColumns = ({
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
             <DropdownMenuLabel>Acciones</DropdownMenuLabel>
-            <DropdownMenuItem onClick={() => onViewDetails?.(payment)}>
-              <Eye className="mr-2 h-4 w-4" />
-              Ver detalles
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
+
+            {/* Ver detalles: SOLO para pagos 1:N */}
+            {isCustomerPayment && (
+              <>
+                <DropdownMenuItem onClick={() => onViewDetails?.(payment)}>
+                  <Eye className="mr-2 h-4 w-4" />
+                  Ver detalles
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+              </>
+            )}
+
+            {/* Anular pago: disponible para todos */}
             {payment.status === 'ACTIVE' && (
               <DropdownMenuItem className="text-destructive" onClick={handleCancel}>
                 <XCircle className="mr-2 h-4 w-4" />
