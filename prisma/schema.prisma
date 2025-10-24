@@ -5,15 +5,9 @@ generator client {
 
 datasource db {
   provider  = "postgresql"
-  url       = env("DATABASE_URL")       // Pooled connection for queries
-  directUrl = env("DIRECT_URL")         // Direct connection for migrations
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
-
-// ========================================
-// BASE SCHEMA - Customize for your project
-// ========================================
-// This is a starting point. Modify according to your needs.
-// See documentation: docs/template/guides/database-setup.md
 
 model User {
   id        String   @id @default(uuid())
@@ -22,64 +16,51 @@ model User {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  // Add your relations here
-  // Example:
-  // posts     Post[]
-
   @@index([email])
 }
 
 model Customer {
-  id        String   @id @default(uuid())
+  id        String    @id @default(uuid())
   name      String
-  phone     String   // Teléfono obligatorio
-  email     String?  // Email opcional
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  // Relations
-  projects  Project[]
+  phone     String
+  email     String?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
   payments  Payment[]
+  projects  Project[]
 
   @@index([name])
   @@index([email])
 }
 
 model BadgeColor {
-  id          String   @id @default(uuid())
-  name        String   @unique       // "Azul", "Verde", "Rojo"
-  key         String   @unique       // "blue", "green", "red" (para código)
-  bgClass     String                 // "bg-blue-500"
-  textClass   String   @default("text-white")  // "text-white"
-  order       Int      @default(0)   // Para ordenar en UI
-  isActive    Boolean  @default(true)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  // Relations - todas las entidades que usen badges
-  projectStatuses  ProjectStatus[]
+  id              String          @id @default(uuid())
+  name            String          @unique
+  key             String          @unique
+  bgClass         String
+  textClass       String          @default("text-white")
+  order           Int             @default(0)
+  isActive        Boolean         @default(true)
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+  projectStatuses ProjectStatus[]
 
   @@index([order])
   @@index([isActive])
 }
 
 model ProjectStatus {
-  id        String   @id @default(uuid())
-  name      String   @unique
-  order     Int      @default(0)
-
-  // FK a BadgeColor
+  id        String     @id @default(uuid())
+  name      String     @unique
+  order     Int        @default(0)
   colorId   String
-  color     BadgeColor @relation(fields: [colorId], references: [id], onDelete: Restrict)
-
-  isInitial Boolean  @default(false)
-  isFinal   Boolean  @default(false)
-  isActive  Boolean  @default(true)
-
+  isInitial Boolean    @default(false)
+  isFinal   Boolean    @default(false)
+  isActive  Boolean    @default(true)
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
   projects  Project[]
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  color     BadgeColor @relation(fields: [colorId], references: [id])
 
   @@index([colorId])
   @@index([order])
@@ -87,114 +68,72 @@ model ProjectStatus {
 }
 
 model Project {
-  id             String   @id @default(uuid())
-  projectNumber  String
-  projectName    String?  // Glosa
-
-  // Relación con Customer (uno a muchos)
-  customerId     String
-  customer       Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
-
-  phone          String   // Teléfono obligatorio (autocompletado desde customer pero editable)
-
-  // Dirección del proyecto (donde se realiza el trabajo)
-  street    String   // Calle y numeración - OBLIGATORIO
-  apartment String?  // Casa/Dpto - OPCIONAL
-  comuna    String   // Comuna - OBLIGATORIO
-  region    String   // Región - OBLIGATORIO
-
-  // NUEVO: FK a ProjectStatus
-  projectStatusId String?
-  projectStatus   ProjectStatus? @relation(fields: [projectStatusId], references: [id], onDelete: Restrict)
-
-  // LEGACY: Campo antiguo para migración (temporal)
-  projectStatusLegacy String @default("") @map("projectStatus")
-
-  date           DateTime @default(now()) // Fecha de ingreso
-
-  // Financials
-  subtotal       Decimal  @db.Decimal(12, 2)
-  taxRate        Decimal  @default(19.0) @db.Decimal(5, 2) // Impuesto (%)
-  total          Decimal  @db.Decimal(12, 2) // Total calculado = subtotal + (subtotal * taxRate / 100)
-
-  // Payments
-  totalAmount    Decimal? @db.Decimal(12, 2) // Monto total acordado del proyecto (puede diferir de total)
-  currency       String   @default("CLP") // Moneda del proyecto (ISO 4217)
-
-  // Metrics
-  windowsCount   Int      @default(0) // Elementos
-  squareMeters   Decimal  @default(0) @db.Decimal(10, 2) // m²
-  description    String?  @db.Text // Descripción
-
-  // Relations
-  paymentAllocations PaymentAllocation[]
-
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  id                  String              @id @default(uuid())
+  projectNumber       String
+  projectName         String?
+  customerId          String
+  phone               String
+  street              String
+  apartment           String?
+  comuna              String
+  region              String
+  projectStatusId     String?
+  projectStatusLegacy String              @default("") @map("projectStatus")
+  date                DateTime            @default(now())
+  subtotal            Decimal             @db.Decimal(12, 2)
+  taxRate             Decimal             @default(19.0) @db.Decimal(5, 2)
+  total               Decimal             @db.Decimal(12, 2)
+  windowsCount        Int                 @default(0)
+  squareMeters        Decimal             @default(0) @db.Decimal(10, 2)
+  description         String?
+  createdAt           DateTime            @default(now())
+  updatedAt           DateTime            @updatedAt
+  currency            String              @default("CLP")
+  totalAmount         Decimal?            @db.Decimal(12, 2)
+  paymentAllocations  PaymentAllocation[]
+  customer            Customer            @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  projectStatus       ProjectStatus?      @relation(fields: [projectStatusId], references: [id], onDelete: Restrict)
 
   @@index([customerId])
   @@index([projectNumber])
   @@index([projectStatusId])
   @@index([date])
-
-  // Composite indexes for common query patterns
   @@index([customerId, projectStatusId])
   @@index([projectStatusId, date(sort: Desc)])
 }
 
-// ========================================
-// PAYMENT SYSTEM
-// ========================================
-
 model PaymentMethod {
-  id                String   @id @default(uuid())
-  name              String   @unique // "Efectivo", "Transferencia", "WebPay"
-  active            Boolean  @default(true)
-  order             Int      @default(0)
-
-  // Metadata opcional
-  icon              String?  // Nombre de icono Lucide
-
-  // Cuotas sin interés
-  hasInstallments   Boolean  @default(false) // ¿Ofrece cuotas comercio?
-  maxInstallments   Int?     // Número máximo de cuotas (requerido si hasInstallments = true)
-
-  // Relations
-  payments          Payment[]
-
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
+  id              String    @id @default(uuid())
+  name            String    @unique
+  active          Boolean   @default(true)
+  order           Int       @default(0)
+  icon            String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  hasInstallments Boolean   @default(false)
+  maxInstallments Int?
+  payments        Payment[]
 
   @@index([active, order])
 }
 
 model Payment {
-  id              String   @id @default(uuid())
-
-  // Tipo de pago: "Project" (1:1) | "Customer" (1:N)
-  type            String   @default("Project") // "Project" | "Customer"
-
-  amount          Decimal  @db.Decimal(12, 2) // Monto total del pago
-  currency        String   // Moneda del pago (debe coincidir con proyectos)
-  date            DateTime // Fecha del pago
-  reference       String?  // N° transacción, comprobante, etc.
-  notes           String?  @db.Text
-
-  // Cuotas sin interés
-  selectedInstallments Int? // Número de cuotas elegidas (null = pago de contado)
-
-  // Relations
-  customerId      String
-  customer        Customer @relation(fields: [customerId], references: [id], onDelete: Restrict)
-
-  paymentMethodId String
-  paymentMethod   PaymentMethod @relation(fields: [paymentMethodId], references: [id], onDelete: Restrict)
-
-  allocations     PaymentAllocation[]
-  installments    Installment[]
-
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  id                   String              @id @default(uuid())
+  amount               Decimal             @db.Decimal(12, 2)
+  currency             String
+  date                 DateTime
+  reference            String?
+  notes                String?
+  customerId           String
+  paymentMethodId      String
+  createdAt            DateTime            @default(now())
+  updatedAt            DateTime            @updatedAt
+  selectedInstallments Int?
+  type                 String              @default("Project")
+  installments         Installment[]
+  customer             Customer            @relation(fields: [customerId], references: [id])
+  paymentMethod        PaymentMethod       @relation(fields: [paymentMethodId], references: [id])
+  allocations          PaymentAllocation[]
 
   @@index([customerId])
   @@index([paymentMethodId])
@@ -204,55 +143,31 @@ model Payment {
 }
 
 model Installment {
-  id                String   @id @default(uuid())
-
-  // Relación con Payment (cascade delete)
+  id                String    @id @default(uuid())
   paymentId         String
-  payment           Payment  @relation(fields: [paymentId], references: [id], onDelete: Cascade)
-
-  installmentNumber Int      // Número de cuota (1, 2, 3, etc.)
-  amount            Decimal  @db.Decimal(12, 2) // Monto de esta cuota
-  dueDate           DateTime // Fecha de vencimiento (payment.date + 30 * (installmentNumber - 1) días)
-  paidDate          DateTime? // Fecha en que se marcó como pagada (null = pendiente)
-  status            String   @default("pending") // "pending" | "paid"
-
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
+  installmentNumber Int
+  amount            Decimal   @db.Decimal(12, 2)
+  dueDate           DateTime
+  paidDate          DateTime?
+  status            String    @default("pending")
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  payment           Payment   @relation(fields: [paymentId], references: [id], onDelete: Cascade)
 
   @@index([paymentId])
-  @@index([status, dueDate]) // Para cron job: buscar pending + vencidas
+  @@index([status, dueDate])
 }
 
 model PaymentAllocation {
   id              String   @id @default(uuid())
-
   paymentId       String
-  payment         Payment  @relation(fields: [paymentId], references: [id], onDelete: Cascade)
-
   projectId       String
-  project         Project  @relation(fields: [projectId], references: [id], onDelete: Restrict)
-
-  allocatedAmount Decimal  @db.Decimal(12, 2) // Cuánto de este pago va a este proyecto
-
+  allocatedAmount Decimal  @db.Decimal(12, 2)
   createdAt       DateTime @default(now())
+  payment         Payment  @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+  project         Project  @relation(fields: [projectId], references: [id])
 
-  @@unique([paymentId, projectId]) // Un pago no puede asignarse dos veces al mismo proyecto
+  @@unique([paymentId, projectId])
   @@index([paymentId])
   @@index([projectId])
 }
-
-// Uncomment and customize for your needs:
-//
-// model Post {
-//   id        String   @id @default(uuid())
-//   title     String
-//   content   String?
-//   published Boolean  @default(false)
-//   authorId  String
-//   author    User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
-//   createdAt DateTime @default(now())
-//   updatedAt DateTime @updatedAt
-//
-//   @@index([authorId])
-//   @@index([published])
-// }
