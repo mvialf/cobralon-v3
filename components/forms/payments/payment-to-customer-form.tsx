@@ -5,7 +5,7 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useQuery } from '@tanstack/react-query'
 import { Trash2 } from 'lucide-react'
-
+import { FormGrid } from '@/components/ui/form-grid'
 import {
   paymentToCustomerSchema,
   type PaymentToCustomerFormValues,
@@ -18,7 +18,7 @@ import { cn } from '@/lib/utils'
 
 import { Combobox } from '@/components/ui/combobox'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
 import {
   Form,
   FormControl,
@@ -37,7 +37,6 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import {
   Table,
   TableBody,
@@ -176,6 +175,17 @@ export function PaymentToCustomerForm({
     }
   }, [projects])
 
+  // Inicializar allocations automáticamente cuando se cargan proyectos
+  useEffect(() => {
+    if (customerProjects.length > 0) {
+      const initialAllocations = customerProjects.map((project) => ({
+        projectId: project.id,
+        allocatedAmount: 0,
+      }))
+      setAllocations(initialAllocations)
+    }
+  }, [customerProjects])
+
   // Sincronizar allocations con form
   useEffect(() => {
     form.setValue('allocations', allocations)
@@ -196,17 +206,6 @@ export function PaymentToCustomerForm({
 
     const fifoAllocations = calculateFIFO(customerProjects, watchedAmount)
     setAllocations(fifoAllocations)
-  }
-
-  // Handler: Agregar proyecto manualmente
-  const handleAddProject = (projectId: string) => {
-    // Verificar que no esté duplicado
-    if (allocations.some((a) => a.projectId === projectId)) {
-      alert('Este proyecto ya está en la lista')
-      return
-    }
-
-    setAllocations([...allocations, { projectId, allocatedAmount: 0 }])
   }
 
   // Handler: Eliminar allocation
@@ -266,8 +265,9 @@ export function PaymentToCustomerForm({
                   onValueChange={(value) => {
                     field.onChange(value)
                     setSelectedCustomerId(value)
-                    // Reset allocations cuando cambia cliente
+                    // Reset allocations y modo cuando cambia cliente
                     setAllocations([])
+                    setDistributionMode('manual')
                   }}
                   options={customersData || []}
                   getOptionValue={(c) => c.id}
@@ -291,77 +291,50 @@ export function PaymentToCustomerForm({
           )}
         />
 
-        {/* 2. Mostrar info del cliente seleccionado */}
-        {selectedCustomerId && (
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-sm font-medium">Cliente Seleccionado</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="font-medium">
-                {customersData?.find((c: Customer) => c.id === selectedCustomerId)?.name}
-              </p>
-              {loadingProjects && (
-                <p className="text-sm text-muted-foreground mt-2">Cargando proyectos...</p>
-              )}
-              {!loadingProjects && customerProjects.length === 0 && (
-                <p className="text-sm text-destructive mt-2">
-                  Este cliente no tiene proyectos con balance pendiente
-                </p>
-              )}
-              {!loadingProjects && customerProjects.length > 0 && (
-                <p className="text-sm text-muted-foreground mt-2">
-                  {customerProjects.length} proyecto{customerProjects.length !== 1 ? 's' : ''} con
-                  balance pendiente
-                </p>
-              )}
-            </CardContent>
-          </Card>
-        )}
+        <FormGrid columns="2-1">
+          {/* 3. Monto del Pago */}
+          <FormField
+            control={form.control}
+            name="amount"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Monto Total del Pago *</FormLabel>
+                <FormControl>
+                  <CurrencyInput
+                    value={field.value}
+                    onChange={field.onChange}
+                    currency={customerProjects[0]?.currency}
+                    disabled={!selectedCustomerId || customerProjects.length === 0}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
 
-        {/* 3. Monto del Pago */}
-        <FormField
-          control={form.control}
-          name="amount"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Monto Total del Pago *</FormLabel>
-              <FormControl>
-                <CurrencyInput
-                  value={field.value}
-                  onChange={field.onChange}
-                  currency={customerProjects[0]?.currency}
-                  disabled={!selectedCustomerId || customerProjects.length === 0}
-                />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
-        {/* 4. Fecha */}
-        <FormField
-          control={form.control}
-          name="date"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Fecha del Pago *</FormLabel>
-              <FormControl>
-                <Input
-                  type="date"
-                  value={
-                    field.value instanceof Date
-                      ? field.value.toISOString().split('T')[0]
-                      : field.value
-                  }
-                  onChange={(e) => field.onChange(new Date(e.target.value))}
-                />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
+          {/* 4. Fecha */}
+          <FormField
+            control={form.control}
+            name="date"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Fecha del Pago *</FormLabel>
+                <FormControl>
+                  <Input
+                    type="date"
+                    value={
+                      field.value instanceof Date
+                        ? field.value.toISOString().split('T')[0]
+                        : field.value
+                    }
+                    onChange={(e) => field.onChange(new Date(e.target.value))}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </FormGrid>
         {/* 5. Método de Pago */}
         <FormField
           control={form.control}
@@ -430,58 +403,59 @@ export function PaymentToCustomerForm({
           />
         )}
 
-        {/* 6. Sección de Allocations (solo si hay proyectos) */}
-        {selectedCustomerId && customerProjects.length > 0 && watchedAmount > 0 && (
+        {/* 6. Sección de Allocations (solo si hay cliente seleccionado) */}
+        {selectedCustomerId && (
           <div className="space-y-4">
             <FormLabel>Distribución del Pago</FormLabel>
 
-            {/* Tabs: FIFO vs Manual */}
-            <Tabs
-              value={distributionMode}
-              onValueChange={(v) => setDistributionMode(v as 'fifo' | 'manual')}
-            >
-              <TabsList className="grid w-full grid-cols-2">
-                <TabsTrigger value="fifo">FIFO Automático</TabsTrigger>
-                <TabsTrigger value="manual">Distribución Manual</TabsTrigger>
-              </TabsList>
-
-              <TabsContent value="fifo" className="space-y-4">
-                <Button
-                  type="button"
-                  onClick={handleCalculateFIFO}
-                  variant="outline"
-                  className="w-full"
-                >
-                  Calcular Distribución FIFO
-                </Button>
-                <p className="text-xs text-muted-foreground">
-                  El cálculo FIFO distribuirá automáticamente el monto entre los proyectos más
-                  antiguos primero.
-                </p>
-              </TabsContent>
-
-              <TabsContent value="manual" className="space-y-4">
-                <div className="flex gap-2">
-                  <Combobox<ProjectWithBalance>
-                    value=""
-                    onValueChange={handleAddProject}
-                    options={customerProjects.filter(
-                      (p) => !allocations.some((a) => a.projectId === p.id)
-                    )}
-                    getOptionValue={(p) => p.id}
-                    getOptionLabel={(p) =>
-                      `${p.projectNumber} - ${formatCurrency(p.balance, p.currency)}`
+            {/* Header con Checkbox Auto (FIFO) */}
+            <div className="flex justify-between items-center">
+              <h3 className="text-sm font-medium">Asignación a Proyectos</h3>
+              <div className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  id="auto-fifo"
+                  checked={distributionMode === 'fifo'}
+                  disabled={!watchedAmount || watchedAmount <= 0}
+                  onChange={(e) => {
+                    const newMode = e.target.checked ? 'fifo' : 'manual'
+                    setDistributionMode(newMode)
+                    if (newMode === 'fifo') {
+                      handleCalculateFIFO()
                     }
-                    placeholder="Agregar proyecto..."
-                    emptyMessage="No hay más proyectos disponibles"
-                    contentWidth="400px"
-                  />
-                </div>
-              </TabsContent>
-            </Tabs>
+                  }}
+                  className="h-4 w-4 rounded border-gray-300"
+                />
+                <label
+                  htmlFor="auto-fifo"
+                  className={cn(
+                    'text-sm',
+                    !watchedAmount || watchedAmount <= 0
+                      ? 'text-muted-foreground cursor-not-allowed'
+                      : 'cursor-pointer'
+                  )}
+                >
+                  Auto (FIFO)
+                </label>
+              </div>
+            </div>
+
+            {/* Loading State */}
+            {loadingProjects && (
+              <div className="text-center py-8 text-muted-foreground">
+                <p>Cargando proyectos...</p>
+              </div>
+            )}
+
+            {/* Empty State */}
+            {!loadingProjects && allocations.length === 0 && (
+              <div className="text-center py-8 text-muted-foreground">
+                <p>Este cliente no tiene proyectos con saldo pendiente.</p>
+              </div>
+            )}
 
             {/* Tabla de Allocations */}
-            {allocations.length > 0 && (
+            {!loadingProjects && allocations.length > 0 && (
               <div className="border rounded-lg">
                 <Table>
                   <TableHeader>
@@ -518,6 +492,7 @@ export function PaymentToCustomerForm({
                               onChange={(value) => handleChangeAllocation(index, value)}
                               currency={project.currency}
                               className="text-right"
+                              disabled={distributionMode === 'fifo'}
                             />
                           </TableCell>
                           <TableCell>
