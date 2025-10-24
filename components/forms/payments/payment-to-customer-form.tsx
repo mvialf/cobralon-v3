@@ -4,9 +4,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useQuery } from '@tanstack/react-query'
-import { Calendar as CalendarIcon, Trash2 } from 'lucide-react'
-import { format } from 'date-fns'
-import { es } from 'date-fns/locale'
+import { Trash2 } from 'lucide-react'
 
 import {
   paymentToCustomerSchema,
@@ -20,7 +18,6 @@ import { cn } from '@/lib/utils'
 
 import { Combobox } from '@/components/ui/combobox'
 import { Button } from '@/components/ui/button'
-import { Calendar } from '@/components/ui/calendar'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import {
   Form,
@@ -31,7 +28,7 @@ import {
   FormMessage,
 } from '@/components/ui/form'
 import { Input } from '@/components/ui/input'
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+import { CurrencyInput } from '@/components/ui/currency-input'
 import {
   Select,
   SelectContent,
@@ -330,12 +327,10 @@ export function PaymentToCustomerForm({
             <FormItem>
               <FormLabel>Monto Total del Pago *</FormLabel>
               <FormControl>
-                <Input
-                  type="number"
-                  step="0.01"
-                  placeholder="0.00"
-                  {...field}
-                  onChange={(e) => field.onChange(e.target.value)}
+                <CurrencyInput
+                  value={field.value}
+                  onChange={field.onChange}
+                  currency={customerProjects[0]?.currency}
                   disabled={!selectedCustomerId || customerProjects.length === 0}
                 />
               </FormControl>
@@ -349,37 +344,19 @@ export function PaymentToCustomerForm({
           control={form.control}
           name="date"
           render={({ field }) => (
-            <FormItem className="flex flex-col">
+            <FormItem>
               <FormLabel>Fecha del Pago *</FormLabel>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <FormControl>
-                    <Button
-                      variant="input-like"
-                      size="input"
-                      className={cn(
-                        'w-full justify-start text-left font-normal',
-                        !field.value && 'text-muted-foreground'
-                      )}
-                    >
-                      <CalendarIcon className="mr-2 h-4 w-4" />
-                      {field.value
-                        ? format(field.value, 'PPP', { locale: es })
-                        : 'Seleccionar fecha'}
-                    </Button>
-                  </FormControl>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
-                  <Calendar
-                    mode="single"
-                    selected={field.value}
-                    onSelect={field.onChange}
-                    disabled={(date) => date > new Date() || date < new Date('1900-01-01')}
-                    initialFocus
-                    locale={es}
-                  />
-                </PopoverContent>
-              </Popover>
+              <FormControl>
+                <Input
+                  type="date"
+                  value={
+                    field.value instanceof Date
+                      ? field.value.toISOString().split('T')[0]
+                      : field.value
+                  }
+                  onChange={(e) => field.onChange(new Date(e.target.value))}
+                />
+              </FormControl>
               <FormMessage />
             </FormItem>
           )}
@@ -536,13 +513,10 @@ export function PaymentToCustomerForm({
                             {formatCurrency(project.balance, project.currency)}
                           </TableCell>
                           <TableCell className="text-right">
-                            <Input
-                              type="number"
-                              step="0.01"
+                            <CurrencyInput
                               value={alloc.allocatedAmount}
-                              onChange={(e) =>
-                                handleChangeAllocation(index, Number(e.target.value))
-                              }
+                              onChange={(value) => handleChangeAllocation(index, value)}
+                              currency={project.currency}
                               className="text-right"
                             />
                           </TableCell>
@@ -566,13 +540,8 @@ export function PaymentToCustomerForm({
 
             {/* Validación Visual */}
             {allocations.length > 0 && (
-              <Card
-                className={cn(
-                  'border-2',
-                  isValidSum ? 'border-green-500 bg-green-50' : 'border-red-500 bg-red-50'
-                )}
-              >
-                <CardContent className="pt-6 space-y-1">
+              <Card>
+                <CardContent className="space-y-2">
                   <div className="flex justify-between">
                     <span className="font-medium">Total del pago:</span>
                     <span className="font-bold">{formatCurrency(watchedAmount, 'CLP')}</span>
@@ -581,7 +550,7 @@ export function PaymentToCustomerForm({
                     <span className="font-medium">Total asignado:</span>
                     <span className="font-bold">{formatCurrency(totalAllocated, 'CLP')}</span>
                   </div>
-                  <div className="flex justify-between border-t pt-2">
+                  <div className="flex justify-between border-t ">
                     <span className="font-medium">Diferencia:</span>
                     <span
                       className={cn('font-bold', isValidSum ? 'text-green-600' : 'text-red-600')}

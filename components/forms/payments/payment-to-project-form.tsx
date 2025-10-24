@@ -15,7 +15,7 @@ import { useDebounce } from '@/hooks/use-debounce'
 
 import { Combobox } from '@/components/ui/combobox'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
 import {
   Form,
   FormControl,
@@ -26,7 +26,7 @@ import {
   FormRoot,
 } from '@/components/ui/form'
 import { FormGrid } from '@/components/ui/form-grid'
-import { Input } from '@/components/ui/input'
+import { CurrencyInput } from '@/components/ui/currency-input'
 import {
   Select,
   SelectContent,
@@ -35,6 +35,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
+import { Card, CardContent } from '@/components/ui/card'
 
 interface PaymentToProjectFormProps {
   onSubmit: (data: PaymentToProjectFormValues, project: ProjectWithBalance) => void | Promise<void>
@@ -184,22 +185,26 @@ export function PaymentToProjectForm({
           )}
         />
 
-        {/* 2. Card: Balance Pendiente */}
+        {/* 2. Cards: Balance Pendiente */}
         {selectedProject && (
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-sm font-medium">Balance Pendiente</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-2xl font-bold text-amber-600">
-                {formatCurrency(selectedProject.balance, selectedProject.currency)}
-              </p>
-              <p className="text-xs text-muted-foreground mt-1">
-                Total del proyecto:{' '}
-                {formatCurrency(selectedProject.totalAmount, selectedProject.currency)}
-              </p>
-            </CardContent>
-          </Card>
+          <div className="flex justify-center gap-4">
+            <Card className="p-2">
+              <CardContent className="flex flex-col ">
+                <p className="text-sm text-center text-muted-foreground">Saldo pendiente</p>
+                <p className="text-lg text-center font-semibold">
+                  {formatCurrency(selectedProject.balance, selectedProject.currency)}
+                </p>
+              </CardContent>
+            </Card>
+            <Card className="p-2">
+              <CardContent className="flex flex-col">
+                <p className="text-sm text-center text-muted-foreground">Total del proyecto</p>
+                <p className="text-lg text-center font-semibold">
+                  {formatCurrency(selectedProject.totalAmount, selectedProject.currency)}
+                </p>
+              </CardContent>
+            </Card>
+          </div>
         )}
 
         <FormGrid columns={2}>
@@ -211,11 +216,10 @@ export function PaymentToProjectForm({
               <FormItem>
                 <FormLabel>Monto del Pago *</FormLabel>
                 <FormControl>
-                  <Input
-                    type="number"
-                    step="0.01"
-                    placeholder="0.00"
-                    {...field}
+                  <CurrencyInput
+                    value={field.value}
+                    onChange={field.onChange}
+                    currency={selectedProject?.currency}
                     disabled={!selectedProject}
                   />
                 </FormControl>
