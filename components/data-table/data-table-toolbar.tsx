@@ -39,7 +39,7 @@ export function DataTableToolbar<TData>({
   const isFiltered = table.getState().columnFilters.length > 0 || !!table.getState().globalFilter
 
   return (
-    <div className="flex py-4 px-4 items-center bg-card rounded-lg justify-between">
+    <div className="flex py-4 px-4 items-center bg-popover rounded-lg justify-between border-border">
       <div className="flex flex-1 items-center space-x-2">
         {searchKey && (
           <div className="relative">
