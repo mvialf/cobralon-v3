@@ -1,15 +1,12 @@
 'use client'
 
 import { type ColumnDef } from '@tanstack/react-table'
-import { MoreHorizontal, CheckCircle } from 'lucide-react'
-import { Button } from '@/components/ui/button'
+import { CheckCircle } from 'lucide-react'
+import { DataTableDropdown } from '@/components/data-table'
 import {
-  DropdownMenu,
-  DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
-  DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { Badge } from '@/components/ui/badge'
 import { DataTableColumnHeader } from '@/components/data-table'
@@ -191,30 +188,22 @@ export const createColumns = ({
       }
 
       return (
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" className="h-8 w-8 p-0">
-              <span className="sr-only">Abrir menú</span>
-              <MoreHorizontal className="h-4 w-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuLabel>Acciones</DropdownMenuLabel>
-            <DropdownMenuSeparator />
-            {isPending && (
-              <DropdownMenuItem onClick={handleMarkAsPaid}>
-                <CheckCircle className="mr-2 h-4 w-4" />
-                Marcar como pagado
-              </DropdownMenuItem>
-            )}
-            <DropdownMenuItem onClick={() => navigator.clipboard.writeText(installment.id)}>
-              Copiar ID de cuota
+        <DataTableDropdown>
+          <DropdownMenuLabel>Acciones</DropdownMenuLabel>
+          <DropdownMenuSeparator />
+          {isPending && (
+            <DropdownMenuItem onClick={handleMarkAsPaid}>
+              <CheckCircle className="mr-2 h-4 w-4" />
+              Marcar como pagado
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => navigator.clipboard.writeText(installment.payment.id)}>
-              Copiar ID de pago
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+          )}
+          <DropdownMenuItem onClick={() => navigator.clipboard.writeText(installment.id)}>
+            Copiar ID de cuota
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={() => navigator.clipboard.writeText(installment.payment.id)}>
+            Copiar ID de pago
+          </DropdownMenuItem>
+        </DataTableDropdown>
       )
     },
   },

@@ -1,15 +1,12 @@
 'use client'
 
 import { type ColumnDef } from '@tanstack/react-table'
-import { MoreHorizontal, Eye, XCircle } from 'lucide-react'
-import { Button } from '@/components/ui/button'
+import { Eye, XCircle } from 'lucide-react'
+import { DataTableDropdown } from '@/components/data-table'
 import {
-  DropdownMenu,
-  DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
-  DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { StatusBadge } from '@/components/ui/status-badge'
 import { DataTableColumnHeader } from '@/components/data-table'
@@ -186,34 +183,26 @@ export const createColumns = ({
       }
 
       return (
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" className="h-8 w-8 p-0">
-              <span className="sr-only">Abrir menu</span>
-              <MoreHorizontal className="h-4 w-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuLabel>Acciones</DropdownMenuLabel>
+        <DataTableDropdown>
+          <DropdownMenuLabel>Acciones</DropdownMenuLabel>
 
-            {/* Ver detalles: SOLO para pagos 1:N */}
-            {isCustomerPayment && (
-              <>
-                <DropdownMenuItem onClick={() => onViewDetails?.(payment)}>
-                  <Eye className="mr-2 h-4 w-4" />
-                  Ver detalles
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-              </>
-            )}
+          {/* Ver detalles: SOLO para pagos 1:N */}
+          {isCustomerPayment && (
+            <>
+              <DropdownMenuItem onClick={() => onViewDetails?.(payment)}>
+                <Eye className="mr-2 h-4 w-4" />
+                Ver detalles
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+            </>
+          )}
 
-            {/* Eliminar pago */}
-            <DropdownMenuItem className="text-destructive" onClick={handleDelete}>
-              <XCircle className="mr-2 h-4 w-4" />
-              Eliminar pago
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+          {/* Eliminar pago */}
+          <DropdownMenuItem className="text-destructive" onClick={handleDelete}>
+            <XCircle className="mr-2 h-4 w-4" />
+            Eliminar pago
+          </DropdownMenuItem>
+        </DataTableDropdown>
       )
     },
   },

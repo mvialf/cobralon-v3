@@ -577,6 +577,56 @@ Props para headers de columnas con sorting:
 | `title`     | `string`                | Título visible de la columna      |
 | `className` | `string`                | Clases CSS adicionales (opcional) |
 
+### `<DataTableDropdown>` Component
+
+Wrapper estandarizado para columnas de actions que encapsula el patrón común de DropdownMenu con trigger de tres puntos (⋯).
+
+**Props:**
+
+| Prop           | Tipo                           | Default        | Descripción                                 |
+| -------------- | ------------------------------ | -------------- | ------------------------------------------- |
+| `children`     | `React.ReactNode`              | **Required**   | Contenido del dropdown (menu items)         |
+| `align`        | `"start" \| "end" \| "center"` | `"end"`        | Alineación del dropdown respecto al trigger |
+| `triggerLabel` | `string`                       | `"Abrir menu"` | Texto para screen readers (a11y)            |
+
+**Ejemplo de uso:**
+
+```tsx
+import { DataTableDropdown } from '@/components/data-table'
+import { DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator } from '@/components/ui/dropdown-menu'
+import { Pencil, Trash2 } from 'lucide-react'
+
+// En columns.tsx
+{
+  id: 'actions',
+  cell: ({ row }) => {
+    const item = row.original
+
+    return (
+      <DataTableDropdown>
+        <DropdownMenuLabel>Acciones</DropdownMenuLabel>
+        <DropdownMenuItem onClick={() => handleEdit(item)}>
+          <Pencil className="mr-2 h-4 w-4" />
+          Editar
+        </DropdownMenuItem>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem onClick={() => handleDelete(item)} className="text-destructive">
+          <Trash2 className="mr-2 h-4 w-4" />
+          Eliminar
+        </DropdownMenuItem>
+      </DataTableDropdown>
+    )
+  },
+}
+```
+
+**Ventajas:**
+
+- ✅ Elimina código repetitivo del trigger (Button + MoreHorizontal icon)
+- ✅ Consistencia visual en todas las tablas
+- ✅ Accesibilidad integrada (sr-only label)
+- ✅ Menos imports necesarios (no Button, no MoreHorizontal, no DropdownMenuTrigger)
+
 ### Custom Cell Renderers
 
 Usa la prop `cell` en `ColumnDef` para renderizado custom:

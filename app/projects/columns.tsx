@@ -2,16 +2,13 @@
 
 import { useState } from 'react'
 import { type ColumnDef } from '@tanstack/react-table'
-import { MoreHorizontal, Pencil, Trash2, Eye, Receipt } from 'lucide-react'
-import { Button } from '@/components/ui/button'
+import { Pencil, Trash2, Eye, Receipt } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
+import { DataTableDropdown } from '@/components/data-table'
 import {
-  DropdownMenu,
-  DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
-  DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { StatusBadge } from '@/components/ui/status-badge'
 import { ProjectNameSummary } from '@/components/summarys/project-name-summary'
@@ -236,51 +233,43 @@ function ProjectActionsCell({
 
   return (
     <>
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button variant="ghost" className="h-8 w-8 p-0">
-            <span className="sr-only">Abrir menu</span>
-            <MoreHorizontal className="h-4 w-4" />
-          </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end">
-          <DropdownMenuLabel>Acciones</DropdownMenuLabel>
+      <DataTableDropdown>
+        <DropdownMenuLabel>Acciones</DropdownMenuLabel>
 
-          {/* Ver detalles */}
-          <DropdownMenuItem onClick={() => setDetailsOpen(true)}>
-            <Eye className="mr-2 h-4 w-4" />
-            Ver detalles
-          </DropdownMenuItem>
+        {/* Ver detalles */}
+        <DropdownMenuItem onClick={() => setDetailsOpen(true)}>
+          <Eye className="mr-2 h-4 w-4" />
+          Ver detalles
+        </DropdownMenuItem>
 
-          {/* Ver pagos */}
-          <DropdownMenuItem onClick={() => setPaymentsOpen(true)}>
-            <Receipt className="mr-2 h-4 w-4" />
-            Ver pagos
-          </DropdownMenuItem>
+        {/* Ver pagos */}
+        <DropdownMenuItem onClick={() => setPaymentsOpen(true)}>
+          <Receipt className="mr-2 h-4 w-4" />
+          Ver pagos
+        </DropdownMenuItem>
 
-          <DropdownMenuSeparator />
+        <DropdownMenuSeparator />
 
-          <DropdownMenuItem
-            onClick={() =>
-              navigator.clipboard.writeText(`${project.customer.name} - ${project.projectNumber}`)
-            }
-          >
-            Copiar información
-          </DropdownMenuItem>
+        <DropdownMenuItem
+          onClick={() =>
+            navigator.clipboard.writeText(`${project.customer.name} - ${project.projectNumber}`)
+          }
+        >
+          Copiar información
+        </DropdownMenuItem>
 
-          <DropdownMenuSeparator />
+        <DropdownMenuSeparator />
 
-          <DropdownMenuItem>
-            <Pencil className="mr-2 h-4 w-4" />
-            Editar
-          </DropdownMenuItem>
+        <DropdownMenuItem>
+          <Pencil className="mr-2 h-4 w-4" />
+          Editar
+        </DropdownMenuItem>
 
-          <DropdownMenuItem className="text-destructive" onClick={handleDelete}>
-            <Trash2 className="mr-2 h-4 w-4" />
-            Eliminar
-          </DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
+        <DropdownMenuItem className="text-destructive" onClick={handleDelete}>
+          <Trash2 className="mr-2 h-4 w-4" />
+          Eliminar
+        </DropdownMenuItem>
+      </DataTableDropdown>
 
       {/* Sheets */}
       <ViewProjectDetailsSheet

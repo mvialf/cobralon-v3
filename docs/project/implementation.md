@@ -906,6 +906,53 @@ Documenta aquí las implementaciones de TU proyecto:
 
 ---
 
+### 📊 Componente Reutilizable: DataTableDropdown
+
+- **Status:** ✅ Complete | **Date:** 2025-10-24 | **Impact:** Medium
+- **Problem:** Código duplicado masivo en columnas de actions - 4 tablas con ~60-80 líneas de boilerplate idéntico (DropdownMenu + trigger + MoreHorizontal icon)
+- **Root Cause:** Patrón repetitivo no abstraído, cada tabla implementaba manualmente el mismo código de trigger
+- **Solution:** Crear componente wrapper `DataTableDropdown` que encapsula el patrón completo
+- **Benefits:**
+  - ✅ **-50+ líneas** de código eliminadas (~34% reducción en boilerplate)
+  - ✅ **Consistencia visual** garantizada en todas las tablas
+  - ✅ **Mantenibilidad:** Cambios centralizados (1 archivo vs 4)
+  - ✅ **Menos imports:** No más Button, MoreHorizontal, DropdownMenuTrigger
+  - ✅ **API simple:** Solo 3 props (2 opcionales), similar a Combobox wrapper (#14)
+  - ✅ **Accesibilidad integrada:** sr-only label automático
+- **Implementación:** ✅ Completada
+  - **Fase 1:** Análisis de duplicación
+    - Identificar patrón repetido en 4 tablas (customers, projects, payments, installments)
+    - Calcular ~60-80 líneas de boilerplate total
+  - **Fase 2:** Crear componente base
+    - Componente `DataTableDropdown` (80 líneas con JSDoc completo)
+    - Props: `children` (required), `align` (default: "end"), `triggerLabel` (default: "Abrir menu")
+    - Encapsular: DropdownMenu + Trigger con Button ghost + MoreHorizontal icon
+  - **Fase 3:** Migrar 4 tablas
+    - `app/customer/columns.tsx` - Eliminar ~12 líneas
+    - `app/projects/columns.tsx` - Eliminar ~14 líneas (componente ProjectActionsCell)
+    - `app/payments/columns.tsx` - Eliminar ~13 líneas
+    - `app/payments/installments/columns.tsx` - Eliminar ~13 líneas
+  - **Fase 4:** Actualizar exports y documentación
+    - `components/data-table/index.ts` - Agregar export
+    - `components/data-table/README.md` - Nueva sección completa (props table + ejemplos + ventajas)
+  - **Fase 5:** Validación
+    - TypeCheck: ✅ Pass
+    - Lint: ✅ Pass (solo warnings pre-existentes)
+    - Prettier: ✅ Applied
+- **Archivos creados:**
+  - `components/data-table/data-table-dropdown.tsx` - Componente wrapper (80 líneas)
+- **Archivos modificados:**
+  - `components/data-table/index.ts` - Export agregado
+  - `components/data-table/README.md` - Documentación completa (+50 líneas)
+  - `app/customer/columns.tsx` - Migrado a wrapper (~12 líneas eliminadas)
+  - `app/projects/columns.tsx` - Migrado a wrapper (~14 líneas eliminadas)
+  - `app/payments/columns.tsx` - Migrado a wrapper (~13 líneas eliminadas)
+  - `app/payments/installments/columns.tsx` - Migrado a wrapper (~13 líneas eliminadas)
+- **Validación:** ✅ TypeCheck: Pass | Lint: Pass | Prettier: Applied
+- **Pattern:** Similar a implementación #14 (Combobox wrapper) - mismo principio DRY aplicado
+
+---
+
 ## Quick Reference Index
 
 | #   | Implementación                                  | Status      | Fecha      | Impact |
@@ -927,19 +974,20 @@ Documenta aquí las implementaciones de TU proyecto:
 | 15  | Migración: Chrome DevTools MCP → Playwright MCP | ✅ Complete | 2025-10-21 | High   |
 | 16  | Migración: next lint → ESLint CLI               | ✅ Complete | 2025-10-22 | Medium |
 | 17  | Optimización de Database Performance (Phase 1)  | ✅ Complete | 2025-10-22 | High   |
+| 18  | Componente Reutilizable: DataTableDropdown      | ✅ Complete | 2025-10-24 | Medium |
 
 ---
 
 ## Statistics
 
-- **Total Implementaciones:** 17
-- **Completadas:** 17
+- **Total Implementaciones:** 18
+- **Completadas:** 18
 - **En Progreso:** 0
 - **Pendientes:** 0
 
 ---
 
-**Última actualización:** 2025-10-22
+**Última actualización:** 2025-10-24
 
 **Nota:** Entrada #13 corregida el 2025-10-22 tras investigación con git-searcher - información previa sobre "refactor 490→242 líneas" era incorrecta.
 
