@@ -32,14 +32,6 @@ function ComboboxDemo() {
         emptyMessage="No trick found."
         contentWidth="400px"
       />
-
-      {value && (
-        <div className="mt-4 rounded-lg border bg-muted/40 p-4">
-          <p className="text-sm">
-            <strong>Selected trick:</strong> {tricks.find((t) => t.value === value)?.label}
-          </p>
-        </div>
-      )}
     </div>
   )
 }
