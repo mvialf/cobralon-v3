@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { type ColumnDef } from '@tanstack/react-table'
-import { Pencil, Trash2, Eye, Receipt } from 'lucide-react'
+import { Pencil, Trash2, Eye, Receipt, DollarSign } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { DataTableDropdown } from '@/components/data-table'
 import {
@@ -14,6 +14,7 @@ import { StatusBadge } from '@/components/ui/status-badge'
 import { ProjectNameSummary } from '@/components/summarys/project-name-summary'
 import { ViewProjectDetailsSheet } from '@/components/dialogs/projects/view-project-details-sheet'
 import { ViewProjectPaymentsSheet } from '@/components/dialogs/projects/view-project-payments-sheet'
+import { PaymentToProjectDialog } from '@/components/dialogs/payments/payment-to-project-dialog'
 import { toast } from 'sonner'
 
 export interface Project {
@@ -207,6 +208,7 @@ function ProjectActionsCell({
 }) {
   const [detailsOpen, setDetailsOpen] = useState(false)
   const [paymentsOpen, setPaymentsOpen] = useState(false)
+  const [paymentDialogOpen, setPaymentDialogOpen] = useState(false)
 
   const handleDelete = async () => {
     if (!confirm(`¿Estás seguro de eliminar el proyecto ${project.projectNumber}?`)) {
@@ -248,6 +250,12 @@ function ProjectActionsCell({
           Ver pagos
         </DropdownMenuItem>
 
+        {/* Registrar pago */}
+        <DropdownMenuItem onClick={() => setPaymentDialogOpen(true)}>
+          <DollarSign className="mr-2 h-4 w-4" />
+          Registrar pago
+        </DropdownMenuItem>
+
         <DropdownMenuSeparator />
 
         <DropdownMenuItem
@@ -282,6 +290,17 @@ function ProjectActionsCell({
         projectId={project.id}
         open={paymentsOpen}
         onOpenChange={setPaymentsOpen}
+      />
+
+      {/* Dialog para registrar pago */}
+      <PaymentToProjectDialog
+        open={paymentDialogOpen}
+        onOpenChange={setPaymentDialogOpen}
+        preselectedProjectId={project.id}
+        onSuccess={() => {
+          // Refetch la tabla cuando se registra un pago exitosamente
+          onProjectDeleted?.()
+        }}
       />
     </>
   )

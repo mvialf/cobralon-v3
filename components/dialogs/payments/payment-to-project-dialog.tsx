@@ -23,6 +23,7 @@ interface PaymentToProjectDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   onSuccess?: () => void
+  preselectedProjectId?: string // ← NUEVO: Proyecto pre-seleccionado desde tabla
 }
 
 /**
@@ -34,11 +35,15 @@ interface PaymentToProjectDialogProps {
  * - POST a /api/payments
  * - Toast de success/error
  * - Callback onSuccess (para refetch)
+ *
+ * Si viene `preselectedProjectId`, el proyecto estará pre-seleccionado
+ * y el usuario no podrá cambiarlo (flujo desde tabla de proyectos)
  */
 export function PaymentToProjectDialog({
   open,
   onOpenChange,
   onSuccess,
+  preselectedProjectId,
 }: PaymentToProjectDialogProps) {
   const router = useRouter()
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -92,11 +97,17 @@ export function PaymentToProjectDialog({
         <DialogHeader>
           <DialogTitle>Registrar Pago a Proyecto</DialogTitle>
           <DialogDescription>
-            Registre un pago que se asignará completamente a un proyecto específico.
+            {preselectedProjectId
+              ? 'Registre un pago que se asignará completamente a este proyecto.'
+              : 'Registre un pago que se asignará completamente a un proyecto específico.'}
           </DialogDescription>
         </DialogHeader>
 
-        <PaymentToProjectForm onSubmit={handleSubmit} isSubmitting={isSubmitting} />
+        <PaymentToProjectForm
+          onSubmit={handleSubmit}
+          isSubmitting={isSubmitting}
+          preselectedProjectId={preselectedProjectId}
+        />
       </DialogContent>
     </Dialog>
   )

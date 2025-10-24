@@ -36,10 +36,12 @@ import {
 } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
 import { Card, CardContent } from '@/components/ui/card'
+import { ProjectNameSummary } from '@/components/summarys/project-name-summary'
 
 interface PaymentToProjectFormProps {
   onSubmit: (data: PaymentToProjectFormValues, project: ProjectWithBalance) => void | Promise<void>
   isSubmitting?: boolean
+  preselectedProjectId?: string // ← NUEVO: Si viene, el proyecto está pre-seleccionado
 }
 
 /**
@@ -47,6 +49,7 @@ interface PaymentToProjectFormProps {
  *
  * Flujo simplificado donde:
  * 1. Usuario busca y selecciona un proyecto (combobox muestra cliente + proyecto)
+ *    O el proyecto viene pre-seleccionado (desde tabla de proyectos)
  * 2. customerId y currency se derivan automáticamente del proyecto
  * 3. 100% del monto se asigna al proyecto
  * 4. Validación de monto vs balance se hace en submit con form.setError()
@@ -54,6 +57,7 @@ interface PaymentToProjectFormProps {
 export function PaymentToProjectForm({
   onSubmit,
   isSubmitting = false,
+  preselectedProjectId,
 }: PaymentToProjectFormProps) {
   // State para búsqueda de proyectos
   const [searchTerm, setSearchTerm] = useState('')
@@ -66,7 +70,7 @@ export function PaymentToProjectForm({
   const form = useForm<PaymentToProjectFormValues>({
     resolver: zodResolver(paymentToProjectSchema),
     defaultValues: {
-      projectId: '',
+      projectId: preselectedProjectId || '', // Pre-cargar si viene
       amount: 0,
       date: new Date(),
       paymentMethodId: '',
@@ -74,7 +78,18 @@ export function PaymentToProjectForm({
     },
   })
 
-  // Fetch proyectos (server-side search)
+  // Fetch proyecto pre-seleccionado (si viene el ID)
+  const { data: preselectedProject, isLoading: loadingPreselected } = useQuery({
+    queryKey: ['project-with-balance', preselectedProjectId],
+    queryFn: async () => {
+      const res = await fetch(`/api/projects/${preselectedProjectId}?withBalance=true`)
+      if (!res.ok) throw new Error('Error al cargar el proyecto')
+      return res.json() as Promise<ProjectWithBalance>
+    },
+    enabled: !!preselectedProjectId,
+  })
+
+  // Fetch proyectos (server-side search) - solo si NO hay proyecto pre-seleccionado
   const { data: projects = [], isLoading: loadingProjects } = useQuery({
     queryKey: ['projects-search', debouncedSearch],
     queryFn: async () => {
@@ -82,7 +97,7 @@ export function PaymentToProjectForm({
       if (!res.ok) throw new Error('Error al buscar proyectos')
       return res.json() as Promise<ProjectWithBalance[]>
     },
-    enabled: debouncedSearch.length >= 2,
+    enabled: !preselectedProjectId && debouncedSearch.length >= 2,
   })
 
   // Fetch payment methods
@@ -103,9 +118,16 @@ export function PaymentToProjectForm({
     },
   })
 
-  // Cuando cambia el proyecto seleccionado
+  // Cuando cambia el proyecto seleccionado o llega el proyecto pre-seleccionado
   const watchedProjectId = form.watch('projectId')
   useEffect(() => {
+    // Si hay proyecto pre-seleccionado y ya se cargó
+    if (preselectedProjectId && preselectedProject) {
+      setSelectedProject(preselectedProject)
+      return
+    }
+
+    // Si no, buscar en los resultados de búsqueda
     if (watchedProjectId && projects.length > 0) {
       const project = projects.find((p: ProjectWithBalance) => p.id === watchedProjectId)
       if (project) {
@@ -114,7 +136,7 @@ export function PaymentToProjectForm({
     } else {
       setSelectedProject(null)
     }
-  }, [watchedProjectId, projects])
+  }, [watchedProjectId, projects, preselectedProjectId, preselectedProject])
 
   // Watch payment method para mostrar campo de cuotas
   const watchedPaymentMethodId = form.watch('paymentMethodId')
@@ -141,49 +163,70 @@ export function PaymentToProjectForm({
   return (
     <Form {...form}>
       <FormRoot onSubmit={form.handleSubmit(handleSubmit)}>
-        {/* 1. Buscar Proyecto (Combobox con server-side search) */}
-        <FormField
-          control={form.control}
-          name="projectId"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Proyecto *</FormLabel>
-              <FormControl>
-                <Combobox<ProjectWithBalance>
-                  value={field.value}
-                  onValueChange={field.onChange}
-                  options={projects}
-                  getOptionValue={(p) => p.id}
-                  getOptionLabel={(p) => `${p.projectNumber} - ${p.customer.name}`}
-                  renderOption={(project) => (
-                    <div className="space-y-0.5">
-                      <div className="text-sm text-muted-foreground">
-                        Proyecto #{project.projectNumber}
-                      </div>
-                      <div className="font-medium">
-                        {project.customer.name}
-                        {project.projectName && ` - ${project.projectName}`}
-                      </div>
-                    </div>
-                  )}
-                  placeholder="Buscar proyecto..."
-                  searchPlaceholder="Escribe número, nombre o cliente..."
-                  emptyMessage={
-                    debouncedSearch.length < 2
-                      ? 'Escribe al menos 2 caracteres para buscar'
-                      : 'No se encontraron proyectos con balance pendiente'
-                  }
-                  loading={loadingProjects}
-                  loadingText="Buscando proyectos..."
-                  contentWidth="400px"
-                  onSearchChange={setSearchTerm}
-                  disableFiltering={true}
+        {/* 1. Proyecto: Mostrar ProjectNameSummary si está pre-seleccionado, sino Combobox */}
+        {preselectedProjectId ? (
+          // Proyecto pre-seleccionado (no editable)
+          <div className="space-y-2">
+            <FormLabel>Proyecto</FormLabel>
+            {loadingPreselected ? (
+              <div className="text-sm text-muted-foreground">Cargando proyecto...</div>
+            ) : selectedProject ? (
+              <div className="rounded-lg border bg-muted/50 p-3">
+                <ProjectNameSummary
+                  projectNumber={selectedProject.projectNumber}
+                  customerName={selectedProject.customer.name}
+                  projectName={selectedProject.projectName}
                 />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+              </div>
+            ) : (
+              <div className="text-sm text-destructive">Error al cargar el proyecto</div>
+            )}
+          </div>
+        ) : (
+          // Combobox normal (búsqueda de proyectos)
+          <FormField
+            control={form.control}
+            name="projectId"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Proyecto *</FormLabel>
+                <FormControl>
+                  <Combobox<ProjectWithBalance>
+                    value={field.value}
+                    onValueChange={field.onChange}
+                    options={projects}
+                    getOptionValue={(p) => p.id}
+                    getOptionLabel={(p) => `${p.projectNumber} - ${p.customer.name}`}
+                    renderOption={(project) => (
+                      <div className="space-y-0.5">
+                        <div className="text-sm text-muted-foreground">
+                          Proyecto #{project.projectNumber}
+                        </div>
+                        <div className="font-medium">
+                          {project.customer.name}
+                          {project.projectName && ` - ${project.projectName}`}
+                        </div>
+                      </div>
+                    )}
+                    placeholder="Buscar proyecto..."
+                    searchPlaceholder="Escribe número, nombre o cliente..."
+                    emptyMessage={
+                      debouncedSearch.length < 2
+                        ? 'Escribe al menos 2 caracteres para buscar'
+                        : 'No se encontraron proyectos con balance pendiente'
+                    }
+                    loading={loadingProjects}
+                    loadingText="Buscando proyectos..."
+                    contentWidth="400px"
+                    onSearchChange={setSearchTerm}
+                    disableFiltering={true}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        )}
 
         {/* 2. Cards: Balance Pendiente */}
         {selectedProject && (
