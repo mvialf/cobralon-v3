@@ -45,6 +45,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
+import { CustomerNameSummary } from '@/components/summarys/customer-name-summary'
 
 interface PaymentMethod {
   id: string
@@ -63,6 +64,7 @@ interface Customer {
 interface PaymentToCustomerFormProps {
   onSubmit: (data: PaymentToCustomerFormValues, currency: string) => void | Promise<void>
   isSubmitting?: boolean
+  preselectedCustomerId?: string // ← NUEVO: Si viene, el cliente está pre-seleccionado
 }
 
 /**
@@ -79,6 +81,7 @@ interface PaymentToCustomerFormProps {
 export function PaymentToCustomerForm({
   onSubmit,
   isSubmitting = false,
+  preselectedCustomerId,
 }: PaymentToCustomerFormProps) {
   // State para búsqueda de clientes
   const [customerSearch, setCustomerSearch] = useState('')
@@ -96,19 +99,19 @@ export function PaymentToCustomerForm({
   >([])
 
   // State para modo de distribución
-  const [distributionMode, setDistributionMode] = useState<'fifo' | 'manual'>('fifo')
+  const [distributionMode, setDistributionMode] = useState<'fifo' | 'manual'>('manual')
 
   // Form setup
   const defaultValues = useMemo(
     () => ({
-      customerId: '',
+      customerId: preselectedCustomerId || '', // Pre-cargar si viene
       amount: 0,
       date: new Date(),
       paymentMethodId: '',
       notes: '',
       allocations: [],
     }),
-    []
+    [preselectedCustomerId]
   )
 
   const form = useForm<PaymentToCustomerFormValues>({
@@ -116,7 +119,18 @@ export function PaymentToCustomerForm({
     defaultValues,
   })
 
-  // Fetch clientes (para Combobox)
+  // Fetch cliente pre-seleccionado (si viene el ID)
+  const { data: preselectedCustomer, isLoading: loadingPreselected } = useQuery({
+    queryKey: ['customer', preselectedCustomerId],
+    queryFn: async () => {
+      const res = await fetch(`/api/customers/${preselectedCustomerId}`)
+      if (!res.ok) throw new Error('Error al cargar el cliente')
+      return res.json() as Promise<Customer>
+    },
+    enabled: !!preselectedCustomerId,
+  })
+
+  // Fetch clientes (para Combobox) - solo si NO hay cliente pre-seleccionado
   const { data: customersData, isLoading: loadingCustomers } = useQuery({
     queryKey: ['customers-search', debouncedCustomerSearch],
     queryFn: async () => {
@@ -125,7 +139,7 @@ export function PaymentToCustomerForm({
       const data = await res.json()
       return data.customers || []
     },
-    enabled: debouncedCustomerSearch.length >= 2,
+    enabled: !preselectedCustomerId && debouncedCustomerSearch.length >= 2,
   })
 
   // Fetch proyectos del cliente seleccionado
@@ -165,6 +179,13 @@ export function PaymentToCustomerForm({
   const selectedPaymentMethod = paymentMethods.find(
     (m: PaymentMethod) => m.id === watchedPaymentMethodId
   )
+
+  // Auto-establecer selectedCustomerId cuando se carga el cliente pre-seleccionado
+  useEffect(() => {
+    if (preselectedCustomerId && preselectedCustomer) {
+      setSelectedCustomerId(preselectedCustomerId)
+    }
+  }, [preselectedCustomerId, preselectedCustomer])
 
   // Actualizar customerProjects cuando se cargan
   useEffect(() => {
@@ -252,44 +273,65 @@ export function PaymentToCustomerForm({
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-3">
-        {/* 1. Buscar Cliente (Combobox) */}
-        <FormField
-          control={form.control}
-          name="customerId"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Cliente *</FormLabel>
-              <FormControl>
-                <Combobox<Customer>
-                  value={field.value}
-                  onValueChange={(value) => {
-                    field.onChange(value)
-                    setSelectedCustomerId(value)
-                    // Reset allocations y modo cuando cambia cliente
-                    setAllocations([])
-                    setDistributionMode('manual')
-                  }}
-                  options={customersData || []}
-                  getOptionValue={(c) => c.id}
-                  getOptionLabel={(c) => c.name}
-                  placeholder="Buscar cliente..."
-                  searchPlaceholder="Escribe nombre, email o teléfono..."
-                  emptyMessage={
-                    debouncedCustomerSearch.length < 2
-                      ? 'Escribe al menos 2 caracteres para buscar'
-                      : 'No se encontraron clientes'
-                  }
-                  loading={loadingCustomers}
-                  loadingText="Buscando clientes..."
-                  contentWidth="400px"
-                  onSearchChange={setCustomerSearch}
-                  disableFiltering={true}
+        {/* 1. Cliente: Mostrar CustomerNameSummary si está pre-seleccionado, sino Combobox */}
+        {preselectedCustomerId ? (
+          // Cliente pre-seleccionado (no editable)
+          <div className="space-y-2">
+            <FormLabel>Cliente</FormLabel>
+            {loadingPreselected ? (
+              <div className="text-sm text-muted-foreground">Cargando cliente...</div>
+            ) : preselectedCustomer ? (
+              <div className="rounded-lg border bg-muted/50 p-3">
+                <CustomerNameSummary
+                  name={preselectedCustomer.name}
+                  phone={preselectedCustomer.phone!}
+                  email={preselectedCustomer.email || undefined}
                 />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+              </div>
+            ) : (
+              <div className="text-sm text-destructive">Error al cargar el cliente</div>
+            )}
+          </div>
+        ) : (
+          // Combobox normal (búsqueda de clientes)
+          <FormField
+            control={form.control}
+            name="customerId"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Cliente *</FormLabel>
+                <FormControl>
+                  <Combobox<Customer>
+                    value={field.value}
+                    onValueChange={(value) => {
+                      field.onChange(value)
+                      setSelectedCustomerId(value)
+                      // Reset allocations y modo cuando cambia cliente
+                      setAllocations([])
+                      setDistributionMode('manual')
+                    }}
+                    options={customersData || []}
+                    getOptionValue={(c) => c.id}
+                    getOptionLabel={(c) => c.name}
+                    placeholder="Buscar cliente..."
+                    searchPlaceholder="Escribe nombre, email o teléfono..."
+                    emptyMessage={
+                      debouncedCustomerSearch.length < 2
+                        ? 'Escribe al menos 2 caracteres para buscar'
+                        : 'No se encontraron clientes'
+                    }
+                    loading={loadingCustomers}
+                    loadingText="Buscando clientes..."
+                    contentWidth="400px"
+                    onSearchChange={setCustomerSearch}
+                    disableFiltering={true}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        )}
 
         <FormGrid columns="2-1">
           {/* 3. Monto del Pago */}
@@ -406,39 +448,7 @@ export function PaymentToCustomerForm({
         {/* 6. Sección de Allocations (solo si hay cliente seleccionado) */}
         {selectedCustomerId && (
           <div className="space-y-4">
-            <FormLabel>Distribución del Pago</FormLabel>
-
-            {/* Header con Checkbox Auto (FIFO) */}
-            <div className="flex justify-between items-center">
-              <h3 className="text-sm font-medium">Asignación a Proyectos</h3>
-              <div className="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  id="auto-fifo"
-                  checked={distributionMode === 'fifo'}
-                  disabled={!watchedAmount || watchedAmount <= 0}
-                  onChange={(e) => {
-                    const newMode = e.target.checked ? 'fifo' : 'manual'
-                    setDistributionMode(newMode)
-                    if (newMode === 'fifo') {
-                      handleCalculateFIFO()
-                    }
-                  }}
-                  className="h-4 w-4 rounded border-gray-300"
-                />
-                <label
-                  htmlFor="auto-fifo"
-                  className={cn(
-                    'text-sm',
-                    !watchedAmount || watchedAmount <= 0
-                      ? 'text-muted-foreground cursor-not-allowed'
-                      : 'cursor-pointer'
-                  )}
-                >
-                  Auto (FIFO)
-                </label>
-              </div>
-            </div>
+            <FormLabel className="text-center">Distribución del Pago</FormLabel>
 
             {/* Loading State */}
             {loadingProjects && (
@@ -451,6 +461,62 @@ export function PaymentToCustomerForm({
             {!loadingProjects && allocations.length === 0 && (
               <div className="text-center py-8 text-muted-foreground">
                 <p>Este cliente no tiene proyectos con saldo pendiente.</p>
+              </div>
+            )}
+            {/* Validación Visual */}
+            {allocations.length > 0 && (
+              <div className="flex justify-center gap-4">
+                <Card className="p-2">
+                  <CardContent className="flex flex-col">
+                    <span className="text-sm text-center text-muted-foreground">Asignado:</span>
+                    <span className="text-center font-semibold">
+                      {formatCurrency(totalAllocated, 'CLP')}
+                    </span>
+                  </CardContent>
+                </Card>
+                <Card className="p-2">
+                  <CardContent className="flex flex-col">
+                    <span className="text-sm text-center text-muted-foreground">Diferencia:</span>
+                    <span
+                      className={cn(
+                        'text-center font-semibold',
+                        isValidSum ? 'text-green-600' : 'text-red-600'
+                      )}
+                    >
+                      {formatCurrency(Math.abs(difference), 'CLP')}
+                      {!isValidSum && (difference > 0 ? ' (falta asignar)' : ' (sobrepasado)')}
+                    </span>
+                  </CardContent>
+                </Card>
+                <Card className="p-2">
+                  <CardContent className="flex flex-col gap-1">
+                    <label
+                      htmlFor="auto-fifo"
+                      className={cn(
+                        'text-sm',
+                        !watchedAmount || watchedAmount <= 0
+                          ? 'text-muted-foreground cursor-not-allowed'
+                          : 'cursor-pointer'
+                      )}
+                    >
+                      Auto
+                    </label>
+                    <input
+                      type="checkbox"
+                      id="auto-fifo"
+                      checked={distributionMode === 'fifo'}
+                      disabled={!watchedAmount || watchedAmount <= 0}
+                      onChange={(e) => {
+                        const newMode = e.target.checked ? 'fifo' : 'manual'
+                        setDistributionMode(newMode)
+                        if (newMode === 'fifo') {
+                          handleCalculateFIFO()
+                        }
+                      }}
+                      className="h-4 w-4"
+                    />
+                  </CardContent>
+                </Card>
               </div>
             )}
 
@@ -511,31 +577,6 @@ export function PaymentToCustomerForm({
                   </TableBody>
                 </Table>
               </div>
-            )}
-
-            {/* Validación Visual */}
-            {allocations.length > 0 && (
-              <Card>
-                <CardContent className="space-y-2">
-                  <div className="flex justify-between">
-                    <span className="font-medium">Total del pago:</span>
-                    <span className="font-bold">{formatCurrency(watchedAmount, 'CLP')}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="font-medium">Total asignado:</span>
-                    <span className="font-bold">{formatCurrency(totalAllocated, 'CLP')}</span>
-                  </div>
-                  <div className="flex justify-between border-t ">
-                    <span className="font-medium">Diferencia:</span>
-                    <span
-                      className={cn('font-bold', isValidSum ? 'text-green-600' : 'text-red-600')}
-                    >
-                      {formatCurrency(Math.abs(difference), 'CLP')}
-                      {!isValidSum && (difference > 0 ? ' (falta asignar)' : ' (sobrepasado)')}
-                    </span>
-                  </div>
-                </CardContent>
-              </Card>
             )}
 
             <FormMessage />

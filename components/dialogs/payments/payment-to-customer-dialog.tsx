@@ -22,6 +22,7 @@ interface PaymentToCustomerDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   onSuccess?: () => void
+  preselectedCustomerId?: string // ← NUEVO: Si viene, el cliente está pre-seleccionado
 }
 
 /**
@@ -38,6 +39,7 @@ export function PaymentToCustomerDialog({
   open,
   onOpenChange,
   onSuccess,
+  preselectedCustomerId,
 }: PaymentToCustomerDialogProps) {
   const router = useRouter()
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -95,7 +97,11 @@ export function PaymentToCustomerDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <PaymentToCustomerForm onSubmit={handleSubmit} isSubmitting={isSubmitting} />
+        <PaymentToCustomerForm
+          onSubmit={handleSubmit}
+          isSubmitting={isSubmitting}
+          preselectedCustomerId={preselectedCustomerId}
+        />
       </DialogContent>
     </Dialog>
   )

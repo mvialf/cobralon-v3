@@ -56,10 +56,10 @@ export default function PaymentsPage() {
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
             <DropdownMenuItem onClick={() => setIsPaymentToProjectDialogOpen(true)}>
-              Pago a Proyecto (1:1)
+              Pago a Proyecto
             </DropdownMenuItem>
             <DropdownMenuItem onClick={() => setIsPaymentToCustomerDialogOpen(true)}>
-              Pago a Cliente (1:N)
+              Pago a Cliente
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>

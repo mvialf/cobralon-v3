@@ -15,12 +15,11 @@ import { toast } from 'sonner'
 
 export interface Payment {
   id: string
-  type: 'Project' | 'Customer' // ← NUEVO: Tipo de pago
+  type: 'Project' | 'Customer' // ← Tipo de pago
   amount: number
   currency: string
   date: string
   reference: string | null
-  status: string
   customer: {
     id: string
     name: string
