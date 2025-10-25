@@ -5,6 +5,7 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 
 import { projectFormSchema, type ProjectFormData } from '@/lib/validations/project-validations'
+import { calculateProjectTotal } from '@/lib/business-logic/totals'
 
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -166,11 +167,10 @@ export const ProjectForm = React.forwardRef<ProjectFormHandle, ProjectFormProps>
     const subtotal = form.watch('subtotal')
     const taxRate = form.watch('taxRate')
 
-    // Calcular total automáticamente
+    // Calcular total automáticamente usando business logic
     const total = React.useMemo(() => {
       if (!subtotal) return 0
-      const tax = subtotal * ((taxRate || 0) / 100)
-      return subtotal + tax
+      return calculateProjectTotal(subtotal, taxRate || 0)
     }, [subtotal, taxRate])
 
     // Cuando se selecciona un customer, autocompletar phone

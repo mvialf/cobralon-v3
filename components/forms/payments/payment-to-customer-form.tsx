@@ -10,8 +10,8 @@ import {
   paymentToCustomerSchema,
   type PaymentToCustomerFormValues,
   type ProjectWithBalance,
-  calculateFIFO,
 } from '@/lib/validations/payment-validations'
+import { calculateFIFO } from '@/lib/business-logic/payment-fifo'
 import { formatCurrency } from '@/lib/format'
 import { useDebounce } from '@/hooks/use-debounce'
 import { cn } from '@/lib/utils'
@@ -225,7 +225,7 @@ export function PaymentToCustomerForm({
       return
     }
 
-    const fifoAllocations = calculateFIFO(customerProjects, watchedAmount)
+    const fifoAllocations = calculateFIFO(watchedAmount, customerProjects)
     setAllocations(fifoAllocations)
   }
 
