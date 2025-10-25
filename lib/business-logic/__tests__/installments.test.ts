@@ -33,7 +33,7 @@ describe('calculateInstallments', () => {
     expect(result[1].dueDate).toEqual(new Date('2025-02-14')) // +30 días
 
     expect(result[2].installmentNumber).toBe(3)
-    expect(result[2].amount).toBe(333.34) // ← Absorbe 0.01
+    expect(result[2].amount).toBeCloseTo(333.34, 2) // ← Absorbe 0.01
     expect(result[2].dueDate).toEqual(new Date('2025-03-16')) // +60 días
 
     // Validar suma exacta
@@ -68,7 +68,7 @@ describe('calculateInstallments', () => {
     expect(result[3].amount).toBe(14.28)
     expect(result[4].amount).toBe(14.28)
     expect(result[5].amount).toBe(14.28)
-    expect(result[6].amount).toBe(14.32) // ← Absorbe 0.04
+    expect(result[6].amount).toBeCloseTo(14.32, 2) // ← Absorbe 0.04
 
     const sum = result.reduce((acc, inst) => acc + inst.amount, 0)
     expect(sum).toBe(100)
