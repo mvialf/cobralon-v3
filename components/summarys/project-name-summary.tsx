@@ -20,7 +20,7 @@ export function ProjectNameSummary({
 }: ProjectNameSummaryProps) {
   return (
     <div className={cn('flex flex-col space-y-1', className)}>
-      <div className="text-sm text-muted-foreground">Proyecto #{projectNumber}</div>
+      <div className="text-sm text-muted-foreground">P - {projectNumber}</div>
       <div className="font-medium">
         {customerName}
         {projectName && ` - ${projectName}`}
