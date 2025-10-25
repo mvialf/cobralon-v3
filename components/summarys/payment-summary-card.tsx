@@ -1,30 +1,19 @@
 'use client'
 
-import { useCallback, useEffect, useState } from 'react'
 import Link from 'next/link'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Plus, CircleDollarSign, Wallet, FileText } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Progress } from '@/components/ui/progress'
-import { Skeleton } from '@/components/ui/skeleton'
-import { Plus } from 'lucide-react'
-import { calculateProjectBalance } from '@/lib/payment-fifo'
-
-interface AllocationFromAPI {
-  allocatedAmount: number
-  project: {
-    id: string
-  }
-}
-
-interface PaymentFromAPI {
-  status: string
-  allocations: AllocationFromAPI[]
-}
+import CircularProgressChart from '@/components/ui/circular-progress-chart'
 
 interface PaymentSummaryCardProps {
-  projectId: string
   totalAmount: number | null
   currency: string
+  totalPaid: number // ← Calculado en backend
+  balance: number // ← Calculado en backend
+  percentPaid: number // ← Calculado en backend
+  variant?: 'card' | 'dashboard'
 }
 
 /**
@@ -34,52 +23,22 @@ interface PaymentSummaryCardProps {
  * - Total del proyecto
  * - Total pagado
  * - Balance pendiente
- * - Progreso visual con barra
- * - Botón para registrar nuevo pago
+ * - Progreso visual con barra o circular (según variant)
+ * - Botón para registrar nuevo pago (solo en variant='card')
+ *
+ * @param variant - 'card' (default): Diseño compacto con Card | 'dashboard': Diseño visual con gráfico circular
+ *
+ * IMPORTANTE: totalPaid, balance y percentPaid vienen pre-calculados del backend.
+ * NO recalcular en frontend para evitar inconsistencias.
  */
-export function PaymentSummaryCard({ projectId, totalAmount, currency }: PaymentSummaryCardProps) {
-  const [allocations, setAllocations] = useState<
-    Array<{ allocatedAmount: number; payment?: { status: string } }>
-  >([])
-  const [isLoading, setIsLoading] = useState(true)
-
-  const fetchAllocations = useCallback(async () => {
-    try {
-      setIsLoading(true)
-      // Obtener allocations del proyecto
-      const response = await fetch(`/api/payments?projectId=${projectId}`)
-      if (!response.ok) throw new Error('Error al cargar pagos')
-
-      const data = await response.json()
-
-      // Extraer allocations de este proyecto
-      const projectAllocations = data.payments.flatMap((payment: PaymentFromAPI) =>
-        payment.allocations
-          .filter((alloc: AllocationFromAPI) => alloc.project.id === projectId)
-          .map((alloc: AllocationFromAPI) => ({
-            allocatedAmount: alloc.allocatedAmount,
-            payment: { status: payment.status },
-          }))
-      )
-
-      setAllocations(projectAllocations)
-    } catch (error) {
-      console.error('Error fetching allocations:', error)
-    } finally {
-      setIsLoading(false)
-    }
-  }, [projectId])
-
-  useEffect(() => {
-    fetchAllocations()
-  }, [fetchAllocations])
-
-  // Calcular balance usando la misma lógica que FIFO
-  const { totalPaid, balance, percentPaid } = calculateProjectBalance({
-    totalAmount,
-    allocations,
-  })
-
+export function PaymentSummaryCard({
+  totalAmount,
+  currency,
+  totalPaid,
+  balance,
+  percentPaid,
+  variant = 'card',
+}: PaymentSummaryCardProps) {
   const formatCurrency = (amount: number) =>
     new Intl.NumberFormat('es-CL', {
       style: 'currency',
@@ -88,22 +47,72 @@ export function PaymentSummaryCard({ projectId, totalAmount, currency }: Payment
       maximumFractionDigits: 0,
     }).format(amount)
 
-  if (isLoading) {
+  // Variant: Dashboard (diseño visual con gráfico circular)
+  if (variant === 'dashboard') {
     return (
-      <Card>
-        <CardHeader>
-          <CardTitle>Resumen de Pagos</CardTitle>
-          <CardDescription>Cargando información de pagos...</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <Skeleton className="h-10 w-full" />
-          <Skeleton className="h-10 w-full" />
-          <Skeleton className="h-10 w-full" />
-        </CardContent>
-      </Card>
+      <div className="space-y-4">
+        <div className="flex gap-4">
+          {/* Card de Saldo (2/3) */}
+          <Card className="w-2/3 flex flex-col">
+            <CardContent className="flex-1 p-4">
+              <div className="flex items-center gap-2 text-primary">
+                <CircleDollarSign className="h-6 w-6" />
+                <p className="text-xl font-medium">Saldo</p>
+              </div>
+              <div className="mt-auto pt-4">
+                <div
+                  className={`text-3xl font-semibold text-right ${
+                    balance > 0
+                      ? 'text-orange-600 dark:text-orange-400'
+                      : 'text-green-600 dark:text-green-400'
+                  }`}
+                >
+                  {formatCurrency(balance)}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Card de Progreso Circular (1/3) */}
+          <Card className="w-1/3 flex items-center justify-center">
+            <CardContent className="p-2">
+              <CircularProgressChart percentage={percentPaid} />
+            </CardContent>
+          </Card>
+        </div>
+
+        <div className="flex gap-4">
+          {/* Card de Abonos (1/2) */}
+          <Card className="w-1/2">
+            <CardContent className="p-4">
+              <div className="flex items-center gap-2 text-orange-600 dark:text-orange-400">
+                <Wallet className="h-5 w-5" />
+                <p className="text-lg font-medium">Abonos</p>
+              </div>
+              <div className="text-2xl text-right font-semibold pt-4 text-green-600 dark:text-green-400">
+                {formatCurrency(totalPaid)}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Card de Total Proyecto (1/2) */}
+          <Card className="w-1/2">
+            <CardContent className="p-4">
+              <div className="flex items-center gap-2 text-green-600 dark:text-green-400">
+                <FileText className="h-5 w-5" />
+                <p className="text-lg font-medium">Proyecto</p>
+              </div>
+              <div className="text-2xl text-right font-semibold pt-4">
+                {formatCurrency(totalAmount || 0)}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
     )
   }
 
+  // Variant: Card (diseño compacto default)
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
