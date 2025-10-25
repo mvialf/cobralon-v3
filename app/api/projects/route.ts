@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { Decimal } from '@prisma/client/runtime/library'
 import { ProjectWhereInput } from '@/types/api'
-import { calculateProjectBalance } from '@/lib/validations/payment-validations'
+import { calculateProjectBalance } from '@/lib/business-logic/project-balance'
 
 /**
  * GET /api/projects

@@ -2,21 +2,17 @@ import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { Decimal } from '@prisma/client/runtime/library'
 import { ProjectUpdateInput } from '@/types/api'
-import { calculateProjectBalance } from '@/lib/validations/payment-validations'
+import { calculateProjectBalance } from '@/lib/business-logic/project-balance'
 
 /**
  * GET /api/projects/[id]
  *
  * Obtiene un proyecto específico por ID con sus relaciones
- *
- * Query params:
- * - withBalance=true: Retorna formato ProjectWithBalance (con balance calculado)
+ * SIEMPRE incluye totalPaid y balance calculados
  */
 export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params
-    const { searchParams } = new URL(request.url)
-    const withBalance = searchParams.get('withBalance') === 'true'
 
     const project = await prisma.project.findUnique({
       where: { id },
@@ -32,6 +28,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
           select: {
             id: true,
             name: true,
+            isFinal: true,
             color: {
               select: {
                 bgClass: true,
@@ -39,14 +36,11 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
             },
           },
         },
-        // Incluir paymentAllocations solo si se requiere balance
-        ...(withBalance && {
-          paymentAllocations: {
-            select: {
-              allocatedAmount: true,
-            },
+        paymentAllocations: {
+          select: {
+            allocatedAmount: true,
           },
-        }),
+        },
       },
     })
 
@@ -54,36 +48,23 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
       return NextResponse.json({ error: 'Proyecto no encontrado' }, { status: 404 })
     }
 
-    // Si se solicita formato con balance calculado
-    if (withBalance) {
-      const { balance } = calculateProjectBalance({
-        totalAmount: Number(project.totalAmount),
-        allocations:
-          'paymentAllocations' in project
-            ? project.paymentAllocations.map((alloc) => ({
-                allocatedAmount: Number(alloc.allocatedAmount),
-              }))
-            : [],
-      })
+    // SIEMPRE calcular totalPaid y balance
+    const { totalPaid, balance, percentPaid } = calculateProjectBalance({
+      totalAmount: Number(project.totalAmount),
+      allocations: project.paymentAllocations.map((alloc: { allocatedAmount: Decimal }) => ({
+        allocatedAmount: Number(alloc.allocatedAmount),
+      })),
+    })
 
-      // Retornar formato ProjectWithBalance
-      return NextResponse.json({
-        id: project.id,
-        projectNumber: project.projectNumber,
-        projectName: project.projectName,
-        totalAmount: Number(project.totalAmount),
-        currency: project.currency,
-        balance,
-        createdAt: project.createdAt,
-        customer: {
-          id: project.customer.id,
-          name: project.customer.name,
-        },
-      })
-    }
-
-    // Formato normal (sin balance calculado)
-    return NextResponse.json(project)
+    // Retornar proyecto con balance calculado
+    return NextResponse.json({
+      ...project,
+      totalAmount: Number(project.totalAmount),
+      total: Number(project.total),
+      totalPaid,
+      balance,
+      percentPaid,
+    })
   } catch (error) {
     console.error('Error fetching project:', error)
     return NextResponse.json({ error: 'Error al obtener el proyecto' }, { status: 500 })

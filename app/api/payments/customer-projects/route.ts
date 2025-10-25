@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
-import { calculateProjectBalance } from '@/lib/validations/payment-validations'
+import { calculateProjectBalance } from '@/lib/business-logic/project-balance'
 
 /**
  * GET /api/payments/customer-projects
