@@ -1,4 +1,9 @@
 import { z } from 'zod'
+import { FINANCIAL } from '../constants/financial-constants'
+
+// Re-export business logic functions for convenience
+export { calculateProjectBalance } from '../business-logic/project-balance'
+export { calculateFIFO } from '../business-logic/payment-fifo'
 
 /**
  * Type para PaymentMethod simplificado
@@ -66,7 +71,7 @@ export const paymentAllocationSchema = z.object({
   allocatedAmount: z.coerce
     .number()
     .positive('El monto debe ser mayor a 0')
-    .multipleOf(0.01, 'El monto debe tener máximo 2 decimales'),
+    .multipleOf(FINANCIAL.DECIMAL_PRECISION, 'El monto debe tener máximo 2 decimales'),
 })
 
 /**
@@ -86,35 +91,6 @@ export type CreatePaymentPayload = {
     projectId: string
     allocatedAmount: number
   }>
-}
-
-/**
- * Helper para calcular el balance de un proyecto
- */
-export function calculateProjectBalance(project: {
-  totalAmount: number | null
-  allocations?: Array<{ allocatedAmount: number }>
-}): {
-  totalPaid: number
-  balance: number
-  percentPaid: number
-  isFullyPaid: boolean
-} {
-  const totalAmount = project.totalAmount || 0
-
-  // Sumar todos los pagos asignados al proyecto
-  const totalPaid = project.allocations?.reduce((sum, alloc) => sum + alloc.allocatedAmount, 0) || 0
-
-  const balance = totalAmount - totalPaid
-  const percentPaid = totalAmount > 0 ? (totalPaid / totalAmount) * 100 : 0
-  const isFullyPaid = balance <= 0
-
-  return {
-    totalPaid,
-    balance,
-    percentPaid,
-    isFullyPaid,
-  }
 }
 
 // ============================================================================
@@ -144,7 +120,7 @@ export const paymentToProjectSchema = z.object({
       invalid_type_error: 'El monto debe ser un número',
     })
     .positive('El monto debe ser mayor a 0')
-    .multipleOf(0.01, 'El monto debe tener máximo 2 decimales'),
+    .multipleOf(FINANCIAL.DECIMAL_PRECISION, 'El monto debe tener máximo 2 decimales'),
 
   // Fecha del pago
   date: z.date({
@@ -255,7 +231,7 @@ export const paymentToCustomerSchema = z
         invalid_type_error: 'El monto debe ser un número',
       })
       .positive('El monto debe ser mayor a 0')
-      .multipleOf(0.01, 'El monto debe tener máximo 2 decimales'),
+      .multipleOf(FINANCIAL.DECIMAL_PRECISION, 'El monto debe tener máximo 2 decimales'),
 
     // Fecha del pago
     date: z.date({
@@ -294,7 +270,7 @@ export const paymentToCustomerSchema = z
           allocatedAmount: z.coerce
             .number()
             .positive('El monto asignado debe ser mayor a 0')
-            .multipleOf(0.01, 'El monto debe tener máximo 2 decimales'),
+            .multipleOf(FINANCIAL.DECIMAL_PRECISION, 'El monto debe tener máximo 2 decimales'),
         })
       )
       .min(1, 'Debe asignar el pago a al menos un proyecto')
@@ -311,7 +287,7 @@ export const paymentToCustomerSchema = z
     (data) => {
       // Suma de allocations debe ser igual al monto total
       const totalAllocated = data.allocations.reduce((sum, a) => sum + a.allocatedAmount, 0)
-      return Math.abs(totalAllocated - data.amount) < 0.01 // Tolerance para decimales
+      return Math.abs(totalAllocated - data.amount) < FINANCIAL.TOLERANCE
     },
     {
       message: 'La suma de los montos asignados debe ser igual al monto total del pago',
@@ -345,55 +321,4 @@ export function paymentToCustomerToPayload(
     selectedInstallments: values.selectedInstallments || null,
     allocations: values.allocations,
   }
-}
-
-/**
- * Calcula distribución FIFO (First In First Out) de un pago
- *
- * Distribuye el monto total entre los proyectos ordenados por fecha de creación,
- * priorizando los proyectos más antiguos primero.
- *
- * @param projects - Array de proyectos con balance pendiente
- * @param totalAmount - Monto total a distribuir
- * @returns Array de allocations con projectId y allocatedAmount
- *
- * @example
- * const projects = [
- *   { id: '1', createdAt: new Date('2024-06-01'), balance: 300000 },
- *   { id: '2', createdAt: new Date('2024-08-01'), balance: 400000 },
- * ]
- * calculateFIFO(projects, 500000)
- * // => [
- * //   { projectId: '1', allocatedAmount: 300000 }, // Cierra proyecto 1
- * //   { projectId: '2', allocatedAmount: 200000 }, // Abono parcial proyecto 2
- * // ]
- */
-export function calculateFIFO(
-  projects: ProjectWithBalance[],
-  totalAmount: number
-): Array<{ projectId: string; allocatedAmount: number }> {
-  // 1. Ordenar proyectos por fecha de creación (más antiguo primero)
-  const sorted = [...projects].sort(
-    (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
-  )
-
-  // 2. Distribuir el monto total
-  let remaining = totalAmount
-  const allocations: Array<{ projectId: string; allocatedAmount: number }> = []
-
-  for (const project of sorted) {
-    if (remaining <= 0) break
-
-    // Asignar el mínimo entre el balance pendiente y el monto restante
-    const toAllocate = Math.min(remaining, project.balance)
-
-    allocations.push({
-      projectId: project.id,
-      allocatedAmount: toAllocate,
-    })
-
-    remaining -= toAllocate
-  }
-
-  return allocations
 }
