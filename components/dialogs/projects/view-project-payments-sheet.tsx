@@ -22,6 +22,9 @@ interface ProjectPaymentData {
   totalAmount: number | null
   currency: string
   projectNumber: string
+  totalPaid: number // ← Calculado en backend
+  balance: number // ← Calculado en backend
+  percentPaid: number // ← Calculado en backend
 }
 
 /**
@@ -49,6 +52,9 @@ export function ViewProjectPaymentsSheet({
         totalAmount: data.totalAmount,
         currency: data.currency,
         projectNumber: data.projectNumber,
+        totalPaid: data.totalPaid, // ← Viene del backend
+        balance: data.balance, // ← Viene del backend
+        percentPaid: data.percentPaid, // ← Viene del backend
       })
     } catch (error) {
       console.error('Error fetching project payment data:', error)
@@ -80,11 +86,14 @@ export function ViewProjectPaymentsSheet({
           </div>
         ) : project ? (
           <div className="space-y-6 py-6">
-            {/* Resumen de Pagos */}
+            {/* Resumen de Pagos - Variant Dashboard */}
             <PaymentSummaryCard
-              projectId={projectId}
+              variant="dashboard"
               totalAmount={project.totalAmount}
               currency={project.currency}
+              totalPaid={project.totalPaid}
+              balance={project.balance}
+              percentPaid={project.percentPaid}
             />
 
             {/* Tabla de Pagos */}
