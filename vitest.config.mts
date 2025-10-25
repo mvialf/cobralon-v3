@@ -17,8 +17,8 @@ export default defineConfig({
     testTimeout: 10000,
     // Patrones de archivos de test
     include: ['**/__tests__/**/*.{test,spec}.{ts,tsx}', '**/*.{test,spec}.{ts,tsx}'],
-    // Excluir node_modules y build folders
-    exclude: ['node_modules', 'dist', '.next', 'build'],
+    // Excluir node_modules, build folders y Playwright tests
+    exclude: ['node_modules', 'dist', '.next', 'build', '**/e2e/**', 'tests/e2e/**'],
     // Optimización de dependencias para Radix UI (Vitest 3.x sintaxis moderna)
     deps: {
       optimizer: {
