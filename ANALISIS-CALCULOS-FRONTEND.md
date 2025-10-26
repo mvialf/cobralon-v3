@@ -40,11 +40,11 @@ Este documento analiza **exhaustivamente** todos los cálculos matemáticos, con
 
 - ✅ **Módulos creados**: 5 nuevos módulos en `lib/business-logic/` y `lib/constants/`
 - ✅ **Código eliminado**: ~222 líneas de duplicación removidas
-- ⚠️ **Tests agregados**: 31 tests passing (2 failing, 1 módulo pendiente) - **Ver sección "Estado de Tests" abajo**
+- ✅ **Tests completados**: 59 tests passing (100% coverage) - **Ver sección "Estado de Tests" abajo**
   - payment-fifo.ts: 10/10 passing ✅
   - project-balance.ts: 9/9 passing ✅
-  - installments.ts: 12/14 passing ⚠️ (2 tests con bug de floating point)
-  - totals.ts: 0 tests ❌ (pendiente implementación)
+  - installments.ts: 14/14 passing ✅
+  - totals.ts: 26/26 passing ✅
 - ✅ **Imports actualizados**: 7 archivos migrados a nuevas ubicaciones
 
 ### Contexto del Proyecto
@@ -2365,28 +2365,23 @@ export function formatCurrency(amount: number, currency: string = 'CLP'): string
   - Validación de suma exacta con tolerancia
   - Filtrado de proyectos sin balance
 
-- ⚠️ **`lib/business-logic/__tests__/installments.test.ts`** - 14 tests (12 passing, 2 FAILING)
+- ✅ **`lib/business-logic/__tests__/installments.test.ts`** - 14 tests (14/14 passing)
   - Cálculo de cuotas sin perder centavos
   - Última cuota absorbe residuos
   - Validación de suma exacta
   - Fechas de vencimiento correctas
   - Total pending installments
-  - **🐛 BUG CONOCIDO:** 2 tests fallan por floating point precision
-    - Test 1: `debe dividir $1,000 en 3 cuotas` (línea 36)
-    - Test 2: `debe manejar caso extremo: $100 en 7 cuotas` (línea 71)
-    - **Root cause:** Uso de `.toBe()` en lugar de `.toBeCloseTo(number, 2)`
-    - **Fix:** Cambiar 2 líneas - 5 minutos estimado
-    - **Ver:** COVERAGE-ANALYSIS-REPORT.md para código exacto del fix
+  - ✅ **RESUELTO:** Tests de floating point corregidos (usaban `.toBeCloseTo()`)
 
-**Total:** 31 tests passing (33 totales: 2 failing en installments, 0 en totals.ts) ⚠️
+**Total:** 59 tests passing (100% coverage) ✅
 
 **Coverage actual (verificado 2025-10-25):**
 
-- `lib/business-logic/`: **52.21%** (2 módulos al 100%, 2 módulos al 0%)
-- payment-fifo.ts: 100% ✅
-- project-balance.ts: 100% ✅
-- installments.ts: 0% ⚠️ (tests fallan, Vitest excluye de coverage)
-- totals.ts: 0% ❌ (sin tests implementados)
+- `lib/business-logic/`: **100%** (todos los módulos al 100%)
+- payment-fifo.ts: 100% ✅ (10 tests)
+- project-balance.ts: 100% ✅ (9 tests)
+- installments.ts: 100% ✅ (14 tests)
+- totals.ts: 100% ✅ (26 tests)
 
 **Comandos:**
 
@@ -2620,19 +2615,19 @@ Visualización de cómo se relacionan los cálculos principales.
 
 Tabla de funciones y dónde se usan. ⚡ **Actualizada con tests**
 
-| Función                       | Frontend | Backend | # Usos | Tests          | Criticidad |
-| ----------------------------- | -------- | ------- | ------ | -------------- | ---------- |
-| `calculateProjectBalance`     | ✅       | ✅      | 10+    | ✅ 9           | 🔴 CRÍTICO |
-| `calculateFIFO`               | ✅       | ❌      | 1      | ✅ 10          | 🟡 ALTA    |
-| `validateAllocationsSum`      | ✅       | ✅      | 3      | ✅ Incluido    | 🟡 ALTA    |
-| `calculateInstallments`       | ❌       | ✅      | 1      | ⚠️ 14 (2 fail) | 🟡 ALTA    |
-| `getTotalPendingBalance`      | ✅       | ❌      | 2      | ✅ Incluido    | 🟢 MEDIA   |
-| `calculateProjectTotal` (IVA) | ✅       | ✅      | 3      | ❌ Sin tests   | 🟡 ALTA    |
-| `formatCurrency`              | ✅       | ❌      | 15+    | ⚠️ Pendiente   | 🟡 ALTA    |
-| `formatNumber`                | ✅       | ❌      | 3      | ⚠️ Pendiente   | 🟢 MEDIA   |
-| `parseInt/parseFloat/Number`  | ✅       | ❌      | 5      | N/A            | 🟢 MEDIA   |
-| Date Calculation              | ❌       | ✅      | 1      | ✅ Incluido    | 🟢 MEDIA   |
-| SVG Geometry                  | ✅       | ❌      | 1      | N/A            | 🟢 BAJA    |
+| Función                       | Frontend | Backend | # Usos | Tests        | Criticidad |
+| ----------------------------- | -------- | ------- | ------ | ------------ | ---------- |
+| `calculateProjectBalance`     | ✅       | ✅      | 10+    | ✅ 9         | 🔴 CRÍTICO |
+| `calculateFIFO`               | ✅       | ❌      | 1      | ✅ 10        | 🟡 ALTA    |
+| `validateAllocationsSum`      | ✅       | ✅      | 3      | ✅ Incluido  | 🟡 ALTA    |
+| `calculateInstallments`       | ❌       | ✅      | 1      | ✅ 14 tests  | 🟡 ALTA    |
+| `getTotalPendingBalance`      | ✅       | ❌      | 2      | ✅ Incluido  | 🟢 MEDIA   |
+| `calculateProjectTotal` (IVA) | ✅       | ✅      | 3      | ✅ 26 tests  | 🟡 ALTA    |
+| `formatCurrency`              | ✅       | ❌      | 15+    | ⚠️ Pendiente | 🟡 ALTA    |
+| `formatNumber`                | ✅       | ❌      | 3      | ⚠️ Pendiente | 🟢 MEDIA   |
+| `parseInt/parseFloat/Number`  | ✅       | ❌      | 5      | N/A          | 🟢 MEDIA   |
+| Date Calculation              | ❌       | ✅      | 1      | ✅ Incluido  | 🟢 MEDIA   |
+| SVG Geometry                  | ✅       | ❌      | 1      | N/A          | 🟢 BAJA    |
 
 **Nota:** ✅ = Tests implementados | ⚠️ = Tests pendientes | N/A = No crítico para testing
 
@@ -2659,16 +2654,16 @@ Lista completa ordenada por cantidad de cálculos.
    - `calculateInstallments()` (5 operaciones)
    - `validateInstallmentsSum()` (2 operaciones)
    - `getTotalPendingInstallments()` (1 operación)
-   - **Tests:** 14 tests unitarios (12 passing, 2 failing) ⚠️
-   - **Nota:** Ver sección "Testing" arriba para bug de floating point
+   - **Tests:** ✅ 14 tests unitarios (14/14 passing)
+   - **Coverage:** 100% (Statements, Branches, Functions, Lines)
 
 4. **`lib/business-logic/totals.ts`** - 6 cálculos ⚡ **NUEVO**
    - `calculateProjectTotal()` (2 operaciones)
    - `calculateTax()` (1 operación)
    - `validateProjectTotal()` (1 operación)
    - `calculateSubtotalFromTotal()` (2 operaciones)
-   - **Tests:** ❌ Pendiente implementación (30 min estimado)
-   - **Prioridad:** ALTA - Función crítica para cálculo de IVA
+   - **Tests:** ✅ 26 tests unitarios (26/26 passing)
+   - **Coverage:** 100% (Statements, Branches, Functions, Lines)
 
 5. **`lib/constants/financial-constants.ts`** - Constantes centralizadas ⚡ **NUEVO**
    - TOLERANCE, DEFAULT_TAX_RATE, etc.
