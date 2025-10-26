@@ -1092,7 +1092,7 @@ Documenta aquí las implementaciones de TU proyecto:
     - Endpoint: `POST /api/cron/mark-installments-paid`
     - Autenticación: Bearer token con CRON_SECRET
     - Lógica: Batch update WHERE status='pending' AND dueDate <= NOW()
-    - Schedule: "0 0 * * *" (diario a medianoche UTC)
+    - Schedule: "0 0 \* \* \*" (diario a medianoche UTC)
     - Logs detallados de cuotas marcadas
   - **Fase 5:** UI Components
     - Página dedicada: `app/payments/installments/page.tsx`
@@ -1315,33 +1315,33 @@ Documenta aquí las implementaciones de TU proyecto:
 
 ## Quick Reference Index
 
-| #   | Implementación                                  | Status      | Fecha      | Impact |
-| --- | ----------------------------------------------- | ----------- | ---------- | ------ |
-| 1   | Setup Inicial del Template                      | ✅ Complete | 2025-01-13 | High   |
-| 2   | Sistema Completo de Testing + Linting           | ✅ Complete | 2025-01-13 | High   |
-| 3   | Migración Next.js 15 + React 19 + ESLint 9      | ✅ Complete | 2025-10-17 | High   |
-| 4   | Database Layer con Prisma + Neon                | ✅ Complete | 2025-01-17 | High   |
-| 5   | Migración Autocomplete → Combobox               | ✅ Complete | 2025-10-19 | Medium |
-| 6   | Documentación de Autenticación                  | ✅ Complete | 2025-10-19 | Medium |
-| 7   | Sistema de Layout Completo: Refactor + Mejoras  | ✅ Complete | 2025-10-18 | High   |
-| 8   | Sistema Configuración Global                    | ✅ Complete | 2025-10-19 | High   |
-| 9   | Componentes Regionales (Currency/Phone/RUT)     | ✅ Complete | 2025-10-19 | High   |
-| 10  | Página de Configuración                         | ✅ Complete | 2025-10-19 | Medium |
-| 11  | Migración @diceui/combobox → Command            | ✅ Complete | 2025-10-19 | High   |
-| 12  | Refactor: Rutas en Inglés                       | ✅ Complete | 2025-10-20 | Medium |
-| 13  | Sistema Completo de Project Status              | ✅ Complete | 2025-10-20 | High   |
-| 14  | Componente Reutilizable: Combobox Wrapper       | ✅ Complete | 2025-10-20 | High   |
-| 15  | Migración: Chrome DevTools MCP → Playwright MCP | ✅ Complete | 2025-10-21 | High   |
-| 16  | Migración: next lint → ESLint CLI               | ✅ Complete | 2025-10-22 | Medium |
-| 17  | Optimización de Database Performance (Phase 1)  | ✅ Complete | 2025-10-22 | High   |
-| 18  | Componente Reutilizable: DataTableDropdown      | ✅ Complete | 2025-10-24 | Medium |
-| 19  | Sistema Completo de Customers (CRUD)            | ✅ Complete | 2025-10-19 | High   |
+| #   | Implementación                                                   | Status      | Fecha      | Impact |
+| --- | ---------------------------------------------------------------- | ----------- | ---------- | ------ |
+| 1   | Setup Inicial del Template                                       | ✅ Complete | 2025-01-13 | High   |
+| 2   | Sistema Completo de Testing + Linting                            | ✅ Complete | 2025-01-13 | High   |
+| 3   | Migración Next.js 15 + React 19 + ESLint 9                       | ✅ Complete | 2025-10-17 | High   |
+| 4   | Database Layer con Prisma + Neon                                 | ✅ Complete | 2025-01-17 | High   |
+| 5   | Migración Autocomplete → Combobox                                | ✅ Complete | 2025-10-19 | Medium |
+| 6   | Documentación de Autenticación                                   | ✅ Complete | 2025-10-19 | Medium |
+| 7   | Sistema de Layout Completo: Refactor + Mejoras                   | ✅ Complete | 2025-10-18 | High   |
+| 8   | Sistema Configuración Global                                     | ✅ Complete | 2025-10-19 | High   |
+| 9   | Componentes Regionales (Currency/Phone/RUT)                      | ✅ Complete | 2025-10-19 | High   |
+| 10  | Página de Configuración                                          | ✅ Complete | 2025-10-19 | Medium |
+| 11  | Migración @diceui/combobox → Command                             | ✅ Complete | 2025-10-19 | High   |
+| 12  | Refactor: Rutas en Inglés                                        | ✅ Complete | 2025-10-20 | Medium |
+| 13  | Sistema Completo de Project Status                               | ✅ Complete | 2025-10-20 | High   |
+| 14  | Componente Reutilizable: Combobox Wrapper                        | ✅ Complete | 2025-10-20 | High   |
+| 15  | Migración: Chrome DevTools MCP → Playwright MCP                  | ✅ Complete | 2025-10-21 | High   |
+| 16  | Migración: next lint → ESLint CLI                                | ✅ Complete | 2025-10-22 | Medium |
+| 17  | Optimización de Database Performance (Phase 1)                   | ✅ Complete | 2025-10-22 | High   |
+| 18  | Componente Reutilizable: DataTableDropdown                       | ✅ Complete | 2025-10-24 | Medium |
+| 19  | Sistema Completo de Customers (CRUD)                             | ✅ Complete | 2025-10-19 | High   |
 | 20  | Sistema Completo de Payments (CRUD + Allocations + Installments) | ✅ Complete | 2025-10-22 | High   |
-| 21  | Sistema de Installments (Cuotas) + Cron Job     | ✅ Complete | 2025-10-22 | High   |
-| 22  | Sistema de Estados de Proyecto (ProjectStatus + BadgeColors) | ✅ Complete | 2025-10-20 | High   |
-| 23  | Settings Modulares (3 Páginas de Configuración) | ✅ Complete | 2025-10-20 | Medium |
-| 24  | Migración PaymentAllocation Architecture        | ✅ Complete | 2025-10-21 | High   |
-| 25  | Documentación Arquitectural Completa (5 ADRs)   | ✅ Complete | 2025-10-25 | High   |
+| 21  | Sistema de Installments (Cuotas) + Cron Job                      | ✅ Complete | 2025-10-22 | High   |
+| 22  | Sistema de Estados de Proyecto (ProjectStatus + BadgeColors)     | ✅ Complete | 2025-10-20 | High   |
+| 23  | Settings Modulares (3 Páginas de Configuración)                  | ✅ Complete | 2025-10-20 | Medium |
+| 24  | Migración PaymentAllocation Architecture                         | ✅ Complete | 2025-10-21 | High   |
+| 25  | Documentación Arquitectural Completa (5 ADRs)                    | ✅ Complete | 2025-10-25 | High   |
 
 ---
 

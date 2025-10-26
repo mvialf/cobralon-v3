@@ -19,6 +19,7 @@ El sistema de gestión de proyectos y pagos necesitaba soportar dos casos de uso
 La decisión arquitectural era: **¿Cómo modelar la relación entre Payment y Project?**
 
 Requisitos identificados:
+
 - ✅ Flexibilidad: Soportar 1 pago → 1 proyecto Y 1 pago → N proyectos
 - ✅ Auditoría: Saber exactamente cuánto de cada pago fue asignado a cada proyecto
 - ✅ Balance calculation: Calcular cuánto debe cada proyecto (`total - SUM(pagos)`)
@@ -76,44 +77,46 @@ model Project {
 // Caso 1: Pago a 1 proyecto
 const payment = await prisma.payment.create({
   data: {
-    type: "Project",
+    type: 'Project',
     amount: 50000,
-    currency: "CLP",
-    customerId: "abc",
+    currency: 'CLP',
+    customerId: 'abc',
     allocations: {
-      create: [{
-        projectId: "project-1",
-        allocatedAmount: 50000
-      }]
-    }
-  }
+      create: [
+        {
+          projectId: 'project-1',
+          allocatedAmount: 50000,
+        },
+      ],
+    },
+  },
 })
 
 // Caso 2: Pago a múltiples proyectos
 const payment = await prisma.payment.create({
   data: {
-    type: "Customer",
+    type: 'Customer',
     amount: 100000,
-    currency: "CLP",
-    customerId: "abc",
+    currency: 'CLP',
+    customerId: 'abc',
     allocations: {
       create: [
-        { projectId: "project-1", allocatedAmount: 40000 },
-        { projectId: "project-2", allocatedAmount: 35000 },
-        { projectId: "project-3", allocatedAmount: 25000 }
-      ]
-    }
-  }
+        { projectId: 'project-1', allocatedAmount: 40000 },
+        { projectId: 'project-2', allocatedAmount: 35000 },
+        { projectId: 'project-3', allocatedAmount: 25000 },
+      ],
+    },
+  },
 })
 
 // Balance calculation
 const project = await prisma.project.findUnique({
-  where: { id: "project-1" },
-  include: { paymentAllocations: true }
+  where: { id: 'project-1' },
+  include: { paymentAllocations: true },
 })
 
-const balance = project.total - project.paymentAllocations
-  .reduce((sum, a) => sum + a.allocatedAmount, 0)
+const balance =
+  project.total - project.paymentAllocations.reduce((sum, a) => sum + a.allocatedAmount, 0)
 ```
 
 ## Alternativas Consideradas
@@ -131,11 +134,13 @@ model Payment {
 ```
 
 **Pros:**
+
 - ✅ Simplicidad máxima (1 campo, 1 JOIN)
 - ✅ Performance óptima (menos queries, menos joins)
 - ✅ Código más simple (sin validaciones de SUM)
 
 **Contras CRÍTICOS:**
+
 - ❌ **Inflexibilidad total:** 1 pago = 1 proyecto SIEMPRE
 - ❌ **No soporta caso real:** Cliente paga $100,000 para 3 proyectos → IMPOSIBLE
 - ❌ **Workaround feo:** Crear 3 Payments separados (confunde auditoría: 1 pago bancario = 3 registros)
@@ -157,10 +162,12 @@ model Payment {
 ```
 
 **Pros:**
+
 - ✅ Sin tabla extra (menos complejidad en schema)
 - ✅ Flexible (N proyectos soportados)
 
 **Contras CRÍTICOS:**
+
 - ❌ **No type-safe:** Prisma trata JSON como `any` (sin IntelliSense)
 - ❌ **No hay FKs:** Integridad referencial perdida (puedes tener projectIds huérfanos)
 - ❌ **No queries relacionales:** No puedes hacer `SELECT * FROM payments WHERE projectId IN allocations`
@@ -176,6 +183,7 @@ model Payment {
 **Ver sección "Decisión" arriba para detalles completos.**
 
 **Pros FUNDAMENTALES:**
+
 - ✅ **Flexibilidad total:** 1 pago → 1 o N proyectos (soporta ambos casos)
 - ✅ **allocatedAmount por proyecto:** Auditoría precisa (sabes exactamente cuánto fue para cada proyecto)
 - ✅ **Queries relacionales:** `SELECT SUM(allocatedAmount) FROM PaymentAllocation WHERE projectId = X`
@@ -184,6 +192,7 @@ model Payment {
 - ✅ **FKs garantizan integridad:** No hay projectIds huérfanos (constraint a nivel DB)
 
 **Contras ACEPTABLES:**
+
 - ⚠️ **Complejidad:** Requiere validación `SUM(allocations) === payment.amount` (15+ validaciones backend)
 - ⚠️ **JOINs adicionales:** `Payment → PaymentAllocation → Project` (mitigado con `relationLoadStrategy: 'join'`)
 - ⚠️ **Código extra:** ~400 líneas de validaciones + schemas + helpers
@@ -197,16 +206,14 @@ model Payment {
 1. **Balance Calculation Preciso**
 
    Cálculo de balance por proyecto:
+
    ```typescript
    // lib/business-logic/project-balance.ts
    export function calculateProjectBalance(
      project: { total: Decimal },
      allocations: { allocatedAmount: Decimal }[]
    ): Decimal {
-     const totalPaid = allocations.reduce(
-       (sum, a) => sum + a.allocatedAmount,
-       new Decimal(0)
-     )
+     const totalPaid = allocations.reduce((sum, a) => sum + a.allocatedAmount, new Decimal(0))
      return project.total.minus(totalPaid)
    }
    ```
@@ -214,6 +221,7 @@ model Payment {
 2. **Auditoría Completa**
 
    Historial detallado de qué pago cubrió qué proyecto:
+
    ```sql
    -- Ver todos los pagos de un proyecto
    SELECT p.date, p.amount, pa.allocatedAmount, p.reference
@@ -224,7 +232,6 @@ model Payment {
    ```
 
 3. **Soporte Dual de Flujos de Pago**
-
    - **type="Project":** 1 allocation automática (flujo simplificado)
    - **type="Customer":** N allocations manuales (flujo avanzado)
 
@@ -246,10 +253,11 @@ model Payment {
    **Mitigación:** Business logic centralizada en `lib/validations/payment-validations.ts`
 
    Validaciones implementadas (app/api/payments/route.ts:183-276):
+
    ```typescript
    // 1. Type validation
-   if (type === "Project" && allocations.length !== 1) {
-     return error("Project payment must have exactly 1 allocation")
+   if (type === 'Project' && allocations.length !== 1) {
+     return error('Project payment must have exactly 1 allocation')
    }
 
    // 2. Sum validation (tolerance para floats)
@@ -261,21 +269,21 @@ model Payment {
    // 3. Mismo customer
    const projects = await prisma.project.findMany({
      where: { id: { in: allocationProjectIds } },
-     select: { customerId: true }
+     select: { customerId: true },
    })
-   if (new Set(projects.map(p => p.customerId)).size > 1) {
-     return error("All projects must belong to same customer")
+   if (new Set(projects.map((p) => p.customerId)).size > 1) {
+     return error('All projects must belong to same customer')
    }
 
    // 4. Misma currency
-   const currencies = new Set(projects.map(p => p.currency))
+   const currencies = new Set(projects.map((p) => p.currency))
    if (currencies.size > 1 || ![...currencies][0] !== payment.currency) {
-     return error("Currency mismatch")
+     return error('Currency mismatch')
    }
 
    // 5. No duplicados
    if (new Set(allocationProjectIds).size !== allocationProjectIds.length) {
-     return error("Duplicate projectIds in allocations")
+     return error('Duplicate projectIds in allocations')
    }
 
    // ... 10+ validaciones más
@@ -286,19 +294,21 @@ model Payment {
    **Trade-off:** Queries requieren JOIN adicional vs FK directo.
 
    **Mitigación 1:** `relationLoadStrategy: 'join'` (fix N+1 queries)
+
    ```typescript
    // app/api/payments/route.ts:67
    const payments = await prisma.payment.findMany({
-     relationLoadStrategy: 'join',  // ← Evita N+1
+     relationLoadStrategy: 'join', // ← Evita N+1
      include: {
        allocations: {
-         include: { project: true }
-       }
-     }
+         include: { project: true },
+       },
+     },
    })
    ```
 
    **Mitigación 2:** Índices compuestos en PaymentAllocation
+
    ```prisma
    @@index([paymentId])  // Para queries por pago
    @@index([projectId])  // Para queries por proyecto
@@ -310,13 +320,13 @@ model Payment {
 
    **Justificación:** Valor ganado vs costo
    - Complejidad agregada:
-     * 400 líneas de validaciones + schemas + helpers
-     * 15+ validaciones backend
-     * 2 schemas Zod diferentes (ver ADR-002)
+     - 400 líneas de validaciones + schemas + helpers
+     - 15+ validaciones backend
+     - 2 schemas Zod diferentes (ver ADR-002)
    - Valor ganado:
-     * Soporta 100% de casos de uso reales (sin workarounds)
-     * Extensible a futuro (descuentos, notas por allocation)
-     * No requiere refactor cuando reglas de negocio cambien
+     - Soporta 100% de casos de uso reales (sin workarounds)
+     - Extensible a futuro (descuentos, notas por allocation)
+     - No requiere refactor cuando reglas de negocio cambien
 
    **ROI estimado:**
    - Tiempo invertido: ~8 horas implementación + tests
@@ -357,11 +367,12 @@ model Payment {
 **Razón:** Previene duplicados accidentales (mismo proyecto asignado 2 veces al mismo pago).
 
 **Ejemplo de error prevenido:**
+
 ```typescript
 // ❌ Sin constraint: Se crea silenciosamente
 allocations: [
-  { projectId: "abc", allocatedAmount: 50000 },
-  { projectId: "abc", allocatedAmount: 30000 }  // Duplicado
+  { projectId: 'abc', allocatedAmount: 50000 },
+  { projectId: 'abc', allocatedAmount: 30000 }, // Duplicado
 ]
 
 // ✅ Con constraint: Error en DB
@@ -381,11 +392,13 @@ payment Payment @relation(fields: [paymentId], references: [id], onDelete: Casca
 ### Precisión Decimal
 
 `Decimal(12,2)` permite:
+
 - **12 dígitos totales:** Máximo $999,999,999,999.99
 - **2 decimales:** Centavos (CLP, USD, EUR)
 - **Sin errores de redondeo:** Decimal es exacto (no Float)
 
 **Ejemplo:**
+
 ```typescript
 // ❌ Float (mal)
 0.1 + 0.2 = 0.30000000000000004

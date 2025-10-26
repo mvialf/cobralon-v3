@@ -20,15 +20,18 @@ Los **Architecture Decision Records (ADRs)** son documentos que capturan decisio
 **Decisión:** Implementar tabla intermedia `PaymentAllocation` para modelar la relación N:M entre `Payment` y `Project`.
 
 **Por qué es importante:**
+
 - Soporta tanto pagos 1:1 (proyecto único) como 1:N (múltiples proyectos)
 - Permite auditoría detallada: saber exactamente cuánto de cada pago fue asignado a cada proyecto
 - Facilita cálculo de balance por proyecto: `total - SUM(allocations)`
 
 **Alternativas rechazadas:**
+
 - FK directo (`payment.projectId`) - No soporta pago a múltiples proyectos
 - JSON field (`payment.allocations`) - Pierde normalización y queries relacionales
 
 **Consecuencias clave:**
+
 - ✅ Flexibilidad total para casos de uso complejos
 - ⚠️ Requiere 15+ validaciones backend (SUM === amount, misma currency, etc.)
 
@@ -39,19 +42,23 @@ Los **Architecture Decision Records (ADRs)** son documentos que capturan decisio
 **Status:** ✅ Aceptado | **Fecha:** 2025-10-21
 
 **Decisión:** Implementar 2 flujos de pago especializados en lugar de 1 universal:
+
 - **Flujo 1:1 (Project Payment):** Pago directo a proyecto específico
 - **Flujo 1:N (Customer Payment):** Pago que se distribuye entre múltiples proyectos
 
 **Por qué es importante:**
+
 - El flujo 1:1 (90% de casos) se simplifica: 3 campos vs 8 campos + tabla de asignaciones
 - El flujo 1:N (10% de casos) gana algoritmo FIFO automático para distribución inteligente
 - **ROI cuantificado:** 14.4x return (36 horas/año ahorradas vs 2.5 horas invertidas)
 
 **Alternativas rechazadas:**
+
 - Form universal con modo "simple"/"avanzado" - Complejidad cognitiva alta
 - Solo flujo avanzado 1:N - UX pobre para caso común (90%)
 
 **Consecuencias clave:**
+
 - ✅ UX optimizada para cada caso de uso
 - ⚠️ 2 schemas Zod distintos (duplicación controlada)
 
@@ -64,17 +71,20 @@ Los **Architecture Decision Records (ADRs)** son documentos que capturan decisio
 **Decisión:** Implementar sistema de cuotas (installments) SIN cálculo de interés.
 
 **Por qué es importante:**
+
 - **Legal compliance:** Ley 20.555 (Chile) permite cuotas sin interés sin licencia financiera
 - **Simplicidad técnica:** División exacta vs fórmula de interés compuesto
 - **Business value:** Evita $60,000/año en comisiones de gateways de pago (3% de $2M/año)
 - **Automatización:** Cron job marca cuotas vencidas automáticamente
 
 **Alternativas rechazadas:**
+
 - Cuotas con interés - Requiere licencia financiera ($5,000-$10,000 anuales)
 - Gateway de pago externo - Comisiones del 3% ($60,000/año en volumen proyectado)
 - Sin cuotas - Reduce tasa de conversión (clientes prefieren pagar en cuotas)
 
 **Consecuencias clave:**
+
 - ✅ $60,000/año ahorrados en comisiones
 - ✅ Cron job automatiza marcado de cuotas (Vercel Cron)
 - ⚠️ Última cuota absorbe centavos residuales (documentado)
@@ -88,18 +98,21 @@ Los **Architecture Decision Records (ADRs)** son documentos que capturan decisio
 **Decisión:** Usar **Neon PostgreSQL** como proveedor de base de datos serverless.
 
 **Por qué es importante:**
+
 - **Database branching como Git:** Crear branches de DB para testing sin riesgo
 - **Zero vendor lock-in:** PostgreSQL estándar + migraciones Prisma portables
 - **Free tier generoso:** 512MB storage + branches ilimitados ($0/mes)
 - **Score:** 88.5/100 (mejor alternativa evaluada)
 
 **Alternativas rechazadas:**
+
 - **PlanetScale:** Disqualified (no soporta foreign keys - incompatible con Prisma)
 - **Supabase:** 53.5/100 (vendor lock-in alto en auth/storage/realtime)
 - **Railway:** 71/100 (más caro, sin database branching)
 - **Amazon RDS:** 64.5/100 (complejidad operacional, sin serverless real)
 
 **Consecuencias clave:**
+
 - ✅ Database branching: `git checkout -b feature` → `neon branches create --name feature`
 - ✅ Portabilidad total: Exportar a cualquier PostgreSQL con `pg_dump`
 - ⚠️ Límite de almacenamiento free tier (512MB) - suficiente para MVP
@@ -113,24 +126,28 @@ Los **Architecture Decision Records (ADRs)** son documentos que capturan decisio
 **Decisión:** Lanzar MVP **sin sistema de autenticación** con roadmap de 3 fases.
 
 **Por qué es importante:**
+
 - **Time-to-market:** MVP en 2-3 semanas (vs 4-5 con auth) - 33% más rápido
 - **Contexto de red interna:** Sistema usado por 1-2 personas en oficina (bajo riesgo)
 - **Reversibilidad total:** Migración a NextAuth toma 10-15 horas (mismo costo que implementar desde MVP)
 - **Foco en validación:** 100% del tiempo en business logic, no en infraestructura
 
 **Alternativas rechazadas:**
+
 - NextAuth.js desde MVP - 10-15 horas de overhead para validar infraestructura (no negocio)
 - Clerk desde MVP - $300/año + vendor lock-in alto para 1-2 usuarios
 - Stack Auth desde MVP - Complejidad innecesaria + vendor lock-in medio
 - Basic Auth custom - Anti-pattern con password compartido
 
 **Consecuencias clave:**
+
 - ✅ Roadmap de 3 fases: MVP (sin auth) → Production (NextAuth) → Enterprise (RBAC)
 - ✅ Triggers claros: >2 usuarios, deploy público, 4 semanas de validación
 - ⚠️ No escalable sin migración (limitación aceptada para MVP)
 - ⚠️ Sin audit logs por usuario (mitigado con timestamps + 1-2 usuarios)
 
 **Roadmap:**
+
 1. **Fase 1 (actual):** MVP sin auth - Red interna, 1-2 usuarios
 2. **Fase 2 (cuando escale):** NextAuth.js - 10-15 horas de implementación
 3. **Fase 3 (si necesita):** Enterprise auth - Multi-tenancy, RBAC, SAML
@@ -175,6 +192,7 @@ Documentados en este directorio ([docs/project/decisions/](./)):
 - **Decisiones de negocio/features:** → `docs/project/decisions/` (este directorio)
 
 **Ejemplo:**
+
 - "¿Por qué usamos Tailwind v4?" → Template ADR-002
 - "¿Por qué la tabla PaymentAllocation?" → Project ADR-001
 
@@ -239,6 +257,7 @@ Cuando agregues un nuevo ADR, usa esta estructura:
 ## Implementación
 
 Detalles técnicos:
+
 - Archivos modificados
 - Código de ejemplo
 - Configuración necesaria
@@ -330,14 +349,14 @@ Información adicional relevante que no encaja en las secciones anteriores.
 
 ## Métricas del Proyecto
 
-| Métrica                   | Valor |
-| ------------------------- | ----- |
-| **ADRs Totales**          | 5     |
-| **Aceptados**             | 5     |
-| **Propuestos**            | 0     |
-| **Deprecados**            | 0     |
-| **Total Líneas de Docs**  | ~3,200|
-| **Tiempo Invertido**      | ~5h   |
+| Métrica                  | Valor  |
+| ------------------------ | ------ |
+| **ADRs Totales**         | 5      |
+| **Aceptados**            | 5      |
+| **Propuestos**           | 0      |
+| **Deprecados**           | 0      |
+| **Total Líneas de Docs** | ~3,200 |
+| **Tiempo Invertido**     | ~5h    |
 
 ---
 

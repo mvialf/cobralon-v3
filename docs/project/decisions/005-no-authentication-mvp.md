@@ -108,11 +108,13 @@ Si decidiéramos implementar auth desde el MVP:
 El mayor riesgo del MVP NO es la seguridad, es que **el producto no resuelva el problema real del usuario**.
 
 **Sin auth (decisión tomada):**
+
 - ✅ 100% del tiempo en features core (payments, allocations, cuotas)
 - ✅ Validación rápida del flujo de negocio
 - ✅ Iteración ágil sin overhead de auth
 
 **Con auth desde MVP:**
+
 - ⚠️ 30-40% del tiempo en infraestructura (auth setup, UI, testing)
 - ⚠️ Validación retrasada 1-2 semanas
 - ⚠️ Complejidad temprana innecesaria
@@ -126,11 +128,13 @@ El sistema se ejecutará en:
 - **Usuarios conocidos:** Dueño y asistente (confianza alta)
 
 **Riesgo sin auth:**
+
 - ❌ Acceso no autorizado: **Riesgo bajo** (red interna)
 - ❌ Data breach: **Riesgo bajo** (no hay datos de terceros sensibles)
 - ❌ Compliance: **No aplica** (sistema interno, no SaaS)
 
 **Mitigación adicional:**
+
 - ✅ Deploy inicial en `localhost` (cero exposición)
 - ✅ Si deploy en LAN: Firewall corporativo como primera línea
 - ✅ Neon PostgreSQL: Credentials NO en código (env vars)
@@ -140,6 +144,7 @@ El sistema se ejecutará en:
 La decisión de NO incluir auth es **completamente reversible**:
 
 **Costo de agregar auth POST-MVP:**
+
 - ⏱️ **Tiempo:** 10-15 horas (NextAuth.js)
 - 💰 **Costo:** $0 (NextAuth open-source) o $25/mes (Clerk)
 - 🔧 **Breaking changes:** Mínimos (solo agregar middleware + protected routes)
@@ -162,6 +167,7 @@ export default async function ProjectsPage() {
 ```
 
 **Pasos de migración (cuando sea necesario):**
+
 1. Instalar NextAuth.js: `npm install next-auth`
 2. Crear `app/api/auth/[...nextauth]/route.ts`
 3. Agregar middleware: `middleware.ts` con protected routes
@@ -178,6 +184,7 @@ Muchos productos exitosos lanzaron MVPs sin auth:
 - **Superhuman:** Invite system, auth mínima inicial
 
 **Pattern común:**
+
 1. MVP interno → Validar producto
 2. Private beta → Agregar auth básico
 3. Public launch → Auth robusto + seguridad enterprise
@@ -256,9 +263,7 @@ model VerificationToken { /* ... */ }
 // middleware.ts
 export function middleware(request: NextRequest) {
   const authHeader = request.headers.get('authorization')
-  const [user, pass] = Buffer.from(authHeader.split(' ')[1], 'base64')
-    .toString()
-    .split(':')
+  const [user, pass] = Buffer.from(authHeader.split(' ')[1], 'base64').toString().split(':')
 
   if (user !== 'admin' || pass !== process.env.ADMIN_PASSWORD) {
     return new Response('Unauthorized', { status: 401 })
@@ -299,14 +304,14 @@ export function middleware(request: NextRequest) {
 
 **Análisis de riesgo:**
 
-| Riesgo                | Sin Auth (MVP) | Con Auth (MVP) |
-| --------------------- | -------------- | -------------- |
-| **Validación lenta**  | ✅ Bajo        | ❌ Alto        |
-| **Over-engineering**  | ✅ Bajo        | ❌ Alto        |
-| **Time-to-market**    | ✅ 2-3 semanas | ⚠️ 4-5 semanas |
-| **Acceso no autor.**  | ⚠️ Medio       | ✅ Bajo        |
-| **Cost ($)**          | ✅ $0          | ⚠️ $0-$300/año |
-| **Reversibilidad**    | ✅ Total       | ❌ N/A         |
+| Riesgo               | Sin Auth (MVP) | Con Auth (MVP) |
+| -------------------- | -------------- | -------------- |
+| **Validación lenta** | ✅ Bajo        | ❌ Alto        |
+| **Over-engineering** | ✅ Bajo        | ❌ Alto        |
+| **Time-to-market**   | ✅ 2-3 semanas | ⚠️ 4-5 semanas |
+| **Acceso no autor.** | ⚠️ Medio       | ✅ Bajo        |
+| **Cost ($)**         | ✅ $0          | ⚠️ $0-$300/año |
+| **Reversibilidad**   | ✅ Total       | ❌ N/A         |
 
 **Decisión:** El riesgo de validación lenta (over-engineering) es MAYOR que el riesgo de acceso no autorizado en red interna.
 
@@ -315,43 +320,36 @@ export function middleware(request: NextRequest) {
 ### Positivas ✅
 
 1. **Time-to-Market Acelerado**
-
    - **Beneficio:** MVP funcional en 2-3 semanas (vs 4-5 con auth)
    - **Cuantificado:** 33-40% reducción en tiempo de desarrollo inicial
    - **Impacto:** Validación temprana del producto con usuario real
 
 2. **Foco 100% en Business Logic**
-
    - **Beneficio:** Todo el esfuerzo en features core (payments, allocations, cuotas)
    - **Evitado:** Debugging de OAuth flows, session management, UI de login
    - **ROI:** 15 horas ahorradas = 15 horas en validar flujos de negocio
 
 3. **Complejidad Mínima del MVP**
-
    - **Beneficio:** Codebase simple, fácil de iterar
    - **Evitado:** 4 tablas Prisma adicionales (User, Account, Session, VerificationToken)
    - **Mantenibilidad:** Menos código = menos bugs, menos tests
 
 4. **Zero Vendor Lock-in Inicial**
-
    - **Beneficio:** No dependemos de Clerk/Stack Auth desde día 1
    - **Flexibilidad:** Podemos evaluar opciones con datos reales de uso
    - **Ejemplo:** Si después necesitamos SAML (enterprise), evaluamos Clerk vs WorkOS
 
 5. **Reducción de Riesgo de Over-Engineering**
-
    - **Beneficio:** No construimos features que quizás nunca necesitemos
    - **Principio:** YAGNI (You Ain't Gonna Need It)
    - **Ejemplo real:** Muchos MVPs nunca escalan a >10 usuarios (auth enterprise innecesario)
 
 6. **Iteración Ágil sin Overhead**
-
    - **Beneficio:** Cambios en flujo de negocio sin tocar auth
    - **Velocidad:** Deploy rápido, sin preocuparnos por sessions/logout
    - **Testing:** E2E tests sin mock de auth
 
 7. **Reversibilidad Total (No Burning Bridges)**
-
    - **Beneficio:** Decisión es completamente reversible sin breaking changes
    - **Costo de migración:** 10-15 horas (mismo que implementar desde MVP)
    - **Data migration:** NO requerida (users table es independiente)
@@ -359,7 +357,6 @@ export function middleware(request: NextRequest) {
 ### Negativas / Trade-offs ⚠️
 
 1. **No Escalable a Múltiples Usuarios Sin Migración**
-
    - **Limitación:** MVP solo funciona para 1-2 usuarios internos
    - **Trigger para cambio:** Cuando >2 personas necesiten acceso
    - **Mitigación:**
@@ -368,7 +365,6 @@ export function middleware(request: NextRequest) {
      - ✅ Costo de migración es conocido y aceptable
 
 2. **Sistema NO Puede Ser Público Sin Auth**
-
    - **Limitación:** MVP debe ejecutarse en red interna o localhost
    - **Trigger para cambio:** Si necesitamos deploy público (Vercel + dominio)
    - **Mitigación:**
@@ -377,7 +373,6 @@ export function middleware(request: NextRequest) {
      - ✅ Cuando necesitemos público → Implementar auth (Fase 2)
 
 3. **Ausencia de Audit Logs por Usuario**
-
    - **Limitación:** No podemos saber "quién hizo qué" (no hay concepto de users)
    - **Impacto:** Auditoría limitada a timestamps y datos modificados
    - **Mitigación:**
@@ -412,7 +407,6 @@ export function middleware(request: NextRequest) {
    - Código: Pasar `userId` en mutations (2-3 horas)
 
 4. **Percepción de "No Production-Ready"**
-
    - **Limitación:** Stakeholders externos pueden ver falta de auth como "toy project"
    - **Impacto:** Si necesitamos mostrar a inversionistas/clientes, auth da credibilidad
    - **Mitigación:**
@@ -421,7 +415,6 @@ export function middleware(request: NextRequest) {
      - ✅ Roadmap de 3 fases muestra plan de producción (documentación)
 
 5. **Riesgo de Procrastinación en Implementar Auth**
-
    - **Limitación:** "Después agregamos auth" puede convertirse en deuda técnica permanente
    - **Impacto:** MVP crece sin auth, migración se vuelve más costosa
    - **Mitigación:**
@@ -676,13 +669,13 @@ El contexto específico de Cobralon justifica esta decisión:
 
 **Comparación con SaaS público:**
 
-| Factor                | Cobralon MVP                 | SaaS Público        |
-| --------------------- | ---------------------------- | ------------------- |
-| **Usuarios iniciales**| 1-2 (internos)               | 10-1000+ (externos) |
-| **Red**               | Local/LAN                    | Internet público    |
-| **Datos**             | Propios del negocio          | De terceros (PII)   |
-| **Compliance**        | No aplica                    | GDPR, SOC 2         |
-| **Auth necesario**    | ⚠️ Post-validación (Fase 2) | ✅ Desde día 1      |
+| Factor                 | Cobralon MVP                | SaaS Público        |
+| ---------------------- | --------------------------- | ------------------- |
+| **Usuarios iniciales** | 1-2 (internos)              | 10-1000+ (externos) |
+| **Red**                | Local/LAN                   | Internet público    |
+| **Datos**              | Propios del negocio         | De terceros (PII)   |
+| **Compliance**         | No aplica                   | GDPR, SOC 2         |
+| **Auth necesario**     | ⚠️ Post-validación (Fase 2) | ✅ Desde día 1      |
 
 ### Revisión Periódica
 

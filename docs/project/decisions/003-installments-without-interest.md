@@ -38,9 +38,7 @@ function generateInstallments(
   const installments = []
 
   // Cuota base (floor para evitar decimales extra)
-  const baseAmount = amount
-    .dividedBy(selectedInstallments)
-    .toDecimalPlaces(2, Decimal.ROUND_DOWN)
+  const baseAmount = amount.dividedBy(selectedInstallments).toDecimalPlaces(2, Decimal.ROUND_DOWN)
 
   // Total de primeras N-1 cuotas
   const totalBase = baseAmount.times(selectedInstallments - 1)
@@ -49,17 +47,17 @@ function generateInstallments(
   const lastAmount = amount.minus(totalBase)
 
   for (let i = 1; i <= selectedInstallments; i++) {
-    const isLast = (i === selectedInstallments)
+    const isLast = i === selectedInstallments
 
     // dueDate: primera cuota = payment.date, resto +30 días
     const dueDate = new Date(paymentDate)
-    dueDate.setDate(dueDate.getDate() + (30 * (i - 1)))
+    dueDate.setDate(dueDate.getDate() + 30 * (i - 1))
 
     installments.push({
       installmentNumber: i,
       amount: isLast ? lastAmount : baseAmount,
       dueDate,
-      status: "pending",
+      status: 'pending',
       paidDate: null,
     })
   }
@@ -69,6 +67,7 @@ function generateInstallments(
 ```
 
 **Ejemplo de generación:**
+
 ```
 Input: $1,000,000 en 6 cuotas
 
@@ -103,42 +102,46 @@ export async function POST(request: Request) {
   const installments = await prisma.installment.findMany({
     where: {
       status: 'pending',
-      dueDate: { lte: new Date() }  // Vencidas
-    }
+      dueDate: { lte: new Date() }, // Vencidas
+    },
   })
 
   // Marcar como pagadas (batch update)
   await prisma.installment.updateMany({
     where: {
-      id: { in: installments.map(i => i.id) }
+      id: { in: installments.map((i) => i.id) },
     },
     data: {
       status: 'paid',
-      paidDate: new Date()
-    }
+      paidDate: new Date(),
+    },
   })
 
   return Response.json({
     success: true,
-    marked: installments.length
+    marked: installments.length,
   })
 }
 ```
 
 **Schedule:** Vercel Cron ejecuta diariamente a medianoche UTC
+
 ```json
 // vercel.json
 {
-  "crons": [{
-    "path": "/api/cron/mark-installments-paid",
-    "schedule": "0 0 * * *"
-  }]
+  "crons": [
+    {
+      "path": "/api/cron/mark-installments-paid",
+      "schedule": "0 0 * * *"
+    }
+  ]
 }
 ```
 
 ### 3. Vista Global de Cuotas
 
 Página dedicada con filtros:
+
 - Status: `pending` | `paid`
 - Date range: Cuotas que vencen en próximos 30 días
 - Customer: Filtrar por cliente
@@ -149,6 +152,7 @@ Página dedicada con filtros:
 ### Alternativa 1: Cuotas CON INTERÉS (Tasa fija o variable)
 
 **Modelo financiero:**
+
 ```
 Ejemplo: $1,000,000 en 12 cuotas al 2% mensual (interés compuesto)
 
@@ -167,6 +171,7 @@ Resultado:
 ```
 
 **Pros:**
+
 - ✅ Revenue adicional significativo (13-20% del monto)
 - ✅ Común en industria financiera
 - ✅ Incentivo económico para empresa
@@ -202,19 +207,22 @@ Resultado:
 **Opciones evaluadas:**
 
 #### A) MercadoPago Cuotas (Latinoamérica)
+
 ```typescript
 // Ejemplo SDK MercadoPago
 const preference = {
-  items: [{
-    title: "Proyecto Renovación Casa",
-    quantity: 1,
-    unit_price: 1000000
-  }],
+  items: [
+    {
+      title: 'Proyecto Renovación Casa',
+      quantity: 1,
+      unit_price: 1000000,
+    },
+  ],
   installments: 12,
   payment_methods: {
     installments: 12,
-    default_installments: 12
-  }
+    default_installments: 12,
+  },
 }
 
 const response = await mercadopago.preferences.create(preference)
@@ -222,36 +230,41 @@ const response = await mercadopago.preferences.create(preference)
 ```
 
 **Pros:**
+
 - ✅ Pagos REALES (cobro automático con tarjeta)
 - ✅ Gateway maneja todo (intereses, compliance, cobro)
 - ✅ UI profesional (checkout page de MercadoPago)
 - ✅ Seguridad PCI-compliant
 
 **Contras:**
+
 - ❌ **Fees altos:**
-  * Transacción: 3.99% + IVA
-  * Cuotas: 2-4% adicional según plan
-  * Ejemplo: $1M pago = $40k + $20k fees = **$60k costo** (6%)
+  - Transacción: 3.99% + IVA
+  - Cuotas: 2-4% adicional según plan
+  - Ejemplo: $1M pago = $40k + $20k fees = **$60k costo** (6%)
 
 - ❌ **Vendor lock-in:**
-  * API específica de MercadoPago
-  * Migrar a otro gateway = reescribir todo
+  - API específica de MercadoPago
+  - Migrar a otro gateway = reescribir todo
 
 - ❌ **Complejidad:**
-  * Webhooks para sincronizar estado
-  * Manejo de failed payments (retry logic)
-  * Refunds y chargebacks
+  - Webhooks para sincronizar estado
+  - Manejo de failed payments (retry logic)
+  - Refunds y chargebacks
 
 - ❌ **Overhead:**
-  * Cuenta merchant (aprobación 1-2 semanas)
-  * Compliance docs (RUT, escrituras, etc.)
+  - Cuenta merchant (aprobación 1-2 semanas)
+  - Compliance docs (RUT, escrituras, etc.)
 
 #### B) Stripe Installments
+
 Similar a MercadoPago pero:
+
 - ❌ Fees: 2.9% + $0.30 USD por transacción + 1-2% installments fee
 - ❌ Menos adoptado en Chile (vs MercadoPago)
 
 **Por qué NO Payment Gateway:**
+
 - **MVP overkill:** No necesitamos cobro automático (relación directa con cliente)
 - **Costo:** $60k fees/año vs $0 con tracking interno
 - **Complejidad:** 3 semanas setup vs 2 horas
@@ -263,6 +276,7 @@ Similar a MercadoPago pero:
 **Ver sección "Decisión" arriba para detalles completos.**
 
 **Pros FUNDAMENTALES:**
+
 - ✅ **Simplicidad extrema:** Solo aritmética básica
 - ✅ **Zero compliance legal:** No es "crédito" (solo tracking interno)
 - ✅ **Sin fees de terceros:** $0 costo de transacción
@@ -272,6 +286,7 @@ Similar a MercadoPago pero:
 - ✅ **Precisión decimal garantizada:** Última cuota ajusta centavos
 
 **Contras ACEPTABLES:**
+
 - ⚠️ **No es pago real:** Solo tracking interno (no cobro automático)
 - ⚠️ **No hay revenue adicional:** Sin intereses ganados
 - ⚠️ **Cliente podría no pagar:** Sin enforcement automático
@@ -284,17 +299,18 @@ Similar a MercadoPago pero:
 1. **Cálculo Preciso Sin Pérdida de Centavos**
 
    Problema común con división de montos:
+
    ```typescript
    // ❌ Enfoque naive (pierde centavos)
-   const cuota = Math.floor(1000000 / 6)  // 166666
-   const total = cuota * 6                // 999996 ← Perdió $4
+   const cuota = Math.floor(1000000 / 6) // 166666
+   const total = cuota * 6 // 999996 ← Perdió $4
 
    // ✅ Enfoque actual (última cuota absorbe)
    const baseAmount = new Decimal(1000000).dividedBy(6).toDecimalPlaces(2, Decimal.ROUND_DOWN)
    // baseAmount = 166666.66
-   const totalBase = baseAmount.times(5)  // 833333.30
-   const lastAmount = new Decimal(1000000).minus(totalBase)  // 166666.70
-   const total = totalBase.plus(lastAmount)  // 1000000.00 ✅
+   const totalBase = baseAmount.times(5) // 833333.30
+   const lastAmount = new Decimal(1000000).minus(totalBase) // 166666.70
+   const total = totalBase.plus(lastAmount) // 1000000.00 ✅
    ```
 
 2. **Automatización de Estado (Cron Job)**
@@ -323,6 +339,7 @@ Similar a MercadoPago pero:
 3. **Transparencia para Cliente**
 
    Cliente sabe EXACTAMENTE cuánto pagará:
+
    ```
    Presupuesto: $5,000,000
    Cuotas: 10 sin interés
@@ -383,6 +400,7 @@ Similar a MercadoPago pero:
    **Trade-off:** No hay cobro automático.
 
    **Riesgo assessment:**
+
    ```
    Escenario A: Cliente paga a tiempo
    - Probabilidad: 80% (clientes conocidos, relación directa)
@@ -443,6 +461,7 @@ Similar a MercadoPago pero:
 **Decisión:** Intervalo fijo de 30 días (no "1 mes").
 
 **Razón:** Simplicidad y predictibilidad
+
 ```typescript
 // ✅ Actual (30 días fijo)
 dueDate.setDate(dueDate.getDate() + 30)
@@ -463,6 +482,7 @@ dueDate.setMonth(dueDate.getMonth() + 1)
 Si en el futuro se necesita agregar características:
 
 1. **Intereses:**
+
    ```prisma
    model Installment {
      // Campos actuales...
@@ -473,6 +493,7 @@ Si en el futuro se necesita agregar características:
    ```
 
 2. **Integración Payment Gateway:**
+
    ```prisma
    model Installment {
      // Campos actuales...
@@ -496,12 +517,12 @@ Si en el futuro se necesita agregar características:
 
 Empresas de construcción en Chile (benchmark informal):
 
-| Empresa | Ofrece Cuotas | Con Interés | Número Máximo |
-|---------|---------------|-------------|---------------|
-| Empresa A | ✅ Sí | ✅ 2% mensual | 12 cuotas |
-| Empresa B | ❌ No | N/A | Solo contado |
-| Empresa C | ✅ Sí | ❌ Sin interés | 6 cuotas |
-| **Este proyecto** | ✅ Sí | ❌ Sin interés | **12 cuotas** |
+| Empresa           | Ofrece Cuotas | Con Interés    | Número Máximo |
+| ----------------- | ------------- | -------------- | ------------- |
+| Empresa A         | ✅ Sí         | ✅ 2% mensual  | 12 cuotas     |
+| Empresa B         | ❌ No         | N/A            | Solo contado  |
+| Empresa C         | ✅ Sí         | ❌ Sin interés | 6 cuotas      |
+| **Este proyecto** | ✅ Sí         | ❌ Sin interés | **12 cuotas** |
 
 **Ventaja competitiva:** Más cuotas sin interés que Empresa C, más flexible que Empresa B.
 

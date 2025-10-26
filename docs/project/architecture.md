@@ -28,15 +28,15 @@ Sistema de gestión integral para empresas que manejan:
 
 ### Stack Tecnológico Principal
 
-| Capa | Tecnología | Propósito |
-|------|------------|-----------|
-| **Frontend** | Next.js 15 + React 19 | App Router, Server Components |
-| **UI** | shadcn/ui + Tailwind v4 | Sistema de componentes |
-| **Backend** | Next.js API Routes | RESTful APIs |
-| **Database** | PostgreSQL (Neon) | Datos relacionales |
-| **ORM** | Prisma 6.7 | Type-safe queries |
-| **Validation** | Zod + React Hook Form | Validación frontend/backend |
-| **State** | React Context API | Configuración global |
+| Capa           | Tecnología              | Propósito                     |
+| -------------- | ----------------------- | ----------------------------- |
+| **Frontend**   | Next.js 15 + React 19   | App Router, Server Components |
+| **UI**         | shadcn/ui + Tailwind v4 | Sistema de componentes        |
+| **Backend**    | Next.js API Routes      | RESTful APIs                  |
+| **Database**   | PostgreSQL (Neon)       | Datos relacionales            |
+| **ORM**        | Prisma 6.7              | Type-safe queries             |
+| **Validation** | Zod + React Hook Form   | Validación frontend/backend   |
+| **State**      | React Context API       | Configuración global          |
 
 ---
 
@@ -222,15 +222,15 @@ Sistema de gestión integral para empresas que manejan:
 
 ### Relaciones Clave
 
-| Relación | Tipo | onDelete Policy | Razón |
-|----------|------|-----------------|-------|
-| **Customer → Project** | 1:N | CASCADE | Si se elimina cliente, eliminar proyectos |
-| **Customer → Payment** | 1:N | _(no especificado)_ | Preservar historial de pagos |
-| **Project → ProjectStatus** | N:1 | RESTRICT | No eliminar estado si hay proyectos usándolo |
-| **Project ← PaymentAllocation** | 1:N | _(default)_ | Preservar asignaciones |
-| **Payment → PaymentAllocation** | 1:N | CASCADE | Si se elimina pago, eliminar asignaciones |
-| **Payment → Installment** | 1:N | CASCADE | Si se elimina pago, eliminar cuotas |
-| **Payment → PaymentMethod** | N:1 | _(no especificado)_ | Preservar métodos históricos |
+| Relación                        | Tipo | onDelete Policy     | Razón                                        |
+| ------------------------------- | ---- | ------------------- | -------------------------------------------- |
+| **Customer → Project**          | 1:N  | CASCADE             | Si se elimina cliente, eliminar proyectos    |
+| **Customer → Payment**          | 1:N  | _(no especificado)_ | Preservar historial de pagos                 |
+| **Project → ProjectStatus**     | N:1  | RESTRICT            | No eliminar estado si hay proyectos usándolo |
+| **Project ← PaymentAllocation** | 1:N  | _(default)_         | Preservar asignaciones                       |
+| **Payment → PaymentAllocation** | 1:N  | CASCADE             | Si se elimina pago, eliminar asignaciones    |
+| **Payment → Installment**       | 1:N  | CASCADE             | Si se elimina pago, eliminar cuotas          |
+| **Payment → PaymentMethod**     | N:1  | _(no especificado)_ | Preservar métodos históricos                 |
 
 ---
 
@@ -260,6 +260,7 @@ Sistema de gestión integral para empresas que manejan:
 ```
 
 **Componentes:**
+
 - Form: `components/forms/projects/project-form.tsx`
 - Dialog: `components/dialogs/projects/new-project-dialog.tsx`
 - API: `POST /api/projects`
@@ -291,6 +292,7 @@ Balance del proyecto = total - SUM(allocations)
 ```
 
 **Componentes:**
+
 - Form: `components/forms/payments/payment-to-project-form.tsx`
 - Dialog: `components/dialogs/payments/payment-to-project-dialog.tsx`
 - API: `POST /api/payments` (validación: allocations.length === 1)
@@ -322,6 +324,7 @@ Sistema crea en transacción:
 ```
 
 **Componentes:**
+
 - Form: `components/forms/payments/payment-to-customer-form.tsx`
 - Dialog: `components/dialogs/payments/payment-to-customer-dialog.tsx`
 - Business Logic: `lib/business-logic/payment-fifo.ts`
@@ -360,8 +363,9 @@ Log detallado en consola
 ```
 
 **Componentes:**
+
 - Cron: `app/api/cron/mark-installments-paid/route.ts`
-- Config: `vercel.json` (schedule: "0 0 * * *" = diario a medianoche)
+- Config: `vercel.json` (schedule: "0 0 \* \* \*" = diario a medianoche)
 - Página: `app/payments/installments/page.tsx`
 
 ---
@@ -382,6 +386,7 @@ Sistema actualiza en tiempo real el Combobox de ProjectForm
 ```
 
 **Componentes:**
+
 - Page: `app/settings/project-status/page.tsx`
 - Form: `components/forms/settings/project-status-form.tsx`
 - Dialog: `components/dialogs/settings/project-status-dialog.tsx`
@@ -506,16 +511,19 @@ Sistema actualiza en tiempo real el Combobox de ProjectForm
 **Decisión:** Tabla intermedia N:M entre Payment y Project
 
 **Alternativas consideradas:**
+
 - ❌ **FK directo** (`payment.projectId`): No soporta pago a múltiples proyectos
 - ❌ **Embedded JSON**: Pierde normalización y consultas complejas
 
 **Razones:**
+
 1. ✅ **Flexibilidad:** Un pago puede asignarse a 1 o N proyectos
 2. ✅ **Auditoría:** Historial completo de asignaciones
 3. ✅ **Balance calculado:** `SUM(allocations.allocatedAmount) GROUP BY project`
 4. ✅ **Tipos de pago:** Soporta tanto "Project" (1:1) como "Customer" (1:N)
 
 **Trade-offs:**
+
 - ⚠️ **Complejidad:** Requiere validación `SUM(allocations) === payment.amount`
 - ⚠️ **Queries:** JOIN adicional para obtener balance
 - ✅ **Mitigación:** Business logic centralizada en `lib/business-logic/`
@@ -527,21 +535,24 @@ Sistema actualiza en tiempo real el Combobox de ProjectForm
 **Decisión:** Tipo `Decimal` de Prisma con precisión 12,2
 
 **Alternativas consideradas:**
+
 - ❌ **Float/Double**: Errores de redondeo en operaciones financieras
 - ❌ **Int (centavos)**: Complica formateo y validaciones
 
 **Razones:**
+
 1. ✅ **Exactitud:** Sin errores de punto flotante
 2. ✅ **Standard financiero:** 2 decimales suficiente para CLP, USD, EUR
 3. ✅ **Rango:** 12 dígitos = hasta $999,999,999,999.99 (suficiente)
 4. ✅ **Prisma support:** Mapea a `DECIMAL` PostgreSQL nativamente
 
 **Constantes:**
+
 ```typescript
 // lib/constants/financial-constants.ts
 export const FINANCIAL = {
-  DECIMAL_PRECISION: 0.01,  // 2 decimales
-  TOLERANCE: 0.01,          // Para comparaciones float
+  DECIMAL_PRECISION: 0.01, // 2 decimales
+  TOLERANCE: 0.01, // Para comparaciones float
 }
 ```
 
@@ -549,14 +560,15 @@ export const FINANCIAL = {
 
 ### 3. ¿Por qué onDelete: CASCADE vs RESTRICT?
 
-| Relación | Policy | Razón |
-|----------|--------|-------|
-| **Customer → Project** | CASCADE | Eliminar cliente implica eliminar sus proyectos (dato de negocio) |
-| **Payment → Allocation** | CASCADE | Eliminar pago debe eliminar asignaciones (coherencia) |
-| **Payment → Installment** | CASCADE | Eliminar pago debe eliminar cuotas (coherencia) |
-| **Project → ProjectStatus** | RESTRICT | Proteger: no eliminar estado si hay proyectos activos |
+| Relación                    | Policy   | Razón                                                             |
+| --------------------------- | -------- | ----------------------------------------------------------------- |
+| **Customer → Project**      | CASCADE  | Eliminar cliente implica eliminar sus proyectos (dato de negocio) |
+| **Payment → Allocation**    | CASCADE  | Eliminar pago debe eliminar asignaciones (coherencia)             |
+| **Payment → Installment**   | CASCADE  | Eliminar pago debe eliminar cuotas (coherencia)                   |
+| **Project → ProjectStatus** | RESTRICT | Proteger: no eliminar estado si hay proyectos activos             |
 
 **Filosofía:**
+
 - CASCADE para relaciones de "ownership" (parent owns child)
 - RESTRICT para relaciones de "reference" (child references config)
 
@@ -567,16 +579,19 @@ export const FINANCIAL = {
 **Decisión:** Tabla `Installment` separada (1:N con Payment)
 
 **Alternativas consideradas:**
+
 - ❌ **JSON field**: Pierdes queries por cuota individual
 - ❌ **N Payments**: Confunde historial (1 pago ≠ N pagos)
 
 **Razones:**
+
 1. ✅ **Queries individuales:** `SELECT * FROM installments WHERE status='pending'`
 2. ✅ **Cron job:** Fácil marcar cuotas vencidas como "paid"
 3. ✅ **Auditoría:** Historial completo por cuota (paidDate, status)
 4. ✅ **Reportes:** "Cuotas por vencer", "Cuotas pendientes del cliente X"
 
 **Ejemplo cron:**
+
 ```sql
 UPDATE installments
 SET status = 'paid', paidDate = NOW()
@@ -590,16 +605,19 @@ WHERE status = 'pending' AND dueDate <= CURRENT_DATE
 **Contexto:** Migración desde sistema legacy con campo String
 
 **Solución:**
+
 - `projectStatusLegacy: String` (campo viejo, default "")
 - `projectStatusId: UUID?` (relación nueva, opcional)
 
 **Razones:**
+
 1. ✅ **Migración progresiva:** Proyectos viejos mantienen string legacy
 2. ✅ **Sin breaking changes:** Código viejo sigue funcionando
 3. ✅ **Nuevos proyectos:** Usan `projectStatusId` con colores/flags
 4. ⚠️ **Deuda técnica:** En futuro, migrar todos y eliminar legacy field
 
 **Estado actual:**
+
 - Nuevos proyectos: `projectStatusId` (FK)
 - Proyectos legacy: `projectStatusLegacy` (String) + `projectStatusId = null`
 
@@ -610,10 +628,12 @@ WHERE status = 'pending' AND dueDate <= CURRENT_DATE
 **Decisión:** Context API con país/región/comuna/locale/currency
 
 **Alternativas consideradas:**
+
 - ❌ **next-intl**: Overkill para solo Chile actualmente
 - ❌ **Hardcoded CLP**: No extensible a otros países
 
 **Razones:**
+
 1. ✅ **Preparación:** Base para futuro multi-país
 2. ✅ **Simplicidad:** Context API sin librerías externas
 3. ✅ **Persistencia:** localStorage + hydration automática
@@ -621,6 +641,7 @@ WHERE status = 'pending' AND dueDate <= CURRENT_DATE
 5. ✅ **Componentes regionales:** PhoneInput, CurrencyInput, RutInput
 
 **Implementación:**
+
 ```typescript
 // lib/contexts/configuration-context.tsx
 const ConfigurationContext = createContext({
@@ -636,16 +657,16 @@ const ConfigurationContext = createContext({
 
 ### Resumen
 
-| Entidad | Endpoints | Paginación | Filtros | Includes |
-|---------|-----------|------------|---------|----------|
-| **Customers** | 4 | ✅ | search (name, email, phone) | - |
-| **Projects** | 4 | ✅ | customerId, statusId, dateRange | customer, projectStatus, allocations |
-| **Payments** | 6 | ✅ | customerId, projectId, dateRange | customer, paymentMethod, allocations.project |
-| **Installments** | 1 | ✅ | status, paymentId, customerId, dateRange | payment.customer, payment.allocations |
-| **ProjectStatus** | 4 | ❌ | - | color |
-| **PaymentMethods** | 2 | ❌ | active | - |
-| **BadgeColors** | 1 | ❌ | - | - |
-| **Cron** | 1 | ❌ | - | - |
+| Entidad            | Endpoints | Paginación | Filtros                                  | Includes                                     |
+| ------------------ | --------- | ---------- | ---------------------------------------- | -------------------------------------------- |
+| **Customers**      | 4         | ✅         | search (name, email, phone)              | -                                            |
+| **Projects**       | 4         | ✅         | customerId, statusId, dateRange          | customer, projectStatus, allocations         |
+| **Payments**       | 6         | ✅         | customerId, projectId, dateRange         | customer, paymentMethod, allocations.project |
+| **Installments**   | 1         | ✅         | status, paymentId, customerId, dateRange | payment.customer, payment.allocations        |
+| **ProjectStatus**  | 4         | ❌         | -                                        | color                                        |
+| **PaymentMethods** | 2         | ❌         | active                                   | -                                            |
+| **BadgeColors**    | 1         | ❌         | -                                        | -                                            |
+| **Cron**           | 1         | ❌         | -                                        | -                                            |
 
 ### Detalle de Endpoints Principales
 
@@ -661,10 +682,12 @@ GET    /api/customers/list      → Lista simple (para dropdowns)
 ```
 
 **Query params (GET /api/customers):**
+
 - `page`, `limit`: Paginación (default: page=1, limit=10, max=100)
 - `search`: Busca en name, email, phone (case-insensitive)
 
 **Validaciones:**
+
 - `name`: Required, String, min 1 char
 - `phone`: Required, String, min 1 char (validado con PhoneInput E.164)
 - `email`: Optional, String, format email, unique
@@ -682,12 +705,14 @@ DELETE /api/projects/[id]       → Eliminar
 ```
 
 **Query params (GET /api/projects):**
+
 - `page`, `limit`: Paginación
 - `customerId`: Filtrar por cliente
 - `projectStatusId`: Filtrar por estado
 - `startDate`, `endDate`: Rango de fechas
 
 **Includes (GET):**
+
 ```typescript
 include: {
   customer: { select: { id, name, phone } },
@@ -704,6 +729,7 @@ include: {
 ```
 
 **Performance:**
+
 - ✅ `relationLoadStrategy: 'join'` (fix N+1)
 - ✅ Índices compuestos: `[customerId, projectStatusId]`, `[projectStatusId, date DESC]`
 
@@ -723,6 +749,7 @@ GET    /api/payments/customer-projects → Proyectos de cliente específico
 ```
 
 **POST Body:**
+
 ```typescript
 {
   type: "Project" | "Customer",
@@ -741,6 +768,7 @@ GET    /api/payments/customer-projects → Proyectos de cliente específico
 ```
 
 **Validaciones backend:**
+
 1. ✅ `type === "Project"` → `allocations.length === 1`
 2. ✅ `type === "Customer"` → `allocations.length >= 1`
 3. ✅ `SUM(allocations.allocatedAmount) === amount` (tolerancia 0.01)
@@ -749,6 +777,7 @@ GET    /api/payments/customer-projects → Proyectos de cliente específico
 6. ✅ No projectIds duplicados
 
 **Creación de Installments (automática):**
+
 ```typescript
 if (selectedInstallments > 1) {
   // Crear N cuotas:
@@ -770,6 +799,7 @@ GET    /api/installments        → Vista global con filtros
 ```
 
 **Query params:**
+
 - `page`, `limit`: Paginación
 - `status`: "pending" | "paid"
 - `paymentId`: Filtrar por pago
@@ -777,6 +807,7 @@ GET    /api/installments        → Vista global con filtros
 - `startDate`, `endDate`: Rango de vencimiento (dueDate)
 
 **Includes:**
+
 ```typescript
 include: {
   payment: {
@@ -796,9 +827,10 @@ include: {
 ```
 
 **Order:**
+
 ```typescript
 orderBy: [
-  { dueDate: 'asc' },           // Vencimientos próximos primero
+  { dueDate: 'asc' }, // Vencimientos próximos primero
   { installmentNumber: 'asc' }, // Número de cuota
 ]
 ```
@@ -812,6 +844,7 @@ POST   /api/cron/mark-installments-paid
 ```
 
 **Autenticación:**
+
 ```typescript
 const authHeader = request.headers.get('authorization')
 const cronSecret = process.env.CRON_SECRET
@@ -822,18 +855,22 @@ if (authHeader !== `Bearer ${cronSecret}`) {
 ```
 
 **Lógica:**
+
 1. Buscar: `WHERE status='pending' AND dueDate <= NOW()`
 2. Batch update: `SET status='paid', paidDate=NOW()`
 3. Log detallado de cuotas marcadas
 
 **Configuración Vercel:**
+
 ```json
 // vercel.json
 {
-  "crons": [{
-    "path": "/api/cron/mark-installments-paid",
-    "schedule": "0 0 * * *"  // Diario a medianoche UTC
-  }]
+  "crons": [
+    {
+      "path": "/api/cron/mark-installments-paid",
+      "schedule": "0 0 * * *" // Diario a medianoche UTC
+    }
+  ]
 }
 ```
 
@@ -895,11 +932,18 @@ export function useConfiguration() {
 
   return {
     // Estado
-    pais, region, ciudad, comuna,
-    currency, locale,
+    pais,
+    region,
+    ciudad,
+    comuna,
+    currency,
+    locale,
 
     // Setters
-    setPais, setRegion, setCiudad, setComuna,
+    setPais,
+    setRegion,
+    setCiudad,
+    setComuna,
 
     // Helpers
     resetConfiguration,

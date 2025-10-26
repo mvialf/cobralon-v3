@@ -13,6 +13,7 @@ El proyecto requería un database provider para PostgreSQL con las siguientes ne
 ### Requisitos del Proyecto
 
 **Funcionales:**
+
 - PostgreSQL real (no MySQL, no NoSQL)
 - Foreign Keys obligatorias (integridad referencial crítica)
 - 10 tablas relacionales con relaciones complejas (N:M, CASCADE, RESTRICT)
@@ -20,6 +21,7 @@ El proyecto requería un database provider para PostgreSQL con las siguientes ne
 - Índices compuestos para performance
 
 **No Funcionales:**
+
 - Free tier para MVP (Budget: $0/mes ideal)
 - Performance: <100ms queries (con 500-5000 proyectos esperados)
 - DX: Setup rápido (<30 min desde cero a DB funcionando)
@@ -29,6 +31,7 @@ El proyecto requería un database provider para PostgreSQL con las siguientes ne
 ### Contexto del Template
 
 El template ya incluía [ADR-008: Prisma + Neon](../../template/decisions/008-prisma-neon.md) que decidía:
+
 - **ORM:** Prisma (vs Drizzle, raw SQL)
 - **Database:** PostgreSQL (vs MySQL, MongoDB)
 - **Provider sugerido:** Neon
@@ -48,6 +51,7 @@ DIRECT_URL="postgresql://user:pass@ep-xxx.us-east-2.aws.neon.tech/neondb?sslmode
 ```
 
 **Explanation:**
+
 - `DATABASE_URL`: Pooled connection (para serverless, Next.js API routes)
 - `DIRECT_URL`: Direct connection (para migrations, Prisma Studio)
 
@@ -64,6 +68,7 @@ DIRECT_URL="postgresql://user:pass@ep-xxx.us-east-2.aws.neon.tech/neondb?sslmode
 ### Alternativa 1: Supabase (PostgreSQL + All-in-one)
 
 **Features:**
+
 - PostgreSQL real
 - Auth integrado (Supabase Auth)
 - Storage integrado (S3-like buckets)
@@ -71,6 +76,7 @@ DIRECT_URL="postgresql://user:pass@ep-xxx.us-east-2.aws.neon.tech/neondb?sslmode
 - Row-level security (RLS) policies
 
 **Pros:**
+
 - ✅ All-in-one: DB + Auth + Storage en un solo provider
 - ✅ UI bonita (dashboard, SQL editor intuitivo)
 - ✅ Free tier generoso: 500MB DB + 2GB bandwidth
@@ -79,6 +85,7 @@ DIRECT_URL="postgresql://user:pass@ep-xxx.us-east-2.aws.neon.tech/neondb?sslmode
 **Contras CRÍTICOS (por qué NO):**
 
 1. **Vendor lock-in ALTO:**
+
    ```typescript
    // ❌ Supabase Auth (no estándar)
    import { createClient } from '@supabase/supabase-js'
@@ -104,6 +111,7 @@ DIRECT_URL="postgresql://user:pass@ep-xxx.us-east-2.aws.neon.tech/neondb?sslmode
    - Cold starts más lentos que Neon
 
 **Score:** 53.5/100
+
 - Vendor lock-in: -20 puntos
 - Features innecesarias: -15 puntos
 - Auth friction: -11.5 puntos
@@ -113,12 +121,14 @@ DIRECT_URL="postgresql://user:pass@ep-xxx.us-east-2.aws.neon.tech/neondb?sslmode
 ### Alternativa 2: PlanetScale (MySQL with Vitess)
 
 **Features:**
+
 - MySQL serverless
 - Database branching (similar a Git)
 - Zero-downtime schema changes
 - Autoscaling horizontal (Vitess)
 
 **Pros:**
+
 - ✅ Branching workflow similar a Git
 - ✅ Performance excelente (Vitess usado por YouTube)
 - ✅ Free tier: 1 billion row reads/month
@@ -126,6 +136,7 @@ DIRECT_URL="postgresql://user:pass@ep-xxx.us-east-2.aws.neon.tech/neondb?sslmode
 **Contras DEAL-BREAKER:**
 
 1. **NO soporta Foreign Keys:**
+
    ```sql
    -- ❌ Esto falla en PlanetScale
    CREATE TABLE payment_allocations (
@@ -136,6 +147,7 @@ DIRECT_URL="postgresql://user:pass@ep-xxx.us-east-2.aws.neon.tech/neondb?sslmode
    ```
 
    **Impacto en este proyecto:**
+
    ```prisma
    // Relaciones críticas que NO funcionarían:
 
@@ -163,6 +175,7 @@ DIRECT_URL="postgresql://user:pass@ep-xxx.us-east-2.aws.neon.tech/neondb?sslmode
    ```
 
 2. **MySQL en lugar de PostgreSQL:**
+
    ```sql
    -- PostgreSQL (mejor para financials)
    amount DECIMAL(12,2)  -- Exacto
@@ -175,6 +188,7 @@ DIRECT_URL="postgresql://user:pass@ep-xxx.us-east-2.aws.neon.tech/neondb?sslmode
    - Menos features avanzados (CTE, Window functions limitadas)
 
 **Score:** 77.0/100 (alto, pero FKs son CRÍTICOS)
+
 - No FKs: **DEAL-BREAKER** → Descalificado
 
 ---
@@ -182,6 +196,7 @@ DIRECT_URL="postgresql://user:pass@ep-xxx.us-east-2.aws.neon.tech/neondb?sslmode
 ### Alternativa 3: Railway (PostgreSQL managed)
 
 **Features:**
+
 - PostgreSQL real (sin restricciones)
 - Deploy automático de Prisma migrations
 - Integración con GitHub
@@ -189,6 +204,7 @@ DIRECT_URL="postgresql://user:pass@ep-xxx.us-east-2.aws.neon.tech/neondb?sslmode
 - Logs y metrics
 
 **Pros:**
+
 - ✅ Simple setup (1 click desde dashboard)
 - ✅ Buen DX (railway.app UX moderna)
 - ✅ PostgreSQL sin restricciones (FKs, extensions, todo funciona)
@@ -197,6 +213,7 @@ DIRECT_URL="postgresql://user:pass@ep-xxx.us-east-2.aws.neon.tech/neondb?sslmode
 **Contras:**
 
 1. **Pricing más caro:**
+
    ```
    Free tier: $5 credit/month
    - DB pequeña: ~$3-4/month
@@ -208,6 +225,7 @@ DIRECT_URL="postgresql://user:pass@ep-xxx.us-east-2.aws.neon.tech/neondb?sslmode
    ```
 
 2. **No database branching:**
+
    ```bash
    # ❌ Railway: No hay branches
    # Testing migration = aplicar directo a production DB (riesgoso)
@@ -226,6 +244,7 @@ DIRECT_URL="postgresql://user:pass@ep-xxx.us-east-2.aws.neon.tech/neondb?sslmode
    - Neon es especializado en PostgreSQL
 
 **Score:** 49.5/100
+
 - Costo: -20 puntos ($10-20/month vs $0)
 - No branching: -25 puntos (feature killer)
 - No autoscaling: -5.5 puntos
@@ -235,6 +254,7 @@ DIRECT_URL="postgresql://user:pass@ep-xxx.us-east-2.aws.neon.tech/neondb?sslmode
 ### Alternativa 4: AWS RDS PostgreSQL (Managed tradicional)
 
 **Features:**
+
 - PostgreSQL oficial (cualquier versión)
 - Backups automáticos (point-in-time recovery)
 - Multi-AZ availability (99.95% uptime)
@@ -242,6 +262,7 @@ DIRECT_URL="postgresql://user:pass@ep-xxx.us-east-2.aws.neon.tech/neondb?sslmode
 - Extensions ilimitadas
 
 **Pros:**
+
 - ✅ Production-grade (enterprise ready)
 - ✅ Compliance (SOC2, HIPAA, ISO, etc.)
 - ✅ Control total (versión PostgreSQL, extensions, tuning)
@@ -250,6 +271,7 @@ DIRECT_URL="postgresql://user:pass@ep-xxx.us-east-2.aws.neon.tech/neondb?sslmode
 **Contras para MVP:**
 
 1. **Costo ALTO:**
+
    ```
    db.t3.micro (2 vCPU, 1GB RAM):
    - Instance: $15/month
@@ -266,6 +288,7 @@ DIRECT_URL="postgresql://user:pass@ep-xxx.us-east-2.aws.neon.tech/neondb?sslmode
    ```
 
 2. **Complejidad setup:**
+
    ```
    Pasos requeridos:
    1. Crear VPC
@@ -289,6 +312,7 @@ DIRECT_URL="postgresql://user:pass@ep-xxx.us-east-2.aws.neon.tech/neondb?sslmode
    - Enterprise features: Overhead innecesario
 
 **Score:** 46.5/100
+
 - Costo: -30 puntos
 - Complejidad: -15 puntos
 - Overkill: -8 puntos
@@ -300,6 +324,7 @@ DIRECT_URL="postgresql://user:pass@ep-xxx.us-east-2.aws.neon.tech/neondb?sslmode
 **Features completas:**
 
 1. **Database Branching (Killer feature)**
+
    ```bash
    # Workflow seguro para migrations
 
@@ -325,6 +350,7 @@ DIRECT_URL="postgresql://user:pass@ep-xxx.us-east-2.aws.neon.tech/neondb?sslmode
    - Feature branches (nuevos modelos Prisma)
 
 2. **Zero Vendor Lock-in**
+
    ```typescript
    // ✅ PostgreSQL estándar (no Neon-specific SQL)
    // Migrar a Supabase/Railway/RDS:
@@ -338,6 +364,7 @@ DIRECT_URL="postgresql://user:pass@ep-xxx.us-east-2.aws.neon.tech/neondb?sslmode
    ```
 
 3. **Autoscaling Compute**
+
    ```
    Free tier behavior:
    - DB hiberna después de 5 min inactividad
@@ -350,6 +377,7 @@ DIRECT_URL="postgresql://user:pass@ep-xxx.us-east-2.aws.neon.tech/neondb?sslmode
    ```
 
 4. **Connection Pooling Integrado**
+
    ```
    DATABASE_URL con ?pgbouncer=true
    → PgBouncer automático
@@ -358,6 +386,7 @@ DIRECT_URL="postgresql://user:pass@ep-xxx.us-east-2.aws.neon.tech/neondb?sslmode
    ```
 
 5. **Free Tier Generoso**
+
    ```
    Incluye:
    - 512MB storage (suficiente para 5000-10000 proyectos)
@@ -382,6 +411,7 @@ DIRECT_URL="postgresql://user:pass@ep-xxx.us-east-2.aws.neon.tech/neondb?sslmode
    ```
 
 **Pricing:**
+
 ```
 Free tier (actual):
 - $0/month forever (mientras <512MB)
@@ -403,6 +433,7 @@ Scale tier (si creces):
 1. **Database Branching = Testing Seguro**
 
    Implementaciones reales que usaron branching:
+
    ```bash
    # Implementación #17: Database optimization
    neon branches create --name test-composite-indexes
@@ -420,6 +451,7 @@ Scale tier (si creces):
 2. **Zero Vendor Lock-in**
 
    Migración futura (si necesaria):
+
    ```bash
    # Paso 1: Dump con pg_dump estándar
    pg_dump $NEON_URL > backup.sql
@@ -439,6 +471,7 @@ Scale tier (si creces):
 3. **Free Tier Permite MVP Completo**
 
    Proyección de uso:
+
    ```
    Proyectos actuales: 14
    Proyectos estimados año 1: 500
@@ -450,6 +483,7 @@ Scale tier (si creces):
 4. **Performance con Autoscaling**
 
    Metrics actuales (con 14 proyectos):
+
    ```
    - Cold start: ~150ms (aceptable)
    - Warm queries: <10ms
@@ -462,6 +496,7 @@ Scale tier (si creces):
 5. **DX: Neon MCP Integration**
 
    Ejemplo de uso:
+
    ```
    Usuario: "Claude, crea branch de testing para migration X"
    Claude (usa Neon MCP):
@@ -553,6 +588,7 @@ Scale tier (si creces):
 ### ¿Cuándo Migrar a Scale Tier ($19/month)?
 
 Triggers para upgrade:
+
 - ✅ DB size > 400MB (cerca del límite de 512MB)
 - ✅ Compute sleep afecta UX (usuarios se quejan de cold starts)
 - ✅ Necesitas >3 proyectos Neon
@@ -563,6 +599,7 @@ Triggers para upgrade:
 ### ¿Cuándo Migrar a Otro Provider?
 
 Escenarios de migración:
+
 - Neon discontinúa servicio (unlikely)
 - Pricing cambia drásticamente (10x+ aumento)
 - Necesitas features enterprise de RDS (multi-AZ, compliance específico)
@@ -574,6 +611,7 @@ Escenarios de migración:
 Más allá de testing migrations:
 
 1. **Feature Development:**
+
    ```bash
    # Developer trabaja en feature de reportes
    neon branches create --name feature-reports
@@ -583,6 +621,7 @@ Más allá de testing migrations:
    ```
 
 2. **Debugging Production Issues:**
+
    ```bash
    # Producción tiene bug con data específica
    neon branches create --name debug-issue-123 --parent main
