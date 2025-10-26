@@ -216,269 +216,35 @@ npx shadcn@latest add [component-name]
 - Iconos desde `lucide-react`
 - Path imports con alias `@/`
 
-## 🗄️ Database: Workflows Híbridos (Opcional)
+## 🗄️ Database
 
-El template incluye Prisma + Neon PostgreSQL. Puedes trabajar **manualmente** o usar **Neon MCP** (opcional) para acelerar tareas específicas.
+**Stack:** Prisma 6.7 + PostgreSQL (Neon)
 
-### Setup Manual (Recomendado para Aprender)
-
-**Proceso completo:**
-
-1. Ir a [neon.tech](https://neon.tech) y crear proyecto
-2. Copiar connection strings (DATABASE_URL + DIRECT_URL)
-3. Crear `.env.local` con las credenciales
-4. Ejecutar:
-   ```bash
-   npm run db:generate  # Genera Prisma Client
-   npm run db:push      # Aplica schema a DB
-   npm run db:seed      # Pobla con data de ejemplo
-   ```
-5. Verificar en Prisma Studio: `npm run db:studio`
-
-**Tiempo:** 15-20 minutos
-**Ventaja:** Entiendes cada paso
-**Cuándo:** Primera vez, aprendiendo el stack
-
-Ver guía completa: [docs/template/guides/database-setup.md](docs/template/guides/database-setup.md)
-
-### Setup Asistido con Neon MCP (Opcional)
-
-**Si configuraste Neon MCP** (ver [guía opcional](docs/template/guides/neon-mcp-optional.md)):
-
-```
-Usuario: "Claude, crea proyecto Neon para este template:
-- Nombre: mi-nuevo-saas
-- Región: us-east-2
-- Genera .env.local
-- Ejecuta setup completo de Prisma"
-
-Claude ejecuta automáticamente:
-✅ Crea proyecto en Neon
-✅ Actualiza .env.local con connection strings
-✅ npm run db:generate && db:push && db:seed
-✅ Listo en 2-3 minutos
-```
-
-**Tiempo:** 2-3 minutos
-**Ventaja:** Rápido para proyectos frecuentes
-**Cuándo:** Ya conoces el proceso, quieres velocidad
-
-**Nota:** Siempre **revisas el .env.local generado** antes de continuar.
-
-### Migraciones: Manual vs Asistido
-
-#### Migración Manual
+**Comandos críticos:**
 
 ```bash
-# 1. Editar schema.prisma (agregar/modificar modelos)
-# 2. Aplicar cambios
-npm run db:push          # Para desarrollo
-# o
-npm run db:migrate       # Para producción (crea migración versionada)
-
-# 3. Verificar en Neon dashboard que se aplicó
+npm run db:generate  # Genera Prisma Client
+npm run db:push      # Aplica schema (desarrollo)
+npm run db:migrate   # Migración versionada (producción)
+npm run db:seed      # Pobla data inicial
+npm run db:studio    # Prisma Studio (GUI)
 ```
 
-**Riesgo:** Si falla, rollback manual.
+**Setup inicial:** [docs/template/guides/database-setup.md](docs/template/guides/database-setup.md)
 
-#### Migración Asistida (Con Neon MCP)
+**Neon MCP (opcional):** Si configuraste Neon MCP, puedes usar comandos de lenguaje natural para migraciones seguras con database branching. Ver [docs/template/guides/neon-mcp-optional.md](docs/template/guides/neon-mcp-optional.md)
 
-```
-Usuario: "Necesito agregar tabla Posts con campos:
-- title (String)
-- content (Text)
-- authorId (FK a User)
-Hazlo en branch temporal primero"
-
-Claude (con Neon MCP):
-1. ✅ Crea branch DB temporal: migration-posts-table
-2. ✅ Actualiza schema.prisma
-3. ✅ Ejecuta migración en branch aislado
-4. ⚠️  "Prueba en localhost:3000, confirma si funciona"
-
-Usuario: "Funciona, aplica a main"
-
-Claude:
-5. ✅ Merge cambios a branch principal
-6. ✅ Elimina branch temporal
-```
-
-**Ventaja:** Si algo falla, el branch principal no se afecta. Database branching seguro.
-
-### Debugging de Queries
-
-#### Manual
-
-```bash
-# 1. Identificar query lenta en logs
-# 2. Copiar query a Neon SQL Editor
-# 3. Ejecutar EXPLAIN ANALYZE
-# 4. Analizar plan de ejecución
-# 5. Agregar índices manualmente
-```
-
-#### Asistido (Con Neon MCP)
-
-```
-Usuario: "Esta query es lenta:
-SELECT * FROM users WHERE email LIKE '%@gmail.com'
-¿Qué está mal?"
-
-Claude (usa explain_sql_statement):
-✅ Problema: Full table scan (no usa índice)
-✅ Sugerencia: El patrón '%...' impide uso de índice
-✅ Alternativa: Usar índice trigram o full-text search
-✅ ¿Crear índice optimizado?
-```
-
-### Cuándo Usar Cada Approach
-
-| Tarea                       | Manual                  | Con Neon MCP              |
-| --------------------------- | ----------------------- | ------------------------- |
-| **Primera vez aprendiendo** | ✅ Recomendado          | ❌ Puede ocultar detalles |
-| **Setup de proyecto nuevo** | ⏱️ 15-20 min            | ⚡ 2-3 min                |
-| **Migración simple**        | ✅ Rápido               | 🤷 Innecesario            |
-| **Migración riesgosa**      | ⚠️ Sin red de seguridad | ✅ Branch temporal        |
-| **Debug de performance**    | ⏱️ Requiere conocer SQL | ⚡ Lenguaje natural       |
-| **Desarrollo diario**       | ✅ Prisma Client        | ✅ Prisma Client          |
-
-**Recomendación:** Aprende el proceso **manual** primero. Usa Neon MCP cuando **quieras velocidad** o **seguridad extra** (branches).
+**Decisión:** [ADR-008: Prisma + Neon](docs/template/decisions/008-prisma-neon.md)
 
 ## 🔐 Autenticación (Opcional)
 
-El template **NO incluye autenticación** por defecto para máxima flexibilidad. Cada proyecto tiene requisitos diferentes.
+El template **NO incluye autenticación** por defecto. Cada proyecto tiene requisitos diferentes.
 
-### Guía Completa
+**Opciones:** Stack Auth (15-30 min) | NextAuth (2-3 hrs) | Clerk (10-15 min)
 
-**Ver:** [docs/template/guides/authentication-setup.md](docs/template/guides/authentication-setup.md)
+**Guía completa:** [docs/template/guides/authentication-setup.md](docs/template/guides/authentication-setup.md)
 
 **Decisión:** [ADR-009: Authentication Options](docs/template/decisions/009-authentication-options.md)
-
-### Quick Comparison
-
-| Opción         | Setup Time | UI Components | Best For                     |
-| -------------- | ---------- | ------------- | ---------------------------- |
-| **Stack Auth** | 15-30 min  | ✅ Sí         | Usuarios de Neon, velocidad  |
-| **NextAuth**   | 2-3 hrs    | ❌ No         | Control total, opensource    |
-| **Clerk**      | 10-15 min  | ✅ Sí         | Velocidad máxima, enterprise |
-
-### Opción A: Stack Auth (Recomendado para Neon)
-
-**Quick Start:**
-
-```bash
-# 1. Instalar Stack Auth
-npx @stackframe/init-stack . --no-browser
-
-# 2. Provisionar Neon Auth (si tienes Neon MCP configurado)
-# Claude puede hacerlo automáticamente
-
-# 3. Configurar .env.local
-NEXT_PUBLIC_STACK_PROJECT_ID="..."
-NEXT_PUBLIC_STACK_PUBLISHABLE_CLIENT_KEY="..."
-STACK_SECRET_SERVER_KEY="..."
-
-# 4. Crear página de login
-# Ver guía completa para código completo
-```
-
-**Componentes:**
-
-```tsx
-import { SignIn, UserButton } from "@stackframe/stack"
-
-// Página de login
-<SignIn />
-
-// User dropdown en sidebar
-<UserButton />
-```
-
-### Opción B: NextAuth.js
-
-**Quick Start:**
-
-```bash
-npm install next-auth@beta @auth/prisma-adapter
-
-# Requiere agregar 4 modelos a schema.prisma
-# Ver guía completa para setup detallado
-```
-
-**Ventajas:**
-
-- ✅ Control total sobre UI/UX
-- ✅ Zero vendor lock-in
-- ✅ Customización extrema
-
-**Desventajas:**
-
-- ⚠️ Debes crear UI manualmente
-- ⚠️ Setup más complejo (4 tablas DB)
-
-### Opción C: Clerk
-
-**Quick Start:**
-
-```bash
-npm install @clerk/nextjs
-
-# Configurar .env.local con API keys de Clerk
-# Ver guía completa
-```
-
-**Ventajas:**
-
-- ✅ Setup más rápido
-- ✅ UI completa incluida
-- ✅ Admin dashboard robusto
-
-**Desventajas:**
-
-- ⚠️ Vendor lock-in alto
-- ⚠️ Costo: $25/mes después de free tier
-
-### Cuándo Usar Cada Opción
-
-| Escenario                        | Recomendación |
-| -------------------------------- | ------------- |
-| Ya usas Neon, quieres rapidez    | Stack Auth    |
-| Necesitas control total          | NextAuth      |
-| Presupuesto OK, máxima velocidad | Clerk         |
-| Proyecto complejo, auth custom   | NextAuth      |
-| MVP rápido                       | Stack Auth    |
-| Enterprise con presupuesto       | Clerk         |
-
-### Configurar Neon MCP (Opcional)
-
-Si quieres probar el approach asistido:
-
-1. **Obtén tu Neon API Key:**
-   - Ve a: https://console.neon.tech/app/settings/api-keys
-   - Crea una nueva API key
-   - Cópiala (solo se muestra una vez)
-
-2. **Configura la variable de entorno:**
-
-   ```bash
-   # Agrega a tu ~/.bashrc o ~/.zshrc
-   export NEON_API_KEY="tu-api-key-aqui"
-
-   # Recarga tu shell
-   source ~/.bashrc  # o source ~/.zshrc
-   ```
-
-3. **Verifica la configuración:**
-   - `.mcp.json` ya incluye la configuración de Neon MCP
-   - Usa la variable `${NEON_API_KEY}` del shell
-
-4. **Reinicia Claude Code** para que detecte el MCP server
-
-**Importante:**
-
-- El template funciona perfectamente **sin Neon MCP**. Es completamente opcional.
-- La API key NO va en `.env.local` (eso es para Next.js, no para MCP)
-- Lee más: [docs/template/guides/neon-mcp-optional.md](docs/template/guides/neon-mcp-optional.md)
 
 ---
 

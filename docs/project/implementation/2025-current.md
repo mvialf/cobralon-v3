@@ -668,7 +668,6 @@ Registrar **implementaciones significativas** de este proyecto con:
 
 ---
 
-
 ## Quick Reference Index
 
 | #   | Implementación                                                   | Status      | Fecha      | Impact |
