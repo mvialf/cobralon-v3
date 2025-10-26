@@ -107,15 +107,11 @@ describe('calculateTax', () => {
   })
 
   it('debe rechazar tasa de impuesto negativa', () => {
-    expect(() => calculateTax(1000, -5)).toThrow(
-      'La tasa de impuesto debe estar entre 0% y 100%'
-    )
+    expect(() => calculateTax(1000, -5)).toThrow('La tasa de impuesto debe estar entre 0% y 100%')
   })
 
   it('debe rechazar tasa de impuesto mayor a 100%', () => {
-    expect(() => calculateTax(1000, 150)).toThrow(
-      'La tasa de impuesto debe estar entre 0% y 100%'
-    )
+    expect(() => calculateTax(1000, 150)).toThrow('La tasa de impuesto debe estar entre 0% y 100%')
   })
 })
 
