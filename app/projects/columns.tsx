@@ -16,6 +16,7 @@ import { ViewProjectDetailsSheet } from '@/components/dialogs/projects/view-proj
 import { ViewProjectPaymentsSheet } from '@/components/dialogs/projects/view-project-payments-sheet'
 import { PaymentToProjectDialog } from '@/components/dialogs/payments/payment-to-project-dialog'
 import { toast } from 'sonner'
+import { formatDate } from '@/lib/format'
 
 export interface Project {
   id: string
@@ -33,6 +34,7 @@ export interface Project {
   total: number // Decimal se convierte a number en JSON
   totalPaid: number // Total pagado (solo pagos ACTIVE) - calculado en backend
   balance: number // Saldo pendiente (total - totalPaid) - calculado en backend
+  percentPaid: number // Porcentaje pagado (0-100) - calculado en backend
   customer: {
     id: string
     name: string
@@ -116,15 +118,7 @@ export const createColumns = ({ onProjectDeleted }: ColumnsProps = {}): ColumnDe
     accessorKey: 'date',
     header: 'Fecha Ingreso',
     cell: ({ row }) => {
-      const date = row.original.date
-      // Convertir a Date si es string
-      const dateObj = typeof date === 'string' ? new Date(date) : date
-      // Formatear en español (dd/mm/yyyy)
-      return new Intl.DateTimeFormat('es-CL', {
-        day: '2-digit',
-        month: '2-digit',
-        year: 'numeric',
-      }).format(dateObj)
+      return formatDate(row.original.date, 'short', 'es-CL')
     },
   },
   {
@@ -132,15 +126,16 @@ export const createColumns = ({ onProjectDeleted }: ColumnsProps = {}): ColumnDe
     header: 'Total Pagado',
     cell: ({ row }) => {
       const totalPaid = row.original.totalPaid
-      const total = row.original.total
+      const percentPaid = row.original.percentPaid // ← Calculado en backend (float)
 
-      // Calcular porcentaje pagado
-      const percentPaid = total > 0 ? Math.round((totalPaid / total) * 100) : 0
+      // Redondear para mostrar en badge (0 decimales, contexto compacto)
+      const percentPaidRounded = Math.round(percentPaid)
 
       // Determinar color del badge según porcentaje
       let badgeVariant: 'success' | 'default' | 'secondary' | 'destructive' | 'outline' = 'default'
 
-      if (percentPaid === 100) {
+      if (percentPaid >= 99.95) {
+        // >= 99.95% se redondea a 100%
         badgeVariant = 'success'
       } else if (percentPaid >= 67) {
         badgeVariant = 'default'
@@ -161,7 +156,7 @@ export const createColumns = ({ onProjectDeleted }: ColumnsProps = {}): ColumnDe
       return (
         <div className="flex items-center gap-2">
           <span>{formattedAmount}</span>
-          <Badge variant={badgeVariant}>{percentPaid}%</Badge>
+          <Badge variant={badgeVariant}>{percentPaidRounded}%</Badge>
         </div>
       )
     },

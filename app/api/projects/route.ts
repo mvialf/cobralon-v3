@@ -95,7 +95,7 @@ export async function GET(request: Request) {
       prisma.project.count({ where }),
     ])
 
-    // Calcular totalPaid y balance para cada proyecto usando helper compartido
+    // Calcular totalPaid, balance y percentPaid para cada proyecto usando helper compartido
     const projectsWithCalculations = projects.map((project) => {
       const { totalPaid, balance } = calculateProjectBalance({
         totalAmount: Number(project.total),
@@ -104,10 +104,14 @@ export async function GET(request: Request) {
         })),
       })
 
+      // Calcular porcentaje pagado (sin redondear - frontend decide precisión)
+      const percentPaid = Number(project.total) > 0 ? (totalPaid / Number(project.total)) * 100 : 0
+
       return {
         ...project,
         totalPaid,
         balance,
+        percentPaid,
       }
     })
 

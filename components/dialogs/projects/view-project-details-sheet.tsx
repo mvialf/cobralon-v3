@@ -8,6 +8,8 @@ import { StatusBadge } from '@/components/ui/status-badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import { ProjectNameSummary } from '@/components/summarys/project-name-summary'
 import { cn } from '@/lib/utils'
+import { formatDate, formatCurrency } from '@/lib/format'
+import { useConfiguration } from '@/hooks/use-configuration'
 
 interface ViewProjectDetailsSheetProps {
   projectId: string
@@ -56,6 +58,7 @@ export function ViewProjectDetailsSheet({
 }: ViewProjectDetailsSheetProps) {
   const [project, setProject] = useState<ProjectDetails | null>(null)
   const [isLoading, setIsLoading] = useState(false)
+  const { configuration } = useConfiguration()
 
   const fetchProject = useCallback(async () => {
     try {
@@ -80,21 +83,6 @@ export function ViewProjectDetailsSheet({
       fetchProject()
     }
   }, [open, projectId, fetchProject])
-
-  const formatCurrency = (amount: number, currency: string) =>
-    new Intl.NumberFormat('es-CL', {
-      style: 'currency',
-      currency,
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    }).format(amount)
-
-  const formatDate = (dateString: string) =>
-    new Date(dateString).toLocaleDateString('es-CL', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-    })
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -141,7 +129,10 @@ export function ViewProjectDetailsSheet({
                   )}
                 </div>
 
-                <DataField label="Fecha" value={formatDate(project.date)} />
+                <DataField
+                  label="Fecha"
+                  value={formatDate(project.date, 'long', configuration.locale)}
+                />
               </div>
             </div>
 

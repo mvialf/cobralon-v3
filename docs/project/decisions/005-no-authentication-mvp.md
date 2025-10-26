@@ -696,7 +696,7 @@ Si alguno es ✅ → **Implementar Fase 2 (NextAuth.js)**
 
 - `docs/project/decisions/005-no-authentication-mvp.md` (este archivo)
 - `docs/project/architecture.md` - Sección de seguridad
-- Roadmap en `docs/project/implementation.md`
+- Roadmap en `docs/project/implementation/2025-current.md`
 
 ---
 

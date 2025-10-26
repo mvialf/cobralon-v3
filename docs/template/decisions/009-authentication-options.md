@@ -378,9 +378,9 @@ docs/template/guides/
 docs/template/decisions/
 └── 009-authentication-options.md # Este ADR
 
-CLAUDE.md                         # Actualizado con sección auth
-docs/template/README.md           # Actualizado con feature
-docs/project/implementation.md    # Nueva entrada
+CLAUDE.md                                 # Actualizado con sección auth
+docs/template/README.md                   # Actualizado con feature
+docs/project/implementation/2025-current.md # Nueva entrada
 ```
 
 ### Estructura de la Guía

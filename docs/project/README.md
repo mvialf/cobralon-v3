@@ -7,7 +7,7 @@ Esta es la documentación de **este proyecto específico** construido con el Saa
 ## Archivos
 
 - [**architecture.md**](architecture.md) - Arquitectura específica de este proyecto
-- [**implementation.md**](implementation.md) - Timeline de implementaciones
+- [**implementation/**](implementation/) - Timeline de implementaciones (organizado por periodos)
 - [**decisions/**](decisions/) - ADRs específicos del proyecto (no del template)
 
 ## Diferencia: Template vs Project Docs
@@ -59,7 +59,7 @@ Documentar:
 1. **Clona el template**
 2. **Borra/modifica este README.md** con info de tu proyecto
 3. **Crea tus ADRs** en `decisions/` según decides arquitectura
-4. **Documenta implementaciones** en `implementation.md`
+4. **Documenta implementaciones** en carpeta `implementation/`
 5. **Actualiza architecture.md** con tu arquitectura específica
 
 ---

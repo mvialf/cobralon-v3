@@ -49,7 +49,7 @@ npm run dev:webpack # Puerto 3001 (Webpack) - Alternativo
 
 Después de completar una **implementación significativa** (nueva feature, refactor mayor, integración externa):
 
-1. Actualizar [docs/project/implementation.md](docs/project/implementation.md) con entrada nueva
+1. Actualizar [docs/project/implementation/2025-current.md](docs/project/implementation/2025-current.md) con entrada nueva
 2. Referenciar ADRs relevantes si existen
 3. Cuantificar beneficios cuando sea posible
 4. Listar archivos modificados principales
@@ -163,8 +163,8 @@ Usa agentes cuando la búsqueda requiere **múltiples pasos** o **análisis cont
 
 @docs/project/README.md # Documentación del proyecto específico
 @docs/project/architecture.md # Arquitectura específica de este proyecto
-@docs/project/implementation.md # Timeline de implementaciones del proyecto
-@docs/project/decisions/ # ADRs específicos del proyecto (inicialmente vacío)
+@docs/project/implementation/ # Timeline de implementaciones del proyecto
+@docs/project/decisions/ # ADRs específicos del proyecto
 
 ---
 

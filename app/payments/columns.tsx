@@ -12,6 +12,7 @@ import { StatusBadge } from '@/components/ui/status-badge'
 import { DataTableColumnHeader } from '@/components/data-table'
 import { ProjectNameSummary } from '@/components/summarys/project-name-summary'
 import { toast } from 'sonner'
+import { formatDate } from '@/lib/format'
 
 export interface Payment {
   id: string
@@ -142,12 +143,7 @@ export const createColumns = ({
     accessorKey: 'date',
     header: ({ column }) => <DataTableColumnHeader column={column} title="Fecha" />,
     cell: ({ row }) => {
-      const date = new Date(row.getValue('date'))
-      return new Intl.DateTimeFormat('es-CL', {
-        day: '2-digit',
-        month: '2-digit',
-        year: 'numeric',
-      }).format(date)
+      return formatDate(row.getValue('date'), 'short', 'es-CL')
     },
   },
 

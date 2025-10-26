@@ -121,8 +121,8 @@ Un registro cronológico de **implementaciones significativas** con:
 1. Crea estructura:
 
 ```bash
-mkdir -p docs/project/decisions
-touch docs/project/implementation.md
+mkdir -p docs/project/decisions docs/project/implementation
+touch docs/project/implementation/2025-current.md
 ```
 
 2. Copia template ADR desde [decisions/README.md](../decisions/README.md)

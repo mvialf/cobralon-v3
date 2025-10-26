@@ -11,6 +11,7 @@ import {
 import { Badge } from '@/components/ui/badge'
 import { DataTableColumnHeader } from '@/components/data-table'
 import { toast } from 'sonner'
+import { formatDate } from '@/lib/format'
 
 export interface Installment {
   id: string
@@ -49,10 +50,12 @@ export interface Installment {
 
 interface ColumnsProps {
   onInstallmentUpdated?: () => void
+  locale?: string
 }
 
 export const createColumns = ({
   onInstallmentUpdated,
+  locale = 'es-CL',
 }: ColumnsProps = {}): ColumnDef<Installment>[] => [
   {
     accessorKey: 'dueDate',
@@ -67,11 +70,7 @@ export const createColumns = ({
 
       return (
         <div className={isOverdue ? 'text-red-600 font-medium' : ''}>
-          {date.toLocaleDateString('es-CL', {
-            year: 'numeric',
-            month: 'short',
-            day: 'numeric',
-          })}
+          {formatDate(row.getValue('dueDate'), 'short', locale)}
           {isOverdue && <div className="text-xs">Vencido</div>}
         </div>
       )
@@ -153,16 +152,7 @@ export const createColumns = ({
       const paidDate = row.getValue('paidDate') as string | null
       if (!paidDate) return <span className="text-muted-foreground text-sm">-</span>
 
-      const date = new Date(paidDate)
-      return (
-        <div className="text-sm">
-          {date.toLocaleDateString('es-CL', {
-            year: 'numeric',
-            month: 'short',
-            day: 'numeric',
-          })}
-        </div>
-      )
+      return <div className="text-sm">{formatDate(paidDate, 'short', locale)}</div>
     },
   },
   {

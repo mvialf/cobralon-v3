@@ -10,6 +10,8 @@ import {
 import { Separator } from '@/components/ui/separator'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Calendar, User, CreditCard, FileText, DollarSign, FolderOpen } from 'lucide-react'
+import { formatDate, formatCurrency } from '@/lib/format'
+import { useConfiguration } from '@/hooks/use-configuration'
 
 interface Payment {
   id: string
@@ -44,24 +46,9 @@ interface PaymentDetailsDialogProps {
 }
 
 export function PaymentDetailsDialog({ payment, open, onOpenChange }: PaymentDetailsDialogProps) {
+  const { configuration } = useConfiguration()
+
   if (!payment) return null
-
-  const formatCurrency = (amount: number, currency: string) =>
-    new Intl.NumberFormat('es-CL', {
-      style: 'currency',
-      currency,
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    }).format(amount)
-
-  const formatDate = (dateString: string) =>
-    new Date(dateString).toLocaleDateString('es-CL', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    })
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -91,7 +78,9 @@ export function PaymentDetailsDialog({ payment, open, onOpenChange }: PaymentDet
               <div className="flex items-center gap-2">
                 <Calendar className="h-4 w-4 text-muted-foreground" />
                 <span className="text-sm font-medium">Fecha:</span>
-                <span className="text-sm">{formatDate(payment.date)}</span>
+                <span className="text-sm">
+                  {formatDate(payment.date, 'full', configuration.locale)}
+                </span>
               </div>
 
               <div className="flex items-center gap-2">

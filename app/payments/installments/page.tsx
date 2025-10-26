@@ -7,10 +7,12 @@ import { DataTable } from '@/components/data-table'
 import { createColumns, type Installment } from './columns'
 import { Skeleton } from '@/components/ui/skeleton'
 import { toast } from 'sonner'
+import { useConfiguration } from '@/hooks/use-configuration'
 
 export default function InstallmentsPage() {
   const [installments, setInstallments] = useState<Installment[]>([])
   const [isLoading, setIsLoading] = useState(true)
+  const { configuration } = useConfiguration()
 
   const fetchInstallments = async () => {
     try {
@@ -38,8 +40,9 @@ export default function InstallmentsPage() {
     () =>
       createColumns({
         onInstallmentUpdated: fetchInstallments,
+        locale: configuration.locale,
       }),
-    []
+    [configuration.locale]
   )
 
   // Obtener estadísticas

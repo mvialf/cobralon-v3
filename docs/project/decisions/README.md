@@ -387,7 +387,7 @@ grep -l "**Propuesto**" docs/project/decisions/*.md
 ## Referencias
 
 - **Metodología de Documentación:** [docs/template/methodology/documentation.md](../../template/methodology/documentation.md)
-- **Implementation Log:** [docs/project/implementation.md](../implementation.md)
+- **Implementation Log:** [docs/project/implementation/](../implementation/) (ver 2025-current.md para entradas recientes)
 - **Template ADRs:** [docs/template/decisions/](../../template/decisions/)
 
 ---

@@ -575,7 +575,7 @@ Scale tier (si creces):
 
 - [docs/template/decisions/008-prisma-neon.md](../../template/decisions/008-prisma-neon.md) - ADR del template (complementario)
 - [docs/template/guides/database-setup.md](../../template/guides/database-setup.md) - Setup manual paso a paso
-- [docs/project/implementation.md](../implementation.md) - Implementación #4: Database Layer
+- [docs/project/implementation/2025-q1.md](../implementation/2025-q1.md) - Implementación #4: Database Layer
 
 ### External References
 

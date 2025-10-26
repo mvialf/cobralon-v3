@@ -12,6 +12,8 @@ import {
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { toast } from 'sonner'
+import { formatDate, formatCurrency } from '@/lib/format'
+import { useConfiguration } from '@/hooks/use-configuration'
 
 interface ProjectPaymentsTableProps {
   projectId: string
@@ -52,7 +54,6 @@ interface PaymentAllocation {
     amount: number
     currency: string
     date: string
-    reference: string | null
     notes: string | null
     paymentMethod: {
       id: string
@@ -71,12 +72,13 @@ interface PaymentAllocation {
  *
  * Muestra:
  * - Lista de pagos del proyecto (via allocations)
- * - Fecha, método, monto asignado, referencia
+ * - Fecha, método, monto asignado
  * - Sin acciones (tabla puramente informativa)
  */
 export function ProjectPaymentsTable({ projectId }: ProjectPaymentsTableProps) {
   const [allocations, setAllocations] = useState<PaymentAllocation[]>([])
   const [isLoading, setIsLoading] = useState(true)
+  const { configuration } = useConfiguration()
 
   const fetchPayments = useCallback(async () => {
     try {
@@ -98,7 +100,6 @@ export function ProjectPaymentsTable({ projectId }: ProjectPaymentsTableProps) {
               amount: payment.amount,
               currency: payment.currency,
               date: payment.date,
-              reference: payment.reference,
               notes: payment.notes,
               paymentMethod: payment.paymentMethod,
               customer: payment.customer,
@@ -123,21 +124,6 @@ export function ProjectPaymentsTable({ projectId }: ProjectPaymentsTableProps) {
   useEffect(() => {
     fetchPayments()
   }, [fetchPayments])
-
-  const formatCurrency = (amount: number, currency: string) =>
-    new Intl.NumberFormat('es-CL', {
-      style: 'currency',
-      currency,
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    }).format(amount)
-
-  const formatDate = (dateString: string) =>
-    new Date(dateString).toLocaleDateString('es-CL', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-    })
 
   if (isLoading) {
     return (
@@ -188,13 +174,14 @@ export function ProjectPaymentsTable({ projectId }: ProjectPaymentsTableProps) {
               <TableHead>Fecha</TableHead>
               <TableHead>Método</TableHead>
               <TableHead>Monto Asignado</TableHead>
-              <TableHead>Referencia</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {allocations.map((allocation) => (
               <TableRow key={allocation.id}>
-                <TableCell>{formatDate(allocation.payment.date)}</TableCell>
+                <TableCell>
+                  {formatDate(allocation.payment.date, 'short', configuration.locale)}
+                </TableCell>
                 <TableCell>
                   <div className="flex items-center gap-2">
                     {allocation.payment.paymentMethod.name}
@@ -202,9 +189,6 @@ export function ProjectPaymentsTable({ projectId }: ProjectPaymentsTableProps) {
                 </TableCell>
                 <TableCell className="font-medium">
                   {formatCurrency(allocation.allocatedAmount, allocation.payment.currency)}
-                </TableCell>
-                <TableCell className="max-w-[200px] truncate">
-                  {allocation.payment.reference || <span className="text-muted-foreground">-</span>}
                 </TableCell>
               </TableRow>
             ))}
