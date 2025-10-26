@@ -10,20 +10,7 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from '@/components/ui/alert-dialog'
-import { XCircle } from 'lucide-react'
 import { toast } from 'sonner'
 
 interface ProjectPaymentsTableProps {
@@ -80,17 +67,16 @@ interface PaymentAllocation {
 }
 
 /**
- * Tabla de pagos de un proyecto
+ * Tabla de pagos de un proyecto (solo lectura)
  *
  * Muestra:
  * - Lista de pagos del proyecto (via allocations)
  * - Fecha, método, monto asignado, referencia
- * - Botón para eliminar pagos
+ * - Sin acciones (tabla puramente informativa)
  */
 export function ProjectPaymentsTable({ projectId }: ProjectPaymentsTableProps) {
   const [allocations, setAllocations] = useState<PaymentAllocation[]>([])
   const [isLoading, setIsLoading] = useState(true)
-  const [deletingPaymentId, setDeletingPaymentId] = useState<string | null>(null)
 
   const fetchPayments = useCallback(async () => {
     try {
@@ -137,29 +123,6 @@ export function ProjectPaymentsTable({ projectId }: ProjectPaymentsTableProps) {
   useEffect(() => {
     fetchPayments()
   }, [fetchPayments])
-
-  const handleDeletePayment = async (paymentId: string) => {
-    try {
-      setDeletingPaymentId(paymentId)
-
-      const response = await fetch(`/api/payments/${paymentId}`, {
-        method: 'DELETE',
-      })
-
-      if (!response.ok) {
-        const error = await response.json()
-        throw new Error(error.error || 'Error al eliminar pago')
-      }
-
-      toast.success('Pago eliminado exitosamente')
-      fetchPayments() // Refetch data
-    } catch (error) {
-      console.error('Error deleting payment:', error)
-      toast.error(error instanceof Error ? error.message : 'Error al eliminar pago')
-    } finally {
-      setDeletingPaymentId(null)
-    }
-  }
 
   const formatCurrency = (amount: number, currency: string) =>
     new Intl.NumberFormat('es-CL', {
@@ -226,7 +189,6 @@ export function ProjectPaymentsTable({ projectId }: ProjectPaymentsTableProps) {
               <TableHead>Método</TableHead>
               <TableHead>Monto Asignado</TableHead>
               <TableHead>Referencia</TableHead>
-              <TableHead className="text-right">Acciones</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -243,59 +205,6 @@ export function ProjectPaymentsTable({ projectId }: ProjectPaymentsTableProps) {
                 </TableCell>
                 <TableCell className="max-w-[200px] truncate">
                   {allocation.payment.reference || <span className="text-muted-foreground">-</span>}
-                </TableCell>
-                <TableCell className="text-right">
-                  <AlertDialog>
-                    <AlertDialogTrigger asChild>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="text-destructive hover:text-destructive"
-                        disabled={deletingPaymentId === allocation.payment.id}
-                      >
-                        <XCircle className="mr-2 h-4 w-4" />
-                        Eliminar
-                      </Button>
-                    </AlertDialogTrigger>
-                    <AlertDialogContent>
-                      <AlertDialogHeader>
-                        <AlertDialogTitle>¿Eliminar este pago?</AlertDialogTitle>
-                        <AlertDialogDescription>
-                          Esta acción no se puede deshacer. El pago será eliminado permanentemente.
-                        </AlertDialogDescription>
-                      </AlertDialogHeader>
-
-                      <div className="rounded-lg border p-4 space-y-2">
-                        <div className="flex justify-between text-sm">
-                          <span className="text-muted-foreground">Monto:</span>
-                          <span className="font-medium">
-                            {formatCurrency(
-                              allocation.allocatedAmount,
-                              allocation.payment.currency
-                            )}
-                          </span>
-                        </div>
-                        <div className="flex justify-between text-sm">
-                          <span className="text-muted-foreground">Método:</span>
-                          <span>{allocation.payment.paymentMethod.name}</span>
-                        </div>
-                        <div className="flex justify-between text-sm">
-                          <span className="text-muted-foreground">Fecha:</span>
-                          <span>{formatDate(allocation.payment.date)}</span>
-                        </div>
-                      </div>
-
-                      <AlertDialogFooter>
-                        <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                        <AlertDialogAction
-                          onClick={() => handleDeletePayment(allocation.payment.id)}
-                          className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                        >
-                          Eliminar Pago
-                        </AlertDialogAction>
-                      </AlertDialogFooter>
-                    </AlertDialogContent>
-                  </AlertDialog>
                 </TableCell>
               </TableRow>
             ))}
