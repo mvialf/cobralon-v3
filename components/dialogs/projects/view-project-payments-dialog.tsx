@@ -193,13 +193,27 @@ Porcentaje Pagado: ${project.percentPaid}%
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-xl max-h-[90vh] overflow-y-auto bg-pay-bg">
-        {/* Header con botón de copiar */}
-        <div className="flex justify-between items-center px-2 py-1 border-b border-pay-foreground/10">
-          <DialogHeader className="flex-1">
-            <DialogTitle className="text-pay-foreground">ESTADO DE CUENTA</DialogTitle>
+      <DialogContent className="max-w-xl bg-pay-bg p-0">
+        {/* Botón de copiar - positioned absolute, FUERA del área de captura */}
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={handleCopy}
+          disabled={isLoading || !project || isCopying}
+          title="Copiar al portapapeles"
+          className="absolute top-4 right-4 z-10 text-pay-foreground hover:bg-pay-foreground/10"
+        >
+          {isCopying ? <Loader2 className="h-5 w-5 animate-spin" /> : <Copy className="h-5 w-5" />}
+        </Button>
+
+        {/* 📸 TODO ESTO SE CAPTURA COMO IMAGEN (desde línea 199) */}
+        {/* ref={contentRef} marca TODO el contenedor: header + contenido */}
+        <div ref={contentRef} className="bg-white text-gray-800 max-h-[90vh] overflow-y-auto">
+          {/* ✅ INCLUIDO EN CAPTURA: Header completo */}
+          <DialogHeader className="px-2 py-4 border-b border-gray-200">
+            <DialogTitle className="text-gray-900">ESTADO DE CUENTA</DialogTitle>
             {isLoading ? (
-              <DialogDescription className="text-pay-foreground">Cargando...</DialogDescription>
+              <DialogDescription className="text-gray-600">Cargando...</DialogDescription>
             ) : project ? (
               <ProjectNameSummary
                 projectNumber={project.projectNumber}
@@ -210,51 +224,31 @@ Porcentaje Pagado: ${project.percentPaid}%
             ) : null}
           </DialogHeader>
 
-          {/* Botón de copiar */}
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={handleCopy}
-            disabled={isLoading || !project || isCopying}
-            title="Copiar al portapapeles"
-            className="text-pay-foreground hover:bg-pay-foreground/10"
-          >
-            {isCopying ? (
-              <Loader2 className="h-5 w-5 animate-spin" />
-            ) : (
-              <Copy className="h-5 w-5" />
-            )}
-          </Button>
-        </div>
-
-        {/* Contenido del dialog */}
-        {isLoading ? (
-          <div className="space-y-6 py-6">
-            <Skeleton className="h-32 w-full bg-pay-card" />
-            <Skeleton className="h-64 w-full bg-pay-card" />
-          </div>
-        ) : project ? (
-          // 📸 ESTE DIV SE CAPTURA COMO IMAGEN
-          // ref={contentRef} marca este contenedor como el área a capturar
-          // Todo lo que está dentro (PaymentSummaryCard + ProjectPaymentsTable)
-          // será convertido a imagen PNG al hacer click en botón Copy
-          <div ref={contentRef} className="space-y-6 py-6 bg-white text-gray-800">
-            {/* ✅ INCLUIDO EN CAPTURA: Resumen de Pagos */}
-            <PaymentSummaryCard
-              variant="dashboard"
-              totalAmount={project.totalAmount}
-              currency={project.currency}
-              totalPaid={project.totalPaid}
-              balance={project.balance}
-              percentPaid={project.percentPaid}
-            />
-
-            {/* ✅ INCLUIDO EN CAPTURA: Tabla de Pagos completa */}
-            <div className="overflow-x-auto">
-              <ProjectPaymentsTable projectId={projectId} hidePaymentMethod />
+          {/* ✅ INCLUIDO EN CAPTURA: Contenido completo */}
+          {isLoading ? (
+            <div className="space-y-6 py-6 px-2">
+              <Skeleton className="h-32 w-full bg-gray-200" />
+              <Skeleton className="h-64 w-full bg-gray-200" />
             </div>
-          </div>
-        ) : null}
+          ) : project ? (
+            <div className="space-y-6 py-6 px-2">
+              {/* ✅ INCLUIDO EN CAPTURA: Resumen de Pagos */}
+              <PaymentSummaryCard
+                variant="dashboard"
+                totalAmount={project.totalAmount}
+                currency={project.currency}
+                totalPaid={project.totalPaid}
+                balance={project.balance}
+                percentPaid={project.percentPaid}
+              />
+
+              {/* ✅ INCLUIDO EN CAPTURA: Tabla de Pagos completa */}
+              <div className="overflow-x-auto">
+                <ProjectPaymentsTable projectId={projectId} hidePaymentMethod />
+              </div>
+            </div>
+          ) : null}
+        </div>
       </DialogContent>
     </Dialog>
   )
