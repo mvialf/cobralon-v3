@@ -11,12 +11,14 @@ import {
 } from '@/components/ui/table'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
+import { Badge } from '@/components/ui/badge'
 import { toast } from 'sonner'
 import { formatDate, formatCurrency } from '@/lib/format'
 import { useConfiguration } from '@/hooks/use-configuration'
 
 interface ProjectPaymentsTableProps {
   projectId: string
+  hidePaymentMethod?: boolean
 }
 
 interface AllocationFromAPI {
@@ -32,6 +34,7 @@ interface PaymentFromAPI {
   amount: number
   currency: string
   date: string
+  type: string
   reference: string | null
   notes: string | null
   paymentMethod: {
@@ -54,6 +57,7 @@ interface PaymentAllocation {
     amount: number
     currency: string
     date: string
+    type: string
     notes: string | null
     paymentMethod: {
       id: string
@@ -72,10 +76,15 @@ interface PaymentAllocation {
  *
  * Muestra:
  * - Lista de pagos del proyecto (via allocations)
- * - Fecha, método, monto asignado
+ * - Ordenados cronológicamente (ascendente: del más antiguo al más reciente)
+ * - Numeración secuencial (N°), fecha, tipo (directo/dividido), monto asignado
+ * - Opcionalmente: método de pago (según prop hidePaymentMethod)
  * - Sin acciones (tabla puramente informativa)
  */
-export function ProjectPaymentsTable({ projectId }: ProjectPaymentsTableProps) {
+export function ProjectPaymentsTable({
+  projectId,
+  hidePaymentMethod = false,
+}: ProjectPaymentsTableProps) {
   const [allocations, setAllocations] = useState<PaymentAllocation[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const { configuration } = useConfiguration()
@@ -100,6 +109,7 @@ export function ProjectPaymentsTable({ projectId }: ProjectPaymentsTableProps) {
               amount: payment.amount,
               currency: payment.currency,
               date: payment.date,
+              type: payment.type,
               notes: payment.notes,
               paymentMethod: payment.paymentMethod,
               customer: payment.customer,
@@ -107,9 +117,9 @@ export function ProjectPaymentsTable({ projectId }: ProjectPaymentsTableProps) {
           }))
       )
 
-      // Ordenar por fecha descendente (más reciente primero)
+      // Ordenar por fecha ascendente (cronológico: más antiguo primero)
       projectAllocations.sort((a: PaymentAllocation, b: PaymentAllocation) => {
-        return new Date(b.payment.date).getTime() - new Date(a.payment.date).getTime()
+        return new Date(a.payment.date).getTime() - new Date(b.payment.date).getTime()
       })
 
       setAllocations(projectAllocations)
@@ -129,8 +139,9 @@ export function ProjectPaymentsTable({ projectId }: ProjectPaymentsTableProps) {
     return (
       <Card>
         <CardHeader>
-          <CardTitle>Pagos del Proyecto</CardTitle>
-          <CardDescription>Cargando historial de pagos...</CardDescription>
+          <CardDescription className="text-pay-foreground">
+            Cargando historial de pagos...
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="space-y-2">
@@ -147,8 +158,9 @@ export function ProjectPaymentsTable({ projectId }: ProjectPaymentsTableProps) {
     return (
       <Card>
         <CardHeader>
-          <CardTitle>Pagos del Proyecto</CardTitle>
-          <CardDescription>Historial de pagos asociados a este proyecto</CardDescription>
+          <CardDescription className="text-pay-foreground">
+            Historial de pagos asociados a este proyecto
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="flex flex-col items-center justify-center py-12 text-center">
@@ -162,39 +174,45 @@ export function ProjectPaymentsTable({ projectId }: ProjectPaymentsTableProps) {
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Pagos del Proyecto</CardTitle>
-        <CardDescription>Historial de pagos asociados a este proyecto</CardDescription>
-      </CardHeader>
-      <CardContent>
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Fecha</TableHead>
-              <TableHead>Método</TableHead>
-              <TableHead>Monto Asignado</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {allocations.map((allocation) => (
-              <TableRow key={allocation.id}>
-                <TableCell>
-                  {formatDate(allocation.payment.date, 'short', configuration.locale)}
-                </TableCell>
-                <TableCell>
+    <div className="bg-transparent">
+      <div className="text-pay-foreground pb-2">Historial de pagos asociados a este proyecto</div>
+
+      <Table className="border border-pay-foreground/10 rounded-md shadow-pay-md">
+        <TableHeader>
+          <TableRow>
+            <TableHead className="w-16 text-pay-card bg-primary">N°</TableHead>
+            <TableHead className="text-pay-card bg-primary">Fecha</TableHead>
+            {!hidePaymentMethod && <TableHead>Método</TableHead>}
+            <TableHead className="text-pay-card bg-primary">Tipo</TableHead>
+            <TableHead className="text-pay-card bg-primary">Monto Asignado</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody className="bg-pay-card">
+          {allocations.map((allocation, index) => (
+            <TableRow key={allocation.id}>
+              <TableCell className="font-medium text-pay-foreground">{index + 1}</TableCell>
+              <TableCell className="font-medium text-pay-foreground">
+                {formatDate(allocation.payment.date, 'short', configuration.locale)}
+              </TableCell>
+              {!hidePaymentMethod && (
+                <TableCell className="font-medium text-pay-foreground">
                   <div className="flex items-center gap-2">
                     {allocation.payment.paymentMethod.name}
                   </div>
                 </TableCell>
-                <TableCell className="font-medium">
-                  {formatCurrency(allocation.allocatedAmount, allocation.payment.currency)}
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </CardContent>
-    </Card>
+              )}
+              <TableCell className="font-medium text-pay-foreground">
+                <Badge variant={allocation.payment.type === 'Customer' ? 'secondary' : 'default'}>
+                  {allocation.payment.type === 'Customer' ? 'Dividido' : 'Directo'}
+                </Badge>
+              </TableCell>
+              <TableCell className="font-medium text-pay-foreground text-right">
+                {formatCurrency(allocation.allocatedAmount, allocation.payment.currency)}
+              </TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+    </div>
   )
 }
