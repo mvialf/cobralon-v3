@@ -58,6 +58,14 @@
   --shadow-2xl: 0 1px 3px 0px hsl(0 0% 0% / 0.25);
   --tracking-normal: 0em;
   --spacing: 0.25rem;
+
+  /* Payments */
+  --pay-bg: oklch(0.928 0.006 264.531);
+  --pay-card: oklch(1 0 0);
+  --pay-foreground: oklch(0.21 0.034 264.665);
+  --pay-shadow: 0 4px 6px -1px hsl(0 0% 0% / 0.1), 0 2px 4px -2px hsl(0 0% 0% / 0.1);
+  --pay-orange: oklch(0.705 0.213 47.604);
+  --pay-green: oklch(0.627 0.194 149.214);
 }
 
 .dark {
@@ -151,6 +159,12 @@
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
 
+  --color-pay-bg: var(--pay-bg);
+  --color-pay-card: var(--pay-card);
+  --color-pay-foreground: var(--pay-foreground);
+  --color-pay-orange: var(--pay-orange);
+  --color-pay-green: var(--pay-green);
+
   --font-sans: var(--font-sans);
   --font-mono: var(--font-mono);
   --font-serif: var(--font-serif);
@@ -168,6 +182,8 @@
   --shadow-lg: var(--shadow-lg);
   --shadow-xl: var(--shadow-xl);
   --shadow-2xl: var(--shadow-2xl);
+
+  --shadow-pay: var(--pay-shadow);
 }
 
 @layer base {
