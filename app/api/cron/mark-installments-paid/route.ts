@@ -47,6 +47,7 @@ export async function POST(request: Request) {
 
     // Buscar todas las cuotas pendientes cuya fecha de vencimiento ya pasó o es hoy
     const installmentsToPay = await prisma.installment.findMany({
+      relationLoadStrategy: 'join', // Fix N+1: Force database-level JOINs
       where: {
         status: 'pending',
         dueDate: {

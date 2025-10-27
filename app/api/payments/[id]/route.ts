@@ -50,6 +50,7 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
 
     // Actualizar el pago
     const payment = await prisma.payment.update({
+      relationLoadStrategy: 'join', // Fix N+1: Force database-level JOINs
       where: { id },
       data: {
         ...(amount !== undefined && { amount }),

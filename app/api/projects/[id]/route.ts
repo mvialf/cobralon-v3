@@ -15,6 +15,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
     const { id } = await params
 
     const project = await prisma.project.findUnique({
+      relationLoadStrategy: 'join', // Fix N+1: Force database-level JOINs
       where: { id },
       include: {
         customer: {

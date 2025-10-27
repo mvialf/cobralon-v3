@@ -64,6 +64,7 @@ export async function GET(request: Request) {
     // Obtener installments y total count
     const [installments, total] = await Promise.all([
       prisma.installment.findMany({
+        relationLoadStrategy: 'join', // Fix N+1: Force database-level JOINs
         where,
         skip,
         take: limit,
