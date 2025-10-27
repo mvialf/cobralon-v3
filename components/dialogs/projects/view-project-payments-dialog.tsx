@@ -2,17 +2,17 @@
 
 import { useCallback, useEffect, useState } from 'react'
 import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-} from '@/components/ui/sheet'
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 import { PaymentSummaryCard } from '@/components/summarys/payment-summary-card'
 import { ProjectPaymentsTable } from '@/components/tables/project-payments-table'
 import { Skeleton } from '@/components/ui/skeleton'
 
-interface ViewProjectPaymentsSheetProps {
+interface ViewProjectPaymentsDialogProps {
   projectId: string
   open: boolean
   onOpenChange: (open: boolean) => void
@@ -28,13 +28,13 @@ interface ProjectPaymentData {
 }
 
 /**
- * Sheet lateral para visualizar pagos de un proyecto
+ * Dialog para visualizar pagos de un proyecto
  */
-export function ViewProjectPaymentsSheet({
+export function ViewProjectPaymentsDialog({
   projectId,
   open,
   onOpenChange,
-}: ViewProjectPaymentsSheetProps) {
+}: ViewProjectPaymentsDialogProps) {
   const [project, setProject] = useState<ProjectPaymentData | null>(null)
   const [isLoading, setIsLoading] = useState(false)
 
@@ -70,19 +70,19 @@ export function ViewProjectPaymentsSheet({
   }, [open, projectId, fetchProjectPaymentData])
 
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="right" className="w-full sm:max-w-4xl overflow-y-auto">
-        <SheetHeader>
-          <SheetTitle>
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-xl max-h-[90vh] overflow-y-auto bg-pay-bg">
+        <DialogHeader>
+          <DialogTitle className="text-pay-foreground">ESTADO DE CUENTA</DialogTitle>
+          <DialogDescription className="text-pay-foreground ">
             {isLoading ? 'Cargando...' : `Pagos - Proyecto ${project?.projectNumber || ''}`}
-          </SheetTitle>
-          <SheetDescription>Historial y estado de pagos del proyecto</SheetDescription>
-        </SheetHeader>
+          </DialogDescription>
+        </DialogHeader>
 
         {isLoading ? (
           <div className="space-y-6 py-6">
-            <Skeleton className="h-32 w-full" />
-            <Skeleton className="h-64 w-full" />
+            <Skeleton className="h-32 w-full bg-pay-card" />
+            <Skeleton className="h-64 w-full bg-pay-card" />
           </div>
         ) : project ? (
           <div className="space-y-6 py-6">
@@ -98,11 +98,11 @@ export function ViewProjectPaymentsSheet({
 
             {/* Tabla de Pagos */}
             <div className="overflow-x-auto">
-              <ProjectPaymentsTable projectId={projectId} />
+              <ProjectPaymentsTable projectId={projectId} hidePaymentMethod />
             </div>
           </div>
         ) : null}
-      </SheetContent>
-    </Sheet>
+      </DialogContent>
+    </Dialog>
   )
 }

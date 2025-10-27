@@ -13,7 +13,7 @@ import {
 import { StatusBadge } from '@/components/ui/status-badge'
 import { ProjectNameSummary } from '@/components/summarys/project-name-summary'
 import { ViewProjectDetailsSheet } from '@/components/dialogs/projects/view-project-details-sheet'
-import { ViewProjectPaymentsSheet } from '@/components/dialogs/projects/view-project-payments-sheet'
+import { ViewProjectPaymentsDialog } from '@/components/dialogs/projects/view-project-payments-dialog'
 import { PaymentToProjectDialog } from '@/components/dialogs/payments/payment-to-project-dialog'
 import { toast } from 'sonner'
 import { formatDate } from '@/lib/format'
@@ -281,7 +281,7 @@ function ProjectActionsCell({
         onOpenChange={setDetailsOpen}
       />
 
-      <ViewProjectPaymentsSheet
+      <ViewProjectPaymentsDialog
         projectId={project.id}
         open={paymentsOpen}
         onOpenChange={setPaymentsOpen}
