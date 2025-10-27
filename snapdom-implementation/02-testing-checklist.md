@@ -696,7 +696,7 @@ Estos tests DEBEN pasar antes de merge:
 **Ambiente:** Dev / Staging / Production
 **Versión:** [Branch/commit hash]
 
-**Firma de aprobación:** ****\*\*\*\*****\_****\*\*\*\*****
+**Firma de aprobación:** \***\*\*\*\*\*\*\***\_\***\*\*\*\*\*\*\***
 
 **Notas adicionales:**
 
