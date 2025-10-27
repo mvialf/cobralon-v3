@@ -9,9 +9,8 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent, CardDescription, CardHeader } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
-import { Badge } from '@/components/ui/badge'
 import { toast } from 'sonner'
 import { formatDate, formatCurrency } from '@/lib/format'
 import { useConfiguration } from '@/hooks/use-configuration'
@@ -77,8 +76,9 @@ interface PaymentAllocation {
  * Muestra:
  * - Lista de pagos del proyecto (via allocations)
  * - Ordenados cronológicamente (ascendente: del más antiguo al más reciente)
- * - Numeración secuencial (N°), fecha, tipo (directo/dividido), monto asignado
+ * - Numeración secuencial (N° con (*) si es pago dividido), fecha, monto asignado
  * - Opcionalmente: método de pago (según prop hidePaymentMethod)
+ * - Nota al pie: (*) indica pagos obtenidos de pago global de cliente
  * - Sin acciones (tabla puramente informativa)
  */
 export function ProjectPaymentsTable({
@@ -88,6 +88,9 @@ export function ProjectPaymentsTable({
   const [allocations, setAllocations] = useState<PaymentAllocation[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const { configuration } = useConfiguration()
+
+  // Extraer solo el locale necesario para evitar re-renders
+  const locale = configuration.locale
 
   const fetchPayments = useCallback(async () => {
     try {
@@ -177,22 +180,24 @@ export function ProjectPaymentsTable({
     <div className="bg-transparent">
       <div className="text-pay-foreground pb-2">Historial de pagos asociados a este proyecto</div>
 
-      <Table className="border border-pay-foreground/10 rounded-md shadow-pay-md">
+      <Table className="border border-pay-foreground rounded-md shadow-pay">
         <TableHeader>
           <TableRow>
             <TableHead className="w-16 text-pay-card bg-primary">N°</TableHead>
             <TableHead className="text-pay-card bg-primary">Fecha</TableHead>
             {!hidePaymentMethod && <TableHead>Método</TableHead>}
-            <TableHead className="text-pay-card bg-primary">Tipo</TableHead>
             <TableHead className="text-pay-card bg-primary">Monto Asignado</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody className="bg-pay-card">
           {allocations.map((allocation, index) => (
             <TableRow key={allocation.id}>
-              <TableCell className="font-medium text-pay-foreground">{index + 1}</TableCell>
               <TableCell className="font-medium text-pay-foreground">
-                {formatDate(allocation.payment.date, 'short', configuration.locale)}
+                {allocation.payment.type === 'Customer' ? '(*) ' : ''}
+                {index + 1}
+              </TableCell>
+              <TableCell className="font-medium text-pay-foreground">
+                {formatDate(allocation.payment.date, 'short', locale)}
               </TableCell>
               {!hidePaymentMethod && (
                 <TableCell className="font-medium text-pay-foreground">
@@ -201,17 +206,22 @@ export function ProjectPaymentsTable({
                   </div>
                 </TableCell>
               )}
-              <TableCell className="font-medium text-pay-foreground">
-                <Badge variant={allocation.payment.type === 'Customer' ? 'secondary' : 'default'}>
-                  {allocation.payment.type === 'Customer' ? 'Dividido' : 'Directo'}
-                </Badge>
-              </TableCell>
               <TableCell className="font-medium text-pay-foreground text-right">
                 {formatCurrency(allocation.allocatedAmount, allocation.payment.currency)}
               </TableCell>
             </TableRow>
           ))}
         </TableBody>
+        <tfoot>
+          <TableRow>
+            <TableCell
+              colSpan={hidePaymentMethod ? 3 : 4}
+              className="text-xs text-pay-foreground pt-2 pb-3 px-4"
+            >
+              (*) Obtenido de pago global de cliente
+            </TableCell>
+          </TableRow>
+        </tfoot>
       </Table>
     </div>
   )

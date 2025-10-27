@@ -66,7 +66,7 @@ export function PaymentSummaryCard({
           </div>
 
           {/* Card de Progreso Circular (1/3) */}
-          <div className="w-1/3 flex p-4 items-center justify-center bg-pay-card rounded-xl shadow-pay">
+          <div className="w-1/3 flex p-2 items-center justify-center bg-pay-card rounded-xl shadow-pay">
             <div className="p-0">
               <CircularProgressChart percentage={Math.round(percentPaid)} />
             </div>

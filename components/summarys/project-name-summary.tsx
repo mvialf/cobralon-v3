@@ -20,11 +20,10 @@ export function ProjectNameSummary({
 }: ProjectNameSummaryProps) {
   return (
     <div className={cn('flex flex-col space-y-1', className)}>
-      <div className="text-sm text-muted-foreground">P - {projectNumber}</div>
-      <div className="font-medium">
-        {customerName}
-        {projectName && ` - ${projectName}`}
+      <div className="text-sm text-inherit">
+        P - {projectNumber} - {customerName}
       </div>
+      <div className="text-xs font-medium text-inherit">{projectName && ` ${projectName}`}</div>
     </div>
   )
 }

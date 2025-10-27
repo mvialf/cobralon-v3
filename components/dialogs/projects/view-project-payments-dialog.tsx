@@ -1,15 +1,9 @@
 'use client'
 
 import { useCallback, useEffect, useState, useRef } from 'react'
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog'
+import { Dialog, DialogClose, DialogContent, DialogDescription } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
-import { Copy, Loader2 } from 'lucide-react'
+import { Copy, Loader2, X } from 'lucide-react'
 import { PaymentSummaryCard } from '@/components/summarys/payment-summary-card'
 import { ProjectPaymentsTable } from '@/components/tables/project-payments-table'
 import { ProjectNameSummary } from '@/components/summarys/project-name-summary'
@@ -193,61 +187,82 @@ Porcentaje Pagado: ${project.percentPaid}%
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-xl bg-pay-bg p-0">
-        {/* Botón de copiar - positioned absolute, FUERA del área de captura */}
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={handleCopy}
-          disabled={isLoading || !project || isCopying}
-          title="Copiar al portapapeles"
-          className="absolute top-4 right-4 z-10 text-pay-foreground hover:bg-pay-foreground/10"
-        >
-          {isCopying ? <Loader2 className="h-5 w-5 animate-spin" /> : <Copy className="h-5 w-5" />}
-        </Button>
+      <DialogContent className="max-w-xl p-0 max-h-[90vh] overflow-y-auto">
+        {/* ❌ BARRA SUPERIOR - NO SE CAPTURA */}
+        <div className="flex items-center justify-between px-6 py-2 border-b border-gray-200 bg-pay-bg">
+          <div className="flex items-center gap-2">
+            {/* Botón Copiar */}
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={handleCopy}
+              disabled={isLoading || !project || isCopying}
+              title="Copiar al portapapeles"
+              className="hover:bg-gray-100 text-pay-foreground"
+            >
+              {isCopying ? (
+                <Loader2 className="h-5 w-5 animate-spin" />
+              ) : (
+                <Copy className="h-5 w-5" />
+              )}
+            </Button>
+            {/* Botón Cerrar */}
+            <DialogClose asChild>
+              <Button variant="ghost" size="icon" title="Cerrar" className="hover:bg-gray-100">
+                <X className="h-5 w-5" />
+              </Button>
+            </DialogClose>
+          </div>
+        </div>
 
-        {/* 📸 TODO ESTO SE CAPTURA COMO IMAGEN (desde línea 199) */}
-        {/* ref={contentRef} marca TODO el contenedor: header + contenido */}
-        <div ref={contentRef} className="bg-white text-gray-800 max-h-[90vh] overflow-y-auto">
-          {/* ✅ INCLUIDO EN CAPTURA: Header completo */}
-          <DialogHeader className="px-2 py-4 border-b border-gray-200">
-            <DialogTitle className="text-gray-900">ESTADO DE CUENTA</DialogTitle>
+        {/* ✅ ÁREA DE CAPTURA - TODO ESTO SE CONVIERTE EN IMAGEN */}
+        <div ref={contentRef} className="bg-pay-bg">
+          <div className="text-xl font-semibold text-pay-foreground px-6 pt-4 ">
+            ESTADO DE CUENTA
+          </div>
+
+          <div className="text-gray-800">
+            {/* Header con información del proyecto */}
             {isLoading ? (
-              <DialogDescription className="text-gray-600">Cargando...</DialogDescription>
-            ) : project ? (
-              <ProjectNameSummary
-                projectNumber={project.projectNumber}
-                customerName={project.customerName}
-                projectName={project.projectName}
-                className="pt-2"
-              />
-            ) : null}
-          </DialogHeader>
-
-          {/* ✅ INCLUIDO EN CAPTURA: Contenido completo */}
-          {isLoading ? (
-            <div className="space-y-6 py-6 px-2">
-              <Skeleton className="h-32 w-full bg-gray-200" />
-              <Skeleton className="h-64 w-full bg-gray-200" />
-            </div>
-          ) : project ? (
-            <div className="space-y-6 py-6 px-2">
-              {/* ✅ INCLUIDO EN CAPTURA: Resumen de Pagos */}
-              <PaymentSummaryCard
-                variant="dashboard"
-                totalAmount={project.totalAmount}
-                currency={project.currency}
-                totalPaid={project.totalPaid}
-                balance={project.balance}
-                percentPaid={project.percentPaid}
-              />
-
-              {/* ✅ INCLUIDO EN CAPTURA: Tabla de Pagos completa */}
-              <div className="overflow-x-auto">
-                <ProjectPaymentsTable projectId={projectId} hidePaymentMethod />
+              <div className="px-6">
+                <DialogDescription className="text-pay-foreground">Cargando...</DialogDescription>
               </div>
-            </div>
-          ) : null}
+            ) : project ? (
+              <div className="px-6 py-2 border-b border-t border-gray-300">
+                <ProjectNameSummary
+                  className="text-pay-foreground"
+                  projectNumber={project.projectNumber}
+                  customerName={project.customerName}
+                  projectName={project.projectName}
+                />
+              </div>
+            ) : null}
+
+            {/* Contenido: Summary + Tabla */}
+            {isLoading ? (
+              <div className="space-y-4 py-6 px-6">
+                <Skeleton className="h-32 w-full bg-pay-bg" />
+                <Skeleton className="h-64 w-full bg-pay-bg" />
+              </div>
+            ) : project ? (
+              <div className="space-y-6 py-4 px-6">
+                {/* Resumen de Pagos */}
+                <PaymentSummaryCard
+                  variant="dashboard"
+                  totalAmount={project.totalAmount}
+                  currency={project.currency}
+                  totalPaid={project.totalPaid}
+                  balance={project.balance}
+                  percentPaid={project.percentPaid}
+                />
+
+                {/* Tabla de Pagos */}
+                <div className="overflow-hidden">
+                  <ProjectPaymentsTable projectId={projectId} hidePaymentMethod />
+                </div>
+              </div>
+            ) : null}
+          </div>
         </div>
       </DialogContent>
     </Dialog>
