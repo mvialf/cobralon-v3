@@ -53,60 +53,52 @@ export function PaymentSummaryCard({
       <div className="space-y-4">
         <div className="flex gap-4">
           {/* Card de Saldo (2/3) */}
-          <Card className="w-2/3 flex flex-col">
-            <CardContent className="flex-1 p-4">
-              <div className="flex items-center gap-2 text-primary">
-                <CircleDollarSign className="h-6 w-6" />
-                <p className="text-xl font-medium">Saldo</p>
+          <div className="w-2/3 bg-pay-card shadow-pay-md p-4 rounded-xl shadow-pay">
+            <div className="flex items-center gap-2">
+              <CircleDollarSign className="h-6 w-6 text-primary" />
+              <p className="text-xl font-medium text-pay-foreground">Saldo</p>
+            </div>
+            <div className="pt-4">
+              <div className="text-3xl font-semibold text-right text-pay-foreground">
+                {formatCurrency(balance)}
               </div>
-              <div className="mt-auto pt-4">
-                <div
-                  className={`text-3xl font-semibold text-right ${
-                    balance > 0
-                      ? 'text-orange-600 dark:text-orange-400'
-                      : 'text-green-600 dark:text-green-400'
-                  }`}
-                >
-                  {formatCurrency(balance)}
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+            </div>
+          </div>
 
           {/* Card de Progreso Circular (1/3) */}
-          <Card className="w-1/3 flex items-center justify-center">
-            <CardContent className="p-2">
+          <div className="w-1/3 flex p-4 items-center justify-center bg-pay-card rounded-xl shadow-pay">
+            <div className="p-0">
               <CircularProgressChart percentage={Math.round(percentPaid)} />
-            </CardContent>
-          </Card>
+            </div>
+          </div>
         </div>
 
         <div className="flex gap-4">
           {/* Card de Abonos (1/2) */}
-          <Card className="w-1/2">
-            <CardContent className="p-4">
-              <div className="flex items-center gap-2 text-orange-600 dark:text-orange-400">
-                <Wallet className="h-5 w-5" />
-                <p className="text-lg font-medium">Abonos</p>
+          <div className="w-1/2 bg-pay-card shadow-pay-md p-4 rounded-xl shadow-pay">
+            <div className="p-0">
+              <div className="flex items-center gap-2">
+                <Wallet className="h-5 w-5 text-pay-orange" />
+                <p className="text-lg font-medium text-pay-foreground">Abonos</p>
               </div>
-              <div className="text-2xl text-right font-semibold pt-4 text-green-600 dark:text-green-400">
+              <div className="text-2xl text-right font-semibold pt-4 text-pay-foreground">
                 {formatCurrency(totalPaid)}
               </div>
-            </CardContent>
-          </Card>
+            </div>
+          </div>
 
           {/* Card de Total Proyecto (1/2) */}
-          <Card className="w-1/2">
-            <CardContent className="p-4">
-              <div className="flex items-center gap-2 text-green-600 dark:text-green-400">
-                <FileText className="h-5 w-5" />
-                <p className="text-lg font-medium">Proyecto</p>
+          <div className="w-1/2 bg-pay-card shadow-pay-md p-4 rounded-xl shadow-pay">
+            <div className="p-0">
+              <div className="flex items-center gap-2">
+                <FileText className="h-5 w-5 text-pay-green" />
+                <p className="text-lg font-medium text-pay-foreground">Proyecto</p>
               </div>
-              <div className="text-2xl text-right font-semibold pt-4">
+              <div className="text-2xl text-right font-semibold pt-4 text-pay-foreground">
                 {formatCurrency(totalAmount || 0)}
               </div>
-            </CardContent>
-          </Card>
+            </div>
+          </div>
         </div>
       </div>
     )
