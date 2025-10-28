@@ -177,7 +177,10 @@ export const CreateTagModal: React.FC<CreateTagModalProps> = ({
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isCreating}>
             Cancelar
           </Button>
-          <Button onClick={handleCreate} disabled={!tagName.trim() || !tagColorId || !!error || isCreating}>
+          <Button
+            onClick={handleCreate}
+            disabled={!tagName.trim() || !tagColorId || !!error || isCreating}
+          >
             {isCreating ? (
               'Creando...'
             ) : (

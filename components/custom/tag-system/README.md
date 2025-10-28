@@ -5,6 +5,7 @@ Sistema completo de gestión de tags (etiquetas) estilo Trello con soporte CRUD,
 ## 📸 Vista Previa
 
 **TagSelector (Popover abierto):**
+
 ```
 ┌─────────────────────────────────┐
 │ Tags                          [+]│  ← Label + botón
@@ -26,6 +27,7 @@ Sistema completo de gestión de tags (etiquetas) estilo Trello con soporte CRUD,
 ```
 
 **CreateTagModal / EditTagModal:**
+
 ```
 ┌─────────────────────────────────┐
 │ Crear Team Tag              [X] │
@@ -219,6 +221,7 @@ model TeamTag {
 ```
 
 **⚠️ IMPORTANTE:** Adapta las relaciones según tu caso de uso:
+
 - Si tags → Proyectos: tabla intermedia `ProjectTag` (N:M)
 - Si tags → Usuarios: tabla intermedia `UserTag` (N:M)
 - Si tags → Tareas: tabla intermedia `TaskTag` (N:M)
@@ -286,10 +289,7 @@ export async function GET() {
     return NextResponse.json({ badgeColors })
   } catch (error) {
     console.error('Error fetching badge colors:', error)
-    return NextResponse.json(
-      { error: 'Error al cargar colores' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: 'Error al cargar colores' }, { status: 500 })
   }
 }
 ```
@@ -315,10 +315,7 @@ export async function GET(request: Request) {
     return NextResponse.json({ teamTags })
   } catch (error) {
     console.error('Error fetching team tags:', error)
-    return NextResponse.json(
-      { error: 'Error al cargar team tags' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: 'Error al cargar team tags' }, { status: 500 })
   }
 }
 
@@ -337,10 +334,7 @@ export async function POST(request: Request) {
     })
 
     if (existing) {
-      return NextResponse.json(
-        { error: 'Ya existe una tag con este nombre' },
-        { status: 409 }
-      )
+      return NextResponse.json({ error: 'Ya existe una tag con este nombre' }, { status: 409 })
     }
 
     // Crear tag
@@ -356,10 +350,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ teamTag }, { status: 201 })
   } catch (error) {
     console.error('Error creating team tag:', error)
-    return NextResponse.json(
-      { error: 'Error al crear tag' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: 'Error al crear tag' }, { status: 500 })
   }
 }
 ```
@@ -371,10 +362,7 @@ export async function POST(request: Request) {
 import { NextResponse } from 'next/server'
 import prisma from '@/lib/db'
 
-export async function PUT(
-  request: Request,
-  { params }: { params: { id: string } }
-) {
+export async function PUT(request: Request, { params }: { params: { id: string } }) {
   try {
     const { id } = params
     const body = await request.json()
@@ -393,10 +381,7 @@ export async function PUT(
     })
 
     if (existing) {
-      return NextResponse.json(
-        { error: 'Ya existe una tag con este nombre' },
-        { status: 409 }
-      )
+      return NextResponse.json({ error: 'Ya existe una tag con este nombre' }, { status: 409 })
     }
 
     // Actualizar
@@ -413,17 +398,11 @@ export async function PUT(
     return NextResponse.json({ teamTag })
   } catch (error) {
     console.error('Error updating team tag:', error)
-    return NextResponse.json(
-      { error: 'Error al actualizar tag' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: 'Error al actualizar tag' }, { status: 500 })
   }
 }
 
-export async function DELETE(
-  request: Request,
-  { params }: { params: { id: string } }
-) {
+export async function DELETE(request: Request, { params }: { params: { id: string } }) {
   try {
     const { id } = params
 
@@ -439,10 +418,7 @@ export async function DELETE(
     return NextResponse.json({ success: true })
   } catch (error) {
     console.error('Error deleting team tag:', error)
-    return NextResponse.json(
-      { error: 'Error al eliminar tag' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: 'Error al eliminar tag' }, { status: 500 })
   }
 }
 ```
@@ -491,7 +467,7 @@ export default function ExamplePage() {
       {/* Debug: Ver tags seleccionadas */}
       <div className="mt-4">
         <p className="text-sm text-muted-foreground">
-          Tags seleccionadas: {selectedTags.map(t => t.name).join(', ')}
+          Tags seleccionadas: {selectedTags.map((t) => t.name).join(', ')}
         </p>
       </div>
     </div>
@@ -511,8 +487,8 @@ Hook principal para manejo de estado y API calls.
 
 ```typescript
 interface UseTeamTagsOptions {
-  initialSelected?: TeamTag[]  // Tags pre-seleccionadas (default: [])
-  autoFetch?: boolean          // Auto-load al montar (default: true)
+  initialSelected?: TeamTag[] // Tags pre-seleccionadas (default: [])
+  autoFetch?: boolean // Auto-load al montar (default: true)
 }
 ```
 
@@ -521,11 +497,11 @@ interface UseTeamTagsOptions {
 ```typescript
 interface UseTeamTagsReturn {
   // Estado
-  availableTags: TeamTag[]      // Tags disponibles desde API
-  availableColors: TagColor[]   // Colores desde API
-  selectedTags: TeamTag[]       // Tags actualmente seleccionadas
-  loading: boolean              // Cargando datos
-  error: string | null          // Error si hay
+  availableTags: TeamTag[] // Tags disponibles desde API
+  availableColors: TagColor[] // Colores desde API
+  selectedTags: TeamTag[] // Tags actualmente seleccionadas
+  loading: boolean // Cargando datos
+  error: string | null // Error si hay
 
   // Setters
   setSelectedTags: (tags: TeamTag[]) => void
@@ -549,12 +525,10 @@ interface UseTeamTagsReturn {
 #### Ejemplo
 
 ```tsx
-const {
-  availableTags,
-  selectedTags,
-  createTag,
-} = useTeamTags({
-  initialSelected: [/* tags pre-seleccionadas */],
+const { availableTags, selectedTags, createTag } = useTeamTags({
+  initialSelected: [
+    /* tags pre-seleccionadas */
+  ],
   autoFetch: true,
 })
 ```
@@ -570,22 +544,27 @@ Selector principal con popover estilo Trello.
 ```typescript
 interface TagSelectorProps {
   // Estado (REQUERIDO)
-  selectedTags: TeamTag[]        // Tags seleccionadas
-  availableTags: TeamTag[]       // Tags disponibles
-  availableColors: TagColor[]    // Colores disponibles
+  selectedTags: TeamTag[] // Tags seleccionadas
+  availableTags: TeamTag[] // Tags disponibles
+  availableColors: TagColor[] // Colores disponibles
 
   // Callbacks (REQUERIDO)
   onTagsChange: (tags: TeamTag[]) => void
 
   // Callbacks CRUD (OPCIONAL)
   onCreateTag?: (name: string, abbreviation: string, colorId: string) => void | Promise<void>
-  onEditTag?: (tagId: string, name: string, abbreviation: string, colorId: string) => void | Promise<void>
+  onEditTag?: (
+    tagId: string,
+    name: string,
+    abbreviation: string,
+    colorId: string
+  ) => void | Promise<void>
   onDeleteTag?: (tagId: string) => void | Promise<void>
 
   // UI (OPCIONAL)
-  placeholder?: string           // Placeholder (default: "Seleccionar tags...")
-  label?: string                 // Label del campo
-  className?: string             // Clases adicionales
+  placeholder?: string // Placeholder (default: "Seleccionar tags...")
+  label?: string // Label del campo
+  className?: string // Clases adicionales
 }
 ```
 
@@ -639,21 +618,17 @@ Badge individual para mostrar una tag.
 
 ```typescript
 interface TagBadgeProps {
-  tag: TeamTag              // Tag a mostrar
-  removable?: boolean       // Mostrar botón X (default: false)
-  onRemove?: (tagId: string) => void  // Callback al remover
-  className?: string        // Clases adicionales
+  tag: TeamTag // Tag a mostrar
+  removable?: boolean // Mostrar botón X (default: false)
+  onRemove?: (tagId: string) => void // Callback al remover
+  className?: string // Clases adicionales
 }
 ```
 
 #### Ejemplo
 
 ```tsx
-<TagBadge
-  tag={tag}
-  removable
-  onRemove={(tagId) => console.log('Removed:', tagId)}
-/>
+<TagBadge tag={tag} removable onRemove={(tagId) => console.log('Removed:', tagId)} />
 ```
 
 ---
@@ -669,8 +644,8 @@ interface CreateTagModalProps {
   isOpen: boolean
   onOpenChange: (open: boolean) => void
   onCreateTag: (name: string, abbreviation: string, colorId: string) => void | Promise<void>
-  existingTags: TeamTag[]      // Para validar duplicados
-  availableColors: TagColor[]  // Selector de colores
+  existingTags: TeamTag[] // Para validar duplicados
+  availableColors: TagColor[] // Selector de colores
 }
 ```
 
@@ -703,10 +678,15 @@ Modal para editar tags existentes.
 interface EditTagModalProps {
   isOpen: boolean
   onOpenChange: (open: boolean) => void
-  onEditTag: (tagId: string, name: string, abbreviation: string, colorId: string) => void | Promise<void>
-  tag: TeamTag | null          // Tag a editar
-  existingTags: TeamTag[]      // Para validar duplicados
-  availableColors: TagColor[]  // Selector de colores
+  onEditTag: (
+    tagId: string,
+    name: string,
+    abbreviation: string,
+    colorId: string
+  ) => void | Promise<void>
+  tag: TeamTag | null // Tag a editar
+  existingTags: TeamTag[] // Para validar duplicados
+  availableColors: TagColor[] // Selector de colores
 }
 ```
 
@@ -769,12 +749,12 @@ className={cn(
 export const teamTagSchema = z.object({
   name: z
     .string()
-    .min(3, 'Mínimo 3 caracteres')  // ← Cambiar min length
+    .min(3, 'Mínimo 3 caracteres') // ← Cambiar min length
     .max(30, 'Máximo 30 caracteres') // ← Cambiar max length
     .trim(),
   abbreviation: z
     .string()
-    .length(3, '3 caracteres')       // ← Cambiar a 3 letras en lugar de 2
+    .length(3, '3 caracteres') // ← Cambiar a 3 letras en lugar de 2
     .toUpperCase()
     .regex(/^[A-Z]{3}$/, 'Solo letras mayúsculas'),
   colorId: z.string().uuid(),
@@ -797,6 +777,7 @@ model TeamTag {
 ```
 
 Luego actualizar:
+
 1. Validations: agregar `description: z.string().optional()`
 2. Modales: agregar campo `<Textarea />` para descripción
 3. API: incluir `description` en CREATE/UPDATE
@@ -810,6 +791,7 @@ Luego actualizar:
 **Causa:** Path alias `@/` no configurado.
 
 **Solución:**
+
 ```json
 // tsconfig.json
 {
@@ -834,9 +816,15 @@ Luego actualizar:
 export default {
   safelist: [
     // Badge colors
-    'bg-blue-500', 'bg-green-500', 'bg-red-500', 'bg-yellow-500',
-    'bg-purple-500', 'bg-orange-500', 'bg-gray-500',
-    'text-white', 'text-black',
+    'bg-blue-500',
+    'bg-green-500',
+    'bg-red-500',
+    'bg-yellow-500',
+    'bg-purple-500',
+    'bg-orange-500',
+    'bg-gray-500',
+    'text-white',
+    'text-black',
     // O usar regex
     {
       pattern: /bg-(blue|green|red|yellow|purple|orange|gray)-(500)/,
@@ -894,27 +882,29 @@ Este sistema fue adaptado de CalReact `uninstall-tags` con los siguientes cambio
 
 ### Cambios Principales
 
-| Aspecto          | CalReact (Original)               | Cobralon (Actual)                       |
-|------------------|-----------------------------------|-----------------------------------------|
-| **Backend**      | Firebase Firestore                | Next.js API Routes + Prisma + PostgreSQL|
-| **Colores**      | Hardcoded hex colors en código    | BD (`BadgeColor` table) con Tailwind    |
-| **Aplicación**   | Botón "Aceptar" en popover        | Aplicación inmediata (sin botón)        |
-| **Estilo**       | Inline styles (`style={{...}}`)   | Tailwind classes (`className`)          |
-| **Validación**   | Frontend only                     | Frontend (Zod) + Backend (Zod)          |
-| **Auto-abbreviation** | No tenía                     | Genera automáticamente de primeras 2 letras |
+| Aspecto               | CalReact (Original)             | Cobralon (Actual)                           |
+| --------------------- | ------------------------------- | ------------------------------------------- |
+| **Backend**           | Firebase Firestore              | Next.js API Routes + Prisma + PostgreSQL    |
+| **Colores**           | Hardcoded hex colors en código  | BD (`BadgeColor` table) con Tailwind        |
+| **Aplicación**        | Botón "Aceptar" en popover      | Aplicación inmediata (sin botón)            |
+| **Estilo**            | Inline styles (`style={{...}}`) | Tailwind classes (`className`)              |
+| **Validación**        | Frontend only                   | Frontend (Zod) + Backend (Zod)              |
+| **Auto-abbreviation** | No tenía                        | Genera automáticamente de primeras 2 letras |
 
 ### Código Equivalente
 
 #### CalReact (Firebase)
+
 ```typescript
 // CalReact: Firebase listener
 const unsubscribe = onSnapshot(collection(db, 'uninstallTags'), (snapshot) => {
-  const tags = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))
+  const tags = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }))
   setTags(tags)
 })
 ```
 
 #### Cobralon (API)
+
 ```typescript
 // Cobralon: API fetch
 const res = await fetch('/api/team-tags?includeColor=true')

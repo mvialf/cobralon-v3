@@ -170,7 +170,10 @@ export const EditTagModal: React.FC<EditTagModalProps> = ({
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isEditing}>
             Cancelar
           </Button>
-          <Button onClick={handleSave} disabled={!tagName.trim() || !tagColorId || !!error || isEditing}>
+          <Button
+            onClick={handleSave}
+            disabled={!tagName.trim() || !tagColorId || !!error || isEditing}
+          >
             {isEditing ? 'Guardando...' : 'Guardar Cambios'}
           </Button>
         </DialogFooter>
