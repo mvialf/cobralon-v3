@@ -41,7 +41,7 @@ npm run typecheck   # Verificar tipos TypeScript
 **Desarrollo:**
 
 ```bash
-npm run dev         # Puerto 3002 (Turbopack) - RECOMENDADO
+npm run dev         # Puerto 3000 (Turbopack) - RECOMENDADO
 npm run dev:webpack # Puerto 3001 (Webpack) - Alternativo
 ```
 
