@@ -61,11 +61,13 @@ touch lib/types/payment.types.ts
 ```
 
 **Copiar desde:**
+
 ```bash
 cp solid-refactoring/examples/types/payment.types.ts lib/types/
 ```
 
 **O crear manualmente:**
+
 ```typescript
 // lib/types/payment.types.ts
 
@@ -173,6 +175,7 @@ touch lib/transformers/payment-transformers.ts
 ```
 
 **Copiar desde:**
+
 ```bash
 cp solid-refactoring/examples/transformers/payment-transformers.ts lib/transformers/
 ```
@@ -247,6 +250,7 @@ touch lib/transformers/__tests__/payment-transformers.test.ts
 ```
 
 **Copiar desde:**
+
 ```bash
 cp solid-refactoring/examples/transformers/payment-transformers.test.ts \
    lib/transformers/__tests__/
@@ -259,6 +263,7 @@ npm test lib/transformers/__tests__/payment-transformers.test.ts
 ```
 
 **Resultado esperado:**
+
 ```
 ✓ lib/transformers/__tests__/payment-transformers.test.ts (30 tests) 15ms
   ✓ extractProjectAllocations (4 tests)
@@ -296,6 +301,7 @@ touch lib/services/payments.service.ts
 ```
 
 **Copiar desde:**
+
 ```bash
 cp solid-refactoring/examples/services/payments.service.ts lib/services/
 ```
@@ -395,10 +401,7 @@ describe('PaymentsService', () => {
 
     const result = await service.fetchByProject('project-1')
 
-    expect(fetchMock).toHaveBeenCalledWith(
-      '/api/payments?projectId=project-1',
-      expect.any(Object)
-    )
+    expect(fetchMock).toHaveBeenCalledWith('/api/payments?projectId=project-1', expect.any(Object))
     expect(result).toEqual(mockPayments)
   })
 
@@ -442,6 +445,7 @@ touch hooks/use-project-payments.ts
 ```
 
 **Copiar desde:**
+
 ```bash
 cp solid-refactoring/examples/hooks/use-project-payments.ts hooks/
 ```
@@ -451,10 +455,7 @@ cp solid-refactoring/examples/hooks/use-project-payments.ts hooks/
 ```typescript
 // hooks/use-project-payments.ts
 import { useState, useEffect, useCallback, useMemo } from 'react'
-import type {
-  IPaymentsRepository,
-  PaymentAllocation,
-} from '@/lib/types/payment.types'
+import type { IPaymentsRepository, PaymentAllocation } from '@/lib/types/payment.types'
 import { PaymentTransformers } from '@/lib/transformers/payment-transformers'
 import { paymentsService } from '@/lib/services/payments.service'
 
@@ -481,11 +482,7 @@ export function useProjectPayments(
   projectId: string,
   options: UseProjectPaymentsOptions = {}
 ): UseProjectPaymentsResult {
-  const {
-    sortOrder = 'asc',
-    sortBy = 'date',
-    repository = paymentsService,
-  } = options
+  const { sortOrder = 'asc', sortBy = 'date', repository = paymentsService } = options
 
   const [data, setData] = useState<PaymentAllocation[]>([])
   const [loading, setLoading] = useState(true)
@@ -500,10 +497,7 @@ export function useProjectPayments(
       const payments = await repository.fetchByProject(projectId)
 
       // 2. Transform
-      let allocations = PaymentTransformers.extractProjectAllocations(
-        payments,
-        projectId
-      )
+      let allocations = PaymentTransformers.extractProjectAllocations(payments, projectId)
 
       // 3. Sort
       if (sortBy === 'date') {
@@ -643,6 +637,7 @@ touch components/tables/project-payments-table.tsx
 ```
 
 **Copiar desde:**
+
 ```bash
 cp solid-refactoring/examples/components/project-payments-table.refactored.tsx \
    components/tables/project-payments-table.tsx
@@ -667,6 +662,7 @@ npm run dev
 ```
 
 **Verificar:**
+
 1. La tabla se renderiza correctamente
 2. Datos se muestran igual que antes
 3. Loading skeleton funciona
@@ -683,6 +679,7 @@ git diff --no-index \
 ```
 
 **Métricas esperadas:**
+
 - Líneas: 229 → ~100 (56% reducción)
 - Responsabilidades: 6 → 1
 - Complejidad: Alta → Baja
@@ -758,6 +755,7 @@ npm test
 ```
 
 **Resultado esperado:**
+
 ```
 ✓ lib/transformers/__tests__/payment-transformers.test.ts (30 tests)
 ✓ lib/services/__tests__/payments.service.test.ts (5 tests)
@@ -799,6 +797,7 @@ npm test:coverage
 ```
 
 **Coverage esperado:**
+
 ```
 File                              | % Stmts | % Branch | % Funcs | % Lines
 ----------------------------------|---------|----------|---------|--------
@@ -833,6 +832,7 @@ git diff backup/before-solid-refactoring components/tables/
 ```
 
 **Verificar que NO HAY:**
+
 - Cambios de comportamiento visible
 - Features removidas
 - Regresiones de UI
@@ -874,17 +874,17 @@ git push origin dev
 
 ### Antes vs Después
 
-| Métrica | Antes | Después | Mejora |
-|---------|-------|---------|--------|
-| **Archivos** | 1 | 5 | +400% |
-| **Líneas totales** | 229 | ~560 | +144% |
-| **Líneas por archivo** | 229 | ~90-100 | -56% |
-| **Responsabilidades** | 6 | 1 | -83% |
-| **Tests** | 0 | 41+ | +∞ |
-| **Coverage** | 0% | 85%+ | +∞ |
-| **Testabilidad** | ❌ Muy difícil | ✅ Fácil | +100% |
-| **Mocks necesarios** | 5 | 0-1 | -80% |
-| **Complejidad ciclomática** | ~8 | ~3 | -62% |
+| Métrica                     | Antes          | Después  | Mejora |
+| --------------------------- | -------------- | -------- | ------ |
+| **Archivos**                | 1              | 5        | +400%  |
+| **Líneas totales**          | 229            | ~560     | +144%  |
+| **Líneas por archivo**      | 229            | ~90-100  | -56%   |
+| **Responsabilidades**       | 6              | 1        | -83%   |
+| **Tests**                   | 0              | 41+      | +∞     |
+| **Coverage**                | 0%             | 85%+     | +∞     |
+| **Testabilidad**            | ❌ Muy difícil | ✅ Fácil | +100%  |
+| **Mocks necesarios**        | 5              | 0-1      | -80%   |
+| **Complejidad ciclomática** | ~8             | ~3       | -62%   |
 
 ---
 
@@ -893,6 +893,7 @@ git push origin dev
 ### Error: "Cannot find module '@/lib/types/payment.types'"
 
 **Solución:**
+
 ```bash
 # Verificar que el alias está configurado
 cat tsconfig.json | grep "@/*"
@@ -904,6 +905,7 @@ cat tsconfig.json | grep "@/*"
 ### Tests fallan con "fetch is not defined"
 
 **Solución:**
+
 ```typescript
 // vitest.setup.ts
 import { vi } from 'vitest'
@@ -914,6 +916,7 @@ global.fetch = vi.fn()
 ### Componente no re-renderiza cuando cambia projectId
 
 **Solución:** Verificar que `projectId` está en dependencies de useEffect:
+
 ```typescript
 useEffect(() => {
   fetchData()
@@ -938,6 +941,7 @@ Después de completar todos los pasos, tendrás:
 **Siguiente paso:** ¡Replica este patrón en otros componentes del proyecto!
 
 **Sugerencias de componentes para refactorizar:**
+
 1. `CustomerForm` (similar patrón)
 2. `PaymentForm` (más complejo, pero mismo approach)
 3. `ProjectForm` (validation logic separable)

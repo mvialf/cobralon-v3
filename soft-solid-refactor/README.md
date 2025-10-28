@@ -20,12 +20,12 @@
 
 ### 📊 Resultados
 
-| Métrica | Antes | Después | Mejora |
-|---------|-------|---------|--------|
-| **LOC componente** | 228 | 158 | **-30.7%** ✅ |
-| **Tests** | 0 | 11 (100% passing) | **+∞** ✅ |
-| **Testabilidad** | 2/10 | 7/10 | **+250%** ✅ |
-| **Reutilización** | 0% | 70% | **+70%** ✅ |
+| Métrica            | Antes | Después           | Mejora        |
+| ------------------ | ----- | ----------------- | ------------- |
+| **LOC componente** | 228   | 158               | **-30.7%** ✅ |
+| **Tests**          | 0     | 11 (100% passing) | **+∞** ✅     |
+| **Testabilidad**   | 2/10  | 7/10              | **+250%** ✅  |
+| **Reutilización**  | 0%    | 70%               | **+70%** ✅   |
 
 ### 🎯 Lo que se logró
 
@@ -80,18 +80,18 @@ Ver caso completo con código, tests, métricas y screenshots:
 
 ## Comparación con SOLID Completo
 
-| Aspecto | SOLID Completo | Soft SOLID | Decisión |
-|---------|----------------|------------|----------|
-| **Capas** | 5 (Component, Hook, Service, Transformers, Types) | 2-3 (Component, Transformers, Types) | ✅ Menos overhead |
-| **Service Layer** | Sí (abstracción sobre fetch) | No (usar Server Components) | ✅ Más Next.js-native |
-| **Hook Layer** | Sí (custom hook) | No (data como prop) | ✅ Más simple |
-| **Tests** | 41 tests | 15-20 tests | ✅ Proporcional |
-| **Inversión** | 6 horas | 1-2 horas | ✅ 67% menos |
-| **LOC nuevo** | 570 | 200 | ✅ 65% menos |
-| **Archivos nuevos** | 5 | 2 | ✅ 60% menos |
-| **Complejidad** | Alta (pero máxima testabilidad) | Media (equilibrada) | ✅ Pragmática |
-| **Reutilización** | 100% (todo reutilizable) | 80% (transformers reutilizables) | ✅ Suficiente |
-| **Extensibilidad** | Máxima (interfaces, DIP) | Alta (functions composables) | ✅ Suficiente |
+| Aspecto             | SOLID Completo                                    | Soft SOLID                           | Decisión              |
+| ------------------- | ------------------------------------------------- | ------------------------------------ | --------------------- |
+| **Capas**           | 5 (Component, Hook, Service, Transformers, Types) | 2-3 (Component, Transformers, Types) | ✅ Menos overhead     |
+| **Service Layer**   | Sí (abstracción sobre fetch)                      | No (usar Server Components)          | ✅ Más Next.js-native |
+| **Hook Layer**      | Sí (custom hook)                                  | No (data como prop)                  | ✅ Más simple         |
+| **Tests**           | 41 tests                                          | 15-20 tests                          | ✅ Proporcional       |
+| **Inversión**       | 6 horas                                           | 1-2 horas                            | ✅ 67% menos          |
+| **LOC nuevo**       | 570                                               | 200                                  | ✅ 65% menos          |
+| **Archivos nuevos** | 5                                                 | 2                                    | ✅ 60% menos          |
+| **Complejidad**     | Alta (pero máxima testabilidad)                   | Media (equilibrada)                  | ✅ Pragmática         |
+| **Reutilización**   | 100% (todo reutilizable)                          | 80% (transformers reutilizables)     | ✅ Suficiente         |
+| **Extensibilidad**  | Máxima (interfaces, DIP)                          | Alta (functions composables)         | ✅ Suficiente         |
 
 ### Veredicto
 
@@ -220,20 +220,22 @@ Usuario ve tabla (fast)
 
 ### Diferencias Clave vs SOLID Completo
 
-| Qué | SOLID | Soft SOLID |
-|-----|-------|------------|
-| **Fetching** | Client hook → Service → fetch() | Server Component → Prisma directo |
-| **Estado** | useState en hook | No hay (data como prop) |
-| **Transformación** | Hook llama transformers | Server Component llama transformers |
-| **Hidratación** | Client re-fetch | Server pre-renderiza |
+| Qué                | SOLID                           | Soft SOLID                          |
+| ------------------ | ------------------------------- | ----------------------------------- |
+| **Fetching**       | Client hook → Service → fetch() | Server Component → Prisma directo   |
+| **Estado**         | useState en hook                | No hay (data como prop)             |
+| **Transformación** | Hook llama transformers         | Server Component llama transformers |
+| **Hidratación**    | Client re-fetch                 | Server pre-renderiza                |
 
 **Ventajas:**
+
 - ✅ Menos JavaScript al cliente
 - ✅ Mejor SEO (tabla pre-renderizada)
 - ✅ Más rápido (no round-trip fetch)
 - ✅ Más simple (menos archivos)
 
 **Trade-offs:**
+
 - ⚠️ No reutilizable el fetching (pero transformers sí)
 - ⚠️ Si necesitas client-side fetching futuro → refactor a SOLID completo
 
@@ -250,12 +252,14 @@ Usuario ve tabla (fast)
 **Objetivo:** Extraer lógica de transformación a pure functions.
 
 **Pasos:**
+
 1. Crear `lib/transformers/payment-transformers.ts`
 2. Mover lógica de flatMap/filter/map
 3. Mover lógica de sorting
 4. Escribir 10-15 tests básicos
 
 **Resultado:**
+
 - ✅ Componente: 229 → 180 líneas (-21%)
 - ✅ Transformers testables (pure functions)
 - ✅ Reutilizable en otros componentes
@@ -267,11 +271,13 @@ Usuario ve tabla (fast)
 **Objetivo:** Componente solo renderiza, data viene de afuera.
 
 **Pasos:**
+
 1. Convertir a props: `<ProjectPaymentsTable data={...} />`
 2. Remover `useState`, `useEffect`, `fetch()`
 3. Componente queda ~120 líneas
 
 **Resultado:**
+
 - ✅ Componente: 180 → 120 líneas (-33% desde inicio)
 - ✅ Más testable (props → JSX)
 - ✅ Más simple
@@ -283,11 +289,13 @@ Usuario ve tabla (fast)
 **Objetivo:** Fetching server-side para mejor performance.
 
 **Pasos:**
+
 1. Crear página Server Component que fetchea data
 2. Llama transformers server-side
 3. Pasa data al Client Component
 
 **Resultado:**
+
 - ✅ Mejor performance
 - ✅ Menos JS al cliente
 - ✅ Más alineado con Next.js 15
@@ -300,16 +308,16 @@ Usuario ve tabla (fast)
 
 ### 📊 Comparación Cuantitativa
 
-| Métrica | Antes | SOLID | Soft SOLID |
-|---------|-------|-------|------------|
-| **Inversión** | 0 | 6h | 1.5h |
-| **LOC total** | 229 | 570 | 320 |
-| **Archivos** | 1 | 6 | 3 |
-| **Tests** | 0 | 41 | 15 |
-| **Complejidad** | Alta (monolítico) | Baja (separado) | Media |
-| **Testabilidad** | 2/10 | 9/10 | 7/10 |
-| **Reutilización** | 0% | 100% | 70% |
-| **Break-even** | - | 4 tareas (2 sem) | 2 tareas (1 sem) |
+| Métrica           | Antes             | SOLID            | Soft SOLID       |
+| ----------------- | ----------------- | ---------------- | ---------------- |
+| **Inversión**     | 0                 | 6h               | 1.5h             |
+| **LOC total**     | 229               | 570              | 320              |
+| **Archivos**      | 1                 | 6                | 3                |
+| **Tests**         | 0                 | 41               | 15               |
+| **Complejidad**   | Alta (monolítico) | Baja (separado)  | Media            |
+| **Testabilidad**  | 2/10              | 9/10             | 7/10             |
+| **Reutilización** | 0%                | 100%             | 70%              |
+| **Break-even**    | -                 | 4 tareas (2 sem) | 2 tareas (1 sem) |
 
 ### ✅ Beneficios de Soft SOLID
 
@@ -361,21 +369,25 @@ soft-solid-refactor/
 ## 🎯 Próximos Pasos
 
 ### 1. Lee la Filosofía
+
 ```bash
 cat soft-solid-refactor/01-philosophy.md
 ```
 
 ### 2. Revisa la Arquitectura
+
 ```bash
 cat soft-solid-refactor/02-pragmatic-architecture.md
 ```
 
 ### 3. Mira Ejemplos de Código
+
 ```bash
 cat soft-solid-refactor/examples/transformers/payment-transformers.ts
 ```
 
 ### 4. Sigue la Guía de Implementación
+
 ```bash
 cat soft-solid-refactor/03-implementation-guide.md
 ```
@@ -387,6 +399,7 @@ cat soft-solid-refactor/03-implementation-guide.md
 ### ¿Por qué no usar SOLID completo?
 
 **Respuesta:** SOLID completo es excelente, pero overkill para:
+
 - Componentes usados en 1-2 lugares
 - Proyectos en etapa MVP
 - Teams pequeños
@@ -398,6 +411,7 @@ cat soft-solid-refactor/03-implementation-guide.md
 ### ¿Cuándo debo upgradear a SOLID completo?
 
 **Triggers:**
+
 1. Necesitas reutilizar en ≥3 lugares
 2. Aparecen bugs frecuentes
 3. Team crece a ≥5 devs
@@ -410,6 +424,7 @@ Ver: `comparison/when-to-upgrade.md`
 ### ¿Es compatible con el template?
 
 **Sí.** Este enfoque es **MÁS** compatible que SOLID completo porque:
+
 - ✅ Usa Server Components (recomendado en `docs/template/architecture/`)
 - ✅ Sigue patrón de `lib/business-logic/` existente
 - ✅ Consistente con el resto del proyecto
@@ -419,6 +434,7 @@ Ver: `comparison/when-to-upgrade.md`
 ### ¿Puedo combinar ambos enfoques?
 
 **Sí.** Usa Soft SOLID por defecto, SOLID completo para componentes críticos:
+
 - Landing page → Soft SOLID (simple)
 - Sistema de pagos → SOLID completo (crítico, complejo)
 - Tablas de lectura → Soft SOLID (simple)

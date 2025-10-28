@@ -173,12 +173,7 @@ export function ProjectPaymentsTable({
             <AlertTitle>Error al cargar pagos</AlertTitle>
             <AlertDescription className="mt-2">
               {error.message}
-              <Button
-                variant="outline"
-                size="sm"
-                className="mt-3"
-                onClick={() => refetch()}
-              >
+              <Button variant="outline" size="sm" className="mt-3" onClick={() => refetch()}>
                 <RefreshCw className="mr-2 h-4 w-4" />
                 Reintentar
               </Button>
@@ -234,9 +229,7 @@ export function ProjectPaymentsTable({
             {!hidePaymentMethod && (
               <TableHead className="text-pay-card bg-primary">Método</TableHead>
             )}
-            <TableHead className="text-pay-card bg-primary text-right">
-              Monto Asignado
-            </TableHead>
+            <TableHead className="text-pay-card bg-primary text-right">Monto Asignado</TableHead>
           </TableRow>
         </TableHeader>
 
@@ -269,10 +262,7 @@ export function ProjectPaymentsTable({
 
               {/* Monto */}
               <TableCell className="font-medium text-pay-foreground text-right">
-                {formatCurrency(
-                  allocation.allocatedAmount,
-                  allocation.payment.currency
-                )}
+                {formatCurrency(allocation.allocatedAmount, allocation.payment.currency)}
               </TableCell>
             </TableRow>
           ))}
@@ -322,9 +312,7 @@ ProjectPaymentsTable.displayName = 'ProjectPaymentsTable'
 /**
  * Versión compacta sin header ni footer
  */
-export function ProjectPaymentsTableCompact(
-  props: Omit<ProjectPaymentsTableProps, 'showTotals'>
-) {
+export function ProjectPaymentsTableCompact(props: Omit<ProjectPaymentsTableProps, 'showTotals'>) {
   // Implementación similar pero sin Card wrapper
   // ...
   return <ProjectPaymentsTable {...props} />

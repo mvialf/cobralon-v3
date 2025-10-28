@@ -74,6 +74,7 @@ export function ProjectPaymentsTable({ projectId, hidePaymentMethod }) {
 #### ❌ Violación: 6 responsabilidades en 1 componente
 
 **Responsabilidad 1: Renderizado UI** ✅ CORRECTO
+
 ```typescript
 // Líneas 179-227
 return (
@@ -87,17 +88,20 @@ return (
   </Table>
 )
 ```
+
 **Veredicto:** Esta ES la responsabilidad correcta del componente.
 
 ---
 
 **Responsabilidad 2: Fetching de datos** ❌ INCORRECTO
+
 ```typescript
 // Línea 98
 const response = await fetch(`/api/payments?projectId=${projectId}`)
 ```
 
 **Problemas:**
+
 - El componente conoce el endpoint específico
 - Acoplamiento fuerte con la API
 - Imposible cambiar estrategia de fetching (GraphQL, cache, etc.)
@@ -108,6 +112,7 @@ const response = await fetch(`/api/payments?projectId=${projectId}`)
 ---
 
 **Responsabilidad 3: Transformación de datos** ❌ INCORRECTO
+
 ```typescript
 // Líneas 104-121: Transformación compleja
 const projectAllocations = data.payments.flatMap((payment: PaymentFromAPI) =>
@@ -131,6 +136,7 @@ const projectAllocations = data.payments.flatMap((payment: PaymentFromAPI) =>
 ```
 
 **Problemas:**
+
 - Lógica de negocio (flatMap + filter + map) dentro del componente
 - No reutilizable (si otro componente necesita esto → copiar/pegar)
 - Difícil de testear (requiere renderizar el componente)
@@ -144,10 +150,10 @@ export function extractProjectAllocations(
   payments: PaymentFromAPI[],
   projectId: string
 ): PaymentAllocation[] {
-  return payments.flatMap(payment =>
+  return payments.flatMap((payment) =>
     payment.allocations
-      .filter(alloc => alloc.project.id === projectId)
-      .map(alloc => mapToPaymentAllocation(payment, alloc))
+      .filter((alloc) => alloc.project.id === projectId)
+      .map((alloc) => mapToPaymentAllocation(payment, alloc))
   )
 }
 ```
@@ -155,6 +161,7 @@ export function extractProjectAllocations(
 ---
 
 **Responsabilidad 4: Ordenamiento** ❌ INCORRECTO
+
 ```typescript
 // Líneas 124-126
 projectAllocations.sort((a: PaymentAllocation, b: PaymentAllocation) => {
@@ -163,6 +170,7 @@ projectAllocations.sort((a: PaymentAllocation, b: PaymentAllocation) => {
 ```
 
 **Problemas:**
+
 - Mutación del array (side effect)
 - Lógica de ordenamiento hardcodeada
 - No parametrizable (si necesitas orden descendente → modifica el código)
@@ -186,6 +194,7 @@ export function sortAllocationsByDate(
 ---
 
 **Responsabilidad 5: Manejo de estado** ⚠️ GRIS
+
 ```typescript
 // Líneas 88-89
 const [allocations, setAllocations] = useState<PaymentAllocation[]>([])
@@ -193,6 +202,7 @@ const [isLoading, setIsLoading] = useState(true)
 ```
 
 **Análisis:**
+
 - El componente maneja su propio estado
 - En arquitectura simple: ACEPTABLE
 - En arquitectura escalable: DEBERÍA delegarse a custom hook
@@ -222,6 +232,7 @@ export function ProjectPaymentsTable({ projectId }) {
 ---
 
 **Responsabilidad 6: Manejo de errores y notificaciones** ❌ INCORRECTO
+
 ```typescript
 // Líneas 130-131
 console.error('Error fetching payments:', error)
@@ -229,6 +240,7 @@ toast.error('Error al cargar pagos')
 ```
 
 **Problemas:**
+
 - Acoplamiento directo con librería de toasts (sonner)
 - Si cambias de librería → modificas todos los componentes
 - No testeable (requiere mockear `toast` global)
@@ -276,10 +288,11 @@ projectAllocations.sort((a, b) => {
 **Solución actual:** Modificar el código del componente ❌
 
 **Solución OCP:** Props parametrizables ✅
+
 ```typescript
 interface ProjectPaymentsTableProps {
   projectId: string
-  sortOrder?: 'asc' | 'desc'  // ← Extensión sin modificación
+  sortOrder?: 'asc' | 'desc' // ← Extensión sin modificación
 }
 ```
 
@@ -304,6 +317,7 @@ interface ProjectPaymentsTableProps {
 **Solución actual:** Modificar el componente ❌
 
 **Solución OCP:** Composition pattern ✅
+
 ```typescript
 <ProjectPaymentsTable projectId="..." columns={[
   { key: 'number', label: 'N°', render: (row) => row.number },
@@ -340,6 +354,7 @@ if (isLoading) {
 **Solución actual:** Modificar el componente ❌
 
 **Solución OCP:** Slots/Children ✅
+
 ```typescript
 interface ProjectPaymentsTableProps {
   loadingComponent?: React.ReactNode
@@ -367,14 +382,15 @@ interface ProjectPaymentsTableProps {
 interface PaymentFromAPI {
   id: string
   amount: number
-  allocations: AllocationFromAPI[]  // ← Payment TIENE allocations
+  allocations: AllocationFromAPI[] // ← Payment TIENE allocations
 }
 
 // Representación 2: Interna
 interface PaymentAllocation {
   id: string
   allocatedAmount: number
-  payment: {                         // ← Allocation TIENE payment
+  payment: {
+    // ← Allocation TIENE payment
     id: string
     amount: number
   }
@@ -382,18 +398,31 @@ interface PaymentAllocation {
 ```
 
 **Análisis:**
+
 - `PaymentFromAPI` tiene relación 1:N con allocations
 - `PaymentAllocation` invierte la relación: allocation → payment
 - Esta inversión puede causar confusión conceptual
 
 **Mejor approach:** Adapters explícitos
+
 ```typescript
 // Domain types (interno)
-interface Payment { id: string; amount: number }
-interface Allocation { id: string; paymentId: string; amount: number }
+interface Payment {
+  id: string
+  amount: number
+}
+interface Allocation {
+  id: string
+  paymentId: string
+  amount: number
+}
 
 // API DTOs
-interface PaymentDTO { id: string; amount: number; allocations: AllocationDTO[] }
+interface PaymentDTO {
+  id: string
+  amount: number
+  allocations: AllocationDTO[]
+}
 
 // Adapter
 class PaymentAdapter {
@@ -414,15 +443,17 @@ class PaymentAdapter {
 ```typescript
 // Líneas 90-93
 const { configuration } = useConfiguration()
-const locale = configuration.locale  // Solo necesita locale
+const locale = configuration.locale // Solo necesita locale
 ```
 
 **Análisis:**
+
 - Necesita: `locale`
 - Obtiene: `{ pais, region, ciudad, comuna, currency, locale }` (6 valores)
 - Si cualquier valor cambia → re-render innecesario
 
 **Impacto medido:**
+
 ```typescript
 // Cambio en `configuration.pais`:
 // ANTES: Re-render de ProjectPaymentsTable ❌ (innecesario)
@@ -430,6 +461,7 @@ const locale = configuration.locale  // Solo necesita locale
 ```
 
 **Solución 1: Props explícitas (inversión de dependencia)**
+
 ```typescript
 interface ProjectPaymentsTableProps {
   projectId: string
@@ -442,11 +474,13 @@ const { locale } = useConfiguration()
 ```
 
 **Beneficios:**
+
 - Testeable (inyectas locale mock)
 - Sin re-renders innecesarios
 - Dependencia explícita
 
 **Solución 2: Hook especializado**
+
 ```typescript
 // hooks/use-locale.ts
 export function useLocale(): string {
@@ -472,20 +506,24 @@ const response = await fetch(`/api/payments?projectId=${projectId}`)
 ```
 
 **Principio violado:**
+
 > Los módulos de alto nivel no deberían depender de módulos de bajo nivel.
 > Ambos deberían depender de abstracciones.
 
 **Análisis:**
+
 - Módulo de alto nivel: `ProjectPaymentsTable` (componente UI)
 - Módulo de bajo nivel: `fetch()` (browser API)
 - ❌ El componente depende directamente de fetch
 
 **Consecuencias:**
+
 1. Imposible testear sin mockear `global.fetch`
 2. No puedes cambiar estrategia (GraphQL, WebSocket, cache)
 3. No puedes agregar retry, circuit breaker, etc.
 
 **Solución DIP:**
+
 ```typescript
 // 1. Define abstracción (interface)
 interface IPaymentsRepository {
@@ -512,6 +550,7 @@ const { data } = useProjectPayments(projectId, repository)
 ```
 
 **Beneficios:**
+
 - Testeable: Inyectas mock repository
 - Extensible: Implementas `CachedPaymentsRepository`, `GraphQLPaymentsRepository`, etc.
 - Desacoplado: Componente no conoce implementación
@@ -530,10 +569,12 @@ formatCurrency(allocation.allocatedAmount, allocation.payment.currency)
 ```
 
 **Análisis:**
+
 - No es terrible (son utilities puras)
 - Pero idealmente deberían ser inyectables
 
 **Solución pragmática:**
+
 ```typescript
 // Opción A: Props (overkill para formatters)
 interface ProjectPaymentsTableProps {
@@ -566,10 +607,12 @@ toast.error('Error al cargar pagos')
 ```
 
 **Análisis:**
+
 - Acoplamiento con librería específica (sonner)
 - Cambiar librería → cambias TODOS los componentes
 
 **Solución DIP:**
+
 ```typescript
 // 1. Abstracción
 interface INotificationService {
@@ -601,6 +644,7 @@ notification.error('Error al cargar pagos')
 ```
 
 **Beneficios:**
+
 - Migrar de sonner a otra librería: Solo cambias implementación
 - Testear: Mockeas INotificationService
 
@@ -613,6 +657,7 @@ notification.error('Error al cargar pagos')
 **Definición:** Número de caminos independientes a través del código.
 
 **Cálculo para `fetchPayments()`:**
+
 ```typescript
 async function fetchPayments() {
   try {                                    // +1 (try)
@@ -647,20 +692,21 @@ async function fetchPayments() {
 
 ### Líneas de Código
 
-| Sección | Líneas | Porcentaje |
-|---------|--------|------------|
-| Imports | 16 | 7% |
-| Types | 53 | 23% |
-| Component | 156 | 68% |
-| - State management | 6 | 3% |
-| - Fetching/Transform | 41 | 18% |
-| - Rendering | 49 | 21% |
-| - Loading state | 18 | 8% |
-| - Empty state | 18 | 8% |
-| - Table rendering | 30 | 13% |
-| **Total** | **229** | **100%** |
+| Sección              | Líneas  | Porcentaje |
+| -------------------- | ------- | ---------- |
+| Imports              | 16      | 7%         |
+| Types                | 53      | 23%        |
+| Component            | 156     | 68%        |
+| - State management   | 6       | 3%         |
+| - Fetching/Transform | 41      | 18%        |
+| - Rendering          | 49      | 21%        |
+| - Loading state      | 18      | 8%         |
+| - Empty state        | 18      | 8%         |
+| - Table rendering    | 30      | 13%        |
+| **Total**            | **229** | **100%**   |
 
 **Análisis:**
+
 - 68% del archivo es lógica del componente
 - 41% de la lógica del componente es fetching/transformación (NO debería estar ahí)
 
@@ -709,6 +755,7 @@ describe('ProjectPaymentsTable', () => {
 ```
 
 **Problemas:**
+
 1. Requiere 4 mocks globales
 2. Difícil mantener (cambios en implementación → cambian mocks)
 3. Lento (renderiza componente real)
@@ -747,6 +794,7 @@ describe('ProjectPaymentsTable', () => {
 ```
 
 **Beneficios:**
+
 - 0 mocks
 - Rápido (solo renderiza tabla)
 - Mantenible (props explícitas)

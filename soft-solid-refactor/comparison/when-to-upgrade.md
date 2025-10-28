@@ -86,6 +86,7 @@ Responde estas preguntas (Sí = 1 punto, No = 0):
 10. [ ] ¿Deployment frequency >1 por día?
 
 **Interpretación:**
+
 - **0-2 puntos:** NO upgradear (Soft SOLID es suficiente)
 - **3-5 puntos:** CONSIDERA upgradear (evalúa caso por caso)
 - **6+ puntos:** UPGRADEA YA (pain es evidente)
@@ -101,6 +102,7 @@ Responde estas preguntas (Sí = 1 punto, No = 0):
 **Timeline:** 3-4 horas
 
 **Pasos:**
+
 1. Crear Service Layer (`lib/services/payments.service.ts`)
 2. Crear Hook Layer (`hooks/use-project-payments.ts`)
 3. Refactorizar componente para usar hook
@@ -117,6 +119,7 @@ Responde estas preguntas (Sí = 1 punto, No = 0):
 **Timeline:** 1 hora por semana × 3 semanas
 
 #### Semana 1: Service Layer (1h)
+
 ```typescript
 // 1. Crear abstracción sobre fetch
 export class PaymentsService {
@@ -137,6 +140,7 @@ const allocations = processProjectPayments(data.payments, projectId)
 ---
 
 #### Semana 2: Hook Layer (1h)
+
 ```typescript
 // 1. Crear hook que usa service + transformers
 export function useProjectPayments(projectId: string) {
@@ -146,7 +150,7 @@ export function useProjectPayments(projectId: string) {
   useEffect(() => {
     setLoading(true)
     PaymentsService.fetchByProject(projectId)
-      .then(payments => {
+      .then((payments) => {
         const processed = processProjectPayments(payments, projectId)
         setData(processed)
       })
@@ -168,6 +172,7 @@ export function ProjectPaymentsTable({ projectId }: Props) {
 ---
 
 #### Semana 3: Tests (1h)
+
 ```typescript
 // Agregar tests de service + hook
 describe('PaymentsService', () => { ... })
@@ -182,26 +187,29 @@ describe('useProjectPayments', () => { ... })
 
 ### Costo de Upgrade
 
-| Enfoque | Tiempo | Riesgo | Mejor para |
-|---------|--------|--------|------------|
-| **Big Bang** | 3-4h | Alto | Pain alto (6+ puntos) |
-| **Incremental** | 3h (1h/semana × 3) | Bajo | Pain medio (3-5 puntos) |
+| Enfoque         | Tiempo             | Riesgo | Mejor para              |
+| --------------- | ------------------ | ------ | ----------------------- |
+| **Big Bang**    | 3-4h               | Alto   | Pain alto (6+ puntos)   |
+| **Incremental** | 3h (1h/semana × 3) | Bajo   | Pain medio (3-5 puntos) |
 
 ### Beneficios Post-Upgrade
 
 **Antes (Soft SOLID):**
+
 - Transformers reutilizables: ✅
 - Fetching reutilizable: ❌
 - Tests: 15 (suficiente)
 - Reutilización: 70%
 
 **Después (SOLID Completo):**
+
 - Transformers reutilizables: ✅
 - Fetching reutilizable: ✅
 - Tests: 40+ (exhaustivo)
 - Reutilización: 100%
 
 **Ganancia neta:**
+
 - +30% reutilización
 - +25 tests
 - Fetching abstracto (cambiar API es fácil)
@@ -216,6 +224,7 @@ describe('useProjectPayments', () => { ... })
 ### Caso 1: Startup que Creció
 
 **Contexto:**
+
 - Empezaron con Soft SOLID (3 devs, MVP)
 - Crecieron a 8 devs en 6 meses
 - Merge conflicts aumentaron
@@ -223,6 +232,7 @@ describe('useProjectPayments', () => { ... })
 **Trigger:** Team ≥8 devs (punto #2)
 
 **Acción:** Upgrade a SOLID completo
+
 - Hook Layer con contratos claros
 - Service Layer testeable
 - Tests aumentaron a 90% coverage
@@ -234,12 +244,14 @@ describe('useProjectPayments', () => { ... })
 ### Caso 2: Migración de API
 
 **Contexto:**
+
 - Soft SOLID funcionaba bien
 - Migraron de REST interno a GraphQL third-party
 
 **Trigger:** Cambio de API (punto #6)
 
 **Acción:** Upgrade a SOLID completo
+
 - Service Layer abstrae API
 - Componentes NO cambiaron (solo service)
 
@@ -250,12 +262,14 @@ describe('useProjectPayments', () => { ... })
 ### Caso 3: Real-Time Dashboard
 
 **Contexto:**
+
 - Tabla simple (Soft SOLID)
 - Cliente pidió real-time updates (refresh cada 5s)
 
 **Trigger:** Real-time updates (punto #5)
 
 **Acción:** Upgrade a SOLID completo
+
 - Service Layer con polling
 - Hook maneja setInterval + cleanup
 - Retry logic en service
@@ -267,6 +281,7 @@ describe('useProjectPayments', () => { ... })
 ### Caso 4: NO Upgradear (Mantener Soft SOLID)
 
 **Contexto:**
+
 - Developer leyó sobre SOLID
 - Quería "mejorar arquitectura"
 - No había pain points
@@ -288,7 +303,7 @@ describe('useProjectPayments', () => { ... })
 Responde honestamente:
 
 1. **¿Tienes pain points actualmente?**
-   - [ ] Sí → Lista cuáles: _______________
+   - [ ] Sí → Lista cuáles: ******\_\_\_******
    - [ ] No → Mantén Soft SOLID
 
 2. **¿Tu scoring fue ≥6 puntos?**
@@ -312,6 +327,7 @@ Responde honestamente:
 **Acción:** Mantén Soft SOLID
 
 **Monitorea:**
+
 - Frecuencia de bugs
 - Time to fix bugs
 - Número de merge conflicts
@@ -322,6 +338,7 @@ Responde honestamente:
 ### Corto Plazo (1-3 meses)
 
 **Re-evalúa:**
+
 - ¿Apareció algún trigger (1-6)?
 - ¿Scoring cambió?
 - ¿Pain aumentó?
@@ -334,10 +351,12 @@ Responde honestamente:
 ### Mediano Plazo (3-6 meses)
 
 **Si todavía Soft SOLID:**
+
 - ✅ Excelente - significa que funciona bien
 - ⚠️ Reevalúa si contexto cambió (team creció, etc)
 
 **Si ya upgradeaste a SOLID:**
+
 - ✅ Valida que valió la pena
 - 📊 Mide: bugs, velocity, developer satisfaction
 
@@ -360,6 +379,7 @@ Antes de empezar, asegúrate:
 ### Paso a Paso
 
 1. **Backup código actual**
+
    ```bash
    git checkout -b upgrade/solid-complete
    ```
@@ -369,11 +389,13 @@ Antes de empezar, asegúrate:
    - Pasos 1-5 detallados
 
 3. **Tests pasan**
+
    ```bash
    npm test
    ```
 
 4. **Validar en desarrollo**
+
    ```bash
    npm run dev
    ```

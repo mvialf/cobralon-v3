@@ -137,9 +137,7 @@ export class PaymentsService implements IPaymentsRepository {
    * })
    * console.log(`Page ${result.page}: ${result.payments.length} of ${result.total}`)
    */
-  async fetchAll(
-    params: PaymentQueryParams = {}
-  ): Promise<{
+  async fetchAll(params: PaymentQueryParams = {}): Promise<{
     payments: PaymentFromAPI[]
     total: number
     page: number
@@ -179,10 +177,7 @@ export class PaymentsService implements IPaymentsRepository {
    *
    * @private
    */
-  private async fetchWithTimeout(
-    url: string,
-    options: RequestInit
-  ): Promise<Response> {
+  private async fetchWithTimeout(url: string, options: RequestInit): Promise<Response> {
     const controller = new AbortController()
     const timeoutId = setTimeout(() => controller.abort(), this.config.timeout)
 
@@ -279,11 +274,7 @@ export class PaymentsService implements IPaymentsRepository {
    *
    * @private
    */
-  private createError(
-    message: string,
-    statusCode?: number,
-    details?: unknown
-  ): PaymentsFetchError {
+  private createError(message: string, statusCode?: number, details?: unknown): PaymentsFetchError {
     const error = new Error(message) as PaymentsFetchError
     error.name = 'PaymentsFetchError'
     error.statusCode = statusCode

@@ -9,11 +9,13 @@
 ## ¿Por Qué Este Paso?
 
 **Problema actual:**
+
 - Componente todavía tiene fetching (useState, useEffect, fetch)
 - Difícil testear (necesitas mockear fetch)
 - No reutilizable (acoplado a API específica)
 
 **Solución:**
+
 - Componente recibe data como prop
 - Fetching se hace en parent (Server Component o custom hook)
 - 100% testeable (props → JSX)
@@ -33,6 +35,7 @@
 ### Opción A: Mantener Client-Side Fetching (más simple)
 
 Si NO quieres cambiar mucho:
+
 - Componente sigue siendo client-only
 - Fetching queda en componente (simplificado con transformers)
 
@@ -44,6 +47,7 @@ Si NO quieres cambiar mucho:
 ### Opción B: Data como Prop (más testeable)
 
 Si quieres máxima testabilidad:
+
 - Componente recibe data procesada
 - Parent hace fetching (Server Component o custom hook)
 
@@ -123,6 +127,7 @@ export function ProjectPaymentsTable({
 ```
 
 **Resultado:**
+
 - ✅ -60 líneas (fetching removido)
 - ✅ Componente: 153 → 93 líneas
 - ✅ 100% testeable (props → JSX)
@@ -199,6 +204,7 @@ export default function ProjectDetailPage({ params }: { params: { id: string } }
 ```
 
 **Ventajas:**
+
 - ✅ Fetching server-side (más rápido)
 - ✅ HTML pre-renderizado (SEO)
 - ✅ Menos JS al cliente
@@ -270,6 +276,7 @@ export function PaymentsClientSection({ projectId }: { projectId: string }) {
 ```
 
 **Ventajas:**
+
 - ✅ Hook reutilizable
 - ✅ Separa fetching de rendering
 - ⚠️ Client-side (más lento que Server Component)
@@ -289,16 +296,19 @@ export function PaymentsClientSection({ projectId }: { projectId: string }) {
 ### Verificar Mejoras
 
 **Antes (Paso 1):**
+
 - Componente: 153 líneas
 - Fetching: Inline en componente
 - Testeable: Parcial (necesita mock fetch)
 
 **Después (Paso 2):**
+
 - Componente: 93 líneas (-39%)
 - Fetching: En parent (Server Component o Hook)
 - Testeable: 100% (props → JSX)
 
 **Ganancia total vs original:**
+
 - Componente: 229 → 93 líneas (**-59%**)
 - Reutilización: 0% → 70%
 - Testabilidad: 2/10 → 8/10
@@ -356,11 +366,13 @@ describe('ProjectPaymentsTable', () => {
 ```
 
 **Ejecutar:**
+
 ```bash
 npm test components/tables/__tests__/project-payments-table.test.tsx
 ```
 
 **Esperado:**
+
 ```
 ✓ ProjectPaymentsTable (3 tests)
 
@@ -375,6 +387,7 @@ Time: <50ms
 ### Error: "Cannot use async function in client component"
 
 **Solución:**
+
 ```typescript
 // ❌ INCORRECTO: async en Client Component
 'use client'
@@ -390,6 +403,7 @@ export default async function MyComponent() { ... }
 ### Data no se muestra
 
 **Solución:**
+
 ```typescript
 // Verificar que parent pasa data correctamente
 <ProjectPaymentsTable data={allocations} />
@@ -402,6 +416,7 @@ export default async function MyComponent() { ... }
 ### Tests fallan: "data is undefined"
 
 **Solución:**
+
 ```typescript
 // Siempre pasa data en tests (no undefined)
 render(<ProjectPaymentsTable data={mockData || []} />)
@@ -414,15 +429,18 @@ render(<ProjectPaymentsTable data={mockData || []} />)
 ### Componente Refactorizado
 
 **LOC:**
+
 - Original: 229 líneas
 - Después Paso 1: 153 líneas (-33%)
 - Después Paso 2: 93 líneas (-59%)
 
 **Responsabilidades:**
+
 - Original: 6 (fetching, transformación, estado, rendering, error handling, loading)
 - Después: 1 (rendering)
 
 **Testabilidad:**
+
 - Original: 2/10 (necesita mockear 5 cosas)
 - Después: 8/10 (solo props → JSX)
 

@@ -2,52 +2,52 @@
 
 ## Tabla Comparativa Exhaustiva
 
-| Aspecto | SOLID Completo | Soft SOLID | Ganador |
-|---------|----------------|------------|---------|
-| **ARQUITECTURA** ||||
-| Capas | 5 (Component, Hook, Service, Transformers, Types) | 3 (Server Component, Client Component, Transformers+Types) | Soft (simplicidad) |
-| Archivos nuevos | 6 | 3 | Soft (-50%) |
-| LOC total | 570 | 320 | Soft (-44%) |
-| LOC promedio/archivo | ~95 | ~107 | Empate |
-| Complejidad arquitectural | Alta | Media | Soft |
-| **INVERSIÓN** ||||
-| Tiempo inicial | 6 horas | 1.5 horas | Soft (-75%) |
-| Break-even | 4 tareas (2 semanas) | 2 tareas (1 semana) | Soft |
-| Curva de aprendizaje | Alta (5 patrones nuevos) | Baja (2 patrones) | Soft |
-| **TESTABILIDAD** ||||
-| Tests necesarios | 41 | 15 | Soft (suficiente) |
-| Coverage alcanzable | 91% | 85% | SOLID (+7%) |
-| Facilidad de testing | 9/10 | 7/10 | SOLID (+22%) |
-| Mocks necesarios | 1-2 | 1 | Empate |
-| **REUTILIZACIÓN** ||||
-| Hook reutilizable | Sí (100%) | No (N/A) | SOLID |
-| Transformers reutilizables | Sí (100%) | Sí (100%) | Empate |
-| Service reutilizable | Sí (100%) | No (N/A) | SOLID |
-| Reutilización total | 100% | 70% | SOLID (+30%) |
-| **PERFORMANCE** ||||
-| Fetching | Client-side (fetch) | Server-side (Prisma) | Soft (+50% faster) |
-| Bundle size (1 uso) | 20KB | 12KB | Soft (-40%) |
-| Bundle size (3 usos) | 32KB | 28KB | Soft (-12%) |
-| SEO | Malo (client fetch) | Excelente (pre-rendered) | Soft |
-| First Contentful Paint | Lento (loading state) | Rápido (HTML completo) | Soft |
-| **MANTENIBILIDAD** ||||
-| Maintainability Index | 75.5 | 72 | SOLID (+5%) |
-| Archivos a modificar (cambio típico) | 1 | 1 | Empate |
-| Facilidad de debugging | Alta | Alta | Empate |
-| Documentación necesaria | Mucha (5 patrones) | Poca (2 patrones) | Soft |
-| **EXTENSIBILIDAD** ||||
-| Agregar cache | Fácil (nuevo service) | Medio (requiere abstracción) | SOLID |
-| Agregar retry | Fácil (service layer) | Medio (custom hook) | SOLID |
-| Agregar validación | Medio | Medio | Empate |
-| Cambiar API | Fácil (solo service) | Medio (multiple places) | SOLID |
-| **CONSISTENCIA** ||||
-| Con Next.js 15 | Media (ignora Server Components) | Alta (usa Server Components) | Soft |
-| Con template actual | Baja (más complejo) | Alta (similar a resto) | Soft |
-| Con docs/template/ | Baja | Alta | Soft |
-| **RIESGO** ||||
-| Riesgo de over-engineering | Alto | Bajo | Soft |
-| Riesgo de bugs | Bajo (alta cobertura) | Medio (85% coverage) | SOLID |
-| Riesgo de debt técnica | Bajo | Medio | SOLID |
+| Aspecto                              | SOLID Completo                                    | Soft SOLID                                                 | Ganador            |
+| ------------------------------------ | ------------------------------------------------- | ---------------------------------------------------------- | ------------------ |
+| **ARQUITECTURA**                     |                                                   |                                                            |                    |
+| Capas                                | 5 (Component, Hook, Service, Transformers, Types) | 3 (Server Component, Client Component, Transformers+Types) | Soft (simplicidad) |
+| Archivos nuevos                      | 6                                                 | 3                                                          | Soft (-50%)        |
+| LOC total                            | 570                                               | 320                                                        | Soft (-44%)        |
+| LOC promedio/archivo                 | ~95                                               | ~107                                                       | Empate             |
+| Complejidad arquitectural            | Alta                                              | Media                                                      | Soft               |
+| **INVERSIÓN**                        |                                                   |                                                            |                    |
+| Tiempo inicial                       | 6 horas                                           | 1.5 horas                                                  | Soft (-75%)        |
+| Break-even                           | 4 tareas (2 semanas)                              | 2 tareas (1 semana)                                        | Soft               |
+| Curva de aprendizaje                 | Alta (5 patrones nuevos)                          | Baja (2 patrones)                                          | Soft               |
+| **TESTABILIDAD**                     |                                                   |                                                            |                    |
+| Tests necesarios                     | 41                                                | 15                                                         | Soft (suficiente)  |
+| Coverage alcanzable                  | 91%                                               | 85%                                                        | SOLID (+7%)        |
+| Facilidad de testing                 | 9/10                                              | 7/10                                                       | SOLID (+22%)       |
+| Mocks necesarios                     | 1-2                                               | 1                                                          | Empate             |
+| **REUTILIZACIÓN**                    |                                                   |                                                            |                    |
+| Hook reutilizable                    | Sí (100%)                                         | No (N/A)                                                   | SOLID              |
+| Transformers reutilizables           | Sí (100%)                                         | Sí (100%)                                                  | Empate             |
+| Service reutilizable                 | Sí (100%)                                         | No (N/A)                                                   | SOLID              |
+| Reutilización total                  | 100%                                              | 70%                                                        | SOLID (+30%)       |
+| **PERFORMANCE**                      |                                                   |                                                            |                    |
+| Fetching                             | Client-side (fetch)                               | Server-side (Prisma)                                       | Soft (+50% faster) |
+| Bundle size (1 uso)                  | 20KB                                              | 12KB                                                       | Soft (-40%)        |
+| Bundle size (3 usos)                 | 32KB                                              | 28KB                                                       | Soft (-12%)        |
+| SEO                                  | Malo (client fetch)                               | Excelente (pre-rendered)                                   | Soft               |
+| First Contentful Paint               | Lento (loading state)                             | Rápido (HTML completo)                                     | Soft               |
+| **MANTENIBILIDAD**                   |                                                   |                                                            |                    |
+| Maintainability Index                | 75.5                                              | 72                                                         | SOLID (+5%)        |
+| Archivos a modificar (cambio típico) | 1                                                 | 1                                                          | Empate             |
+| Facilidad de debugging               | Alta                                              | Alta                                                       | Empate             |
+| Documentación necesaria              | Mucha (5 patrones)                                | Poca (2 patrones)                                          | Soft               |
+| **EXTENSIBILIDAD**                   |                                                   |                                                            |                    |
+| Agregar cache                        | Fácil (nuevo service)                             | Medio (requiere abstracción)                               | SOLID              |
+| Agregar retry                        | Fácil (service layer)                             | Medio (custom hook)                                        | SOLID              |
+| Agregar validación                   | Medio                                             | Medio                                                      | Empate             |
+| Cambiar API                          | Fácil (solo service)                              | Medio (multiple places)                                    | SOLID              |
+| **CONSISTENCIA**                     |                                                   |                                                            |                    |
+| Con Next.js 15                       | Media (ignora Server Components)                  | Alta (usa Server Components)                               | Soft               |
+| Con template actual                  | Baja (más complejo)                               | Alta (similar a resto)                                     | Soft               |
+| Con docs/template/                   | Baja                                              | Alta                                                       | Soft               |
+| **RIESGO**                           |                                                   |                                                            |                    |
+| Riesgo de over-engineering           | Alto                                              | Bajo                                                       | Soft               |
+| Riesgo de bugs                       | Bajo (alta cobertura)                             | Medio (85% coverage)                                       | SOLID              |
+| Riesgo de debt técnica               | Bajo                                              | Medio                                                      | SOLID              |
 
 ---
 
@@ -55,13 +55,13 @@
 
 ### Escenario 1: Proyecto MVP (1-3 devs, <6 meses)
 
-| Factor | Peso | SOLID Score | Soft Score | Ganador |
-|--------|------|-------------|------------|---------|
-| Velocidad de desarrollo | 40% | 6/10 | 9/10 | **Soft** |
-| Simplicidad | 30% | 5/10 | 9/10 | **Soft** |
-| Testing | 15% | 9/10 | 7/10 | SOLID |
-| Escalabilidad | 15% | 9/10 | 7/10 | SOLID |
-| **TOTAL** | 100% | **6.45/10** | **8.55/10** | **Soft SOLID ✅** |
+| Factor                  | Peso | SOLID Score | Soft Score  | Ganador           |
+| ----------------------- | ---- | ----------- | ----------- | ----------------- |
+| Velocidad de desarrollo | 40%  | 6/10        | 9/10        | **Soft**          |
+| Simplicidad             | 30%  | 5/10        | 9/10        | **Soft**          |
+| Testing                 | 15%  | 9/10        | 7/10        | SOLID             |
+| Escalabilidad           | 15%  | 9/10        | 7/10        | SOLID             |
+| **TOTAL**               | 100% | **6.45/10** | **8.55/10** | **Soft SOLID ✅** |
 
 **Veredicto:** Soft SOLID es mejor para MVPs.
 
@@ -69,13 +69,13 @@
 
 ### Escenario 2: Proyecto en Crecimiento (3-5 devs, 6-12 meses)
 
-| Factor | Peso | SOLID Score | Soft Score | Ganador |
-|--------|------|-------------|------------|---------|
-| Velocidad de desarrollo | 25% | 6/10 | 8/10 | Soft |
-| Mantenibilidad | 30% | 9/10 | 7/10 | SOLID |
-| Testing | 20% | 9/10 | 7/10 | SOLID |
-| Escalabilidad | 25% | 9/10 | 7/10 | SOLID |
-| **TOTAL** | 100% | **8.05/10** | **7.35/10** | **SOLID Completo ✅** |
+| Factor                  | Peso | SOLID Score | Soft Score  | Ganador               |
+| ----------------------- | ---- | ----------- | ----------- | --------------------- |
+| Velocidad de desarrollo | 25%  | 6/10        | 8/10        | Soft                  |
+| Mantenibilidad          | 30%  | 9/10        | 7/10        | SOLID                 |
+| Testing                 | 20%  | 9/10        | 7/10        | SOLID                 |
+| Escalabilidad           | 25%  | 9/10        | 7/10        | SOLID                 |
+| **TOTAL**               | 100% | **8.05/10** | **7.35/10** | **SOLID Completo ✅** |
 
 **Veredicto:** Considera SOLID completo cuando crezcas.
 
@@ -83,13 +83,13 @@
 
 ### Escenario 3: Producto Enterprise (≥5 devs, >12 meses)
 
-| Factor | Peso | SOLID Score | Soft Score | Ganador |
-|--------|------|-------------|------------|---------|
-| Velocidad de desarrollo | 15% | 6/10 | 8/10 | Soft |
-| Mantenibilidad | 25% | 9/10 | 7/10 | SOLID |
-| Testing | 30% | 9/10 | 7/10 | SOLID |
-| Escalabilidad | 30% | 9/10 | 6/10 | SOLID |
-| **TOTAL** | 100% | **8.4/10** | **6.9/10** | **SOLID Completo ✅** |
+| Factor                  | Peso | SOLID Score | Soft Score | Ganador               |
+| ----------------------- | ---- | ----------- | ---------- | --------------------- |
+| Velocidad de desarrollo | 15%  | 6/10        | 8/10       | Soft                  |
+| Mantenibilidad          | 25%  | 9/10        | 7/10       | SOLID                 |
+| Testing                 | 30%  | 9/10        | 7/10       | SOLID                 |
+| Escalabilidad           | 30%  | 9/10        | 6/10       | SOLID                 |
+| **TOTAL**               | 100% | **8.4/10**  | **6.9/10** | **SOLID Completo ✅** |
 
 **Veredicto:** SOLID completo es mandatorio para enterprise.
 
@@ -104,6 +104,7 @@
 **Mejor opción:** **Soft SOLID** ✅
 
 **Por qué:**
+
 - ✅ Server Components son perfectos para solo lectura
 - ✅ No necesitas client-side fetching
 - ✅ Transformers cubren toda la lógica necesaria
@@ -118,6 +119,7 @@
 **Mejor opción:** **Soft SOLID** ✅
 
 **Por qué:**
+
 - ✅ Server Actions para mutations
 - ✅ Zod validations (ya tienes en `lib/validations/`)
 - ✅ React Hook Form para UI
@@ -132,6 +134,7 @@
 **Mejor opción:** **SOLID Completo** ✅
 
 **Por qué:**
+
 - ✅ Necesitas client-side fetching (WebSocket/polling)
 - ✅ Hook layer es útil para manejar updates
 - ✅ Service layer puede manejar reconexión
@@ -146,6 +149,7 @@
 **Mejor opción:** **SOLID Completo** ✅
 
 **Por qué:**
+
 - ✅ Reutilización justifica inversión en hook
 - ✅ Tests exhaustivos valen la pena
 - ✅ Hook abstrae fetching + caching
@@ -194,6 +198,7 @@ ROI 1 año: (115.2h / 1.5h) = 7680%
 ```
 
 **Análisis:**
+
 - Soft SOLID tiene MEJOR ROI porcentual (+220%)
 - SOLID completo ahorra MÁS horas absolutas (+28.8h en año 1)
 - Soft SOLID break-even MÁS RÁPIDO (1 semana vs 4 semanas)
@@ -260,6 +265,7 @@ ROI 1 año: (115.2h / 1.5h) = 7680%
 ### Para Tu Proyecto Actual
 
 **Contexto:**
+
 - ✅ Componente funciona bien
 - ✅ 1-3 devs
 - ✅ MVP stage
@@ -271,6 +277,7 @@ ROI 1 año: (115.2h / 1.5h) = 7680%
 ### Cuándo Upgradear a SOLID Completo
 
 **Triggers:**
+
 1. Team crece a ≥5 developers
 2. Componente se reutiliza en ≥5 lugares
 3. Aparecen bugs frecuentes relacionados con fetching/transformación

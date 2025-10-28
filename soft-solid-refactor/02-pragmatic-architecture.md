@@ -161,6 +161,7 @@ Arquitectura simplificada que balancea principios SOLID con realidad de Next.js 
 ### Fetching de Datos
 
 #### SOLID Completo (Client-Side)
+
 ```typescript
 // ❌ Complejidad: 3 archivos, 150 LOC
 
@@ -206,6 +207,7 @@ export function ProjectPaymentsTable({ projectId }: Props) {
 ```
 
 **Problemas:**
+
 - ⚠️ 3 archivos adicionales (service, hook, types)
 - ⚠️ 150 LOC de boilerplate
 - ⚠️ Client-side fetching (más lento)
@@ -215,6 +217,7 @@ export function ProjectPaymentsTable({ projectId }: Props) {
 ---
 
 #### Soft SOLID (Server-Side)
+
 ```typescript
 // ✅ Simplicidad: 1 archivo, 40 LOC
 
@@ -248,6 +251,7 @@ export function ProjectPaymentsTable({ data }: Props) {
 ```
 
 **Ventajas:**
+
 - ✅ 1 archivo (vs 3)
 - ✅ 40 LOC (vs 150)
 - ✅ Fetching server-side (más rápido)
@@ -260,6 +264,7 @@ export function ProjectPaymentsTable({ data }: Props) {
 ### Testabilidad
 
 #### SOLID Completo
+
 ```typescript
 // ✅ Testabilidad máxima (pero compleja)
 
@@ -301,6 +306,7 @@ describe('ProjectPaymentsTable', () => {
 ---
 
 #### Soft SOLID
+
 ```typescript
 // ✅ Testabilidad suficiente (simple)
 
@@ -339,6 +345,7 @@ describe('ProjectPaymentsTable', () => {
 #### Caso: Necesitas mostrar pagos en otro componente
 
 **SOLID Completo:**
+
 ```typescript
 // ✅ Reutilización fácil (hook)
 
@@ -356,6 +363,7 @@ function ComponentB() {
 ```
 
 **Soft SOLID:**
+
 ```typescript
 // ⚠️ Reutilización del transformer (suficiente)
 
@@ -375,10 +383,12 @@ async function PageB() {
 ```
 
 **Análisis:**
+
 - SOLID: Hook reutilizable (fetching + transformación)
 - Soft SOLID: Transformer reutilizable (solo transformación)
 
 **Pregunta:** ¿Necesitas reutilizar el fetching?
+
 - Si sí → SOLID completo
 - Si no → Soft SOLID suficiente
 
@@ -411,6 +421,7 @@ export function transformer(data: RawData): ProcessedData {
 ```
 
 **Ventajas:**
+
 - ✅ Testeable: `expect(transformer(input)).toEqual(output)`
 - ✅ Reutilizable: Server Y client pueden usarlo
 - ✅ Simple: No necesita hooks, services, etc
@@ -422,9 +433,7 @@ export function transformer(data: RawData): ProcessedData {
 ```typescript
 // Transformers individuales (pequeños, testeables)
 export function extractAllocations(payments, projectId) {
-  return payments.flatMap(p =>
-    p.allocations.filter(a => a.projectId === projectId)
-  )
+  return payments.flatMap((p) => p.allocations.filter((a) => a.projectId === projectId))
 }
 
 export function sortByDate(items, order = 'asc') {
@@ -462,6 +471,7 @@ const processed = processPayments(payments, id, { sort: 'asc', groupByMonth: tru
 ```
 
 **Ventajas:**
+
 - ✅ Cada función hace UNA cosa
 - ✅ Composable (puedes combinar como LEGO)
 - ✅ Testeable individualmente
@@ -491,11 +501,11 @@ export interface PaymentFromDB {
 // Processed data para UI (lo que el componente recibe)
 export interface PaymentAllocation {
   id: string
-  allocatedAmount: number  // ← Convertido de Decimal a number
+  allocatedAmount: number // ← Convertido de Decimal a number
   payment: {
     id: string
     amount: number
-    date: string  // ← ISO string para serialización
+    date: string // ← ISO string para serialización
     type: string
     customer: { id: string; name: string }
     paymentMethod: { id: string; name: string; icon?: string }
@@ -513,6 +523,7 @@ export function transformPaymentToAllocation(
 ```
 
 **Ventajas:**
+
 - ✅ Type-safe en compile time
 - ✅ Autocomplete en IDE
 - ✅ Refactors seguros (TypeScript detecta breakage)
@@ -524,18 +535,18 @@ export function transformPaymentToAllocation(
 
 ### Comparación Cuantitativa
 
-| Métrica | Actual | SOLID | Soft SOLID | Ganancia vs Actual |
-|---------|--------|-------|------------|-------------------|
-| **Archivos totales** | 1 | 6 | 3 | +2 (manejable) |
-| **LOC total** | 229 | 570 | 320 | +91 (aceptable) |
-| **LOC por archivo** | 229 | ~95 | ~107 | -53% |
-| **Tests necesarios** | 0 | 41 | 15 | +15 (suficiente) |
-| **Tiempo inversión** | 0 | 6h | 1.5h | 1.5h (bajo) |
-| **Complejidad** | Alta | Baja | Media | ✅ Mejorada |
-| **Testabilidad** | 2/10 | 9/10 | 7/10 | +250% |
-| **Reutilización** | 0% | 100% | 70% | +70% |
-| **Performance** | Media | Media | Alta | ✅ Server-side |
-| **Bundle size** | 15KB | 20KB | 12KB | -20% |
+| Métrica              | Actual | SOLID | Soft SOLID | Ganancia vs Actual |
+| -------------------- | ------ | ----- | ---------- | ------------------ |
+| **Archivos totales** | 1      | 6     | 3          | +2 (manejable)     |
+| **LOC total**        | 229    | 570   | 320        | +91 (aceptable)    |
+| **LOC por archivo**  | 229    | ~95   | ~107       | -53%               |
+| **Tests necesarios** | 0      | 41    | 15         | +15 (suficiente)   |
+| **Tiempo inversión** | 0      | 6h    | 1.5h       | 1.5h (bajo)        |
+| **Complejidad**      | Alta   | Baja  | Media      | ✅ Mejorada        |
+| **Testabilidad**     | 2/10   | 9/10  | 7/10       | +250%              |
+| **Reutilización**    | 0%     | 100%  | 70%        | +70%               |
+| **Performance**      | Media  | Media | Alta       | ✅ Server-side     |
+| **Bundle size**      | 15KB   | 20KB  | 12KB       | -20%               |
 
 **Conclusión:** Soft SOLID consigue **70-80% del beneficio** de SOLID completo con **25% del esfuerzo**.
 
@@ -548,6 +559,7 @@ export function transformPaymentToAllocation(
 **Recomendación:** Soft SOLID
 
 **Por qué:**
+
 - No necesita fetching client-side
 - Server Components son perfectos
 - Transformers cubren la lógica necesaria
@@ -560,6 +572,7 @@ export function transformPaymentToAllocation(
 **Recomendación:** Soft SOLID + React Hook Form
 
 **Arquitectura:**
+
 ```typescript
 // Server Component valida
 async function action(formData: FormData) {
@@ -581,6 +594,7 @@ function Form() {
 **Recomendación:** SOLID Completo
 
 **Por qué:**
+
 - Necesitas client-side fetching (WebSockets, polling)
 - Hook layer es útil aquí
 - Service layer puede manejar reconexión
@@ -592,6 +606,7 @@ function Form() {
 **Recomendación:** SOLID Completo
 
 **Por qué:**
+
 - Reutilización justifica inversión en hook
 - Tests exhaustivos valen la pena
 - Contratos (interfaces) son necesarios

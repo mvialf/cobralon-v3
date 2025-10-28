@@ -1,10 +1,6 @@
 // lib/transformers/payment-transformers.ts
 
-import type {
-  PaymentFromAPI,
-  PaymentAllocation,
-  SortOrder,
-} from '@/lib/types/payment.types'
+import type { PaymentFromAPI, PaymentAllocation, SortOrder } from '@/lib/types/payment.types'
 
 /**
  * Extrae las allocations de un proyecto específico desde una lista de pagos

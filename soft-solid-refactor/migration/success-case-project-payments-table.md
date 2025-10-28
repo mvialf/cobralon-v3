@@ -11,23 +11,23 @@
 
 ### Métricas Logradas
 
-| Métrica | Antes | Después | Mejora |
-|---------|-------|---------|--------|
-| **LOC del componente** | 228 líneas | 158 líneas | **-30.7%** |
-| **Tests** | 0 | 11 (100% passing) | **+∞** |
-| **Testabilidad** | 2/10 | 7/10 | **+250%** |
-| **Reutilización** | 0% | 70% | **+70%** |
-| **Complejidad ciclomática** | Alta | Media-Baja | **-40%** |
+| Métrica                     | Antes      | Después           | Mejora     |
+| --------------------------- | ---------- | ----------------- | ---------- |
+| **LOC del componente**      | 228 líneas | 158 líneas        | **-30.7%** |
+| **Tests**                   | 0          | 11 (100% passing) | **+∞**     |
+| **Testabilidad**            | 2/10       | 7/10              | **+250%**  |
+| **Reutilización**           | 0%         | 70%               | **+70%**   |
+| **Complejidad ciclomática** | Alta       | Media-Baja        | **-40%**   |
 
 ### Comparación con Predicciones
 
-| Predicción (Guía) | Real | ✅/❌ |
-|-------------------|------|-------|
-| LOC: 228 → 180 (-21%) | 228 → 158 (-30.7%) | ✅ **Mejor** |
-| Tests: 0 → 15 | 0 → 11 | ✅ Suficiente |
-| Tiempo: 1-2 hrs | ~2 hrs | ✅ Exacto |
-| Testabilidad: 2/10 → 7/10 | 2/10 → 7/10 | ✅ Exacto |
-| Reutilización: 0% → 70% | 0% → 70% | ✅ Exacto |
+| Predicción (Guía)         | Real               | ✅/❌         |
+| ------------------------- | ------------------ | ------------- |
+| LOC: 228 → 180 (-21%)     | 228 → 158 (-30.7%) | ✅ **Mejor**  |
+| Tests: 0 → 15             | 0 → 11             | ✅ Suficiente |
+| Tiempo: 1-2 hrs           | ~2 hrs             | ✅ Exacto     |
+| Testabilidad: 2/10 → 7/10 | 2/10 → 7/10        | ✅ Exacto     |
+| Reutilización: 0% → 70%   | 0% → 70%           | ✅ Exacto     |
 
 **Conclusión**: Las predicciones de la guía fueron **altamente precisas**. El único sobre-rendimiento fue en reducción de LOC (-30.7% vs -21% esperado).
 
@@ -40,6 +40,7 @@
 **Componente**: Tabla de pagos asociados a un proyecto
 **Ubicación**: Dialog "Ver Pagos" desde tabla de proyectos
 **Complejidad**:
+
 - 228 líneas totales
 - 53 líneas de tipos inline duplicados
 - 30+ líneas de lógica de transformación inline
@@ -60,11 +61,13 @@
 ### Fase 1: Preparación (5 min)
 
 ✅ Crear estructura:
+
 ```bash
 mkdir -p soft-solid-refactor/migration
 ```
 
 ✅ Backup del original:
+
 ```bash
 cp components/tables/project-payments-table.tsx \
    components/tables/project-payments-table.backup.tsx
@@ -95,7 +98,7 @@ export interface PaymentFromAPI {
   id: string
   amount: number
   currency: string
-  date: string  // ISO string
+  date: string // ISO string
   type: 'Project' | 'Customer'
   reference: string | null
   notes: string | null
@@ -144,11 +147,7 @@ export type SortOrder = 'asc' | 'desc'
 ✅ Crear `lib/transformers/payment-transformers.ts` (107 líneas):
 
 ```typescript
-import type {
-  PaymentFromAPI,
-  PaymentAllocation,
-  SortOrder,
-} from '@/lib/types/payment.types'
+import type { PaymentFromAPI, PaymentAllocation, SortOrder } from '@/lib/types/payment.types'
 
 /**
  * Extrae las allocations de un proyecto específico
@@ -206,6 +205,7 @@ export function processProjectPayments(
 ```
 
 **Características**:
+
 - ✅ Pure functions (sin side effects)
 - ✅ Composables (se pueden combinar)
 - ✅ Documentadas con JSDoc
@@ -236,12 +236,12 @@ const mockPayments: PaymentFromAPI[] = [
       {
         id: 'alloc-1',
         allocatedAmount: 500,
-        project: { id: 'project-A', /* ... */ },
+        project: { id: 'project-A' /* ... */ },
       },
       {
         id: 'alloc-2',
         allocatedAmount: 500,
-        project: { id: 'project-B', /* ... */ },
+        project: { id: 'project-B' /* ... */ },
       },
     ],
   },
@@ -326,6 +326,7 @@ describe('payment-transformers', () => {
 ```
 
 **Resultado**:
+
 ```bash
 ✓ lib/transformers/__tests__/payment-transformers.test.ts (11 tests) 6ms
   ✓ extractProjectAllocations (4 tests)
@@ -343,6 +344,7 @@ Tests       11 passed (11)
 ✅ Simplificar `components/tables/project-payments-table.tsx`:
 
 **Antes (228 líneas)**:
+
 ```typescript
 'use client'
 
@@ -388,6 +390,7 @@ export function ProjectPaymentsTable({ projectId, hidePaymentMethod }: Props) {
 ```
 
 **Después (158 líneas)**:
+
 ```typescript
 'use client'
 
@@ -426,6 +429,7 @@ export function ProjectPaymentsTable({ projectId, hidePaymentMethod }: Props) {
 ```
 
 **Cambios**:
+
 - ❌ Eliminadas 53 líneas de types inline
 - ❌ Eliminadas 30+ líneas de lógica de transformación
 - ✅ Agregados 2 imports
@@ -436,6 +440,7 @@ export function ProjectPaymentsTable({ projectId, hidePaymentMethod }: Props) {
 ### Fase 6: Validación (10 min)
 
 ✅ **Tests Unitarios**:
+
 ```bash
 npm test lib/transformers/__tests__/payment-transformers.test.ts
 
@@ -443,6 +448,7 @@ npm test lib/transformers/__tests__/payment-transformers.test.ts
 ```
 
 ✅ **TypeCheck**:
+
 ```bash
 npm run typecheck
 # ✅ No errors en archivos de implementación
@@ -450,19 +456,21 @@ npm run typecheck
 ```
 
 ✅ **Lint**:
+
 ```bash
 npm run lint
 # ✅ No errors
 ```
 
 ✅ **Testing Manual (Playwright MCP)**:
+
 - Navegado a `/projects`
 - Abierto menú de proyecto "P - 2024-006 - Pedro Sanchez"
 - Seleccionado "Ver pagos"
 - **Resultado**:
   - ✅ Tabla renderizada correctamente
   - ✅ 3 pagos ordenados cronológicamente
-  - ✅ Numeración secuencial con marcador (*) funcionando
+  - ✅ Numeración secuencial con marcador (\*) funcionando
   - ✅ Formateo de moneda correcto
   - ✅ Columna "Método" oculta (prop `hidePaymentMethod`)
 
@@ -531,16 +539,19 @@ npm run lint
 ### Retorno
 
 **Inmediato**:
+
 - ✅ Componente 30% más pequeño
 - ✅ 11 tests pasando (0% → 100% coverage en transformers)
 - ✅ Lógica reutilizable lista para otros componentes
 
 **A corto plazo (1-2 semanas)**:
+
 - ✅ Próximo componente con pagos: 50% menos tiempo (reutiliza transformers)
 - ✅ Nuevos features: más fácil agregar (lógica ya separada)
 - ✅ Bugs: más fácil encontrar y fixear (tests + separación)
 
 **A mediano plazo (1-3 meses)**:
+
 - ✅ Onboarding: Nuevos devs entienden código más rápido
 - ✅ Refactoring: Cambios de lógica no rompen componentes
 - ✅ Confidence: Tests dan seguridad para cambios
@@ -548,6 +559,7 @@ npm run lint
 ### Break-even
 
 **Tiempo recuperado estimado**:
+
 - 1er componente adicional: -1 hora (reutiliza todo)
 - 2do componente adicional: -45 min
 - 3er componente adicional: -30 min
@@ -630,6 +642,7 @@ npm run lint
 ### Extender transformers (Si es necesario)
 
 1. **Agregar filtros adicionales**:
+
    ```typescript
    export function filterByPaymentType(
      allocations: PaymentAllocation[],
@@ -638,6 +651,7 @@ npm run lint
    ```
 
 2. **Agregar agrupaciones**:
+
    ```typescript
    export function groupByMonth(
      allocations: PaymentAllocation[]
@@ -646,9 +660,7 @@ npm run lint
 
 3. **Agregar cálculos**:
    ```typescript
-   export function calculateTotalAllocated(
-     allocations: PaymentAllocation[]
-   ): number
+   export function calculateTotalAllocated(allocations: PaymentAllocation[]): number
    ```
 
 ### NO hacer (Evitar over-engineering)
@@ -676,6 +688,7 @@ La implementación Soft SOLID fue **100% exitosa** y **cumplió todas las expect
 ### Siguiente Caso
 
 Este caso demuestra que el enfoque Soft SOLID es:
+
 - ✅ **Pragmático**: 2 hrs vs 6 hrs de SOLID completo
 - ✅ **Efectivo**: -30.7% LOC, +250% testabilidad
 - ✅ **Predecible**: Métricas coinciden con predicciones

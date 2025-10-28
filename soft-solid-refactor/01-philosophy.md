@@ -14,17 +14,19 @@ Este documento explica la **filosofía** detrás del enfoque "Soft SOLID" - un e
 **Desarrollador B:** "¿Tiene bugs?"
 **Desarrollador A:** "No, pero no sigue SOLID."
 **Desarrollador B:** "¿Está causando problemas de mantenimiento?"
-**Desarrollador A:** "No, pero *podría* en el futuro."
+**Desarrollador A:** "No, pero _podría_ en el futuro."
 
 **❌ Este es arquitectura por arquitectura.**
 
 ### El Dogma SOLID
 
 Principios SOLID son **guidelines**, no **laws**:
+
 - ✅ Son útiles cuando resuelven problemas reales
 - ❌ Se vuelven perjudiciales cuando se aplican dogmáticamente
 
 **Analogía:**
+
 > "Un martillo es excelente para clavar, pero usar un martillo para ajustar tornillos porque 'tengo un martillo' es absurdo."
 
 ---
@@ -85,17 +87,18 @@ Código Pragmático
 ```
 
 **Ley de Pareto en Arquitectura:**
+
 - 20% de arquitectura perfecta → 80% del beneficio
 - 80% restante → solo 20% más de beneficio
 
 #### Trade-offs Conscientes
 
-| Decisión | Pureza SOLID | Pragmatismo | Elegimos |
-|----------|--------------|-------------|----------|
-| **Service Layer** | Sí (DIP, testeable) | No (Server Components más simple) | Pragmatismo |
-| **Transformers** | Sí (pure functions) | Sí (mismo beneficio) | Ambos |
-| **41 tests** | Sí (coverage máximo) | No (15 tests suficientes) | Pragmatismo |
-| **Hook Layer** | Sí (reutilizable) | No (data como prop) | Pragmatismo |
+| Decisión          | Pureza SOLID         | Pragmatismo                       | Elegimos    |
+| ----------------- | -------------------- | --------------------------------- | ----------- |
+| **Service Layer** | Sí (DIP, testeable)  | No (Server Components más simple) | Pragmatismo |
+| **Transformers**  | Sí (pure functions)  | Sí (mismo beneficio)              | Ambos       |
+| **41 tests**      | Sí (coverage máximo) | No (15 tests suficientes)         | Pragmatismo |
+| **Hook Layer**    | Sí (reutilizable)    | No (data como prop)               | Pragmatismo |
 
 **Resultado:** Obtenemos 75% del beneficio con 30% del esfuerzo.
 
@@ -129,21 +132,25 @@ Baja Complejidad + Baja Reutilización
 #### Factores Contextuales
 
 **Team Size:**
+
 - 1-2 devs → Comunicación > Documentación → Soft SOLID
 - 3-5 devs → Balance → Soft SOLID o SOLID
 - 5+ devs → Contratos claros necesarios → SOLID completo
 
 **Project Stage:**
+
 - MVP/Early → Velocidad > Arquitectura → Soft SOLID
 - Growth → Balance → Soft SOLID
 - Scale → Estabilidad > Velocidad → SOLID completo
 
 **Business Context:**
+
 - Startup → Ship rápido → Soft SOLID
 - Enterprise → Compliance crítico → SOLID completo
 - Agency → Proyectos rápidos → Soft SOLID
 
 **Technical Debt:**
+
 - Bajo → Mantener simple → NO refactorizar
 - Medio → Mejorar gradualmente → Soft SOLID
 - Alto → Necesitas estructura → SOLID completo
@@ -194,18 +201,19 @@ Fase 4: Clean Architecture / Hexagonal
 
 #### Next.js 15 App Router Ya Provee
 
-| Feature | Tu Abstracción | Next.js Native | Mejor Opción |
-|---------|----------------|----------------|--------------|
-| **Data Fetching** | Service Layer + fetch() | Server Components + Prisma | Next.js ✅ |
-| **Caching** | Custom cache service | React cache() | Next.js ✅ |
-| **Loading States** | useState + useEffect | Suspense boundaries | Next.js ✅ |
-| **Error Handling** | try/catch en service | error.tsx boundaries | Next.js ✅ |
+| Feature            | Tu Abstracción          | Next.js Native             | Mejor Opción |
+| ------------------ | ----------------------- | -------------------------- | ------------ |
+| **Data Fetching**  | Service Layer + fetch() | Server Components + Prisma | Next.js ✅   |
+| **Caching**        | Custom cache service    | React cache()              | Next.js ✅   |
+| **Loading States** | useState + useEffect    | Suspense boundaries        | Next.js ✅   |
+| **Error Handling** | try/catch en service    | error.tsx boundaries       | Next.js ✅   |
 
 **Principio:** Usa las herramientas del framework antes de crear abstracciones.
 
 #### Ejemplo Real
 
 **❌ Reinventa la rueda (SOLID completo):**
+
 ```typescript
 // lib/services/payments.service.ts
 export class PaymentsService {
@@ -229,6 +237,7 @@ export function useProjectPayments(id: string) {
 ```
 
 **✅ Usa Next.js (Soft SOLID):**
+
 ```typescript
 // app/projects/[id]/page.tsx (Server Component)
 async function ProjectPage({ params }) {
@@ -243,6 +252,7 @@ async function ProjectPage({ params }) {
 ```
 
 **Beneficios:**
+
 - ✅ Menos código (40 líneas vs 80)
 - ✅ Mejor performance (server-side)
 - ✅ Más simple (no abstracciones innecesarias)
@@ -257,10 +267,12 @@ async function ProjectPage({ params }) {
 **Definición:** No agregues funcionalidad hasta que la necesites.
 
 **Aplicación a SOLID:**
-- ❌ "Voy a hacer Service Layer porque *podríamos* necesitar cambiar de API"
+
+- ❌ "Voy a hacer Service Layer porque _podríamos_ necesitar cambiar de API"
 - ✅ "Cuando cambie la API, ENTONCES crearé abstracción"
 
 **Evidencia empírica:**
+
 - 80% de abstracciones "por si acaso" nunca se usan
 - 100% de abstracciones prematurasm agregan complejidad desde día 1
 
@@ -273,6 +285,7 @@ async function ProjectPage({ params }) {
 **Comparación:**
 
 **Simple (Soft SOLID):**
+
 ```typescript
 // Server Component fetchea
 const data = await getPayments()
@@ -281,20 +294,21 @@ return <Table data={processed} />
 ```
 
 **Complejo (SOLID completo):**
+
 ```typescript
 // Hook orquesta
 const hook = useProjectPayments(id)
-  // ↓ llama
-  Service.fetch()
-    // ↓ retorna al
-  Hook.transform()
-    // ↓ actualiza
-  useState()
-    // ↓ re-renderiza
-  Component
+// ↓ llama
+Service.fetch()
+// ↓ retorna al
+Hook.transform()
+// ↓ actualiza
+useState()
+// ↓ re-renderiza
+Component
 ```
 
-**Pregunta:** ¿El segundo es *realmente* necesario para tu caso de uso?
+**Pregunta:** ¿El segundo es _realmente_ necesario para tu caso de uso?
 
 ---
 
@@ -303,6 +317,7 @@ const hook = useProjectPayments(id)
 **Definición:** Entre dos explicaciones, la más simple suele ser correcta.
 
 **Aplicación:**
+
 - 🔴 "Necesito Service + Hook + 41 tests porque es la arquitectura correcta"
 - 🟢 "Funciona bien con Server Components + Transformers + 15 tests"
 
@@ -315,12 +330,14 @@ const hook = useProjectPayments(id)
 **Concepto:** Software "peor" pero más simple suele ganar sobre software "perfecto" pero complejo.
 
 **Historia:**
+
 - Unix shell scripts > elaborate GUIs
 - REST > SOAP
 - React > Angular 1
 - Next.js Pages Router > complex frameworks
 
 **Por qué gana "worse":**
+
 - ✅ Más fácil aprender
 - ✅ Más fácil mantener
 - ✅ Más fácil debuggear
@@ -337,6 +354,7 @@ const hook = useProjectPayments(id)
 **Filosofía:** "Move fast and break things" → "Move fast with stable infrastructure"
 
 **Evolución:**
+
 1. 2004-2010: Monolitos, código "sucio" → ✅ Crecimiento rápido
 2. 2010-2015: Refactorizar lo que duele → ✅ Scale gradual
 3. 2015-hoy: Infraestructura sofisticada → ✅ Scale masivo
@@ -348,9 +366,11 @@ const hook = useProjectPayments(id)
 ### Case Study 2: Amazon
 
 **Quote de Jeff Bezos:**
+
 > "We never try to solve problems we don't have yet. We wait until we feel the pain."
 
 **Ejemplo:**
+
 - Amazon.com empezó como monolito Perl (1994)
 - Microservicios solo llegaron en 2002 (8 años después)
 - ¿Por qué? Porque ENTONCES sentían el dolor de scaling
@@ -362,12 +382,14 @@ const hook = useProjectPayments(id)
 ### Case Study 3: Twitter Fail Whale
 
 **Historia:**
+
 - Twitter empezó en Ruby on Rails (simple)
 - Crecieron rápido → "Fail Whale" (site caído constantemente)
 - Refactorizaron a JVM/Scala (complejo)
 - ¿Fue error inicial? **No.**
 
 **Razón:**
+
 - Si hubieran empezado con arquitectura perfecta → habrían tardado 2 años
 - Competitors habrían ganado
 - En su lugar: shipped rápido, escalaron cuando necesitaron
@@ -426,17 +448,18 @@ const hook = useProjectPayments(id)
 
 ### Scoring System
 
-| Factor | Peso | Tu Proyecto |
-|--------|------|-------------|
-| **Pain actual** | 30% | 2/10 (funciona bien) |
-| **Reutilización** | 25% | 3/10 (1-2 lugares) |
-| **Team size** | 20% | 2/10 (1-3 devs) |
-| **Business risk** | 15% | 4/10 (MVP, bajo riesgo) |
-| **Testing requirements** | 10% | 3/10 (no mandatorio) |
+| Factor                   | Peso | Tu Proyecto             |
+| ------------------------ | ---- | ----------------------- |
+| **Pain actual**          | 30%  | 2/10 (funciona bien)    |
+| **Reutilización**        | 25%  | 3/10 (1-2 lugares)      |
+| **Team size**            | 20%  | 2/10 (1-3 devs)         |
+| **Business risk**        | 15%  | 4/10 (MVP, bajo riesgo) |
+| **Testing requirements** | 10%  | 3/10 (no mandatorio)    |
 
 **Puntaje:** (2×0.3 + 3×0.25 + 2×0.2 + 4×0.15 + 3×0.1) = **2.65/10**
 
 **Interpretación:**
+
 - 0-3: NO refactorizar
 - 3-6: Soft SOLID ← **Tu proyecto está aquí**
 - 6-10: SOLID completo

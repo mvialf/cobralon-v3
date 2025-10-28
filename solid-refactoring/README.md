@@ -27,12 +27,12 @@ Este directorio contiene todo el material necesario para refactorizar el compone
 
 ### 🔴 Violaciones SOLID
 
-| Principio | Estado | Impacto |
-|-----------|--------|---------|
-| **SRP** - Single Responsibility | ❌ Viola | Alto - Múltiples responsabilidades |
-| **OCP** - Open/Closed | ⚠️ Parcial | Medio - Difícil extender |
-| **DIP** - Dependency Inversion | ❌ Viola | Alto - Acoplamiento fuerte |
-| **ISP** - Interface Segregation | ⚠️ Parcial | Medio - Dependencias innecesarias |
+| Principio                       | Estado     | Impacto                            |
+| ------------------------------- | ---------- | ---------------------------------- |
+| **SRP** - Single Responsibility | ❌ Viola   | Alto - Múltiples responsabilidades |
+| **OCP** - Open/Closed           | ⚠️ Parcial | Medio - Difícil extender           |
+| **DIP** - Dependency Inversion  | ❌ Viola   | Alto - Acoplamiento fuerte         |
+| **ISP** - Interface Segregation | ⚠️ Parcial | Medio - Dependencias innecesarias  |
 
 ### 📊 Responsabilidades Actuales (debería ser 1)
 
@@ -46,6 +46,7 @@ Este directorio contiene todo el material necesario para refactorizar el compone
 ### 🧪 Problemas de Testabilidad
 
 **Mocks necesarios actualmente:**
+
 - `global.fetch` → API calls
 - `useConfiguration` → Hook de contexto
 - `toast.error` → Notificaciones
@@ -173,11 +174,13 @@ solid-refactoring/
 ### Fases
 
 #### **Fase 1: Preparación** (30 min)
+
 - ✅ Leer análisis completo (`01-analysis.md`)
 - ✅ Entender arquitectura propuesta (`02-architecture.md`)
 - ✅ Revisar ejemplos de código en `examples/`
 
 #### **Fase 2: Implementación** (2-3 horas)
+
 - ✅ Paso 1: Extraer tipos → `lib/types/payment.types.ts`
 - ✅ Paso 2: Crear transformers → `lib/transformers/payment-transformers.ts`
 - ✅ Paso 3: Crear service → `lib/services/payments.service.ts`
@@ -185,12 +188,14 @@ solid-refactoring/
 - ✅ Paso 5: Refactorizar componente → `components/tables/project-payments-table.tsx`
 
 #### **Fase 3: Testing** (1-2 horas)
+
 - ✅ Tests de transformers (pure functions - fácil)
 - ✅ Tests de service (mockear fetch)
 - ✅ Tests de hook (React Testing Library)
 - ✅ Tests de componente (integration)
 
 #### **Fase 4: Deploy** (30 min)
+
 - ✅ Reemplazar componente viejo con nuevo
 - ✅ Validar que todo funciona
 - ✅ Eliminar código viejo
@@ -203,18 +208,19 @@ solid-refactoring/
 
 ### 📈 Métricas de Mejora
 
-| Métrica | Antes | Después | Mejora |
-|---------|-------|---------|--------|
-| **Líneas por archivo** | 229 | ~80-100 | -56% |
-| **Responsabilidades** | 6 | 1 | -83% |
-| **Testabilidad** | ❌ Muy difícil | ✅ Fácil | +100% |
-| **Mocks necesarios** | 5 | 0-1 | -80% |
-| **Reutilización** | ❌ No | ✅ Sí | +∞ |
-| **Complejidad ciclomática** | Alta | Baja | -60% |
+| Métrica                     | Antes          | Después  | Mejora |
+| --------------------------- | -------------- | -------- | ------ |
+| **Líneas por archivo**      | 229            | ~80-100  | -56%   |
+| **Responsabilidades**       | 6              | 1        | -83%   |
+| **Testabilidad**            | ❌ Muy difícil | ✅ Fácil | +100%  |
+| **Mocks necesarios**        | 5              | 0-1      | -80%   |
+| **Reutilización**           | ❌ No          | ✅ Sí    | +∞     |
+| **Complejidad ciclomática** | Alta           | Baja     | -60%   |
 
 ### ✅ Beneficios Concretos
 
 #### 1. **Testabilidad Extrema**
+
 ```typescript
 // ANTES: Imposible testear sin mockear todo
 // DESPUÉS: Tests simples y rápidos
@@ -227,6 +233,7 @@ render(<ProjectPaymentsTable data={mockData} loading={false} />)
 ```
 
 #### 2. **Reutilización**
+
 ```typescript
 // Ahora OTROS componentes pueden usar:
 const { data, loading, error } = useProjectPayments('project-1')
@@ -236,12 +243,14 @@ const sorted = sortAllocationsByDate(allocations)
 ```
 
 #### 3. **Mantenibilidad**
+
 - Cada archivo tiene UNA responsabilidad clara
 - Cambios en API → solo modificas `payments.service.ts`
 - Cambios en transformación → solo modificas `payment-transformers.ts`
 - Cambios en UI → solo modificas el componente
 
 #### 4. **Extensibilidad**
+
 ```typescript
 // Agregar ordenamiento descendente: FÁCIL
 PaymentTransformers.sortByDate(allocations, 'desc')
@@ -254,6 +263,7 @@ await retryWithBackoff(() => this.fetch(...))
 ```
 
 #### 5. **Claridad**
+
 ```typescript
 // ANTES: ¿Qué hace este componente?
 // - UI + Fetching + Transformación + Estado + Errores
@@ -269,16 +279,19 @@ await retryWithBackoff(() => this.fetch(...))
 ### Para Empezar
 
 1. **Lee el análisis completo:**
+
    ```bash
    cat solid-refactoring/01-analysis.md
    ```
 
 2. **Revisa la arquitectura propuesta:**
+
    ```bash
    cat solid-refactoring/02-architecture.md
    ```
 
 3. **Mira los ejemplos de código:**
+
    ```bash
    cat solid-refactoring/examples/types/payment.types.ts
    cat solid-refactoring/examples/transformers/payment-transformers.ts
@@ -318,18 +331,23 @@ cp solid-refactoring/examples/transformers/payment-transformers.ts lib/transform
 ## ❓ FAQ
 
 ### ¿Es necesario refactorizar TODO el proyecto?
+
 **No.** Empieza con este componente. Si funciona bien, replica el patrón en otros.
 
 ### ¿Puedo hacer la migración incremental?
+
 **Sí.** Crea los archivos nuevos SIN tocar el viejo. Cuando funcione, reemplaza.
 
 ### ¿Qué pasa con el código viejo?
+
 **Mantenlo** hasta que el nuevo esté 100% probado. Luego elimínalo.
 
 ### ¿Cuánto tiempo toma?
+
 **4-6 horas** para este componente (incluyendo tests).
 
 ### ¿Es overkill para un componente simple?
+
 **No.** Este componente tiene 229 líneas y 6 responsabilidades. Ya es complejo.
 
 ---

@@ -9,12 +9,14 @@
 ## ¿Por Qué Este Paso?
 
 **Problema actual:**
+
 - Lógica de transformación mezclada en componente (líneas 104-126)
 - 23 líneas de flatMap/filter/map/sort inline
 - No reutilizable
 - Difícil de testear
 
 **Solución:**
+
 - Extraer a pure functions en `lib/transformers/`
 - Testeable sin mocks
 - Reutilizable en server Y client
@@ -143,11 +145,7 @@ touch lib/transformers/payment-transformers.ts
 ```typescript
 // lib/transformers/payment-transformers.ts
 
-import type {
-  PaymentFromAPI,
-  PaymentAllocation,
-  SortOrder,
-} from '@/lib/types/payment.types'
+import type { PaymentFromAPI, PaymentAllocation, SortOrder } from '@/lib/types/payment.types'
 
 /**
  * Extrae allocations de un proyecto específico
@@ -271,14 +269,14 @@ const mockPayments: PaymentFromAPI[] = [
       {
         id: 'alloc-1',
         allocatedAmount: 500,
-        project: { id: 'project-A', projectNumber: 'P 0001', projectName: 'A', currency: 'CLP' }
+        project: { id: 'project-A', projectNumber: 'P 0001', projectName: 'A', currency: 'CLP' },
       },
       {
         id: 'alloc-2',
         allocatedAmount: 500,
-        project: { id: 'project-B', projectNumber: 'P 0002', projectName: 'B', currency: 'CLP' }
-      }
-    ]
+        project: { id: 'project-B', projectNumber: 'P 0002', projectName: 'B', currency: 'CLP' },
+      },
+    ],
   },
   {
     id: 'payment-2',
@@ -294,10 +292,10 @@ const mockPayments: PaymentFromAPI[] = [
       {
         id: 'alloc-3',
         allocatedAmount: 2000,
-        project: { id: 'project-A', projectNumber: 'P 0001', projectName: 'A', currency: 'CLP' }
-      }
-    ]
-  }
+        project: { id: 'project-A', projectNumber: 'P 0001', projectName: 'A', currency: 'CLP' },
+      },
+    ],
+  },
 ]
 
 describe('extractProjectAllocations', () => {
@@ -358,6 +356,7 @@ npm test lib/transformers/__tests__/payment-transformers.test.ts
 ```
 
 **Esperado:**
+
 ```
 ✓ extractProjectAllocations (3 tests)
 ✓ sortAllocationsByDate (3 tests)
@@ -383,11 +382,13 @@ Time: <100ms
 ### Verificar Mejoras
 
 **Antes:**
+
 - Componente: 229 líneas
 - Lógica inline: 76 líneas (types + transformación)
 - Tests: 0
 
 **Después:**
+
 - Componente: 153 líneas (-76)
 - Lógica reutilizable: `lib/transformers/`, `lib/types/`
 - Tests: 7 (+7)
@@ -401,6 +402,7 @@ Time: <100ms
 ### Error: "Cannot find module '@/lib/types/payment.types'"
 
 **Solución:**
+
 ```bash
 # Verificar tsconfig.json tiene path alias
 cat tsconfig.json | grep "@/*"
@@ -412,6 +414,7 @@ cat tsconfig.json | grep "@/*"
 ### Tests fallan: "TypeError: Cannot read property 'flatMap'"
 
 **Solución:**
+
 ```typescript
 // Mock data debe tener estructura correcta
 const mockPayments: PaymentFromAPI[] = [...]
@@ -423,6 +426,7 @@ const mockPayments: PaymentFromAPI[] = [...]
 ### Componente muestra data incorrecta
 
 **Solución:**
+
 ```typescript
 // Verificar que estás pasando el projectId correcto
 const allocations = processProjectPayments(data.payments, projectId, 'asc')

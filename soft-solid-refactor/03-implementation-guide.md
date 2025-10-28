@@ -63,6 +63,7 @@ mkdir -p lib/transformers/__tests__
 **Lee** [components/tables/project-payments-table.tsx](../components/tables/project-payments-table.tsx)
 
 **Identifica:**
+
 - ✅ Líneas 18-71: Type definitions
 - ✅ Líneas 95-135: Fetching + transformación
 - ✅ Líneas 179-227: Renderizado UI
@@ -104,7 +105,7 @@ export interface PaymentFromAPI {
   id: string
   amount: number
   currency: string
-  date: string  // ISO string
+  date: string // ISO string
   type: 'Project' | 'Customer'
   reference: string | null
   notes: string | null
@@ -132,7 +133,7 @@ export interface PaymentAllocation {
     id: string
     amount: number
     currency: string
-    date: string  // ISO string
+    date: string // ISO string
     type: 'Project' | 'Customer'
     notes: string | null
     paymentMethod: {
@@ -197,11 +198,7 @@ interface ProjectPaymentsTableProps {
 ```typescript
 // lib/transformers/payment-transformers.ts
 
-import type {
-  PaymentFromAPI,
-  PaymentAllocation,
-  SortOrder,
-} from '@/lib/types/payment.types'
+import type { PaymentFromAPI, PaymentAllocation, SortOrder } from '@/lib/types/payment.types'
 
 /**
  * Extrae las allocations de un proyecto específico desde una lista de pagos
@@ -322,6 +319,7 @@ export function ProjectPaymentsTable({ projectId, hidePaymentMethod = false }: P
 ```
 
 **Resultado:**
+
 - ✅ Componente: -23 líneas de lógica compleja
 - ✅ Lógica ahora es reutilizable
 - ✅ Lógica es testeable (pure function)
@@ -361,14 +359,24 @@ const mockPayments: PaymentFromAPI[] = [
       {
         id: 'alloc-1',
         allocatedAmount: 500,
-        project: { id: 'project-A', projectNumber: 'P 0001-2025', projectName: 'Project A', currency: 'CLP' }
+        project: {
+          id: 'project-A',
+          projectNumber: 'P 0001-2025',
+          projectName: 'Project A',
+          currency: 'CLP',
+        },
       },
       {
         id: 'alloc-2',
         allocatedAmount: 500,
-        project: { id: 'project-B', projectNumber: 'P 0002-2025', projectName: 'Project B', currency: 'CLP' }
-      }
-    ]
+        project: {
+          id: 'project-B',
+          projectNumber: 'P 0002-2025',
+          projectName: 'Project B',
+          currency: 'CLP',
+        },
+      },
+    ],
   },
   {
     id: 'payment-2',
@@ -384,10 +392,15 @@ const mockPayments: PaymentFromAPI[] = [
       {
         id: 'alloc-3',
         allocatedAmount: 2000,
-        project: { id: 'project-A', projectNumber: 'P 0001-2025', projectName: 'Project A', currency: 'CLP' }
-      }
-    ]
-  }
+        project: {
+          id: 'project-A',
+          projectNumber: 'P 0001-2025',
+          projectName: 'Project A',
+          currency: 'CLP',
+        },
+      },
+    ],
+  },
 ]
 
 describe('payment-transformers', () => {
@@ -412,7 +425,7 @@ describe('payment-transformers', () => {
         id: 'payment-1',
         amount: 1000,
         currency: 'CLP',
-        customer: { name: 'John Doe' }
+        customer: { name: 'John Doe' },
       })
     })
   })
@@ -463,6 +476,7 @@ npm test lib/transformers/__tests__/payment-transformers.test.ts
 ```
 
 **Esperado:**
+
 ```
 ✓ payment-transformers (8 tests)
   ✓ extractProjectAllocations
@@ -489,6 +503,7 @@ Time: < 100ms
 ### 5.1 Estado Actual del Componente
 
 Después de Fases 2-3, el componente ya está más limpio:
+
 - ✅ Types extraídos (-53 líneas)
 - ✅ Transformers extraídos (-23 líneas)
 - ✅ Componente: ~153 líneas (vs 229 original)
@@ -548,6 +563,7 @@ export function ProjectPaymentsTable({ projectId, hidePaymentMethod = false }: P
 ```
 
 **Resultado:**
+
 - ✅ Componente: ~130 líneas (vs 229 original) = **-43%**
 - ✅ Lógica de transformación reutilizable
 - ✅ Testeable
@@ -581,6 +597,7 @@ export function ProjectPaymentsTable({
 ```
 
 **Resultado:**
+
 - ✅ Componente: ~100 líneas (vs 229 original) = **-56%**
 - ✅ 100% testeable (props → JSX, sin mocks)
 - ✅ Requiere parent component fetchee data
@@ -592,11 +609,13 @@ export function ProjectPaymentsTable({
 ### 6.1 Cuándo Hacerlo
 
 **Hazlo si:**
+
 - ✅ La página NO tiene interactividad client-side compleja
 - ✅ Quieres mejor SEO
 - ✅ Quieres mejor performance (less JS)
 
 **NO lo hagas si:**
+
 - ❌ Necesitas real-time updates
 - ❌ Necesitas client state complejo
 - ❌ Componente padre ya es Client Component
@@ -677,6 +696,7 @@ export function ProjectPaymentsTable({ data, hidePaymentMethod = false }: Props)
 ```
 
 **Resultado:**
+
 - ✅ Fetching server-side (más rápido)
 - ✅ HTML pre-renderizado (mejor SEO)
 - ✅ Menos JS al cliente
@@ -701,14 +721,14 @@ export function ProjectPaymentsTable({ data, hidePaymentMethod = false }: Props)
 
 **Antes vs Después:**
 
-| Métrica | Antes | Después | Mejora |
-|---------|-------|---------|--------|
-| **LOC component** | 229 | 100-130 | -43% a -56% |
-| **LOC total** | 229 | ~300 | +31% (pero distribuido) |
-| **Archivos** | 1 | 3 | +2 (manejable) |
-| **Tests** | 0 | 8+ | +∞ |
-| **Testabilidad** | Difícil | Fácil | +300% |
-| **Reutilización** | 0% | 70% | +70% |
+| Métrica           | Antes   | Después | Mejora                  |
+| ----------------- | ------- | ------- | ----------------------- |
+| **LOC component** | 229     | 100-130 | -43% a -56%             |
+| **LOC total**     | 229     | ~300    | +31% (pero distribuido) |
+| **Archivos**      | 1       | 3       | +2 (manejable)          |
+| **Tests**         | 0       | 8+      | +∞                      |
+| **Testabilidad**  | Difícil | Fácil   | +300%                   |
+| **Reutilización** | 0%      | 70%     | +70%                    |
 
 ✅ **Logro:** Código más limpio, testeable y mantenible
 
@@ -777,11 +797,13 @@ gh pr create --title "refactor: Soft SOLID para ProjectPaymentsTable" \
 ### Si Necesitas Upgradear a SOLID Completo
 
 **Triggers para upgrade:**
+
 - Necesitas reutilizar en ≥3 lugares
 - Aparecen bugs frecuentes
 - Team crece a ≥5 devs
 
 **Cuando eso pase:**
+
 1. Lee `solid-refactoring/03-implementation-guide.md`
 2. Agrega Service Layer + Hook Layer
 3. Incrementa tests a 40+
