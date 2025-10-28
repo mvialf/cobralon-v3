@@ -6,6 +6,7 @@ import { AppLayout } from '@/components/layout/app-layout'
 import { NewProjectDialog } from '@/components/dialogs/projects/new-project-dialog'
 import { DataTable } from '@/components/data-table/data-table'
 import { createColumns, type Project } from './columns'
+import { toast } from 'sonner'
 
 interface ProjectStatus {
   id: string
@@ -21,15 +22,18 @@ export default function ProjectsPage() {
   const [statuses, setStatuses] = useState<ProjectStatus[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [projectState, setProjectState] = useState<'Activo' | 'Finalizado' | 'all'>('Activo') // Default: solo activos
+  const [updatingProjectId, setUpdatingProjectId] = useState<string | null>(null)
 
   const fetchProjects = useCallback(async () => {
     try {
       setIsLoading(true)
-      const response = await fetch(`/api/projects?projectState=${projectState}`)
+      // API combinada: proyectos + metadata en una sola llamada
+      const response = await fetch(`/api/projects-with-metadata?projectState=${projectState}`)
       if (!response.ok) throw new Error('Error al cargar proyectos')
 
       const data = await response.json()
       setProjects(data.projects)
+      setStatuses(data.metadata.projectStatuses)
     } catch (error) {
       console.error('Error:', error)
     } finally {
@@ -37,23 +41,10 @@ export default function ProjectsPage() {
     }
   }, [projectState])
 
-  // Cargar proyectos y statuses desde la API
+  // Cargar proyectos y statuses desde la API combinada
   useEffect(() => {
     fetchProjects()
-    fetchStatuses()
   }, [fetchProjects]) // Refetch cuando cambia fetchProjects
-
-  const fetchStatuses = async () => {
-    try {
-      const response = await fetch('/api/project-status')
-      if (!response.ok) throw new Error('Error al cargar estados')
-
-      const data = await response.json()
-      setStatuses(data.projectStatuses)
-    } catch (error) {
-      console.error('Error al cargar estados:', error)
-    }
-  }
 
   const handleProjectCreated = () => {
     // Recargar lista de proyectos después de crear uno nuevo
@@ -65,7 +56,50 @@ export default function ProjectsPage() {
     fetchProjects()
   }
 
-  const columns = createColumns({ onProjectDeleted: handleProjectDeleted })
+  const handleStatusChange = async (projectId: string, newStatusId: string) => {
+    try {
+      setUpdatingProjectId(projectId)
+
+      const response = await fetch(`/api/projects/${projectId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ projectStatusId: newStatusId }),
+      })
+
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.error || 'Error al actualizar estado')
+      }
+
+      // Actualizar proyecto en el estado local para feedback inmediato
+      setProjects((prev) =>
+        prev.map((p) => {
+          if (p.id === projectId) {
+            const newStatus = statuses.find((s) => s.id === newStatusId)
+            return newStatus ? { ...p, projectStatus: newStatus } : p
+          }
+          return p
+        })
+      )
+
+      toast.success('Estado actualizado correctamente')
+    } catch (error) {
+      console.error('Error al actualizar estado:', error)
+      toast.error(error instanceof Error ? error.message : 'Error al actualizar estado')
+    } finally {
+      setUpdatingProjectId(null)
+    }
+  }
+
+  const columns = createColumns({
+    onProjectDeleted: handleProjectDeleted,
+    statuses: statuses.map((s) => ({
+      id: s.id,
+      label: s.name,
+      color: { bgClass: s.color.bgClass },
+    })),
+    updatingProjectId,
+  })
 
   // Función de filtrado global: busca en projectNumber, customer.name y projectName
   const globalFilterFn = (row: Row<Project>, _columnId: string, filterValue: string) => {
@@ -146,6 +180,9 @@ export default function ProjectsPage() {
                 },
               },
             ]}
+            meta={{
+              handleStatusChange,
+            }}
           />
         )}
       </div>

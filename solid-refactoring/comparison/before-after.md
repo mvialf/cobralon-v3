@@ -2,14 +2,14 @@
 
 ## Vista General
 
-| Aspecto | Antes | Después |
-|---------|-------|---------|
-| **Archivos** | 1 monolítico | 5 especializados |
-| **Líneas totales** | 229 | ~560 |
-| **Líneas por archivo** | 229 | ~90-100 (promedio) |
-| **Tests** | 0 | 41+ |
-| **Coverage** | 0% | 85%+ |
-| **Responsabilidades** | 6 | 1 por archivo |
+| Aspecto                | Antes        | Después            |
+| ---------------------- | ------------ | ------------------ |
+| **Archivos**           | 1 monolítico | 5 especializados   |
+| **Líneas totales**     | 229          | ~560               |
+| **Líneas por archivo** | 229          | ~90-100 (promedio) |
+| **Tests**              | 0            | 41+                |
+| **Coverage**           | 0%           | 85%+               |
+| **Responsabilidades**  | 6            | 1 por archivo      |
 
 ---
 
@@ -190,10 +190,7 @@ export const paymentsService = new PaymentsService()
 // ✅ hooks/use-project-payments.ts
 // Orquestador de estado
 
-export function useProjectPayments(
-  projectId: string,
-  options = {}
-) {
+export function useProjectPayments(projectId: string, options = {}) {
   const [data, setData] = useState<PaymentAllocation[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<Error | null>(null)
@@ -207,16 +204,10 @@ export function useProjectPayments(
       const payments = await paymentsService.fetchByProject(projectId)
 
       // 2. Transformar con transformers
-      let allocations = PaymentTransformers.extractProjectAllocations(
-        payments,
-        projectId
-      )
+      let allocations = PaymentTransformers.extractProjectAllocations(payments, projectId)
 
       // 3. Ordenar
-      allocations = PaymentTransformers.sortAllocationsByDate(
-        allocations,
-        options.sortOrder
-      )
+      allocations = PaymentTransformers.sortAllocationsByDate(allocations, options.sortOrder)
 
       setData(allocations)
     } catch (err) {
@@ -418,6 +409,7 @@ describe('ProjectPaymentsTable', () => {
 ### Escenario 1: Agregar ordenamiento descendente
 
 **ANTES:**
+
 ```typescript
 // ❌ Modificar componente
 projectAllocations.sort((a, b) => {
@@ -426,6 +418,7 @@ projectAllocations.sort((a, b) => {
 ```
 
 **DESPUÉS:**
+
 ```typescript
 // ✅ Solo agregar prop
 <ProjectPaymentsTable projectId="..." sortOrder="desc" />
@@ -439,6 +432,7 @@ const { data } = useProjectPayments(projectId, { sortOrder: 'desc' })
 ### Escenario 2: Agregar cache
 
 **ANTES:**
+
 ```typescript
 // ❌ Modificar todo el componente
 // - Agregar lógica de cache en fetchPayments
@@ -447,6 +441,7 @@ const { data } = useProjectPayments(projectId, { sortOrder: 'desc' })
 ```
 
 **DESPUÉS:**
+
 ```typescript
 // ✅ Solo modificar service (o crear nuevo)
 export class CachedPaymentsService extends PaymentsService {
@@ -470,6 +465,7 @@ export class CachedPaymentsService extends PaymentsService {
 ### Escenario 3: Agregar filtro por tipo de pago
 
 **ANTES:**
+
 ```typescript
 // ❌ Modificar componente completamente
 // - Agregar prop filterByType
@@ -479,6 +475,7 @@ export class CachedPaymentsService extends PaymentsService {
 ```
 
 **DESPUÉS:**
+
 ```typescript
 // ✅ Ya está implementado
 <ProjectPaymentsTable
@@ -501,6 +498,7 @@ const { data } = useProjectPayments(projectId, {
 ### Escenario: API cambia estructura
 
 **ANTES:**
+
 ```typescript
 // ❌ Cambiar en componente:
 // 1. Interface PaymentFromAPI
@@ -510,6 +508,7 @@ const { data } = useProjectPayments(projectId, {
 ```
 
 **DESPUÉS:**
+
 ```typescript
 // ✅ Cambios localizados:
 // 1. Actualizar payment.types.ts
@@ -549,37 +548,40 @@ const sorted = PaymentTransformers.sortAllocationsByDate(allocations, 'asc')
 
 ## Métricas Finales
 
-| Aspecto | Antes | Después | Cambio |
-|---------|-------|---------|--------|
-| **Líneas por archivo** | 229 | ~90 (promedio) | -60% |
-| **Responsabilidades** | 6 | 1 | -83% |
-| **Archivos tests** | 0 | 4 | +∞ |
-| **Tests totales** | 0 | 41+ | +∞ |
-| **Coverage** | 0% | 85%+ | +∞ |
-| **Mocks necesarios** | 5 | 0-1 | -80% |
-| **Complejidad ciclomática** | 8 | 2-3 | -65% |
-| **Tiempo de tests** | N/A | <100ms | - |
-| **Reutilización** | 0% | 100% | +100% |
-| **Extensibilidad** | Baja | Alta | +100% |
-| **Mantenibilidad** | Baja | Alta | +100% |
+| Aspecto                     | Antes | Después        | Cambio |
+| --------------------------- | ----- | -------------- | ------ |
+| **Líneas por archivo**      | 229   | ~90 (promedio) | -60%   |
+| **Responsabilidades**       | 6     | 1              | -83%   |
+| **Archivos tests**          | 0     | 4              | +∞     |
+| **Tests totales**           | 0     | 41+            | +∞     |
+| **Coverage**                | 0%    | 85%+           | +∞     |
+| **Mocks necesarios**        | 5     | 0-1            | -80%   |
+| **Complejidad ciclomática** | 8     | 2-3            | -65%   |
+| **Tiempo de tests**         | N/A   | <100ms         | -      |
+| **Reutilización**           | 0%    | 100%           | +100%  |
+| **Extensibilidad**          | Baja  | Alta           | +100%  |
+| **Mantenibilidad**          | Baja  | Alta           | +100%  |
 
 ---
 
 ## Conclusión
 
 **ANTES:** Funciona, pero...
+
 - ❌ Difícil de testear
 - ❌ Imposible de reutilizar
 - ❌ Complejo de mantener
 - ❌ Rígido para extender
 
 **DESPUÉS:** Funciona Y además...
+
 - ✅ Fácil de testear (85% coverage)
 - ✅ Completamente reutilizable
 - ✅ Simple de mantener (cambios localizados)
 - ✅ Flexible para extender (OCP)
 
 **ROI:**
+
 - Inversión: 4-6 horas
 - Retorno: Cada cambio futuro toma 50-70% menos tiempo
 - Break-even: ~2-3 cambios significativos

@@ -180,10 +180,7 @@ export function useProjectPayments(
       const payments = await repository.fetchByProject(projectId)
 
       // 2. Extraer allocations del proyecto (transformer)
-      let allocations = PaymentTransformers.extractProjectAllocations(
-        payments,
-        projectId
-      )
+      let allocations = PaymentTransformers.extractProjectAllocations(payments, projectId)
 
       // 3. Aplicar filtro de tipo si está especificado
       if (filterByType) {
@@ -199,10 +196,7 @@ export function useProjectPayments(
           allocations = PaymentTransformers.sortAllocationsByAmount(allocations, sortOrder)
           break
         case 'customer':
-          allocations = PaymentTransformers.sortAllocationsByCustomerName(
-            allocations,
-            sortOrder
-          )
+          allocations = PaymentTransformers.sortAllocationsByCustomerName(allocations, sortOrder)
           break
       }
 

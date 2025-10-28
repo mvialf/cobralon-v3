@@ -1,7 +1,13 @@
 'use client'
 
 import { useCallback, useEffect, useState, useRef } from 'react'
-import { Dialog, DialogClose, DialogContent, DialogDescription } from '@/components/ui/dialog'
+import {
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogDescription,
+  DialogTitle,
+} from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Copy, Loader2, X } from 'lucide-react'
 import { PaymentSummaryCard } from '@/components/summarys/payment-summary-card'
@@ -187,7 +193,9 @@ Porcentaje Pagado: ${project.percentPaid}%
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-xl p-0 max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-xl p-0 max-h-[90vh] overflow-y-auto gap-0">
+        {/* Título accesible para lectores de pantalla */}
+        <DialogTitle className="sr-only">Estado de Cuenta del Proyecto</DialogTitle>
         {/* ❌ BARRA SUPERIOR - NO SE CAPTURA */}
         <div className="flex items-center justify-between px-6 py-2 border-b border-gray-200 bg-pay-bg">
           <div className="flex items-center gap-2">
@@ -198,7 +206,6 @@ Porcentaje Pagado: ${project.percentPaid}%
               onClick={handleCopy}
               disabled={isLoading || !project || isCopying}
               title="Copiar al portapapeles"
-              className="hover:bg-gray-100 text-pay-foreground"
             >
               {isCopying ? (
                 <Loader2 className="h-5 w-5 animate-spin" />
@@ -217,12 +224,11 @@ Porcentaje Pagado: ${project.percentPaid}%
 
         {/* ✅ ÁREA DE CAPTURA - TODO ESTO SE CONVIERTE EN IMAGEN */}
         <div ref={contentRef} className="bg-pay-bg">
-          <div className="text-xl font-semibold text-pay-foreground px-6 pt-4 ">
-            ESTADO DE CUENTA
-          </div>
-
-          <div className="text-gray-800">
+          <div className="text-xl font-semibold text-pay-foreground px-6 py-2 ">
             {/* Header con información del proyecto */}
+            <div className="px-6">
+              <div className="text-pay-foreground">Estado de Cuenta</div>
+            </div>
             {isLoading ? (
               <div className="px-6">
                 <DialogDescription className="text-pay-foreground">Cargando...</DialogDescription>

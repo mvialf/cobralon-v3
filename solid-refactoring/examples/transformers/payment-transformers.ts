@@ -208,9 +208,7 @@ export function filterByPaymentMethod(
   allocations: PaymentAllocation[],
   paymentMethodId: string
 ): PaymentAllocation[] {
-  return allocations.filter(
-    (alloc) => alloc.payment.paymentMethod.id === paymentMethodId
-  )
+  return allocations.filter((alloc) => alloc.payment.paymentMethod.id === paymentMethodId)
 }
 
 /**

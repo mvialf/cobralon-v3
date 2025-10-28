@@ -144,17 +144,19 @@ Component          Hook              Service          Transformers       API
 **Archivo:** `components/tables/project-payments-table.tsx`
 
 **Props Interface:**
+
 ```typescript
 interface ProjectPaymentsTableProps {
   projectId: string
   hidePaymentMethod?: boolean
-  locale?: string  // Opcional, default desde context
-  sortOrder?: 'asc' | 'desc'  // Opcional, default 'asc'
-  onPaymentClick?: (paymentId: string) => void  // Opcional
+  locale?: string // Opcional, default desde context
+  sortOrder?: 'asc' | 'desc' // Opcional, default 'asc'
+  onPaymentClick?: (paymentId: string) => void // Opcional
 }
 ```
 
 **Responsabilidades:**
+
 - ✅ Renderizar tabla con datos recibidos
 - ✅ Formatear montos y fechas (usando formatters)
 - ✅ Mostrar loading/empty states
@@ -163,6 +165,7 @@ interface ProjectPaymentsTableProps {
 - ❌ NO manejo de estado complejo
 
 **Dependencias:**
+
 - `useProjectPayments()` hook
 - `formatDate`, `formatCurrency` utilities
 - Componentes UI de shadcn
@@ -170,6 +173,7 @@ interface ProjectPaymentsTableProps {
 **Tamaño estimado:** ~80-100 líneas (vs 229 actual)
 
 **Ejemplo simplificado:**
+
 ```typescript
 export function ProjectPaymentsTable({
   projectId,
@@ -209,6 +213,7 @@ export function ProjectPaymentsTable({
 **Archivo:** `hooks/use-project-payments.ts`
 
 **Interface:**
+
 ```typescript
 interface UseProjectPaymentsResult {
   data: PaymentAllocation[]
@@ -217,13 +222,11 @@ interface UseProjectPaymentsResult {
   refetch: () => Promise<void>
 }
 
-function useProjectPayments(
-  projectId: string,
-  sortOrder?: 'asc' | 'desc'
-): UseProjectPaymentsResult
+function useProjectPayments(projectId: string, sortOrder?: 'asc' | 'desc'): UseProjectPaymentsResult
 ```
 
 **Responsabilidades:**
+
 - ✅ Manejo de estado (loading, error, data)
 - ✅ Orquestar fetching vía service
 - ✅ Aplicar transformaciones vía transformers
@@ -232,12 +235,14 @@ function useProjectPayments(
 - ❌ NO implementación de fetching (delega a service)
 
 **Dependencias:**
+
 - `PaymentsService` (service layer)
 - `PaymentTransformers` (transformer functions)
 
 **Tamaño estimado:** ~40-60 líneas
 
 **Ejemplo simplificado:**
+
 ```typescript
 export function useProjectPayments(
   projectId: string,
@@ -256,16 +261,10 @@ export function useProjectPayments(
       const payments = await PaymentsService.fetchByProject(projectId)
 
       // 2. Transformar con transformers
-      const allocations = PaymentTransformers.extractProjectAllocations(
-        payments,
-        projectId
-      )
+      const allocations = PaymentTransformers.extractProjectAllocations(payments, projectId)
 
       // 3. Ordenar
-      const sorted = PaymentTransformers.sortAllocationsByDate(
-        allocations,
-        sortOrder
-      )
+      const sorted = PaymentTransformers.sortAllocationsByDate(allocations, sortOrder)
 
       setData(sorted)
     } catch (err) {
@@ -290,6 +289,7 @@ export function useProjectPayments(
 **Archivo:** `lib/services/payments.service.ts`
 
 **Interface (abstracción):**
+
 ```typescript
 export interface IPaymentsRepository {
   fetchByProject(projectId: string): Promise<PaymentFromAPI[]>
@@ -299,6 +299,7 @@ export interface IPaymentsRepository {
 ```
 
 **Implementación:**
+
 ```typescript
 export class PaymentsService implements IPaymentsRepository {
   private baseUrl: string
@@ -319,6 +320,7 @@ export const paymentsService = new PaymentsService()
 ```
 
 **Responsabilidades:**
+
 - ✅ Fetching de datos desde API
 - ✅ Manejo de errores HTTP
 - ✅ Retry logic (opcional)
@@ -327,12 +329,14 @@ export const paymentsService = new PaymentsService()
 - ❌ NO lógica de negocio
 
 **Dependencias:**
+
 - `fetch` (browser API)
 - Type definitions (`PaymentFromAPI`)
 
 **Tamaño estimado:** ~60-80 líneas
 
 **Beneficios:**
+
 - ✅ Testeable (mockear fetch)
 - ✅ Extensible (implementar IPaymentsRepository con GraphQL, cache, etc.)
 - ✅ Reutilizable (toda la app usa el mismo service)
@@ -364,9 +368,7 @@ export function groupAllocationsByMonth(
 ): Map<string, PaymentAllocation[]>
 
 // 4. Calcular total de allocations
-export function calculateTotalAllocated(
-  allocations: PaymentAllocation[]
-): number
+export function calculateTotalAllocated(allocations: PaymentAllocation[]): number
 
 // 5. Filtrar por tipo de pago
 export function filterByPaymentType(
@@ -376,6 +378,7 @@ export function filterByPaymentType(
 ```
 
 **Responsabilidades:**
+
 - ✅ Transformaciones de datos (pure functions)
 - ✅ Ordenamiento, filtrado, mapeo
 - ✅ Cálculos de negocio
@@ -384,6 +387,7 @@ export function filterByPaymentType(
 - ❌ NO dependencias externas
 
 **Características:**
+
 - **Pure functions:** Mismo input → mismo output
 - **Inmutables:** No modifican input, retornan nuevo array/objeto
 - **Testeable al 100%:** Sin mocks necesarios
@@ -391,6 +395,7 @@ export function filterByPaymentType(
 **Tamaño estimado:** ~80-100 líneas
 
 **Ejemplo:**
+
 ```typescript
 export function sortAllocationsByDate(
   allocations: PaymentAllocation[],
@@ -407,13 +412,11 @@ export function sortAllocationsByDate(
 ```
 
 **Tests triviales:**
+
 ```typescript
 describe('sortAllocationsByDate', () => {
   it('should sort ascending', () => {
-    const input = [
-      { payment: { date: '2025-01-15' } },
-      { payment: { date: '2025-01-10' } }
-    ]
+    const input = [{ payment: { date: '2025-01-15' } }, { payment: { date: '2025-01-10' } }]
     const result = sortAllocationsByDate(input, 'asc')
     expect(result[0].payment.date).toBe('2025-01-10')
     expect(result[1].payment.date).toBe('2025-01-15')
@@ -495,6 +498,7 @@ export interface PaymentQueryParams {
 ```
 
 **Responsabilidades:**
+
 - ✅ Definir contratos compartidos
 - ✅ DTOs de API
 - ✅ Domain types
@@ -511,12 +515,14 @@ export interface PaymentQueryParams {
 ### Problema: Acoplamiento fuerte con implementaciones
 
 **Antes:**
+
 ```typescript
 // Component directamente usa fetch
 const response = await fetch('/api/payments?projectId=...')
 ```
 
 **Después:**
+
 ```typescript
 // Component usa abstracción (via hook)
 const { data } = useProjectPayments(projectId)
@@ -534,13 +540,11 @@ describe('useProjectPayments', () => {
   it('should fetch and transform data', async () => {
     // Mock del service
     const mockService: IPaymentsRepository = {
-      fetchByProject: jest.fn().mockResolvedValue(mockPayments)
+      fetchByProject: jest.fn().mockResolvedValue(mockPayments),
     }
 
     // Inyectar mock
-    const { result } = renderHook(() =>
-      useProjectPayments('project-1', mockService)
-    )
+    const { result } = renderHook(() => useProjectPayments('project-1', mockService))
 
     // Assertions
     await waitFor(() => {
@@ -570,12 +574,12 @@ describe('useProjectPayments', () => {
 
 ### Tests por Capa
 
-| Capa | Tipo | Complejidad | Mocks | Cobertura |
-|------|------|-------------|-------|-----------|
-| **Transformers** | Unit | Baja | 0 | 100% |
-| **Service** | Unit | Media | 1 (fetch) | 90%+ |
-| **Hook** | Integration | Media | 1 (service) | 80%+ |
-| **Component** | Integration | Alta | 1 (hook) | 70%+ |
+| Capa             | Tipo        | Complejidad | Mocks       | Cobertura |
+| ---------------- | ----------- | ----------- | ----------- | --------- |
+| **Transformers** | Unit        | Baja        | 0           | 100%      |
+| **Service**      | Unit        | Media       | 1 (fetch)   | 90%+      |
+| **Hook**         | Integration | Media       | 1 (service) | 80%+      |
+| **Component**    | Integration | Alta        | 1 (hook)    | 70%+      |
 
 **Total tests estimados:** 20-30 tests
 
@@ -587,51 +591,52 @@ describe('useProjectPayments', () => {
 
 ### Líneas de Código
 
-| Archivo | Antes | Después | Cambio |
-|---------|-------|---------|--------|
-| **Component** | 229 | ~90 | -60% |
-| **Hook** | - | ~50 | +50 |
-| **Service** | - | ~70 | +70 |
-| **Transformers** | - | ~90 | +90 |
-| **Types** | - | ~60 | +60 |
-| **Tests** | 0 | ~200 | +200 |
-| **Total** | 229 | ~560 | +144% |
+| Archivo          | Antes | Después | Cambio |
+| ---------------- | ----- | ------- | ------ |
+| **Component**    | 229   | ~90     | -60%   |
+| **Hook**         | -     | ~50     | +50    |
+| **Service**      | -     | ~70     | +70    |
+| **Transformers** | -     | ~90     | +90    |
+| **Types**        | -     | ~60     | +60    |
+| **Tests**        | 0     | ~200    | +200   |
+| **Total**        | 229   | ~560    | +144%  |
 
 **Análisis:**
+
 - ✅ Más líneas totales (esperado en arquitectura modular)
 - ✅ Pero cada archivo es más simple y testeable
 - ✅ Tests agregan valor real (vs sin tests antes)
 
 ### Responsabilidades
 
-| Antes | Después |
-|-------|---------|
+| Antes                          | Después                      |
+| ------------------------------ | ---------------------------- |
 | Component: 6 responsabilidades | Component: 1 responsabilidad |
-| - Rendering ✅ | - Rendering ✅ |
-| - Fetching ❌ | Hook: State management |
-| - Transformation ❌ | Service: Data fetching |
-| - Sorting ❌ | Transformers: Business logic |
-| - State management ⚠️ | Types: Contracts |
-| - Error handling ❌ | |
+| - Rendering ✅                 | - Rendering ✅               |
+| - Fetching ❌                  | Hook: State management       |
+| - Transformation ❌            | Service: Data fetching       |
+| - Sorting ❌                   | Transformers: Business logic |
+| - State management ⚠️          | Types: Contracts             |
+| - Error handling ❌            |                              |
 
 ### Testabilidad
 
-| Métrica | Antes | Después |
-|---------|-------|---------|
-| **Mocks necesarios** | 4-5 | 0-1 |
-| **Tests escritos** | 0 | 20-30 |
-| **Cobertura** | 0% | 85%+ |
-| **Velocidad tests** | N/A | <5s |
+| Métrica              | Antes | Después |
+| -------------------- | ----- | ------- |
+| **Mocks necesarios** | 4-5   | 0-1     |
+| **Tests escritos**   | 0     | 20-30   |
+| **Cobertura**        | 0%    | 85%+    |
+| **Velocidad tests**  | N/A   | <5s     |
 
 ### Mantenibilidad
 
-| Escenario | Antes | Después |
-|-----------|-------|---------|
-| **Cambiar API endpoint** | Modificar component | Modificar service |
-| **Agregar ordenamiento** | Modificar component | Agregar prop |
-| **Agregar cache** | Modificar component | Modificar service |
-| **Reutilizar lógica** | Copiar/pegar | Importar hook |
-| **Testear transformación** | Imposible | Trivial |
+| Escenario                  | Antes               | Después           |
+| -------------------------- | ------------------- | ----------------- |
+| **Cambiar API endpoint**   | Modificar component | Modificar service |
+| **Agregar ordenamiento**   | Modificar component | Agregar prop      |
+| **Agregar cache**          | Modificar component | Modificar service |
+| **Reutilizar lógica**      | Copiar/pegar        | Importar hook     |
+| **Testear transformación** | Imposible           | Trivial           |
 
 ---
 
@@ -640,6 +645,7 @@ describe('useProjectPayments', () => {
 ### Casos de Uso Soportados
 
 **1. Agregar cache con SWR:**
+
 ```typescript
 // lib/services/payments.service.cached.ts
 import useSWR from 'swr'
@@ -652,8 +658,8 @@ export function useProjectPayments(projectId: string) {
   )
 
   // Transformaciones igual que antes
-  const allocations = useMemo(() =>
-    data ? PaymentTransformers.extractProjectAllocations(data, projectId) : [],
+  const allocations = useMemo(
+    () => (data ? PaymentTransformers.extractProjectAllocations(data, projectId) : []),
     [data, projectId]
   )
 
@@ -662,6 +668,7 @@ export function useProjectPayments(projectId: string) {
 ```
 
 **2. Agregar retry logic:**
+
 ```typescript
 // lib/services/payments.service.ts
 class PaymentsService {
@@ -680,6 +687,7 @@ class PaymentsService {
 ```
 
 **3. Agregar ordenamiento por monto:**
+
 ```typescript
 // lib/transformers/payment-transformers.ts
 export function sortAllocationsByAmount(
@@ -693,12 +701,14 @@ export function sortAllocationsByAmount(
 }
 
 // Hook:
-const sortFn = sortBy === 'date'
-  ? PaymentTransformers.sortAllocationsByDate
-  : PaymentTransformers.sortAllocationsByAmount
+const sortFn =
+  sortBy === 'date'
+    ? PaymentTransformers.sortAllocationsByDate
+    : PaymentTransformers.sortAllocationsByAmount
 ```
 
 **4. Implementar GraphQL service:**
+
 ```typescript
 // lib/services/payments.service.graphql.ts
 class GraphQLPaymentsService implements IPaymentsRepository {
@@ -721,11 +731,13 @@ class GraphQLPaymentsService implements IPaymentsRepository {
 ## ✅ Checklist de Implementación
 
 ### Fase 1: Preparación
+
 - [ ] Leer este documento completo
 - [ ] Revisar análisis (`01-analysis.md`)
 - [ ] Entender flujo de datos
 
 ### Fase 2: Implementación
+
 - [ ] Crear `lib/types/payment.types.ts`
 - [ ] Crear `lib/transformers/payment-transformers.ts`
 - [ ] Escribir tests de transformers
@@ -737,12 +749,14 @@ class GraphQLPaymentsService implements IPaymentsRepository {
 - [ ] Escribir tests de component
 
 ### Fase 3: Validación
+
 - [ ] Todos los tests pasan
 - [ ] Build sin errores
 - [ ] Lint sin warnings
 - [ ] Verificar UI funciona igual que antes
 
 ### Fase 4: Deploy
+
 - [ ] Code review
 - [ ] Merge a dev
 - [ ] Testing manual

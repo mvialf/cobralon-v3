@@ -44,6 +44,7 @@ model BadgeColor {
   createdAt       DateTime        @default(now())
   updatedAt       DateTime        @updatedAt
   projectStatuses ProjectStatus[]
+  teamTags        TeamTag[]
 
   @@index([order])
   @@index([isActive])
@@ -60,7 +61,7 @@ model ProjectStatus {
   createdAt DateTime   @default(now())
   updatedAt DateTime   @updatedAt
   projects  Project[]
-  color     BadgeColor @relation(fields: [colorId], references: [id])
+  color     BadgeColor @relation(fields: [colorId], references: [id], onDelete: Restrict)
 
   @@index([colorId])
   @@index([order])
@@ -99,7 +100,7 @@ model Project {
   @@index([projectStatusId])
   @@index([date])
   @@index([customerId, projectStatusId])
-  @@index([projectStatusId, date(sort: Desc)])
+  @@index([projectStatusId, createdAt(sort: Desc)])
 }
 
 model PaymentMethod {
@@ -170,4 +171,20 @@ model PaymentAllocation {
   @@unique([paymentId, projectId])
   @@index([paymentId])
   @@index([projectId])
+}
+
+model TeamTag {
+  id           String     @id @default(uuid())
+  name         String     @unique
+  abbreviation String
+  colorId      String
+  order        Int        @default(0)
+  isActive     Boolean    @default(true)
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  color        BadgeColor @relation(fields: [colorId], references: [id], onDelete: Restrict)
+
+  @@index([colorId])
+  @@index([order])
+  @@index([isActive])
 }

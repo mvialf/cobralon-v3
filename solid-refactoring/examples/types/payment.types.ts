@@ -255,10 +255,7 @@ export type PaymentWithoutAllocations = Omit<PaymentFromAPI, 'allocations'>
 /**
  * Campos requeridos para crear un payment
  */
-export type CreatePaymentDTO = Pick<
-  PaymentFromAPI,
-  'amount' | 'currency' | 'date' | 'type'
-> & {
+export type CreatePaymentDTO = Pick<PaymentFromAPI, 'amount' | 'currency' | 'date' | 'type'> & {
   paymentMethodId: string
   customerId: string
   reference?: string

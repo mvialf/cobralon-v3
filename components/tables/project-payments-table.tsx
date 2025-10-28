@@ -14,60 +14,12 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { toast } from 'sonner'
 import { formatDate, formatCurrency } from '@/lib/format'
 import { useConfiguration } from '@/hooks/use-configuration'
+import { processProjectPayments } from '@/lib/transformers/payment-transformers'
+import type { PaymentFromAPI, PaymentAllocation } from '@/lib/types/payment.types'
 
 interface ProjectPaymentsTableProps {
   projectId: string
   hidePaymentMethod?: boolean
-}
-
-interface AllocationFromAPI {
-  id: string
-  allocatedAmount: number
-  project: {
-    id: string
-  }
-}
-
-interface PaymentFromAPI {
-  id: string
-  amount: number
-  currency: string
-  date: string
-  type: string
-  reference: string | null
-  notes: string | null
-  paymentMethod: {
-    id: string
-    name: string
-    icon: string | null
-  }
-  customer: {
-    id: string
-    name: string
-  }
-  allocations: AllocationFromAPI[]
-}
-
-interface PaymentAllocation {
-  id: string
-  allocatedAmount: number
-  payment: {
-    id: string
-    amount: number
-    currency: string
-    date: string
-    type: string
-    notes: string | null
-    paymentMethod: {
-      id: string
-      name: string
-      icon: string | null
-    }
-    customer: {
-      id: string
-      name: string
-    }
-  }
 }
 
 /**
@@ -98,34 +50,12 @@ export function ProjectPaymentsTable({
       const response = await fetch(`/api/payments?projectId=${projectId}`)
       if (!response.ok) throw new Error('Error al cargar pagos')
 
-      const data = await response.json()
+      const data: { payments: PaymentFromAPI[] } = await response.json()
 
-      // Extraer allocations de este proyecto con toda la info del pago
-      const projectAllocations = data.payments.flatMap((payment: PaymentFromAPI) =>
-        payment.allocations
-          .filter((alloc: AllocationFromAPI) => alloc.project.id === projectId)
-          .map((alloc: AllocationFromAPI) => ({
-            id: alloc.id,
-            allocatedAmount: alloc.allocatedAmount,
-            payment: {
-              id: payment.id,
-              amount: payment.amount,
-              currency: payment.currency,
-              date: payment.date,
-              type: payment.type,
-              notes: payment.notes,
-              paymentMethod: payment.paymentMethod,
-              customer: payment.customer,
-            },
-          }))
-      )
+      // Usar transformer: extrae allocations del proyecto y las ordena cronológicamente
+      const processedAllocations = processProjectPayments(data.payments, projectId, 'asc')
 
-      // Ordenar por fecha ascendente (cronológico: más antiguo primero)
-      projectAllocations.sort((a: PaymentAllocation, b: PaymentAllocation) => {
-        return new Date(a.payment.date).getTime() - new Date(b.payment.date).getTime()
-      })
-
-      setAllocations(projectAllocations)
+      setAllocations(processedAllocations)
     } catch (error) {
       console.error('Error fetching payments:', error)
       toast.error('Error al cargar pagos')

@@ -237,7 +237,7 @@ export async function POST(request: Request) {
       select: {
         id: true,
         customerId: true,
-        currency: true,
+        currency: true, // Solo traer campos necesarios para validación
       },
     })
 

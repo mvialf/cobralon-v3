@@ -57,43 +57,40 @@ export async function GET(request: Request) {
     }
     // 'all' no agrega filtro de status
 
-    // Obtener proyectos y total count
-    const [projects, _total] = await Promise.all([
-      prisma.project.findMany({
-        relationLoadStrategy: 'join', // ← Fix N+1: Force database-level JOINs
-        where,
-        skip,
-        take: limit,
-        orderBy: { createdAt: 'desc' },
-        include: {
-          customer: {
-            select: {
-              id: true,
-              name: true,
-              phone: true,
-            },
+    // Obtener proyectos (COUNT eliminado - se calcula con filteredProjects.length)
+    const projects = await prisma.project.findMany({
+      relationLoadStrategy: 'join', // ← Fix N+1: Force database-level JOINs
+      where,
+      skip,
+      take: limit,
+      orderBy: { createdAt: 'desc' },
+      include: {
+        customer: {
+          select: {
+            id: true,
+            name: true,
+            phone: true,
           },
-          projectStatus: {
-            select: {
-              id: true,
-              name: true,
-              isFinal: true, // ← Agregar campo isFinal para filtrado en frontend
-              color: {
-                select: {
-                  bgClass: true,
-                },
+        },
+        projectStatus: {
+          select: {
+            id: true,
+            name: true,
+            isFinal: true, // ← Agregar campo isFinal para filtrado en frontend
+            color: {
+              select: {
+                bgClass: true,
               },
             },
           },
-          paymentAllocations: {
-            select: {
-              allocatedAmount: true,
-            },
+        },
+        paymentAllocations: {
+          select: {
+            allocatedAmount: true,
           },
         },
-      }),
-      prisma.project.count({ where }),
-    ])
+      },
+    })
 
     // Calcular totalPaid, balance y percentPaid para cada proyecto usando helper compartido
     const projectsWithCalculations = projects.map((project) => {

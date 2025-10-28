@@ -10,7 +10,7 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu'
-import { StatusBadge } from '@/components/ui/status-badge'
+import { EditableBadge, type EditableBadgeOption } from '@/components/ui/editable-badge'
 import { ProjectNameSummary } from '@/components/summarys/project-name-summary'
 import { ViewProjectDetailsSheet } from '@/components/dialogs/projects/view-project-details-sheet'
 import { ViewProjectPaymentsDialog } from '@/components/dialogs/projects/view-project-payments-dialog'
@@ -44,9 +44,17 @@ export interface Project {
 
 interface ColumnsProps {
   onProjectDeleted?: () => void
+  /** Lista de estados disponibles para el EditableBadge */
+  statuses?: EditableBadgeOption[]
+  /** Estado de actualización (projectId actual siendo actualizado) */
+  updatingProjectId?: string | null
 }
 
-export const createColumns = ({ onProjectDeleted }: ColumnsProps = {}): ColumnDef<Project>[] => [
+export const createColumns = ({
+  onProjectDeleted,
+  statuses = [],
+  updatingProjectId = null,
+}: ColumnsProps = {}): ColumnDef<Project>[] => [
   {
     accessorKey: 'projectNumber',
     header: 'Proyecto',
@@ -64,10 +72,38 @@ export const createColumns = ({ onProjectDeleted }: ColumnsProps = {}): ColumnDe
   {
     accessorKey: 'projectStatus',
     header: 'Estado',
-    cell: ({ row }) => {
-      const status = row.original.projectStatus
-      if (!status) return <span className="text-muted-foreground">Sin estado</span>
-      return <StatusBadge bgClass={status.color.bgClass} label={status.name} />
+    cell: ({ row, table }) => {
+      const project = row.original
+      const status = project.projectStatus
+
+      // Obtener el callback de actualización desde meta
+      const handleStatusChange = (table.options.meta as any)?.handleStatusChange
+
+      // Determinar si este proyecto específico está siendo actualizado
+      const isPending = updatingProjectId === project.id
+
+      // Transformar status a EditableBadgeOption format
+      const value: EditableBadgeOption | null = status
+        ? {
+            id: status.id,
+            label: status.name,
+            color: status.color,
+          }
+        : null
+
+      return (
+        <EditableBadge
+          value={value}
+          options={statuses}
+          onChange={
+            handleStatusChange
+              ? (statusId: string) => handleStatusChange(project.id, statusId)
+              : undefined
+          }
+          isPending={isPending}
+          placeholder="Sin estado"
+        />
+      )
     },
     filterFn: (row, _id, filterValue) => {
       const status = row.original.projectStatus
