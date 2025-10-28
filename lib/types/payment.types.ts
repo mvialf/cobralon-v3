@@ -31,7 +31,7 @@ export interface PaymentFromAPI {
   id: string
   amount: number
   currency: string
-  date: string  // ISO string
+  date: string // ISO string
   type: 'Project' | 'Customer'
   reference: string | null
   notes: string | null
@@ -65,7 +65,7 @@ export interface PaymentAllocation {
     id: string
     amount: number
     currency: string
-    date: string  // ISO string
+    date: string // ISO string
     type: 'Project' | 'Customer'
     notes: string | null
     paymentMethod: {
