@@ -1,0 +1,159 @@
+import { NextResponse } from 'next/server'
+import { prisma } from '@/lib/db'
+import { teamTagSchema, generateAbbreviation } from '@/lib/validations/team-tag-validations'
+import { z } from 'zod'
+
+/**
+ * GET /api/team-tags
+ *
+ * Obtiene todas las tags de equipo, ordenadas por orden ascendente
+ *
+ * Query params:
+ * - includeInactive: "true" para incluir tags inactivas (default: false)
+ * - includeColor: "true" para incluir datos del color (default: true)
+ *
+ * Response:
+ * ```json
+ * {
+ *   "teamTags": [
+ *     {
+ *       "id": "uuid",
+ *       "name": "Desarrollador",
+ *       "abbreviation": "DV",
+ *       "order": 1,
+ *       "colorId": "uuid",
+ *       "color": { "name": "Azul", "bgClass": "bg-blue-500", ... },
+ *       "isActive": true
+ *     }
+ *   ]
+ * }
+ * ```
+ */
+export async function GET(request: Request) {
+  try {
+    const { searchParams } = new URL(request.url)
+    const includeInactive = searchParams.get('includeInactive') === 'true'
+    const includeColor = searchParams.get('includeColor') !== 'false' // default true
+
+    // Build query options
+    const queryOptions: any = {
+      where: includeInactive ? undefined : { isActive: true },
+      orderBy: { order: 'asc' },
+    }
+
+    // Add include conditionally
+    if (includeColor) {
+      queryOptions.include = {
+        color: {
+          select: {
+            id: true,
+            name: true,
+            key: true,
+            bgClass: true,
+            textClass: true,
+          },
+        },
+      }
+    }
+
+    const teamTags = await prisma.teamTag.findMany(queryOptions)
+
+    return NextResponse.json({ teamTags })
+  } catch (error) {
+    console.error('Error fetching team tags:', error)
+    return NextResponse.json({ error: 'Error al obtener las team tags' }, { status: 500 })
+  }
+}
+
+/**
+ * POST /api/team-tags
+ *
+ * Crea una nueva team tag
+ *
+ * Body:
+ * ```json
+ * {
+ *   "name": "Desarrollador",
+ *   "abbreviation": "DV",  // Opcional: se auto-genera si no se provee
+ *   "colorId": "uuid-del-color",
+ *   "order": 5  // Opcional
+ * }
+ * ```
+ *
+ * Validaciones:
+ * - El nombre debe ser único
+ * - La abreviatura debe tener exactamente 2 letras mayúsculas
+ * - El colorId debe existir en BadgeColor
+ */
+export async function POST(request: Request) {
+  try {
+    const body = await request.json()
+
+    // Auto-generar abbreviation si viene vacío
+    const dataToValidate = {
+      ...body,
+      abbreviation: body.abbreviation || generateAbbreviation(body.name),
+    }
+
+    const validatedData = teamTagSchema.parse(dataToValidate)
+
+    // Validación: nombre único
+    const existingByName = await prisma.teamTag.findUnique({
+      where: { name: validatedData.name },
+    })
+
+    if (existingByName) {
+      return NextResponse.json(
+        { error: `Ya existe una tag con el nombre "${validatedData.name}"` },
+        { status: 400 }
+      )
+    }
+
+    // Validación: colorId existe
+    const colorExists = await prisma.badgeColor.findUnique({
+      where: { id: validatedData.colorId },
+    })
+
+    if (!colorExists) {
+      return NextResponse.json({ error: 'El color seleccionado no existe' }, { status: 400 })
+    }
+
+    // Calcular order automáticamente si no se provee
+    let order: number
+
+    if (body.order !== undefined) {
+      order = body.order
+    } else {
+      // Buscar el máximo order actual
+      const maxOrder = await prisma.teamTag.findFirst({
+        orderBy: { order: 'desc' },
+        select: { order: true },
+      })
+
+      // Si no hay tags, empezar en 10, sino sumar 10 al máximo
+      order = maxOrder ? maxOrder.order + 10 : 10
+    }
+
+    // Crear la tag
+    const newTag = await prisma.teamTag.create({
+      data: {
+        name: validatedData.name,
+        abbreviation: validatedData.abbreviation,
+        colorId: validatedData.colorId,
+        order,
+      },
+      include: {
+        color: true,
+      },
+    })
+
+    return NextResponse.json({ teamTag: newTag }, { status: 201 })
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return NextResponse.json({ error: 'Datos inválidos', details: error.errors }, { status: 400 })
+    }
+
+    console.error('Error creating team tag:', error)
+    return NextResponse.json({ error: 'Error al crear la team tag' }, { status: 500 })
+  }
+}
