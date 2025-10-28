@@ -27,11 +27,13 @@ export default function ProjectsPage() {
   const fetchProjects = useCallback(async () => {
     try {
       setIsLoading(true)
-      const response = await fetch(`/api/projects?projectState=${projectState}`)
+      // API combinada: proyectos + metadata en una sola llamada
+      const response = await fetch(`/api/projects-with-metadata?projectState=${projectState}`)
       if (!response.ok) throw new Error('Error al cargar proyectos')
 
       const data = await response.json()
       setProjects(data.projects)
+      setStatuses(data.metadata.projectStatuses)
     } catch (error) {
       console.error('Error:', error)
     } finally {
@@ -39,23 +41,10 @@ export default function ProjectsPage() {
     }
   }, [projectState])
 
-  // Cargar proyectos y statuses desde la API
+  // Cargar proyectos y statuses desde la API combinada
   useEffect(() => {
     fetchProjects()
-    fetchStatuses()
   }, [fetchProjects]) // Refetch cuando cambia fetchProjects
-
-  const fetchStatuses = async () => {
-    try {
-      const response = await fetch('/api/project-status')
-      if (!response.ok) throw new Error('Error al cargar estados')
-
-      const data = await response.json()
-      setStatuses(data.projectStatuses)
-    } catch (error) {
-      console.error('Error al cargar estados:', error)
-    }
-  }
 
   const handleProjectCreated = () => {
     // Recargar lista de proyectos después de crear uno nuevo

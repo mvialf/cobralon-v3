@@ -100,7 +100,7 @@ model Project {
   @@index([projectStatusId])
   @@index([date])
   @@index([customerId, projectStatusId])
-  @@index([projectStatusId, date(sort: Desc)])
+  @@index([projectStatusId, createdAt(sort: Desc)])
 }
 
 model PaymentMethod {
