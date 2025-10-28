@@ -303,7 +303,7 @@ describe('useProjectPayments', () => { ... })
 Responde honestamente:
 
 1. **¿Tienes pain points actualmente?**
-   - [ ] Sí → Lista cuáles: ******\_\_\_******
+   - [ ] Sí → Lista cuáles: **\*\***\_\_\_**\*\***
    - [ ] No → Mantén Soft SOLID
 
 2. **¿Tu scoring fue ≥6 puntos?**
