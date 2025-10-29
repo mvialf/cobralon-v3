@@ -15,6 +15,7 @@ import { ProjectNameSummary } from '@/components/summarys/project-name-summary'
 import { PaymentProgressSummary } from '@/components/summarys/payment-progress-summary'
 import { ViewProjectDetailsSheet } from '@/components/dialogs/projects/view-project-details-sheet'
 import { ViewProjectPaymentsDialog } from '@/components/dialogs/projects/view-project-payments-dialog'
+import { EditProjectDialog } from '@/components/dialogs/projects/edit-project-dialog'
 import { PaymentToProjectDialog } from '@/components/dialogs/payments/payment-to-project-dialog'
 import { toast } from 'sonner'
 import { formatDate } from '@/lib/format'
@@ -45,6 +46,7 @@ export interface Project {
 
 interface ColumnsProps {
   onProjectDeleted?: () => void
+  onProjectUpdated?: () => void
   /** Lista de estados disponibles para el EditableBadge */
   statuses?: EditableBadgeOption[]
   /** Estado de actualización (projectId actual siendo actualizado) */
@@ -53,6 +55,7 @@ interface ColumnsProps {
 
 export const createColumns = ({
   onProjectDeleted,
+  onProjectUpdated,
   statuses = [],
   updatingProjectId = null,
 }: ColumnsProps = {}): ColumnDef<Project>[] => [
@@ -219,7 +222,11 @@ export const createColumns = ({
   {
     id: 'actions',
     cell: ({ row }) => (
-      <ProjectActionsCell project={row.original} onProjectDeleted={onProjectDeleted} />
+      <ProjectActionsCell
+        project={row.original}
+        onProjectDeleted={onProjectDeleted}
+        onProjectUpdated={onProjectUpdated}
+      />
     ),
     meta: {
       headerClassName: 'text-center',
@@ -234,13 +241,16 @@ export const createColumns = ({
 function ProjectActionsCell({
   project,
   onProjectDeleted,
+  onProjectUpdated,
 }: {
   project: Project
   onProjectDeleted?: () => void
+  onProjectUpdated?: () => void
 }) {
   const [detailsOpen, setDetailsOpen] = useState(false)
   const [paymentsOpen, setPaymentsOpen] = useState(false)
   const [paymentDialogOpen, setPaymentDialogOpen] = useState(false)
+  const [editDialogOpen, setEditDialogOpen] = useState(false)
 
   const handleDelete = async () => {
     if (!confirm(`¿Estás seguro de eliminar el proyecto ${project.projectNumber}?`)) {
@@ -300,7 +310,7 @@ function ProjectActionsCell({
 
         <DropdownMenuSeparator />
 
-        <DropdownMenuItem>
+        <DropdownMenuItem onClick={() => setEditDialogOpen(true)}>
           <Pencil className="mr-2 h-4 w-4" />
           Editar
         </DropdownMenuItem>
@@ -322,6 +332,14 @@ function ProjectActionsCell({
         projectId={project.id}
         open={paymentsOpen}
         onOpenChange={setPaymentsOpen}
+      />
+
+      {/* Dialog para editar proyecto */}
+      <EditProjectDialog
+        projectId={project.id}
+        open={editDialogOpen}
+        onOpenChange={setEditDialogOpen}
+        onProjectUpdated={onProjectUpdated}
       />
 
       {/* Dialog para registrar pago */}

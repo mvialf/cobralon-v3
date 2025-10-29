@@ -117,6 +117,30 @@ export const ProjectForm = React.forwardRef<ProjectFormHandle, ProjectFormProps>
       },
     }))
 
+    // Reset form cuando defaultValues cambian (para modo edición)
+    React.useEffect(() => {
+      if (defaultValues) {
+        form.reset({
+          customerId: defaultValues.customerId || '',
+          projectNumber: defaultValues.projectNumber || '',
+          projectName: defaultValues.projectName || '',
+          phone: defaultValues.phone || '',
+          street: defaultValues.street || '',
+          apartment: defaultValues.apartment || '',
+          comuna: defaultValues.comuna || '',
+          region: defaultValues.region || configuration.region || '',
+          projectStatusId: defaultValues.projectStatusId || '',
+          date: defaultValues.date || new Date(),
+          subtotal: defaultValues.subtotal || 0,
+          taxRate: defaultValues.taxRate || 19,
+          currency: defaultValues.currency || configuration.currency || 'CLP',
+          windowsCount: defaultValues.windowsCount || 0,
+          squareMeters: defaultValues.squareMeters || 0,
+          description: defaultValues.description || '',
+        })
+      }
+    }, [defaultValues, form, configuration])
+
     // Cargar lista de customers al montar
     React.useEffect(() => {
       async function loadCustomers() {
