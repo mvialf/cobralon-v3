@@ -1,13 +1,27 @@
 'use client'
 
 import Link from 'next/link'
-import { ChevronDown, DollarSign, ArrowRight } from 'lucide-react'
+import { ChevronDown, DollarSign, ArrowRight, Table } from 'lucide-react'
 
 import { AppLayout } from '@/components/layout/app-layout'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 
 const ejemplos = [
+  {
+    title: 'DataTable',
+    description: 'Showcase completo del sistema de tablas avanzadas',
+    href: '/examples/data-table',
+    icon: Table,
+    features: [
+      'Sorting & Filtering',
+      'Pagination',
+      'Row Selection',
+      'Custom Cell Rendering',
+      '40 registros mock',
+    ],
+    color: 'text-purple-500',
+  },
   {
     title: 'Combobox',
     description: 'Combobox con debounce y loading state',

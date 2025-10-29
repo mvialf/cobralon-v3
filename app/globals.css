@@ -59,15 +59,20 @@
   --tracking-normal: 0em;
   --spacing: 0.25rem;
 
-  /* Payments */
-  --pay-bg: oklch(0.928 0.006 264.531);
-  --pay-card: oklch(0.967 0.003 264.542);
-  --pay-foreground: oklch(0.278 0.033 256.848);
-  --pay-shadow: 0 4px 6px -1px hsl(0 0% 0% / 0.1), 0 2px 4px -2px hsl(0 0% 0% / 0.1);
-  --pay-border: oklch(0.872 0.01 258.338);
-  --pay-orange: oklch(0.646 0.222 41.116);
-  --pay-green: oklch(0.627 0.194 149.214);
-  --pay-blue: oklch(0.546 0.245 262.881);
+  /* ================================================
+     CAPTURE DIALOG THEME
+     ================================================
+     Tema consistente para capturas (Light mode fijo)
+     Independiente del theme del usuario (dark/light)
+     ================================================ */
+  --capture-bg: oklch(0.928 0.006 264.531);
+  --capture-card: oklch(0.967 0.003 264.542);
+  --capture-foreground: oklch(0.278 0.033 256.848);
+  --capture-shadow: 0 4px 6px -1px hsl(0 0% 0% / 0.1), 0 2px 4px -2px hsl(0 0% 0% / 0.1);
+  --capture-border: oklch(0.872 0.01 258.338);
+  --capture-orange: oklch(0.646 0.222 41.116);
+  --capture-green: oklch(0.627 0.194 149.214);
+  --capture-blue: oklch(0.546 0.245 262.881);
 }
 
 .dark {
@@ -161,13 +166,13 @@
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
 
-  --color-pay-bg: var(--pay-bg);
-  --color-pay-card: var(--pay-card);
-  --color-pay-foreground: var(--pay-foreground);
-  --color-pay-border: var(--pay-border);
-  --color-pay-orange: var(--pay-orange);
-  --color-pay-green: var(--pay-green);
-  --color-pay-blue: var(--pay-blue);
+  --color-capture-bg: var(--capture-bg);
+  --color-capture-card: var(--capture-card);
+  --color-capture-foreground: var(--capture-foreground);
+  --color-capture-border: var(--capture-border);
+  --color-capture-orange: var(--capture-orange);
+  --color-capture-green: var(--capture-green);
+  --color-capture-blue: var(--capture-blue);
 
   --font-sans: var(--font-sans);
   --font-mono: var(--font-mono);
@@ -187,7 +192,7 @@
   --shadow-xl: var(--shadow-xl);
   --shadow-2xl: var(--shadow-2xl);
 
-  --shadow-pay: var(--pay-shadow);
+  --shadow-capture: var(--capture-shadow);
 }
 
 @layer base {
