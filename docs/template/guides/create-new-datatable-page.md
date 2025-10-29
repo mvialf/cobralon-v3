@@ -118,9 +118,7 @@ export const createColumns = ({
   {
     accessorKey: 'name',
     header: 'Producto',
-    cell: ({ row }) => (
-      <div className="font-medium">{row.getValue('name')}</div>
-    ),
+    cell: ({ row }) => <div className="font-medium">{row.getValue('name')}</div>,
     meta: {
       headerClassName: 'text-left',
       cellClassName: 'text-left',
@@ -133,9 +131,7 @@ export const createColumns = ({
   {
     accessorKey: 'sku',
     header: 'SKU',
-    cell: ({ row }) => (
-      <span className="text-muted-foreground">{row.getValue('sku')}</span>
-    ),
+    cell: ({ row }) => <span className="text-muted-foreground">{row.getValue('sku')}</span>,
     meta: {
       headerClassName: 'text-left',
       cellClassName: 'text-left',
@@ -161,19 +157,11 @@ export const createColumns = ({
   {
     accessorKey: 'price',
     header: ({ column }) => (
-      <DataTableColumnHeader
-        column={column}
-        title="Precio"
-        className="justify-end"
-      />
+      <DataTableColumnHeader column={column} title="Precio" className="justify-end" />
     ),
     cell: ({ row }) => {
       const price = row.getValue('price') as number
-      return (
-        <div className="text-right font-semibold">
-          {formatCurrency(price, 'CLP')}
-        </div>
-      )
+      return <div className="text-right font-semibold">{formatCurrency(price, 'CLP')}</div>
     },
     meta: {
       headerClassName: 'text-right',
@@ -187,11 +175,7 @@ export const createColumns = ({
   {
     accessorKey: 'stock',
     header: ({ column }) => (
-      <DataTableColumnHeader
-        column={column}
-        title="Stock"
-        className="justify-end"
-      />
+      <DataTableColumnHeader column={column} title="Stock" className="justify-end" />
     ),
     cell: ({ row }) => {
       const stock = row.getValue('stock') as number
@@ -200,9 +184,7 @@ export const createColumns = ({
       return (
         <div className="flex items-center justify-end gap-2">
           <span>{stock}</span>
-          <Badge variant={variant}>
-            {stock > 10 ? 'OK' : stock > 0 ? 'Bajo' : 'Agotado'}
-          </Badge>
+          <Badge variant={variant}>{stock > 10 ? 'OK' : stock > 0 ? 'Bajo' : 'Agotado'}</Badge>
         </div>
       )
     },
@@ -240,9 +222,7 @@ export const createColumns = ({
   // ──────────────────────────────────────────────────────────
   {
     accessorKey: 'createdAt',
-    header: ({ column }) => (
-      <DataTableColumnHeader column={column} title="Fecha Creación" />
-    ),
+    header: ({ column }) => <DataTableColumnHeader column={column} title="Fecha Creación" />,
     cell: ({ row }) => {
       return formatDate(row.getValue('createdAt'), 'short', 'es-CL')
     },
@@ -362,6 +342,7 @@ Antes de pasar al siguiente paso, verifica:
 
 import { useState, useEffect, useCallback } from 'react'
 import { AppLayout } from '@/components/layout/app-layout'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { DataTable } from '@/components/data-table/data-table'
 import { createColumns, type Product } from './columns'
 import { Button } from '@/components/ui/button'
@@ -436,10 +417,7 @@ export default function ProductsPage() {
     <AppLayout
       pageTitle="Productos"
       pageDescription="Gestiona tu inventario de productos"
-      breadcrumbs={[
-        { label: 'Inicio', href: '/' },
-        { label: 'Productos' },
-      ]}
+      breadcrumbs={[{ label: 'Inicio', href: '/' }, { label: 'Productos' }]}
       action={
         <Button>
           <Plus className="mr-2 h-4 w-4" />
@@ -447,26 +425,77 @@ export default function ProductsPage() {
         </Button>
       }
     >
-      <div className="space-y-4">
-        {isLoading ? (
-          <div className="flex items-center justify-center h-64">
-            <div className="text-muted-foreground">Cargando productos...</div>
-          </div>
-        ) : (
-          <DataTable
-            columns={columns}
-            data={products}
-            searchKey="name"
-            searchPlaceholder="Buscar por nombre o SKU..."
-          />
-        )}
-      </div>
+      {/*
+        IMPORTANTE: Handling de Overflow Horizontal
+
+        Cuando tu DataTable tiene 8+ columnas, envuélvelo con estas clases
+        para prevenir scroll horizontal duplicado (página + tabla):
+
+        - overflow-hidden en Card: Contiene el overflow
+        - overflow-x-auto en CardContent: Permite scroll interno
+
+        Ver docs/template/components/data-table.md#handling-horizontal-overflow
+      */}
+      <Card className="overflow-hidden">
+        <CardHeader>
+          <CardTitle>Listado de Productos</CardTitle>
+        </CardHeader>
+        <CardContent className="overflow-x-auto">
+          {isLoading ? (
+            <div className="flex items-center justify-center h-64">
+              <div className="text-muted-foreground">Cargando productos...</div>
+            </div>
+          ) : (
+            <DataTable
+              columns={columns}
+              data={products}
+              searchKey="name"
+              searchPlaceholder="Buscar por nombre o SKU..."
+            />
+          )}
+        </CardContent>
+      </Card>
     </AppLayout>
   )
 }
 ```
 
-### 3.2 Checklist page.tsx
+### 3.2 Patrón de Overflow para Tablas Anchas
+
+**⚠️ IMPORTANTE:** Si tu DataTable tiene **8+ columnas**, SIEMPRE envuélvelo con este patrón:
+
+```tsx
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+
+;<Card className="overflow-hidden">
+  {' '}
+  {/* ← Contiene el overflow */}
+  <CardHeader>
+    <CardTitle>Título de la Tabla</CardTitle>
+  </CardHeader>
+  <CardContent className="overflow-x-auto">
+    {' '}
+    {/* ← Permite scroll interno */}
+    <DataTable columns={columns} data={data} />
+  </CardContent>
+</Card>
+```
+
+**Por qué es necesario:**
+
+- ❌ **Sin este patrón:** Scroll horizontal duplicado (página completa + tabla)
+- ✅ **Con este patrón:** Scroll horizontal SOLO dentro del Card
+
+**Cuándo aplicarlo:**
+
+- ✅ Tu DataTable tiene 8+ columnas
+- ✅ Columnas con contenido variable (nombres largos, descripciones)
+- ✅ Múltiples columnas numéricas (precios, cantidades, porcentajes)
+- ✅ Columnas de acciones (dropdowns, botones)
+
+**Documentación completa:** [data-table.md - Best Practices](../components/data-table.md#handling-horizontal-overflow)
+
+### 3.3 Checklist page.tsx
 
 - [ ] Estado `products` y `isLoading` definidos
 - [ ] `fetchProducts` con `useCallback`
@@ -476,6 +505,7 @@ export default function ProductsPage() {
 - [ ] `AppLayout` con breadcrumbs
 - [ ] Loading state con mensaje
 - [ ] `DataTable` con searchKey y placeholder
+- [ ] **Patrón de overflow:** `Card` con `overflow-hidden` + `CardContent` con `overflow-x-auto` (si 8+ columnas)
 
 ---
 
@@ -585,7 +615,6 @@ const fetchProducts = useCallback(async () => {
 
     setProducts(data.products)
     setCategories(data.categories) // ← Metadata para filtros
-
   } catch (error) {
     toast.error('Error al cargar')
   } finally {
@@ -653,11 +682,13 @@ touch components/dialogs/products/edit-product-dialog.tsx
 Antes de considerar la implementación completa:
 
 ### Estructura de Archivos
+
 - [ ] `app/entities/columns.tsx` creado
 - [ ] `app/entities/page.tsx` creado
 - [ ] Imports correctos en ambos archivos
 
 ### columns.tsx
+
 - [ ] Interface TypeScript definida y exportada
 - [ ] `createColumns` con factory pattern
 - [ ] Todas las columnas tienen `meta` (headerClassName, cellClassName)
@@ -672,6 +703,7 @@ Antes de considerar la implementación completa:
 - [ ] `EntityActionsCell` implementado correctamente
 
 ### page.tsx
+
 - [ ] Estado de datos (`entities`, `isLoading`)
 - [ ] Función `fetchEntities` con `useCallback`
 - [ ] `useEffect` para cargar al montar
@@ -690,8 +722,12 @@ Antes de considerar la implementación completa:
   - [ ] `data`
   - [ ] `searchKey`
   - [ ] `searchPlaceholder`
+- [ ] **Overflow handling** (si 8+ columnas):
+  - [ ] `Card` con `className="overflow-hidden"`
+  - [ ] `CardContent` con `className="overflow-x-auto"`
 
 ### Funcionalidad
+
 - [ ] Fetching funciona correctamente
 - [ ] Loading state se muestra
 - [ ] Búsqueda funciona
@@ -707,6 +743,7 @@ Antes de considerar la implementación completa:
 - [ ] Refetch después de mutaciones
 
 ### UX
+
 - [ ] Confirmación para operaciones destructivas
 - [ ] Feedback visual durante operaciones
 - [ ] Mensajes de error informativos
@@ -777,12 +814,14 @@ filterableColumns={[
 **Causa:** Fechas como string sin parsear
 
 **Solución 1 (backend):**
+
 ```tsx
 // En API, devolver Date objects
 date: new Date(dateString)
 ```
 
 **Solución 2 (frontend):**
+
 ```tsx
 // En columns.tsx, accessorFn para convertir
 {
@@ -804,13 +843,13 @@ date: new Date(dateString)
 ```tsx
 // En page.tsx: asegúrate de pasar el callback
 const columns = createColumns({
-  onEntityUpdated: fetchEntities,  // ← Conectar aquí
+  onEntityUpdated: fetchEntities, // ← Conectar aquí
 })
 
 // En columns.tsx: llamar el callback
 const handleDelete = async () => {
   await fetch(`/api/entities/${entity.id}`, { method: 'DELETE' })
-  onEntityUpdated?.()  // ← Invocar aquí
+  onEntityUpdated?.() // ← Invocar aquí
 }
 ```
 
@@ -845,6 +884,7 @@ Ver: `app/customer/` (implementación más simple)
 Ver: `app/projects/` (implementación completa con filtros faceted, estado editable, acciones complejas)
 
 **Highlights:**
+
 - Global filter multi-campo
 - Filtros faceted con colores
 - EditableBadge para estado
@@ -855,6 +895,7 @@ Ver: `app/projects/` (implementación completa con filtros faceted, estado edita
 Ver: `app/payments/` (implementación con tipos diferentes de registros)
 
 **Highlights:**
+
 - Columna "Tipo" con badge
 - Lógica condicional en actions
 - Custom rendering según tipo

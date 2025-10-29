@@ -64,7 +64,7 @@ export function ProjectPaymentsTable({
     return (
       <Card>
         <CardHeader>
-          <CardDescription className="text-pay-foreground">
+          <CardDescription className="text-capture-foreground">
             Cargando historial de pagos...
           </CardDescription>
         </CardHeader>
@@ -83,13 +83,13 @@ export function ProjectPaymentsTable({
     return (
       <Card>
         <CardHeader>
-          <CardDescription className="text-pay-foreground text-sm font-medium">
+          <CardDescription className="text-capture-foreground text-sm font-medium">
             Historial de pagos
           </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="flex flex-col items-center justify-center py-12 text-center">
-            <p className="text-pay-foreground text-sm font-normal">
+            <p className="text-capture-foreground text-sm font-normal">
               No hay pagos registrados para este proyecto
             </p>
           </div>
@@ -100,22 +100,22 @@ export function ProjectPaymentsTable({
 
   return (
     <div className="bg-transparent">
-      <div className="text-pay-foreground text-md font-normal pb-2">Historial de pagos</div>
+      <div className="text-capture-foreground text-md font-normal pb-2">Historial de pagos</div>
 
       <div className="overflow-hidden">
-        <table className="w-full border border-pay-border shadow-pay-shadow rounded-md">
-          <thead className="bg-pay-border">
+        <table className="w-full border border-capture-border shadow-capture-shadow rounded-md">
+          <thead className="bg-capture-border">
             <tr className="border-b">
-              <th className="w-20 py-2 px-4 text-pay-foreground text-md bg-transparent text-end text-sm">
+              <th className="w-20 py-2 px-4 text-capture-foreground text-md bg-transparent text-end text-sm">
                 Abono
               </th>
-              <th className="py-2 px-4 text-pay-foreground bg-transparent text-center text-sm">
+              <th className="py-2 px-4 text-capture-foreground bg-transparent text-center text-sm">
                 Fecha
               </th>
               {!hidePaymentMethod && (
-                <th className="py-2 px-4 text-pay-foreground bg-transparent text-sm">Método</th>
+                <th className="py-2 px-4 text-capture-foreground bg-transparent text-sm">Método</th>
               )}
-              <th className="w-28 py-2 px-4 text-md text-pay-foreground bg-transparent text-end text-sm">
+              <th className="w-28 py-2 px-4 text-md text-capture-foreground bg-transparent text-end text-sm">
                 Valor
               </th>
             </tr>
@@ -123,21 +123,21 @@ export function ProjectPaymentsTable({
           <tbody className="bg-pay-card">
             {allocations.map((allocation, index) => (
               <tr key={allocation.id} className="border-b hover:bg-muted/50">
-                <td className="py-2 px-4 font-medium text-pay-foreground text-end text-sm">
+                <td className="py-2 px-4 font-medium text-capture-foreground text-end text-sm">
                   {allocation.payment.type === 'Customer' ? '(*) ' : ''}
                   {index + 1}
                 </td>
-                <td className="py-2 px-4 font-medium text-pay-foreground text-center text-sm">
+                <td className="py-2 px-4 font-medium text-capture-foreground text-center text-sm">
                   {formatDate(allocation.payment.date, 'short', locale)}
                 </td>
                 {!hidePaymentMethod && (
-                  <td className="py-2 px-4 text-sm text-pay-foreground text-sm">
+                  <td className="py-2 px-4 text-sm text-capture-foreground text-sm">
                     <div className="flex items-center gap-2">
                       {allocation.payment.paymentMethod.name}
                     </div>
                   </td>
                 )}
-                <td className="py-2 px-4 font-medium text-pay-foreground text-right text-sm">
+                <td className="py-2 px-4 font-medium text-capture-foreground text-right text-sm">
                   {formatCurrency(allocation.allocatedAmount, allocation.payment.currency)}
                 </td>
               </tr>
@@ -147,7 +147,7 @@ export function ProjectPaymentsTable({
             <tr>
               <td
                 colSpan={hidePaymentMethod ? 3 : 4}
-                className="text-xs font-normal text-pay-foreground pt-2 pb-3 px-4"
+                className="text-xs font-normal text-capture-foreground pt-2 pb-3 px-4"
               >
                 (*) Obtenido de pago global de cliente
               </td>

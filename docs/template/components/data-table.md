@@ -281,6 +281,118 @@ Este componente es **portable** y puede copiarse a otros proyectos. Requisitos:
 
 **Documentación completa de portabilidad:** Ver [components/data-table/README.md](../../../components/data-table/README.md)
 
+## Best Practices
+
+### Handling Horizontal Overflow
+
+Cuando tu DataTable tiene muchas columnas (típicamente 8+), necesitas prevenir el **scroll horizontal duplicado** (scroll a nivel de página completa + scroll a nivel de tabla).
+
+#### El Problema
+
+Sin manejo adecuado del overflow, cuando la tabla excede el ancho del viewport:
+
+- ❌ **Scroll a nivel de página:** Toda la aplicación (sidebar, header, contenido) se mueve horizontalmente
+- ❌ **Scroll a nivel de tabla:** La tabla también tiene su propio scroll
+- ❌ **UX pobre:** Usuario confundido por scroll duplicado, especialmente en mobile
+
+#### La Solución
+
+Envuelve el DataTable con clases específicas de Tailwind para **contener** el overflow:
+
+```tsx
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { DataTable } from '@/components/data-table'
+
+;<Card className="overflow-hidden">
+  {' '}
+  {/* ← Contiene el overflow */}
+  <CardHeader>
+    <CardTitle>Mis Datos</CardTitle>
+  </CardHeader>
+  <CardContent className="overflow-x-auto">
+    {' '}
+    {/* ← Permite scroll interno */}
+    <DataTable columns={columns} data={data} />
+  </CardContent>
+</Card>
+```
+
+#### Por Qué Funciona
+
+1. **`overflow-hidden` en Card:**
+   - Previene que el contenido interno "escape" del contenedor
+   - Elimina el scroll horizontal a nivel de página
+   - El Card actúa como contenedor de contención
+
+2. **`overflow-x-auto` en CardContent:**
+   - Permite scroll horizontal SOLO dentro del contenedor
+   - Se activa automáticamente cuando la tabla excede el ancho disponible
+   - Mantiene el scroll vertical normal
+
+#### Resultado
+
+✅ **Scroll horizontal:** Solo dentro del Card (donde está la tabla)
+✅ **Página:** Sin scroll horizontal, solo vertical
+✅ **Mobile:** La tabla es scrollable horizontalmente dentro del Card
+✅ **Desktop:** Si la ventana es suficientemente ancha, no hay scroll
+
+#### Casos de Uso
+
+**Aplica este patrón cuando:**
+
+- ✅ Tu DataTable tiene 8+ columnas
+- ✅ Columnas con contenido variable (nombres largos, descripciones, etc.)
+- ✅ Múltiples columnas numéricas (precios, cantidades, porcentajes)
+- ✅ Columnas de acciones (dropdowns, botones)
+
+**Ejemplo completo:**
+
+```tsx
+'use client'
+
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { DataTable } from '@/components/data-table'
+import { columns } from './columns'
+
+export default function ProjectsPage() {
+  return (
+    <Card className="overflow-hidden">
+      <CardHeader>
+        <CardTitle>Proyectos (10 columnas)</CardTitle>
+      </CardHeader>
+      <CardContent className="overflow-x-auto">
+        <DataTable
+          columns={columns} // 10 columnas
+          data={projectsData}
+          searchKey="name"
+          enableRowSelection
+        />
+      </CardContent>
+    </Card>
+  )
+}
+```
+
+#### Otros Casos de Contenido Wide
+
+Este mismo patrón aplica a **cualquier contenido wide** que pueda exceder el viewport:
+
+- 📊 Tablas largas (no DataTable)
+- 🖼️ Imágenes muy anchas
+- 💻 Code blocks largos
+- 📈 Gráficas horizontales
+
+```tsx
+// Patrón general para contenido wide
+<Card className="overflow-hidden">
+  <CardContent className="overflow-x-auto">{/* Contenido wide aquí */}</CardContent>
+</Card>
+```
+
+#### Demo Interactiva
+
+Ver ejemplo completo en [/examples/data-table](../../../app/examples/data-table/page.tsx) - DataTable con 10 columnas demostrando este patrón.
+
 ## Troubleshooting
 
 ### Error: Cannot find module '@/lib/utils'

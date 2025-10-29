@@ -12,6 +12,7 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { EditableBadge, type EditableBadgeOption } from '@/components/ui/editable-badge'
 import { ProjectNameSummary } from '@/components/summarys/project-name-summary'
+import { PaymentProgressSummary } from '@/components/summarys/payment-progress-summary'
 import { ViewProjectDetailsSheet } from '@/components/dialogs/projects/view-project-details-sheet'
 import { ViewProjectPaymentsDialog } from '@/components/dialogs/projects/view-project-payments-dialog'
 import { PaymentToProjectDialog } from '@/components/dialogs/payments/payment-to-project-dialog'
@@ -181,39 +182,11 @@ export const createColumns = ({
     accessorKey: 'totalPaid',
     header: 'Total Pagado',
     cell: ({ row }) => {
-      const totalPaid = row.original.totalPaid
-      const percentPaid = row.original.percentPaid // ← Calculado en backend (float)
-
-      // Redondear para mostrar en badge (0 decimales, contexto compacto)
-      const percentPaidRounded = Math.round(percentPaid)
-
-      // Determinar color del badge según porcentaje
-      let badgeVariant: 'success' | 'default' | 'secondary' | 'destructive' | 'outline' = 'default'
-
-      if (percentPaid >= 99.95) {
-        // >= 99.95% se redondea a 100%
-        badgeVariant = 'success'
-      } else if (percentPaid >= 67) {
-        badgeVariant = 'default'
-      } else if (percentPaid >= 34) {
-        badgeVariant = 'secondary'
-      } else {
-        badgeVariant = 'destructive'
-      }
-
-      // Formatear como moneda CLP (sin decimales)
-      const formattedAmount = new Intl.NumberFormat('es-CL', {
-        style: 'currency',
-        currency: 'CLP',
-        minimumFractionDigits: 0,
-        maximumFractionDigits: 0,
-      }).format(totalPaid)
-
       return (
-        <div className="flex items-center justify-end gap-2">
-          <span>{formattedAmount}</span>
-          <Badge variant={badgeVariant}>{percentPaidRounded}%</Badge>
-        </div>
+        <PaymentProgressSummary
+          totalPaid={row.original.totalPaid}
+          percentPaid={row.original.percentPaid}
+        />
       )
     },
     meta: {

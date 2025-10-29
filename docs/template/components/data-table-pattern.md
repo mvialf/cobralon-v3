@@ -38,14 +38,14 @@ app/[entidad]/
 
 ### ¿Por qué 2 Archivos?
 
-| Beneficio | Explicación |
-|-----------|-------------|
-| **Separación de concerns** | Presentación (cómo se ve) vs Lógica (de dónde viene) |
-| **Reutilización** | `createColumns()` puede usarse en múltiples contextos |
-| **Type-safety** | TypeScript end-to-end con interfaces compartidas |
-| **Testabilidad** | Cada parte se testea de forma aislada |
-| **Mantenibilidad** | Cambios en formato no afectan lógica de negocio |
-| **Escalabilidad** | Agregar columnas es trivial, no toca fetching |
+| Beneficio                  | Explicación                                           |
+| -------------------------- | ----------------------------------------------------- |
+| **Separación de concerns** | Presentación (cómo se ve) vs Lógica (de dónde viene)  |
+| **Reutilización**          | `createColumns()` puede usarse en múltiples contextos |
+| **Type-safety**            | TypeScript end-to-end con interfaces compartidas      |
+| **Testabilidad**           | Cada parte se testea de forma aislada                 |
+| **Mantenibilidad**         | Cambios en formato no afectan lógica de negocio       |
+| **Escalabilidad**          | Agregar columnas es trivial, no toca fetching         |
 
 ---
 
@@ -122,6 +122,7 @@ graph TD
 #### ✅ Debe hacer:
 
 1. **Definir el contrato de datos** (TypeScript interface)
+
    ```tsx
    export interface Project {
      id: string
@@ -135,6 +136,7 @@ graph TD
    ```
 
 2. **Configurar estructura de columnas** (ColumnDef array)
+
    ```tsx
    export const createColumns = (props) => [
      { accessorKey: 'name', header: 'Nombre', ... },
@@ -153,6 +155,7 @@ graph TD
    - Navegación/modals
 
 5. **Definir metadata de UI**
+
    ```tsx
    meta: {
      headerClassName: 'text-right',
@@ -181,6 +184,7 @@ graph TD
 #### ✅ Debe hacer:
 
 1. **Fetching de datos**
+
    ```tsx
    const fetchProjects = async () => {
      const res = await fetch('/api/projects')
@@ -190,11 +194,13 @@ graph TD
    ```
 
 2. **Estado de loading/error**
+
    ```tsx
    const [isLoading, setIsLoading] = useState(true)
    ```
 
 3. **Orquestar columnas**
+
    ```tsx
    const columns = createColumns({
      onProjectDeleted: fetchProjects,
@@ -203,6 +209,7 @@ graph TD
    ```
 
 4. **Configurar filtros**
+
    ```tsx
    const filterableColumns = [
      { id: 'status', title: 'Estado', options: [...] }
@@ -210,6 +217,7 @@ graph TD
    ```
 
 5. **Manejar callbacks de refetch**
+
    ```tsx
    const handleProjectDeleted = () => {
      fetchProjects()
@@ -284,21 +292,21 @@ User changes status → EditableBadge in column
 
 Tabla completa de convenciones de alineación:
 
-| Tipo de Dato | Header | Cell | Justificación |
-|--------------|--------|------|---------------|
-| **Texto** (nombres, descripciones) | `text-left` | `text-left` | Lectura natural izquierda→derecha |
-| **Números** (enteros, decimales) | `text-right` | `text-right` | Alineación de unidades |
-| **Moneda** | `text-right` | `text-right` | Convención contable universal |
-| **Fechas** | `text-center` | `text-center` | Dato compacto, centrado funciona mejor |
-| **Badges/Estados** | `text-center` | `text-center` | Balance visual, peso igual |
-| **Booleanos** (checks) | `text-center` | `text-center` | Checkbox/icon centrado |
-| **Acciones** (dropdowns) | `text-center` | `text-center` | Botón simétrico |
-| **Compuesto** ($ + badge) | `text-right` | `text-right` | El número domina, badge es decorativo |
-| **IDs** | `text-left` | `text-left` | Texto técnico, lectura izquierda |
-| **Emails** | `text-left` | `text-left` | Similar a texto |
-| **Teléfonos** | `text-left` | `text-left` | Formato con código país (+56...) |
-| **Porcentajes solos** | `text-right` | `text-right` | Es un número |
-| **URLs** | `text-left` | `text-left` | Lectura izquierda |
+| Tipo de Dato                       | Header        | Cell          | Justificación                          |
+| ---------------------------------- | ------------- | ------------- | -------------------------------------- |
+| **Texto** (nombres, descripciones) | `text-left`   | `text-left`   | Lectura natural izquierda→derecha      |
+| **Números** (enteros, decimales)   | `text-right`  | `text-right`  | Alineación de unidades                 |
+| **Moneda**                         | `text-right`  | `text-right`  | Convención contable universal          |
+| **Fechas**                         | `text-center` | `text-center` | Dato compacto, centrado funciona mejor |
+| **Badges/Estados**                 | `text-center` | `text-center` | Balance visual, peso igual             |
+| **Booleanos** (checks)             | `text-center` | `text-center` | Checkbox/icon centrado                 |
+| **Acciones** (dropdowns)           | `text-center` | `text-center` | Botón simétrico                        |
+| **Compuesto** ($ + badge)          | `text-right`  | `text-right`  | El número domina, badge es decorativo  |
+| **IDs**                            | `text-left`   | `text-left`   | Texto técnico, lectura izquierda       |
+| **Emails**                         | `text-left`   | `text-left`   | Similar a texto                        |
+| **Teléfonos**                      | `text-left`   | `text-left`   | Formato con código país (+56...)       |
+| **Porcentajes solos**              | `text-right`  | `text-right`  | Es un número                           |
+| **URLs**                           | `text-left`   | `text-left`   | Lectura izquierda                      |
 
 ### Ejemplo de Aplicación
 
@@ -363,8 +371,8 @@ formatDate(row.getValue('date'), 'full', 'es-CL')
 import { formatCurrency } from '@/lib/format'
 
 // Con helper (recomendado)
-formatCurrency(amount, 'CLP')  // → "$1.234.567"
-formatCurrency(amount, 'USD')  // → "$1,234.56"
+formatCurrency(amount, 'CLP') // → "$1.234.567"
+formatCurrency(amount, 'USD') // → "$1,234.56"
 
 // Inline cuando necesitas config específica
 new Intl.NumberFormat('es-CL', {
@@ -381,20 +389,20 @@ new Intl.NumberFormat('es-CL', {
 import { formatNumber } from '@/lib/format'
 
 // Con decimales
-formatNumber(1234.567, 2)  // → "1.234,57"
+formatNumber(1234.567, 2) // → "1.234,57"
 
 // Sin decimales
-formatNumber(1234.567, 0)  // → "1.235"
+formatNumber(1234.567, 0) // → "1.235"
 ```
 
 #### Porcentajes
 
 ```tsx
 // Sin decimales (contexto compacto)
-Math.round(percent) + '%'  // → "87%"
+Math.round(percent) + '%' // → "87%"
 
 // Con 1 decimal (contexto detallado)
-percent.toFixed(1) + '%'   // → "87.3%"
+percent.toFixed(1) + '%' // → "87.3%"
 ```
 
 ---
@@ -429,11 +437,13 @@ Para datos derivados que necesitan sorting y filtering:
 ```
 
 **Cuándo usar accessorFn:**
+
 - Datos derivados de múltiples campos
 - Cálculos que necesitan ser sortables/filtrables
 - Transformaciones complejas
 
 **Cuándo NO usar accessorFn:**
+
 - Formateo simple (usar cell directamente)
 - Datos que ya existen tal cual
 
@@ -454,12 +464,12 @@ const handleStatusChange = async (projectId: string, newStatusId: string) => {
   setUpdatingProjectId(null)
 }
 
-<DataTable
+;<DataTable
   columns={columns}
   data={projects}
   meta={{
-    handleStatusChange,           // ← Callback
-    updatingProjectId,            // ← Estado de UI
+    handleStatusChange, // ← Callback
+    updatingProjectId, // ← Estado de UI
     // Más metadata...
   }}
 />
@@ -486,6 +496,7 @@ cell: ({ row, table }) => {
 ```
 
 **Ventajas:**
+
 - No contamina props de columnas individuales
 - Permite pasar funciones complejas
 - State sincronizado automáticamente
@@ -502,14 +513,14 @@ cell: ({ row, table }) => {
 
 ```tsx
 interface DataTableProps<TData> {
-  columns: ColumnDef<TData>[]         // Desde columns.tsx
-  data: TData[]                       // Desde page.tsx fetch
+  columns: ColumnDef<TData>[] // Desde columns.tsx
+  data: TData[] // Desde page.tsx fetch
 
   // Búsqueda
-  searchKey?: string                  // Columna para búsqueda simple
+  searchKey?: string // Columna para búsqueda simple
   searchPlaceholder?: string
-  enableGlobalFilter?: boolean        // Búsqueda multi-columna
-  globalFilterFn?: FilterFn<TData>    // Custom filter function
+  enableGlobalFilter?: boolean // Búsqueda multi-columna
+  globalFilterFn?: FilterFn<TData> // Custom filter function
 
   // Filtros
   filterableColumns?: Array<{
@@ -520,7 +531,7 @@ interface DataTableProps<TData> {
   }>
 
   // Metadata
-  meta?: TableMeta<TData>             // Para comunicación con columnas
+  meta?: TableMeta<TData> // Para comunicación con columnas
 }
 ```
 
@@ -551,6 +562,7 @@ interface DataTableProps<TData> {
 ### data-table-toolbar.tsx (Filters Bar)
 
 **Características:**
+
 - Input de búsqueda con icono Search
 - Filtros faceted (multi-select)
 - Botón "Limpiar filtros"
@@ -570,6 +582,7 @@ interface DataTableProps<TData> {
 ### data-table-column-header.tsx (Sortable Header)
 
 **Características:**
+
 - Dropdown con: Asc, Desc, Ocultar
 - Solo renderiza si `column.getCanSort() === true`
 - Iconos visuales (arrows) para sorting activo
@@ -595,6 +608,7 @@ interface DataTableProps<TData> {
 ### data-table-faceted-filter.tsx (Multi-Select Filter)
 
 **Características:**
+
 - Popover con Command (searchable)
 - Multi-select con checkboxes
 - Muestra count de cada opción (facets)
@@ -624,8 +638,7 @@ filterableColumns={[
 
 ```tsx
 import { DataTableDropdown } from '@/components/data-table'
-
-<DataTableDropdown>
+;<DataTableDropdown>
   <DropdownMenuLabel>Acciones</DropdownMenuLabel>
 
   <DropdownMenuItem onClick={handleView}>
@@ -663,7 +676,7 @@ const globalFilterFn = (row: Row<Project>, _columnId: string, filterValue: strin
   )
 }
 
-<DataTable
+;<DataTable
   columns={columns}
   data={projects}
   enableGlobalFilter={true}
@@ -858,6 +871,7 @@ function ProjectActionsCell({
 ```
 
 **Ventajas:**
+
 - ✅ Array de columnas limpio y legible
 - ✅ Componente con su propio estado (useState)
 - ✅ Lógica compleja encapsulada
@@ -904,8 +918,8 @@ export default function CustomersPage() {
 
   useEffect(() => {
     fetch('/api/customers')
-      .then(res => res.json())
-      .then(data => setCustomers(data))
+      .then((res) => res.json())
+      .then((data) => setCustomers(data))
       .finally(() => setIsLoading(false))
   }, [])
 
@@ -1014,6 +1028,41 @@ Ver ejemplo completo de `ProjectActionsCell` en [Patrones Avanzados](#4-actionsc
 5. **NO usar string literals para estados** (usa TypeScript unions)
 6. **NO olvidar `meta.headerClassName` y `meta.cellClassName`**
 7. **NO crear múltiples fuentes de verdad** (1 fetch, 1 estado)
+
+---
+
+### Handling Horizontal Overflow
+
+**Problema:** Cuando tu DataTable tiene 8+ columnas, sin manejo correcto de overflow obtienes **scroll horizontal duplicado** (página completa + tabla).
+
+**Solución:** SIEMPRE envolver DataTable con este patrón:
+
+```tsx
+// En page.tsx
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+
+;<Card className="overflow-hidden">
+  {' '}
+  {/* ← Contiene el overflow */}
+  <CardHeader>
+    <CardTitle>Título de la Tabla</CardTitle>
+  </CardHeader>
+  <CardContent className="overflow-x-auto">
+    {' '}
+    {/* ← Permite scroll interno */}
+    <DataTable columns={columns} data={data} />
+  </CardContent>
+</Card>
+```
+
+**Cuándo aplicar:**
+
+- ✅ Tu DataTable tiene 8+ columnas
+- ✅ Columnas con contenido variable (nombres largos, descripciones)
+- ✅ Múltiples columnas numéricas (precios, cantidades, porcentajes)
+- ✅ Columnas de acciones (dropdowns, botones)
+
+**Documentación detallada:** [data-table.md - Best Practices](data-table.md#handling-horizontal-overflow)
 
 ---
 
