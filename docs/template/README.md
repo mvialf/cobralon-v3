@@ -72,12 +72,17 @@ http://localhost:3000
 - [**AppLayout**](components/app-layout.md) - Orchestrator principal
 - [**AppSidebar**](components/app-sidebar.md) - Sidebar de navegación
 - [**DataTable**](components/data-table.md) - Sistema de tablas avanzadas
+- [**DataTable Pattern**](components/data-table-pattern.md) - ⭐ Arquitectura del patrón de 2 archivos
 - [**UI Components**](components/ui-components.md) - 50+ componentes shadcn/ui
 
 ### Guías de Setup
 
 - [**Database Setup**](guides/database-setup.md) - Prisma + Neon PostgreSQL
 - [**Authentication Setup**](guides/authentication-setup.md) - Stack Auth / NextAuth / Clerk
+
+### Guías de Desarrollo
+
+- [**Create DataTable Page**](guides/create-new-datatable-page.md) - ⭐ Tutorial paso a paso para crear tablas
 
 ### Metodología
 
