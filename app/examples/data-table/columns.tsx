@@ -8,10 +8,10 @@
  * - ✅ Sorting (todas las columnas)
  * - ✅ Filtering (faceted filters)
  * - ✅ Custom Cell Rendering (componentes summary)
- * - ✅ Conditional Styling (colores según valor)
+ * - ✅ Conditional Styling (con Badges configurables, no hardcoded)
  * - ✅ Actions Dropdown
- * - ✅ EditableBadge
- * - ✅ StatusBadge
+ * - ✅ StatusBadge (ejemplo correcto de colores condicionales)
+ * - ✅ PriorityBadge (ejemplo correcto de mapping de estados)
  * - ✅ PaymentProgressSummary
  */
 
@@ -266,20 +266,11 @@ export const exampleColumns: ColumnDef<MockProject>[] = [
     enableSorting: true,
   },
 
-  // 7. BALANCE CON CONDITIONAL STYLING (Colores según valor)
+  // 7. BALANCE (Formato moneda simple)
   {
     accessorKey: 'balance',
     header: 'Saldo',
-    cell: ({ row }) => {
-      const balance = row.original.balance
-      const className =
-        balance === 0
-          ? 'text-success font-semibold'
-          : balance > 2000000
-            ? 'text-destructive font-semibold'
-            : ''
-      return <span className={className}>{formatCurrency(balance)}</span>
-    },
+    cell: ({ row }) => formatCurrency(row.original.balance),
     meta: {
       headerClassName: 'text-right',
       cellClassName: 'text-right',

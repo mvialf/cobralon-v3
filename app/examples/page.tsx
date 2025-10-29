@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { ChevronDown, DollarSign, ArrowRight, Table } from 'lucide-react'
+import { ChevronDown, Phone, ArrowRight, Table, MessageSquare, Tags } from 'lucide-react'
 
 import { AppLayout } from '@/components/layout/app-layout'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -23,6 +23,33 @@ const ejemplos = [
     color: 'text-purple-500',
   },
   {
+    title: 'Regional Inputs',
+    description: 'Inputs regionalizados para Chile (phone, RUT, currency)',
+    href: '/examples/regional-inputs',
+    icon: Phone,
+    features: [
+      'PhoneInput (E.164)',
+      'RutInput con validación',
+      'CurrencyInput multi-moneda',
+      'Configuración regional',
+      '17 ejemplos completos',
+    ],
+    color: 'text-green-500',
+  },
+  {
+    title: 'Dialogs',
+    description: 'Patrones de diálogos (form, project, scrollable, capture)',
+    href: '/examples/dialogs',
+    icon: MessageSquare,
+    features: [
+      'Form Dialog con ScrollArea',
+      'Project Dialog (crear/editar)',
+      'Scrollable con requireScroll',
+      'Capture Dialog (screenshot)',
+    ],
+    color: 'text-orange-500',
+  },
+  {
     title: 'Combobox',
     description: 'Combobox con debounce y loading state',
     href: '/examples/combobox',
@@ -31,17 +58,17 @@ const ejemplos = [
     color: 'text-blue-500',
   },
   {
-    title: 'Currency Input',
-    description: 'Input de moneda con formateo automático',
-    href: '/examples/currency-input',
-    icon: DollarSign,
+    title: 'Team Tags',
+    description: 'Sistema de tags con CRUD y BadgeColor',
+    href: '/examples/team-tags',
+    icon: Tags,
     features: [
-      'Múltiples monedas',
-      'Validación min/max',
-      'Formateo Intl.NumberFormat',
-      'Locale configurable',
+      'useTeamTags hook',
+      'TagSelector component',
+      'CRUD operations',
+      'BadgeColor integration',
     ],
-    color: 'text-green-500',
+    color: 'text-pink-500',
   },
 ]
 

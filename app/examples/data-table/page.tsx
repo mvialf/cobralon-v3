@@ -15,7 +15,6 @@
  * - Actions Dropdown (edit, delete, view)
  * - Custom Cell Rendering (componentes summary)
  * - Conditional Styling (colores según valor)
- * - Stats Cards (métricas en tiempo real)
  *
  * 📊 Datos: 40 registros mock con edge cases
  * 🎨 Componentes: PaymentProgressSummary, StatusBadge, PriorityBadge
@@ -29,76 +28,17 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Separator } from '@/components/ui/separator'
-import { Download, Info, TrendingUp, DollarSign, Package, CheckCircle2 } from 'lucide-react'
+import { Download, Info } from 'lucide-react'
 import { toast } from 'sonner'
 
-import {
-  mockTableData,
-  MOCK_STATUSES,
-  MOCK_PRIORITIES,
-  getTableStats,
-  type MockProject,
-} from './mock-data'
+import { mockTableData, MOCK_STATUSES, MOCK_PRIORITIES, type MockProject } from './mock-data'
 import { exampleColumns } from './columns'
-
-/**
- * Formatear moneda CLP
- */
-function formatCurrency(amount: number): string {
-  return new Intl.NumberFormat('es-CL', {
-    style: 'currency',
-    currency: 'CLP',
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(amount)
-}
-
-/**
- * Stats Card Component
- */
-function StatsCard({
-  title,
-  value,
-  description,
-  icon: Icon,
-  trend,
-}: {
-  title: string
-  value: string
-  description: string
-  icon: any
-  trend?: 'up' | 'down'
-}) {
-  return (
-    <Card>
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-        <CardTitle className="text-sm font-medium">{title}</CardTitle>
-        <Icon className="h-4 w-4 text-muted-foreground" />
-      </CardHeader>
-      <CardContent>
-        <div className="text-2xl font-bold">{value}</div>
-        <p className="text-xs text-muted-foreground mt-1">
-          {description}
-          {trend && (
-            <span className={trend === 'up' ? 'text-success' : 'text-destructive'}>
-              {' '}
-              {trend === 'up' ? '↑' : '↓'}
-            </span>
-          )}
-        </p>
-      </CardContent>
-    </Card>
-  )
-}
 
 /**
  * PÁGINA PRINCIPAL
  */
 export default function DataTableExamplesPage() {
   const [selectedRows, setSelectedRows] = useState<MockProject[]>([])
-
-  // Calcular estadísticas
-  const stats = getTableStats(mockTableData)
 
   // Handler para bulk actions (demo)
   const handleBulkExport = () => {
@@ -134,35 +74,6 @@ export default function DataTableExamplesPage() {
             registros) con edge cases incluidos.
           </AlertDescription>
         </Alert>
-      </div>
-
-      {/* Stats Cards */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-6">
-        <StatsCard
-          title="Total Proyectos"
-          value={stats.totalProjects.toString()}
-          description="40 registros de ejemplo"
-          icon={Package}
-        />
-        <StatsCard
-          title="Monto Total"
-          value={formatCurrency(stats.totalAmount)}
-          description={`${formatCurrency(stats.totalPaid)} pagados`}
-          icon={DollarSign}
-          trend="up"
-        />
-        <StatsCard
-          title="Proyectos Activos"
-          value={stats.inProgressProjects.toString()}
-          description={`${stats.pendingProjects} pendientes`}
-          icon={TrendingUp}
-        />
-        <StatsCard
-          title="Completados"
-          value={stats.completedProjects.toString()}
-          description={`${Math.round((stats.completedProjects / stats.totalProjects) * 100)}% del total`}
-          icon={CheckCircle2}
-        />
       </div>
 
       {/* Features List */}
