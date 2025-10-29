@@ -82,7 +82,8 @@ http://localhost:3000
 
 ### Guías de Desarrollo
 
-- [**Create DataTable Page**](guides/create-new-datatable-page.md) - ⭐ Tutorial paso a paso para crear tablas
+- [**Building Features**](guides/building-features.md) - ⭐ Guía práctica de implementación de features
+- [**Create DataTable Page**](guides/create-new-datatable-page.md) - Tutorial paso a paso para crear tablas
 
 ### Metodología
 
@@ -194,7 +195,7 @@ Después de instalar el template:
    - Drizzle ORM
    - Supabase
 
-3. **Implementar Features**
+3. **Implementar Features** → Ver [Building Features Guide](guides/building-features.md)
    - CRUD operations
    - Forms con React Hook Form + Zod
    - Data tables con TanStack Table

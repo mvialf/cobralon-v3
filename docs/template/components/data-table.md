@@ -302,7 +302,6 @@ Envuelve el DataTable con clases específicas de Tailwind para **contener** el o
 ```tsx
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { DataTable } from '@/components/data-table'
-
 ;<Card className="overflow-hidden">
   {' '}
   {/* ← Contiene el overflow */}

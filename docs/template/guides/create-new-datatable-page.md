@@ -466,7 +466,6 @@ export default function ProductsPage() {
 
 ```tsx
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-
 ;<Card className="overflow-hidden">
   {' '}
   {/* ← Contiene el overflow */}

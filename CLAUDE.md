@@ -145,6 +145,7 @@ Usa agentes cuando la búsqueda requiere **múltiples pasos** o **análisis cont
 @docs/template/README.md # Introducción rápida al template
 @docs/template/architecture/overview.md # Visión arquitectural general
 @docs/template/architecture/stack.md # Stack tecnológico, versiones y configuración
+@docs/template/guides/building-features.md # ⭐ Guía práctica: cómo implementar features paso a paso
 @docs/template/components/app-layout.md # API del AppLayout
 @docs/template/components/app-sidebar.md # Configurar sidebar navegación
 @docs/template/methodology/workflow.md # Proceso de desarrollo recomendado
@@ -215,6 +216,24 @@ npx shadcn@latest add [component-name]
 - Layouts son client components (`"use client"`)
 - Iconos desde `lucide-react`
 - Path imports con alias `@/`
+
+### Implementar Features
+
+**⭐ Guía completa:** [docs/template/guides/building-features.md](docs/template/guides/building-features.md)
+
+**4 patrones principales:**
+
+1. Read-Only Data Display → Server Component + DataTable
+2. CRUD Operations → Form + Dialog + API Route
+3. Modal Interactions → Dialog + Client Component
+4. Complex Relations (N:M) → Transformers + Allocations
+
+**Principios clave:**
+
+- Server Components First (fetch en server)
+- Extract When It Hurts (>10 líneas O 2+ usos)
+- Data Down, Events Up (props > hooks)
+- Test What Matters (pure functions primero)
 
 ## 🗄️ Database
 

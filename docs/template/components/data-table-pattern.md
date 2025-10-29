@@ -1040,7 +1040,6 @@ Ver ejemplo completo de `ProjectActionsCell` en [Patrones Avanzados](#4-actionsc
 ```tsx
 // En page.tsx
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-
 ;<Card className="overflow-hidden">
   {' '}
   {/* ← Contiene el overflow */}

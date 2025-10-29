@@ -179,4 +179,7 @@ Ver [stack.md](stack.md) para el inventario completo de dependencias y versiones
 
 ## Siguiente Paso
 
-Para empezar a usar el template, lee [Getting Started](../getting-started/installation.md).
+Para empezar a usar el template:
+
+1. **Instalación:** [Getting Started](../getting-started/installation.md)
+2. **Implementación de features:** [Building Features Guide](../guides/building-features.md) ⭐
