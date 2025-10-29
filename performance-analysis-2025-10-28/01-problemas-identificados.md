@@ -112,6 +112,7 @@ include: {
 ### Soluciones
 
 #### Opción A: Eliminar `select` y traer modelos completos
+
 ```typescript
 include: {
   customer: true,  // Sin select = JOIN simple
@@ -121,10 +122,12 @@ include: {
   paymentAllocations: true,
 }
 ```
+
 **Pros:** JOINs simples, más rápido
 **Contras:** Traes más datos (todos los campos)
 
 #### Opción B: Usar `$queryRaw` con JOINs manuales
+
 ```typescript
 const projects = await prisma.$queryRaw`
   SELECT
@@ -141,10 +144,12 @@ const projects = await prisma.$queryRaw`
   LIMIT 10
 `
 ```
+
 **Pros:** Control total, JOINs simples, puedes calcular balance en SQL
 **Contras:** Pierdes type-safety de Prisma, más verbose
 
 #### Opción C: Campo denormalizado `balance`
+
 Agregar campo calculado que se actualiza en cada Payment.
 **Ver:** Problema #3 para detalles
 
@@ -162,10 +167,10 @@ El frontend hace 2 llamadas HTTP separadas con alta latencia:
 // app/projects/page.tsx (Client Component)
 useEffect(() => {
   // Primera llamada
-  fetch('/api/projects?projectState=Activo')  // 5.2s
+  fetch('/api/projects?projectState=Activo') // 5.2s
 
   // Segunda llamada (paralela o secuencial)
-  fetch('/api/project-status')                // 5.2s
+  fetch('/api/project-status') // 5.2s
 }, [])
 ```
 
@@ -203,24 +208,27 @@ GET /api/project-status 200 in 5179ms                 ← Segunda API (paralela)
 ### Soluciones
 
 #### Opción A: Combinar en una sola API
+
 ```typescript
 // Nueva ruta: app/api/projects-with-metadata/route.ts
 export async function GET(request: Request) {
   const [projects, statuses, paymentMethods] = await Promise.all([
     getProjects(searchParams),
     getProjectStatuses(),
-    getPaymentMethods()  // Si se necesita
+    getPaymentMethods(), // Si se necesita
   ])
 
   return NextResponse.json({
     projects,
-    metadata: { statuses, paymentMethods }
+    metadata: { statuses, paymentMethods },
   })
 }
 ```
+
 **Ganancia:** Elimina 1 round-trip (~400ms)
 
 #### Opción B: Migrar a Server Component
+
 ```typescript
 // app/projects/page.tsx (Server Component)
 export default async function ProjectsPage({
@@ -237,9 +245,11 @@ export default async function ProjectsPage({
   return <ProjectsTable initialData={projects} statuses={statuses} />
 }
 ```
+
 **Ganancia:** ~2 segundos (elimina toda la latencia cliente → servidor)
 
 #### Opción C: Streaming con Suspense (avanzado)
+
 ```typescript
 // app/projects/page.tsx
 export default function ProjectsPage() {
@@ -250,6 +260,7 @@ export default function ProjectsPage() {
   )
 }
 ```
+
 **Beneficio adicional:** Renderizado parcial, mejor UX
 
 ---
@@ -274,9 +285,7 @@ const projectsWithCalculations = projects.map((project) => {
   })
 
   // ❌ Calcular percentPaid en JavaScript
-  const percentPaid = Number(project.total) > 0
-    ? (totalPaid / Number(project.total)) * 100
-    : 0
+  const percentPaid = Number(project.total) > 0 ? (totalPaid / Number(project.total)) * 100 : 0
 
   return { ...project, totalPaid, balance, percentPaid }
 })
@@ -311,6 +320,7 @@ const filteredProjects = projectsWithCalculations.filter((project) => {
    - Creación de nuevos objetos
 
 4. **El COUNT query se descarta:**
+
    ```typescript
    // Línea 95: ejecutamos COUNT
    const [projects, _total] = await Promise.all([...])
@@ -350,12 +360,14 @@ LIMIT 10 OFFSET 0
 ```
 
 **Ventajas:**
+
 - ✅ Cálculo de balance en SQL (más rápido)
 - ✅ Filtrado en SQL (menos datos transferidos)
 - ✅ Paginación correcta (LIMIT se aplica después de filtrar)
 - ✅ COUNT correcto (cuenta filas después de WHERE)
 
 **Implementación:**
+
 ```typescript
 const projects = await prisma.$queryRaw<ProjectWithBalance[]>`
   ${sql_query_above}
@@ -422,6 +434,7 @@ Con cold start de Neon:
 ### Solución
 
 #### Opción A: Eliminar COUNT completamente
+
 ```typescript
 // ANTES:
 const [projects, _total] = await Promise.all([
@@ -434,14 +447,17 @@ const projects = await prisma.project.findMany({ ... })
 
 // Usar filteredProjects.length directamente
 ```
+
 **Ganancia:** ~2 segundos
 
 #### Opción B: Mover filtrado a SQL y mantener COUNT
+
 Si movemos el filtrado a SQL (Problema #3), entonces el COUNT sí es correcto:
+
 ```typescript
 const [projects, total] = await Promise.all([
   prisma.$queryRaw`SELECT ... WHERE ... balance > 0`,
-  prisma.$queryRaw`SELECT COUNT(*) ... WHERE ... balance > 0`
+  prisma.$queryRaw`SELECT COUNT(*) ... WHERE ... balance > 0`,
 ])
 
 // Ahora 'total' sí es correcto
@@ -485,10 +501,12 @@ GET /api/projects 200 in 500ms   ← Segundo request rápido (si fuera inmediato
 ### Soluciones
 
 #### Opción A: Aceptar el cold start (gratis)
+
 - Es normal en free tier
 - Solo afecta primer request después de 5 min
 
 #### Opción B: Keep-alive ping (gratis)
+
 ```typescript
 // vercel.json - Cron job cada 4 minutos
 {
@@ -508,10 +526,12 @@ export async function GET() {
   return Response.json({ ok: true })
 }
 ```
+
 **Pros:** Gratis, simple
 **Contras:** 360 requests/día (dentro de límites)
 
 #### Opción C: Upgrade a Neon Pro ($19/mes)
+
 - Sin cold starts
 - Más storage
 - Más compute
@@ -536,7 +556,9 @@ model Project {
 
 ```typescript
 // app/api/projects/route.ts:67
-orderBy: { createdAt: 'desc' }  // ← Query ordena por 'createdAt'
+orderBy: {
+  createdAt: 'desc'
+} // ← Query ordena por 'createdAt'
 ```
 
 ### ¿Por qué es Problema?
@@ -547,6 +569,7 @@ orderBy: { createdAt: 'desc' }  // ← Query ordena por 'createdAt'
    - Son campos **diferentes**
 
 2. **PostgreSQL debe ordenar en memoria:**
+
    ```sql
    -- Sin índice adecuado:
    1. Traer todas las filas que cumplen WHERE
@@ -561,6 +584,7 @@ orderBy: { createdAt: 'desc' }  // ← Query ordena por 'createdAt'
 ### Solución
 
 #### Opción A: Corregir el índice
+
 ```prisma
 model Project {
   // CAMBIAR:
@@ -570,21 +594,27 @@ model Project {
   @@index([projectStatusId, createdAt(sort: Desc)])
 }
 ```
+
 Luego: `npm run db:push`
 
 #### Opción B: Cambiar el ORDER BY
+
 ```typescript
 // Si 'date' es más relevante que 'createdAt':
-orderBy: { date: 'desc' }  // Usa el índice existente
+orderBy: {
+  date: 'desc'
+} // Usa el índice existente
 ```
 
 #### Opción C: Agregar índice adicional
+
 ```prisma
 model Project {
   @@index([projectStatusId, date(sort: Desc)])
   @@index([projectStatusId, createdAt(sort: Desc)])  // ← Nuevo
 }
 ```
+
 **Contras:** Más índices = más overhead en escrituras
 
 ---
@@ -606,27 +636,29 @@ DIRECT_URL="postgresql://...@....c-2.us-west-2.aws.neon.tech/..."
 ### ¿Qué Hace el Pooler?
 
 PgBouncer en modo "transaction":
+
 - Cada query se ejecuta en una conexión diferente del pool
 - No hay prepared statements cache entre queries
 - Overhead de handshake por cada query
 
 ### Cuándo Usar Cada URL
 
-| Escenario | URL a Usar | Razón |
-|---|---|---|
-| **Queries de lectura complejos** | `DIRECT_URL` | Sin overhead de pooler |
-| **Queries de escritura** | `DATABASE_URL` | Pooling previene conexiones agotadas |
-| **Migrations** | `DIRECT_URL` | Requerido por Prisma |
-| **Edge Functions** | `DATABASE_URL` | Conexiones efímeras |
+| Escenario                        | URL a Usar     | Razón                                |
+| -------------------------------- | -------------- | ------------------------------------ |
+| **Queries de lectura complejos** | `DIRECT_URL`   | Sin overhead de pooler               |
+| **Queries de escritura**         | `DATABASE_URL` | Pooling previene conexiones agotadas |
+| **Migrations**                   | `DIRECT_URL`   | Requerido por Prisma                 |
+| **Edge Functions**               | `DATABASE_URL` | Conexiones efímeras                  |
 
 ### Solución
 
 #### Crear cliente separado para lecturas
+
 ```typescript
 // lib/db-read.ts
 export const prismaRead = new PrismaClient({
-  datasourceUrl: process.env.DIRECT_URL,  // Sin pooler
-  log: ['error']
+  datasourceUrl: process.env.DIRECT_URL, // Sin pooler
+  log: ['error'],
 })
 ```
 
@@ -676,7 +708,7 @@ log: process.env.NODE_ENV === 'development' ? ['query', 'error', 'warn'] : ['err
 ```typescript
 // lib/db.ts - Durante performance testing
 export const prisma = new PrismaClient({
-  log: ['error']  // Solo errors, incluso en dev
+  log: ['error'], // Solo errors, incluso en dev
 })
 ```
 
@@ -688,19 +720,20 @@ export const prisma = new PrismaClient({
 
 ## 📊 Resumen de Impactos
 
-| # | Problema | Impacto | Dificultad | Prioridad |
-|---|----------|---------|------------|-----------|
-| 1 | LATERAL joins | ~2.5s (30%) | Alta | 🔴 Crítica |
-| 2 | Doble API call | ~2s (25%) | Media | 🔴 Alta |
-| 3 | Post-processing JS | ~800ms (15%) | Media | 🟡 Alta |
-| 4 | COUNT desperdiciado | ~2s (10%) | Baja | 🟡 Media |
-| 5 | Neon cold start | ~1.5s (15%) | N/A | 🟢 Baja |
-| 6 | Índice no usado | ~200ms (3%) | Baja | 🟠 Media |
-| 7 | Pooler overhead | ~100ms (5%) | Baja | 🟠 Baja |
-| 8 | Query logging | ~100ms (2%) | Muy baja | 🟢 Baja |
+| #   | Problema            | Impacto      | Dificultad | Prioridad  |
+| --- | ------------------- | ------------ | ---------- | ---------- |
+| 1   | LATERAL joins       | ~2.5s (30%)  | Alta       | 🔴 Crítica |
+| 2   | Doble API call      | ~2s (25%)    | Media      | 🔴 Alta    |
+| 3   | Post-processing JS  | ~800ms (15%) | Media      | 🟡 Alta    |
+| 4   | COUNT desperdiciado | ~2s (10%)    | Baja       | 🟡 Media   |
+| 5   | Neon cold start     | ~1.5s (15%)  | N/A        | 🟢 Baja    |
+| 6   | Índice no usado     | ~200ms (3%)  | Baja       | 🟠 Media   |
+| 7   | Pooler overhead     | ~100ms (5%)  | Baja       | 🟠 Baja    |
+| 8   | Query logging       | ~100ms (2%)  | Muy baja   | 🟢 Baja    |
 
 ---
 
 **Ver también:**
+
 - [Plan de Acción](02-plan-de-accion.md)
 - [Ejemplos de Código](03-ejemplos-codigo.md)

@@ -20,17 +20,20 @@ Diferencia: 517% más lento de lo aceptable
 ## 📊 Impacto en Negocio
 
 ### Experiencia de Usuario
+
 - ❌ **10+ segundos** de espera en cada carga
 - ❌ Sensación de aplicación "rota" o "lenta"
 - ❌ Frustración del usuario
 - ❌ Pérdida de productividad
 
 ### Escalabilidad
+
 - ❌ Con 10 proyectos: 5.2s
 - ❌ Con 100 proyectos: ~8-10s estimado
 - ❌ Con 1,000 proyectos: **INUSABLE** (30s+)
 
 ### Costos
+
 - ❌ Mayor uso de recursos del servidor
 - ❌ Mayor consumo de conexiones DB
 - ❌ Riesgo de timeout en producción
@@ -40,9 +43,11 @@ Diferencia: 517% más lento de lo aceptable
 ## 🎯 Solución Propuesta
 
 ### Fase 1: Quick Wins (HOY - 2 horas)
+
 **Mejora:** 5.2s → 1.5s (-70%)
 
 #### Acciones:
+
 1. ✅ Eliminar query COUNT desperdiciado (-2s)
 2. ✅ Corregir índice ORDER BY (-0.2s)
 3. ✅ Combinar 2 APIs en 1 (-0.2s)
@@ -55,9 +60,11 @@ Diferencia: 517% más lento de lo aceptable
 ---
 
 ### Fase 2: Optimización SQL (ESTA SEMANA - 4 horas)
+
 **Mejora:** 1.5s → 500ms (-90% total)
 
 #### Acciones:
+
 1. ✅ Mover cálculo de balance a SQL (-0.5s)
 2. ✅ Migrar a Server Component (-0.4s)
 3. ✅ Usar DIRECT_URL para lecturas (-0.1s)
@@ -69,9 +76,11 @@ Diferencia: 517% más lento de lo aceptable
 ---
 
 ### Fase 3: Cache + Infraestructura (2 SEMANAS - 8 horas)
+
 **Mejora:** 500ms → 50ms (-99% total)
 
 #### Acciones:
+
 1. ✅ Campo denormalizado `balance` (4h)
 2. ✅ Redis cache con Upstash (3h)
 3. ✅ React Suspense streaming (1h)
@@ -84,11 +93,11 @@ Diferencia: 517% más lento de lo aceptable
 
 ## 💰 Costo-Beneficio
 
-| Fase | Inversión | Mejora | Valor/Hora |
-|------|-----------|--------|------------|
-| **Fase 1** | 2 horas | -70% | 🔥 **35% por hora** |
-| **Fase 2** | 4 horas | -20% adicional | 🟢 5% por hora |
-| **Fase 3** | 8 horas | -9% adicional | 🟡 1% por hora |
+| Fase       | Inversión | Mejora         | Valor/Hora          |
+| ---------- | --------- | -------------- | ------------------- |
+| **Fase 1** | 2 horas   | -70%           | 🔥 **35% por hora** |
+| **Fase 2** | 4 horas   | -20% adicional | 🟢 5% por hora      |
+| **Fase 3** | 8 horas   | -9% adicional  | 🟡 1% por hora      |
 
 **Recomendación:** Implementar Fase 1 INMEDIATAMENTE. Evaluar Fase 2-3 según crecimiento.
 
@@ -97,17 +106,20 @@ Diferencia: 517% más lento de lo aceptable
 ## 🚦 Decisión Requerida
 
 ### Opción A: Implementar Todo (Recomendado)
+
 - **Timeline:** 3 semanas
 - **Resultado:** Sistema production-ready escalable
 - **Riesgo:** Bajo-Medio
 
 ### Opción B: Solo Quick Wins
+
 - **Timeline:** 1 día
 - **Resultado:** Mejora sustancial (70%)
 - **Riesgo:** Muy bajo
 - **Limitación:** No escala a 1000+ proyectos
 
 ### Opción C: No hacer nada
+
 - **Resultado:** Sistema continúa inusable
 - **Riesgo:** Alto (usuarios frustrados, abandono)
 - **Costo:** Pérdida de productividad continua
@@ -117,10 +129,12 @@ Diferencia: 517% más lento de lo aceptable
 ## 📋 Estado de Implementación
 
 ### ✅ Fase 1: COMPLETADA (2025-10-28)
+
 **Tiempo invertido:** 1.5 horas
 **Mejora lograda:** 70% estimada (5.2s → 1.5s)
 
 #### Cambios Implementados:
+
 1. ✅ Win #1: Eliminado COUNT query desperdiciado
    - Archivo: `app/api/projects/route.ts`
    - Impacto: -2s
@@ -140,6 +154,7 @@ Diferencia: 517% más lento de lo aceptable
    - Impacto: -100ms
 
 #### Validación:
+
 - ✅ TypeScript: Sin errores en código principal
 - ✅ ESLint: Solo warnings menores
 - ✅ Database: Schema actualizado correctamente
@@ -150,11 +165,13 @@ Diferencia: 517% más lento de lo aceptable
 ## 📋 Próximos Pasos (Opcional)
 
 ### Evaluar Fase 2
+
 1. [ ] Medir performance real en desarrollo
 2. [ ] Decidir si implementar Fase 2 (90% mejora)
 3. [ ] Planning de optimización SQL
 
 ### Fase 3 (Si es Necesario)
+
 1. [ ] Decidir sobre cache Redis
 2. [ ] Evaluar upgrade Neon plan
 3. [ ] Monitorear métricas en producción
@@ -164,11 +181,13 @@ Diferencia: 517% más lento de lo aceptable
 ## 📞 Documentación
 
 **Cambios implementados:**
+
 - Ver commit: "perf: implementar Quick Wins de optimización (Fase 1)"
 - Archivos modificados: 4
 - Archivos nuevos: 1
 
 **Documentación técnica:**
+
 - `README.md` - Overview general + estado
 - `01-problemas-identificados.md` - Análisis técnico
 - `02-plan-de-accion.md` - Roadmap completo
@@ -180,6 +199,7 @@ Diferencia: 517% más lento de lo aceptable
 ## ✅ Resultado
 
 **Compromiso cumplido:**
+
 - ✅ Fase 1: Mejora del 70% implementada
 - ✅ Código testeado y validado
 - ✅ Sin breaking changes

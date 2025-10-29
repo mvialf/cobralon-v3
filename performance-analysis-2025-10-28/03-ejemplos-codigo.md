@@ -30,6 +30,7 @@ Este archivo contiene código listo para copy-paste para cada optimización.
 **Archivo:** `app/api/projects/route.ts`
 
 #### ANTES (líneas 61-95)
+
 ```typescript
 const [projects, _total] = await Promise.all([
   prisma.project.findMany({
@@ -70,6 +71,7 @@ const [projects, _total] = await Promise.all([
 ```
 
 #### DESPUÉS
+
 ```typescript
 const projects = await prisma.project.findMany({
   relationLoadStrategy: 'join',
@@ -113,6 +115,7 @@ const projects = await prisma.project.findMany({
 **Archivo:** `prisma/schema.prisma`
 
 #### ANTES (línea ~103)
+
 ```prisma
 model Project {
   id                  String              @id @default(uuid())
@@ -131,6 +134,7 @@ model Project {
 ```
 
 #### DESPUÉS
+
 ```prisma
 model Project {
   id                  String              @id @default(uuid())
@@ -149,6 +153,7 @@ model Project {
 ```
 
 **Ejecutar:**
+
 ```bash
 npm run db:push
 ```
@@ -302,6 +307,7 @@ export async function GET(request: Request) {
 ```
 
 **Modificar frontend para usar nueva API:**
+
 ```typescript
 // app/projects/page.tsx o donde hagas el fetch
 useEffect(() => {
@@ -322,6 +328,7 @@ useEffect(() => {
 **Archivo:** `lib/db.ts`
 
 #### ANTES
+
 ```typescript
 export const prisma =
   globalForPrisma.prisma ??
@@ -331,11 +338,12 @@ export const prisma =
 ```
 
 #### DESPUÉS (temporal)
+
 ```typescript
 export const prisma =
   globalForPrisma.prisma ??
   new PrismaClient({
-    log: ['error'],  // Solo errors, incluso en dev
+    log: ['error'], // Solo errors, incluso en dev
   })
 ```
 
@@ -357,7 +365,7 @@ const globalForPrismaRead = globalThis as unknown as {
 export const prismaRead =
   globalForPrismaRead.prismaRead ??
   new PrismaClient({
-    datasourceUrl: process.env.DIRECT_URL,  // Sin pooler
+    datasourceUrl: process.env.DIRECT_URL, // Sin pooler
     log: process.env.NODE_ENV === 'development' ? ['error'] : ['error'],
   })
 
@@ -393,7 +401,7 @@ export interface ProjectWithBalance {
   comuna: string
   region: string
   date: Date
-  subtotal: string  // Decimal viene como string
+  subtotal: string // Decimal viene como string
   tax_rate: string
   total: string
   total_paid: string
@@ -538,6 +546,7 @@ export async function getProjectsWithBalance({
 **Modificar archivo:** `app/projects/page.tsx`
 
 #### ANTES (Client Component)
+
 ```typescript
 'use client'
 
@@ -562,6 +571,7 @@ export default function ProjectsPage() {
 ```
 
 #### DESPUÉS (Server Component)
+
 ```typescript
 import { getProjectsWithBalance } from '@/lib/queries/get-projects-with-balance'
 import { prismaRead } from '@/lib/db-read'
@@ -626,6 +636,7 @@ export default async function ProjectsPage({ searchParams }: PageProps) {
 ```
 
 **Modificar componente tabla:**
+
 ```typescript
 // components/projects/projects-table.tsx
 'use client'  // ← Sigue siendo Client para interactividad
@@ -669,6 +680,7 @@ export function ProjectsTable({
 ### Mejora #1: Redis Cache
 
 **Instalar:**
+
 ```bash
 npm install @upstash/redis
 ```
@@ -782,6 +794,7 @@ export async function POST(request: Request) {
 ### Mejora #2: Campo Balance Denormalizado
 
 **Modificar schema:**
+
 ```prisma
 // prisma/schema.prisma
 model Project {
@@ -800,6 +813,7 @@ model Project {
 ```
 
 **Ejecutar:**
+
 ```bash
 npm run db:push
 ```
@@ -892,7 +906,7 @@ export async function POST(request: Request) {
 // Con campo balance, el query es mucho más simple:
 const projects = await prisma.project.findMany({
   where: {
-    balance: { gt: 0 },  // ← Balance pre-calculado
+    balance: { gt: 0 }, // ← Balance pre-calculado
     projectStatus: { isFinal: false },
   },
   include: {
@@ -952,6 +966,7 @@ testPerformance()
 ```
 
 **Ejecutar:**
+
 ```bash
 chmod +x scripts/test-performance.ts
 npm install -g ts-node
@@ -977,6 +992,7 @@ UPSTASH_REDIS_REST_TOKEN="..."
 ---
 
 **Ver también:**
+
 - [README](README.md)
 - [Problemas Identificados](01-problemas-identificados.md)
 - [Plan de Acción](02-plan-de-accion.md)

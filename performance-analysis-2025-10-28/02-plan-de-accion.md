@@ -26,6 +26,7 @@ Fase 3: Optimización Pro  500ms → 50ms (-99%)      [2 semanas]
 **Ganancia:** -2 segundos
 
 #### Antes
+
 ```typescript
 // app/api/projects/route.ts:61-95
 const [projects, _total] = await Promise.all([
@@ -43,6 +44,7 @@ return NextResponse.json({
 ```
 
 #### Después
+
 ```typescript
 const projects = await prisma.project.findMany({ ... })
 
@@ -57,6 +59,7 @@ return NextResponse.json({
 ```
 
 #### Pasos
+
 1. Abrir `app/api/projects/route.ts`
 2. Línea 61: Cambiar `Promise.all([...])` por `prisma.project.findMany({ ... })`
 3. Eliminar `_total` de la desestructuración
@@ -71,17 +74,22 @@ return NextResponse.json({
 **Ganancia:** -200ms
 
 #### Problema
+
 ```prisma
 // prisma/schema.prisma:103
 @@index([projectStatusId, date(sort: Desc)])  // ← Índice en 'date'
 ```
 
 Pero el query ordena por `createdAt`:
+
 ```typescript
-orderBy: { createdAt: 'desc' }  // ← Campo diferente
+orderBy: {
+  createdAt: 'desc'
+} // ← Campo diferente
 ```
 
 #### Solución
+
 ```prisma
 // prisma/schema.prisma
 model Project {
@@ -100,6 +108,7 @@ model Project {
 ```
 
 #### Pasos
+
 1. Editar `prisma/schema.prisma`
 2. Modificar línea 103 según arriba
 3. Ejecutar: `npm run db:push`
@@ -113,15 +122,17 @@ model Project {
 **Ganancia:** -200ms (1 round-trip menos)
 
 #### Problema Actual
+
 ```typescript
 // Frontend hace 2 llamadas:
-fetch('/api/projects?projectState=Activo')  // 5.2s
-fetch('/api/project-status')                // 5.2s
+fetch('/api/projects?projectState=Activo') // 5.2s
+fetch('/api/project-status') // 5.2s
 ```
 
 #### Solución: Nueva API Unificada
 
 **Crear:** `app/api/projects-with-metadata/route.ts`
+
 ```typescript
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
@@ -168,12 +179,13 @@ export async function GET(request: Request) {
 ```
 
 **Modificar Frontend:**
+
 ```typescript
 // app/projects/page.tsx
 useEffect(() => {
   fetch('/api/projects-with-metadata?projectState=Activo')
-    .then(res => res.json())
-    .then(data => {
+    .then((res) => res.json())
+    .then((data) => {
       setProjects(data.projects)
       setStatuses(data.metadata.statuses)
     })
@@ -188,6 +200,7 @@ useEffect(() => {
 **Ganancia:** -100ms
 
 #### Solución
+
 ```typescript
 // lib/db.ts
 export const prisma = new PrismaClient({
@@ -195,7 +208,7 @@ export const prisma = new PrismaClient({
   // log: process.env.NODE_ENV === 'development' ? ['query', 'error', 'warn'] : ['error'],
 
   // DESPUÉS (temporal durante debugging):
-  log: ['error']  // Solo errors, incluso en dev
+  log: ['error'], // Solo errors, incluso en dev
 })
 ```
 
@@ -205,13 +218,13 @@ export const prisma = new PrismaClient({
 
 ### 📊 Resultados Esperados Fase 1
 
-| Métrica | Antes | Después | Mejora |
-|---------|-------|---------|--------|
-| **Tiempo total** | 5,175ms | ~1,500ms | -70% |
-| **COUNT query** | 2,000ms | 0ms | -100% |
-| **Índice ORDER BY** | 200ms | 50ms | -75% |
-| **Doble API call** | 400ms latencia | 200ms | -50% |
-| **Query logging** | 100ms | 0ms | -100% |
+| Métrica             | Antes          | Después  | Mejora |
+| ------------------- | -------------- | -------- | ------ |
+| **Tiempo total**    | 5,175ms        | ~1,500ms | -70%   |
+| **COUNT query**     | 2,000ms        | 0ms      | -100%  |
+| **Índice ORDER BY** | 200ms          | 50ms     | -75%   |
+| **Doble API call**  | 400ms latencia | 200ms    | -50%   |
+| **Query logging**   | 100ms          | 0ms      | -100%  |
 
 ---
 
@@ -227,6 +240,7 @@ export const prisma = new PrismaClient({
 #### Solución: Usar $queryRaw con Aggregates
 
 **Crear:** `lib/queries/get-projects-with-balance.ts`
+
 ```typescript
 import { prisma } from '@/lib/db'
 import { Prisma } from '@prisma/client'
@@ -305,9 +319,7 @@ export async function getProjectsWithBalance({
     paramIndex++
   }
 
-  const whereClause = whereConditions.length > 0
-    ? `WHERE ${whereConditions.join(' AND ')}`
-    : ''
+  const whereClause = whereConditions.length > 0 ? `WHERE ${whereConditions.join(' AND ')}` : ''
 
   // Query principal con aggregates
   const query = `
@@ -368,7 +380,7 @@ export async function getProjectsWithBalance({
   // Ejecutar ambas queries en paralelo
   const [projects, countResult] = await Promise.all([
     prisma.$queryRawUnsafe<ProjectWithBalance[]>(query, ...params),
-    prisma.$queryRawUnsafe<[{ count: bigint }]>(countQuery, ...params.slice(0, -2))
+    prisma.$queryRawUnsafe<[{ count: bigint }]>(countQuery, ...params.slice(0, -2)),
   ])
 
   return {
@@ -379,6 +391,7 @@ export async function getProjectsWithBalance({
 ```
 
 **Modificar API:**
+
 ```typescript
 // app/api/projects/route.ts
 import { getProjectsWithBalance } from '@/lib/queries/get-projects-with-balance'
@@ -414,18 +427,20 @@ export async function GET(request: Request) {
 **Ganancia:** -800ms (elimina latencia de red)
 
 #### Problema
+
 ```typescript
 // app/projects/page.tsx (Client Component)
 'use client'
 
 export default function ProjectsPage() {
   useEffect(() => {
-    fetch('/api/projects')  // ← 200ms latencia de red
+    fetch('/api/projects') // ← 200ms latencia de red
   }, [])
 }
 ```
 
 #### Solución
+
 ```typescript
 // app/projects/page.tsx (Server Component)
 import { getProjectsWithBalance } from '@/lib/queries/get-projects-with-balance'
@@ -478,9 +493,10 @@ export default async function ProjectsPage({ searchParams }: PageProps) {
 ```
 
 **Modificar Tabla:**
+
 ```typescript
 // components/projects/projects-table.tsx
-'use client'  // ← Sigue siendo Client (para interactividad)
+'use client' // ← Sigue siendo Client (para interactividad)
 
 interface ProjectsTableProps {
   initialProjects: ProjectWithBalance[]
@@ -488,11 +504,7 @@ interface ProjectsTableProps {
   pagination: { page: number; limit: number; total: number }
 }
 
-export function ProjectsTable({
-  initialProjects,
-  statuses,
-  pagination
-}: ProjectsTableProps) {
+export function ProjectsTable({ initialProjects, statuses, pagination }: ProjectsTableProps) {
   const [projects, setProjects] = useState(initialProjects)
   // Interactividad local (sorting, filtering)
   // ...
@@ -507,6 +519,7 @@ export function ProjectsTable({
 **Ganancia:** -100ms
 
 #### Solución
+
 ```typescript
 // lib/db-read.ts (nuevo archivo)
 import { PrismaClient } from '@prisma/client'
@@ -518,7 +531,7 @@ const globalForPrismaRead = globalThis as unknown as {
 export const prismaRead =
   globalForPrismaRead.prismaRead ??
   new PrismaClient({
-    datasourceUrl: process.env.DIRECT_URL,  // ← Sin pooler
+    datasourceUrl: process.env.DIRECT_URL, // ← Sin pooler
     log: ['error'],
   })
 
@@ -528,6 +541,7 @@ if (process.env.NODE_ENV !== 'production') {
 ```
 
 **Usar en queries de lectura:**
+
 ```typescript
 // lib/queries/get-projects-with-balance.ts
 import { prismaRead } from '@/lib/db-read'  // ← Cambiar import
@@ -544,12 +558,12 @@ export async function getProjectsWithBalance(...) {
 
 ### 📊 Resultados Esperados Fase 2
 
-| Métrica | Después Fase 1 | Después Fase 2 | Mejora |
-|---------|----------------|----------------|--------|
-| **Tiempo total** | 1,500ms | ~500ms | -67% |
-| **Balance en SQL** | 800ms (JS) | 100ms (SQL) | -87% |
-| **Latencia red** | 400ms | 0ms (SSR) | -100% |
-| **Pooler overhead** | 100ms | 0ms (direct) | -100% |
+| Métrica             | Después Fase 1 | Después Fase 2 | Mejora |
+| ------------------- | -------------- | -------------- | ------ |
+| **Tiempo total**    | 1,500ms        | ~500ms         | -67%   |
+| **Balance en SQL**  | 800ms (JS)     | 100ms (SQL)    | -87%   |
+| **Latencia red**    | 400ms          | 0ms (SSR)      | -100%  |
+| **Pooler overhead** | 100ms          | 0ms (direct)   | -100%  |
 
 ---
 
@@ -563,6 +577,7 @@ export async function getProjectsWithBalance(...) {
 **Ganancia:** Query más simple, escalable
 
 #### Migración
+
 ```prisma
 // prisma/schema.prisma
 model Project {
@@ -575,6 +590,7 @@ model Project {
 ```
 
 #### Trigger o Application Logic
+
 ```typescript
 // lib/business-logic/update-project-balance.ts
 export async function updateProjectBalance(projectId: string) {
@@ -583,9 +599,9 @@ export async function updateProjectBalance(projectId: string) {
     select: {
       total: true,
       paymentAllocations: {
-        select: { allocatedAmount: true }
-      }
-    }
+        select: { allocatedAmount: true },
+      },
+    },
   })
 
   const totalPaid = project.paymentAllocations.reduce(
@@ -596,12 +612,13 @@ export async function updateProjectBalance(projectId: string) {
 
   await prisma.project.update({
     where: { id: projectId },
-    data: { balance }
+    data: { balance },
   })
 }
 ```
 
 #### Actualizar en cada Payment
+
 ```typescript
 // app/api/payments/route.ts
 export async function POST(request: Request) {
@@ -609,12 +626,12 @@ export async function POST(request: Request) {
     data: {
       // ...
       allocations: {
-        create: allocations.map(alloc => ({
+        create: allocations.map((alloc) => ({
           projectId: alloc.projectId,
-          allocatedAmount: alloc.allocatedAmount
-        }))
-      }
-    }
+          allocatedAmount: alloc.allocatedAmount,
+        })),
+      },
+    },
   })
 
   // Actualizar balance de proyectos afectados
@@ -632,11 +649,13 @@ export async function POST(request: Request) {
 **Ganancia:** 50ms en cache hit
 
 #### Setup
+
 ```bash
 npm install @upstash/redis
 ```
 
 #### Configuración
+
 ```typescript
 // lib/cache.ts
 import { Redis } from '@upstash/redis'
@@ -649,13 +668,14 @@ export const redis = new Redis({
 export function getCacheKey(prefix: string, params: Record<string, any>) {
   const sortedParams = Object.keys(params)
     .sort()
-    .map(key => `${key}:${params[key]}`)
+    .map((key) => `${key}:${params[key]}`)
     .join(':')
   return `${prefix}:${sortedParams}`
 }
 ```
 
 #### Uso
+
 ```typescript
 // lib/queries/get-projects-with-balance.ts
 import { redis, getCacheKey } from '@/lib/cache'
@@ -683,6 +703,7 @@ export async function getProjectsWithBalance(params) {
 ```
 
 #### Invalidación
+
 ```typescript
 // app/api/projects/route.ts (POST)
 export async function POST(request: Request) {
@@ -728,18 +749,19 @@ async function ProjectsTableWrapper({ searchParams }) {
 
 ### 📊 Resultados Esperados Fase 3
 
-| Métrica | Después Fase 2 | Después Fase 3 | Mejora Total |
-|---------|----------------|----------------|--------------|
-| **Tiempo (cache miss)** | 500ms | ~200ms | **-96%** |
-| **Tiempo (cache hit)** | 500ms | ~50ms | **-99%** |
-| **Query DB** | Complejo | Simple | Mantenible |
-| **Escalabilidad** | 10k rows OK | 100k+ rows OK | Futuro-proof |
+| Métrica                 | Después Fase 2 | Después Fase 3 | Mejora Total |
+| ----------------------- | -------------- | -------------- | ------------ |
+| **Tiempo (cache miss)** | 500ms          | ~200ms         | **-96%**     |
+| **Tiempo (cache hit)**  | 500ms          | ~50ms          | **-99%**     |
+| **Query DB**            | Complejo       | Simple         | Mantenible   |
+| **Escalabilidad**       | 10k rows OK    | 100k+ rows OK  | Futuro-proof |
 
 ---
 
 ## ✅ Checklist de Implementación
 
 ### ✅ Fase 1 (COMPLETADA - 2025-10-28)
+
 - [x] Win #1: Eliminar COUNT query
 - [x] Win #2: Corregir índice ORDER BY
 - [x] Win #3: Combinar APIs
@@ -750,17 +772,20 @@ async function ProjectsTableWrapper({ searchParams }) {
 **Resultado:** Mejora estimada del 70% (5.2s → 1.5s)
 
 **Archivos modificados:**
+
 - `app/api/projects/route.ts` - Eliminado COUNT query
 - `prisma/schema.prisma` - Corregido índice
 - `app/projects/page.tsx` - Usa API combinada
 - `lib/db.ts` - Logging deshabilitado
 
 **Archivos nuevos:**
+
 - `app/api/projects-with-metadata/route.ts` - API combinada
 
 ---
 
 ### Fase 2 (PENDIENTE - ESTA SEMANA)
+
 - [ ] Mejora #1: SQL con aggregates
 - [ ] Mejora #2: Server Component
 - [ ] Mejora #3: DIRECT_URL
@@ -768,6 +793,7 @@ async function ProjectsTableWrapper({ searchParams }) {
 - [ ] **Verificar:** Tests E2E pasan
 
 ### Fase 3 (PENDIENTE - PRÓXIMO SPRINT)
+
 - [ ] Mejora #1: Campo `balance` denormalizado
 - [ ] Mejora #2: Redis cache
 - [ ] Mejora #3: Streaming con Suspense
@@ -778,19 +804,20 @@ async function ProjectsTableWrapper({ searchParams }) {
 
 ## 📊 KPIs de Éxito
 
-| KPI | Baseline | Objetivo Fase 1 | Objetivo Fase 2 | Objetivo Fase 3 |
-|-----|----------|-----------------|-----------------|-----------------|
-| **P50 latency** | 5,175ms | < 1,500ms | < 500ms | < 100ms |
-| **P95 latency** | 7,000ms | < 2,500ms | < 800ms | < 200ms |
-| **Cache hit rate** | 0% | 0% | 0% | > 80% |
-| **DB queries/request** | 2 | 1 | 1 | 0-1 |
-| **Bytes transferred** | ~50KB | ~50KB | ~50KB | ~50KB |
+| KPI                    | Baseline | Objetivo Fase 1 | Objetivo Fase 2 | Objetivo Fase 3 |
+| ---------------------- | -------- | --------------- | --------------- | --------------- |
+| **P50 latency**        | 5,175ms  | < 1,500ms       | < 500ms         | < 100ms         |
+| **P95 latency**        | 7,000ms  | < 2,500ms       | < 800ms         | < 200ms         |
+| **Cache hit rate**     | 0%       | 0%              | 0%              | > 80%           |
+| **DB queries/request** | 2        | 1               | 1               | 0-1             |
+| **Bytes transferred**  | ~50KB    | ~50KB           | ~50KB           | ~50KB           |
 
 ---
 
 ## 🔬 Cómo Medir Performance
 
 ### En Desarrollo
+
 ```typescript
 // app/api/projects/route.ts
 export async function GET(request: Request) {
@@ -808,17 +835,20 @@ export async function GET(request: Request) {
 ```
 
 ### Con Chrome DevTools
+
 1. Abrir DevTools → Network tab
 2. Reload página
 3. Ver timing de `/api/projects` request
 4. Click derecho → "Timing" para breakdown
 
 ### Con curl
+
 ```bash
 curl -w "@curl-format.txt" http://localhost:3000/api/projects
 ```
 
 **curl-format.txt:**
+
 ```
     time_namelookup:  %{time_namelookup}\n
        time_connect:  %{time_connect}\n
@@ -837,16 +867,19 @@ curl -w "@curl-format.txt" http://localhost:3000/api/projects
 Si algo sale mal en producción:
 
 ### Fase 1
+
 - Revertir commit
 - Deploy anterior
 - Total downtime: < 5 min
 
 ### Fase 2
+
 - Revertir a API calls (quitar SSR)
 - Prisma client sigue funcionando
 - Total downtime: < 10 min
 
 ### Fase 3
+
 - Deshabilitar Redis cache
 - Funcionalidad sigue funcionando sin cache
 - Performance degrada a Fase 2
@@ -855,5 +888,6 @@ Si algo sale mal en producción:
 ---
 
 **Ver también:**
+
 - [Problemas Identificados](01-problemas-identificados.md)
 - [Ejemplos de Código](03-ejemplos-codigo.md)

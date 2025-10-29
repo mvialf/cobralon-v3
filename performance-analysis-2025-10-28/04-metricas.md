@@ -5,21 +5,23 @@
 ### Testing en Desarrollo (localhost:3001)
 
 **Metodología:**
+
 - 5 requests consecutivos a `/api/projects-with-metadata?projectState=Activo`
 - Servidor: npm run dev (Turbopack, Next.js 15.5.6)
 - Base de datos: Neon PostgreSQL (free tier)
 
 **Resultados:**
 
-| Request | Tiempo (ms) | Notas |
-|---------|-------------|-------|
-| #1 | 5,216 | ⚠️ Con cold start de Neon (~4.5s) |
-| #2 | 657 | ✅ Warm database |
-| #3 | 847 | ✅ Warm database |
-| #4 | 733 | ✅ Warm database |
-| #5 | 495 | ✅ Warm database |
+| Request | Tiempo (ms) | Notas                             |
+| ------- | ----------- | --------------------------------- |
+| #1      | 5,216       | ⚠️ Con cold start de Neon (~4.5s) |
+| #2      | 657         | ✅ Warm database                  |
+| #3      | 847         | ✅ Warm database                  |
+| #4      | 733         | ✅ Warm database                  |
+| #5      | 495         | ✅ Warm database                  |
 
 **Estadísticas (sin cold start, n=4):**
+
 - **Media:** 683ms
 - **Mediana:** 695ms
 - **Mínimo:** 495ms
@@ -28,11 +30,11 @@
 
 ### Comparación con Baseline
 
-| Métrica | Baseline | Fase 1 (real) | Mejora |
-|---------|----------|---------------|--------|
-| **Tiempo promedio** | 5,175ms | **683ms** | **-86.8% ⚡** |
-| **Estimado** | 5,175ms | 1,500ms | -70% |
-| **Resultado** | - | - | **17% MEJOR que estimado** |
+| Métrica             | Baseline | Fase 1 (real) | Mejora                     |
+| ------------------- | -------- | ------------- | -------------------------- |
+| **Tiempo promedio** | 5,175ms  | **683ms**     | **-86.8% ⚡**              |
+| **Estimado**        | 5,175ms  | 1,500ms       | -70%                       |
+| **Resultado**       | -        | -             | **17% MEJOR que estimado** |
 
 ### Breakdown de Optimizaciones
 
@@ -50,6 +52,7 @@ Baseline: 5,175ms
 ### Validación Funcional
 
 ✅ **Todos los checks pasaron:**
+
 - [x] Datos correctos (10 proyectos cargados)
 - [x] Balance calculado correctamente
 - [x] Filtros funcionando
@@ -60,11 +63,13 @@ Baseline: 5,175ms
 ### Cold Start Analysis
 
 **Neon Free Tier Limitation:**
+
 - Database se suspende después de 5 minutos de inactividad
 - Primera query después de suspensión: +4,500ms overhead
 - Solución: Upgrade a Neon Pro ($19/mes) elimina cold starts
 
 **Impacto:**
+
 - Con cold start: 5,216ms (similar a baseline)
 - Sin cold start: 683ms (**mejora real del 87%**)
 
@@ -74,11 +79,11 @@ Baseline: 5,175ms
 
 ### Tiempos de Respuesta
 
-| Endpoint | Tiempo | Status |
-|----------|--------|--------|
+| Endpoint                                | Tiempo      | Status         |
+| --------------------------------------- | ----------- | -------------- |
 | `GET /api/projects?projectState=Activo` | **5,175ms** | 🔴 Inaceptable |
-| `GET /api/project-status` | **5,179ms** | 🔴 Inaceptable |
-| **Total percibido (usuario)** | **~10.3s** | 🔴 Crítico |
+| `GET /api/project-status`               | **5,179ms** | 🔴 Inaceptable |
+| **Total percibido (usuario)**           | **~10.3s**  | 🔴 Crítico     |
 
 ### Breakdown del Tiempo
 
@@ -112,36 +117,36 @@ GET /api/project-status (5,179ms):
 
 **Objetivo:** Reducir 70% del tiempo
 
-| Métrica | Baseline | Objetivo Fase 1 | Ganancia |
-|---------|----------|-----------------|----------|
-| **Tiempo total** | 5,175ms | **1,500ms** | **-70%** |
-| **COUNT query** | 2,000ms | 0ms | -100% |
-| **API calls** | 2 | 1 | -50% |
-| **Logging overhead** | 100ms | 0ms | -100% |
-| **ORDER BY no indexado** | 200ms | 50ms | -75% |
+| Métrica                  | Baseline | Objetivo Fase 1 | Ganancia |
+| ------------------------ | -------- | --------------- | -------- |
+| **Tiempo total**         | 5,175ms  | **1,500ms**     | **-70%** |
+| **COUNT query**          | 2,000ms  | 0ms             | -100%    |
+| **API calls**            | 2        | 1               | -50%     |
+| **Logging overhead**     | 100ms    | 0ms             | -100%    |
+| **ORDER BY no indexado** | 200ms    | 50ms            | -75%     |
 
 ### Fase 2: Mejoras Medianas
 
 **Objetivo:** Reducir 90% del tiempo total (vs baseline)
 
-| Métrica | Después Fase 1 | Objetivo Fase 2 | Ganancia |
-|---------|----------------|-----------------|----------|
-| **Tiempo total** | 1,500ms | **500ms** | **-67%** |
-| **Balance en JS** | 500ms | 50ms (SQL) | -90% |
-| **LATERAL joins** | 800ms | 200ms (raw SQL) | -75% |
-| **Network latency** | 200ms | 0ms (SSR) | -100% |
-| **Pooler overhead** | 100ms | 0ms (direct) | -100% |
+| Métrica             | Después Fase 1 | Objetivo Fase 2 | Ganancia |
+| ------------------- | -------------- | --------------- | -------- |
+| **Tiempo total**    | 1,500ms        | **500ms**       | **-67%** |
+| **Balance en JS**   | 500ms          | 50ms (SQL)      | -90%     |
+| **LATERAL joins**   | 800ms          | 200ms (raw SQL) | -75%     |
+| **Network latency** | 200ms          | 0ms (SSR)       | -100%    |
+| **Pooler overhead** | 100ms          | 0ms (direct)    | -100%    |
 
 ### Fase 3: Optimización Pro
 
 **Objetivo:** Performance < 100ms con cache
 
-| Métrica | Después Fase 2 | Objetivo Fase 3 | Ganancia Total |
-|---------|----------------|-----------------|----------------|
-| **Tiempo (cache miss)** | 500ms | **200ms** | **-96%** |
-| **Tiempo (cache hit)** | 500ms | **50ms** | **-99%** |
-| **Query complexity** | Alto | Bajo | Mantenible |
-| **Cache hit rate** | 0% | > 80% | Escalable |
+| Métrica                 | Después Fase 2 | Objetivo Fase 3 | Ganancia Total |
+| ----------------------- | -------------- | --------------- | -------------- |
+| **Tiempo (cache miss)** | 500ms          | **200ms**       | **-96%**       |
+| **Tiempo (cache hit)**  | 500ms          | **50ms**        | **-99%**       |
+| **Query complexity**    | Alto           | Bajo            | Mantenible     |
+| **Cache hit rate**      | 0%             | > 80%           | Escalable      |
 
 ---
 
@@ -162,12 +167,12 @@ Fase 3 cache hit      |█|                                            1%
 
 ### Comparación con Industry Standards
 
-| Categoría | Tiempo | Nuestra Meta | Status |
-|-----------|--------|--------------|--------|
-| **Excelente** | < 100ms | Fase 3 cache hit | ✅ Alcanzable |
-| **Bueno** | 100-300ms | Fase 3 cache miss | ✅ Alcanzable |
-| **Aceptable** | 300-1000ms | Fase 2 | ✅ Alcanzable |
-| **Inaceptable** | > 3000ms | Baseline actual | 🔴 Actual |
+| Categoría       | Tiempo     | Nuestra Meta      | Status        |
+| --------------- | ---------- | ----------------- | ------------- |
+| **Excelente**   | < 100ms    | Fase 3 cache hit  | ✅ Alcanzable |
+| **Bueno**       | 100-300ms  | Fase 3 cache miss | ✅ Alcanzable |
+| **Aceptable**   | 300-1000ms | Fase 2            | ✅ Alcanzable |
+| **Inaceptable** | > 3000ms   | Baseline actual   | 🔴 Actual     |
 
 ---
 
@@ -176,6 +181,7 @@ Fase 3 cache hit      |█|                                            1%
 ### 1. Chrome DevTools Network Tab
 
 **Pasos:**
+
 1. Abrir DevTools (F12)
 2. Ir a Network tab
 3. Filtrar por XHR/Fetch
@@ -184,6 +190,7 @@ Fase 3 cache hit      |█|                                            1%
 6. Ver panel "Timing"
 
 **Métricas clave:**
+
 - **Waiting (TTFB):** Tiempo del servidor
 - **Content Download:** Tiempo de transferencia
 - **Total:** Suma de ambos
@@ -191,6 +198,7 @@ Fase 3 cache hit      |█|                                            1%
 ### 2. Server-Side Logging
 
 **Agregar a API:**
+
 ```typescript
 export async function GET(request: Request) {
   const start = Date.now()
@@ -203,7 +211,7 @@ export async function GET(request: Request) {
   return NextResponse.json(result, {
     headers: {
       'X-Response-Time': `${duration}ms`,
-      'X-Cache-Status': 'MISS',  // o 'HIT'
+      'X-Cache-Status': 'MISS', // o 'HIT'
     },
   })
 }
@@ -212,6 +220,7 @@ export async function GET(request: Request) {
 ### 3. curl con Timing
 
 **Crear archivo:** `scripts/curl-format.txt`
+
 ```
     time_namelookup:  %{time_namelookup}s\n
        time_connect:  %{time_connect}s\n
@@ -224,6 +233,7 @@ export async function GET(request: Request) {
 ```
 
 **Ejecutar:**
+
 ```bash
 curl -w "@scripts/curl-format.txt" -o /dev/null -s \
   "http://localhost:3000/api/projects?projectState=Activo"
@@ -232,6 +242,7 @@ curl -w "@scripts/curl-format.txt" -o /dev/null -s \
 ### 4. Script de Benchmark
 
 **Crear:** `scripts/benchmark.sh`
+
 ```bash
 #!/bin/bash
 
@@ -259,6 +270,7 @@ echo "📊 Average: ${AVG}ms"
 ```
 
 **Ejecutar:**
+
 ```bash
 chmod +x scripts/benchmark.sh
 ./scripts/benchmark.sh
@@ -278,14 +290,14 @@ lhci autorun --collect.url=http://localhost:3000/projects
 
 ### KPIs a Monitorear
 
-| KPI | Descripción | Target | Herramienta |
-|-----|-------------|--------|-------------|
-| **P50 latency** | 50% de requests completan en X ms | < 500ms | Vercel Analytics |
-| **P95 latency** | 95% de requests completan en X ms | < 1000ms | Vercel Analytics |
-| **P99 latency** | 99% de requests completan en X ms | < 2000ms | Vercel Analytics |
-| **Error rate** | % de requests que fallan | < 0.1% | Vercel Logs |
-| **Cache hit rate** | % de requests servidos desde cache | > 80% | Redis Insights |
-| **Throughput** | Requests por segundo | > 100 RPS | Load testing |
+| KPI                | Descripción                        | Target    | Herramienta      |
+| ------------------ | ---------------------------------- | --------- | ---------------- |
+| **P50 latency**    | 50% de requests completan en X ms  | < 500ms   | Vercel Analytics |
+| **P95 latency**    | 95% de requests completan en X ms  | < 1000ms  | Vercel Analytics |
+| **P99 latency**    | 99% de requests completan en X ms  | < 2000ms  | Vercel Analytics |
+| **Error rate**     | % de requests que fallan           | < 0.1%    | Vercel Logs      |
+| **Cache hit rate** | % de requests servidos desde cache | > 80%     | Redis Insights   |
+| **Throughput**     | Requests por segundo               | > 100 RPS | Load testing     |
 
 ### Vercel Analytics
 
@@ -310,6 +322,7 @@ export default function ProjectsPage() {
 ### Upstash Redis Insights
 
 Monitor cache performance:
+
 - Hit rate
 - Miss rate
 - Avg response time
@@ -329,6 +342,7 @@ ab -n 100 -c 10 http://localhost:3000/api/projects?projectState=Activo
 ```
 
 **Métricas clave:**
+
 - **Requests per second:** Throughput
 - **Time per request (mean):** Latencia promedio
 - **50% / 95% / 99%:** Percentiles
@@ -336,25 +350,28 @@ ab -n 100 -c 10 http://localhost:3000/api/projects?projectState=Activo
 ### Artillery (más avanzado)
 
 **Instalar:**
+
 ```bash
 npm install -D artillery
 ```
 
 **Crear:** `artillery.yml`
+
 ```yaml
 config:
   target: 'http://localhost:3000'
   phases:
     - duration: 60
-      arrivalRate: 10  # 10 usuarios/segundo
+      arrivalRate: 10 # 10 usuarios/segundo
 scenarios:
-  - name: "Load projects"
+  - name: 'Load projects'
     flow:
       - get:
-          url: "/api/projects?projectState=Activo"
+          url: '/api/projects?projectState=Activo'
 ```
 
 **Ejecutar:**
+
 ```bash
 npx artillery run artillery.yml
 ```
@@ -420,8 +437,12 @@ async function main() {
   const baseline: BenchmarkResult = require('./baseline.json')
 
   console.log('\n📈 Comparison vs baseline:')
-  console.log(`  Avg: ${baseline.avg}ms → ${stats.avg.toFixed(0)}ms (${(((stats.avg - baseline.avg) / baseline.avg) * 100).toFixed(0)}%)`)
-  console.log(`  P95: ${baseline.p95}ms → ${stats.p95}ms (${(((stats.p95 - baseline.p95) / baseline.p95) * 100).toFixed(0)}%)`)
+  console.log(
+    `  Avg: ${baseline.avg}ms → ${stats.avg.toFixed(0)}ms (${(((stats.avg - baseline.avg) / baseline.avg) * 100).toFixed(0)}%)`
+  )
+  console.log(
+    `  P95: ${baseline.p95}ms → ${stats.p95}ms (${(((stats.p95 - baseline.p95) / baseline.p95) * 100).toFixed(0)}%)`
+  )
 
   // Fail if regression > 20%
   if (stats.p95 > baseline.p95 * 1.2) {
@@ -436,6 +457,7 @@ main()
 ```
 
 **Baseline:** `scripts/baseline.json`
+
 ```json
 {
   "version": "baseline",
@@ -447,6 +469,7 @@ main()
 ```
 
 **Ejecutar en CI:**
+
 ```yaml
 # .github/workflows/performance.yml
 name: Performance Tests
@@ -472,41 +495,42 @@ jobs:
 
 ### 10 Proyectos (actual)
 
-| Fase | Target | Alcanzable |
-|------|--------|------------|
-| Baseline | 5,175ms | ❌ Actual |
-| Fase 1 | < 1,500ms | ✅ Muy fácil |
-| Fase 2 | < 500ms | ✅ Fácil |
-| Fase 3 | < 100ms | ✅ Fácil |
+| Fase     | Target    | Alcanzable   |
+| -------- | --------- | ------------ |
+| Baseline | 5,175ms   | ❌ Actual    |
+| Fase 1   | < 1,500ms | ✅ Muy fácil |
+| Fase 2   | < 500ms   | ✅ Fácil     |
+| Fase 3   | < 100ms   | ✅ Fácil     |
 
 ### 100 Proyectos
 
-| Fase | Target | Alcanzable |
-|------|--------|------------|
-| Baseline | ~8,000ms | ❌ Peor |
-| Fase 1 | < 2,000ms | ✅ Fácil |
-| Fase 2 | < 800ms | ✅ Fácil |
-| Fase 3 | < 200ms | ✅ Fácil |
+| Fase     | Target    | Alcanzable |
+| -------- | --------- | ---------- |
+| Baseline | ~8,000ms  | ❌ Peor    |
+| Fase 1   | < 2,000ms | ✅ Fácil   |
+| Fase 2   | < 800ms   | ✅ Fácil   |
+| Fase 3   | < 200ms   | ✅ Fácil   |
 
 ### 1,000 Proyectos
 
-| Fase | Target | Alcanzable |
-|------|--------|------------|
-| Baseline | ~30,000ms | ❌ Inusable |
-| Fase 1 | < 5,000ms | ⚠️ Requiere optimizaciones adicionales |
-| Fase 2 | < 1,500ms | ✅ Con índices correctos |
-| Fase 3 | < 300ms | ✅ Con cache |
+| Fase     | Target    | Alcanzable                             |
+| -------- | --------- | -------------------------------------- |
+| Baseline | ~30,000ms | ❌ Inusable                            |
+| Fase 1   | < 5,000ms | ⚠️ Requiere optimizaciones adicionales |
+| Fase 2   | < 1,500ms | ✅ Con índices correctos               |
+| Fase 3   | < 300ms   | ✅ Con cache                           |
 
 ### 10,000+ Proyectos
 
-| Fase | Target | Alcanzable |
-|------|--------|------------|
-| Baseline | > 60,000ms | ❌ Timeout |
-| Fase 1 | N/A | ❌ No suficiente |
-| Fase 2 | < 3,000ms | ⚠️ Con paginación cursor |
-| Fase 3 | < 500ms | ✅ Con cache + balance denormalizado |
+| Fase     | Target     | Alcanzable                           |
+| -------- | ---------- | ------------------------------------ |
+| Baseline | > 60,000ms | ❌ Timeout                           |
+| Fase 1   | N/A        | ❌ No suficiente                     |
+| Fase 2   | < 3,000ms  | ⚠️ Con paginación cursor             |
+| Fase 3   | < 500ms    | ✅ Con cache + balance denormalizado |
 
 **Nota:** A gran escala (10k+ proyectos), se requieren optimizaciones adicionales:
+
 - Cursor pagination (en lugar de offset)
 - Materialized views
 - Partitioning de tablas
@@ -559,28 +583,31 @@ Sentry.init({
 
 ### Template de Spreadsheet
 
-| Fecha | Fase | P50 (ms) | P95 (ms) | Cache Hit % | Notas |
-|-------|------|----------|----------|-------------|-------|
-| 2025-10-28 | Baseline | 5100 | 5500 | 0% | Estado actual |
-| 2025-10-28 | Fase 1 | TBD | TBD | 0% | Después de quick wins |
-| 2025-10-29 | Fase 2 | TBD | TBD | 0% | Después de SQL + SSR |
-| 2025-11-01 | Fase 3 | TBD | TBD | TBD | Con cache Redis |
+| Fecha      | Fase     | P50 (ms) | P95 (ms) | Cache Hit % | Notas                 |
+| ---------- | -------- | -------- | -------- | ----------- | --------------------- |
+| 2025-10-28 | Baseline | 5100     | 5500     | 0%          | Estado actual         |
+| 2025-10-28 | Fase 1   | TBD      | TBD      | 0%          | Después de quick wins |
+| 2025-10-29 | Fase 2   | TBD      | TBD      | 0%          | Después de SQL + SSR  |
+| 2025-11-01 | Fase 3   | TBD      | TBD      | TBD         | Con cache Redis       |
 
 ---
 
 ## ✅ Acceptance Criteria
 
 ### Fase 1
+
 - [ ] P95 latency < 2,500ms
 - [ ] No errores 500 en tests
 - [ ] Funcionalidad intacta (manual QA)
 
 ### Fase 2
+
 - [ ] P95 latency < 800ms
 - [ ] Tests E2E pasan
 - [ ] Server Components rendering correctamente
 
 ### Fase 3
+
 - [ ] P95 latency < 200ms (cache miss)
 - [ ] P95 latency < 100ms (cache hit)
 - [ ] Cache hit rate > 80%
@@ -589,6 +616,7 @@ Sentry.init({
 ---
 
 **Ver también:**
+
 - [README](README.md)
 - [Plan de Acción](02-plan-de-accion.md)
 - [Ejemplos de Código](03-ejemplos-codigo.md)
