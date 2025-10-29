@@ -68,6 +68,10 @@ export const createColumns = ({
         />
       )
     },
+    meta: {
+      headerClassName: 'text-left',
+      cellClassName: 'text-left',
+    },
   },
   {
     accessorKey: 'projectStatus',
@@ -117,6 +121,10 @@ export const createColumns = ({
       }
       return false
     },
+    meta: {
+      headerClassName: 'text-center',
+      cellClassName: 'text-center',
+    },
   },
   {
     id: 'projectState',
@@ -135,6 +143,10 @@ export const createColumns = ({
     filterFn: (row, id, value) => {
       return value.includes(row.getValue(id))
     },
+    meta: {
+      headerClassName: 'text-center',
+      cellClassName: 'text-center',
+    },
   },
   {
     accessorKey: 'total',
@@ -149,12 +161,20 @@ export const createColumns = ({
         maximumFractionDigits: 0,
       }).format(total)
     },
+    meta: {
+      headerClassName: 'text-right',
+      cellClassName: 'text-right',
+    },
   },
   {
     accessorKey: 'date',
     header: 'Fecha Ingreso',
     cell: ({ row }) => {
       return formatDate(row.original.date, 'short', 'es-CL')
+    },
+    meta: {
+      headerClassName: 'text-center',
+      cellClassName: 'text-center',
     },
   },
   {
@@ -190,11 +210,15 @@ export const createColumns = ({
       }).format(totalPaid)
 
       return (
-        <div className="flex items-center gap-2">
+        <div className="flex items-center justify-end gap-2">
           <span>{formattedAmount}</span>
           <Badge variant={badgeVariant}>{percentPaidRounded}%</Badge>
         </div>
       )
+    },
+    meta: {
+      headerClassName: 'text-right',
+      cellClassName: 'text-right',
     },
   },
   {
@@ -203,12 +227,8 @@ export const createColumns = ({
     cell: ({ row }) => {
       const balance = row.original.balance
 
-      // Color: rojo si deuda, verde si pagado completamente
-      const colorClass =
-        balance > 0.01 ? 'text-destructive font-medium' : 'text-green-600 font-medium'
-
       return (
-        <span className={colorClass}>
+        <span>
           {new Intl.NumberFormat('es-CL', {
             style: 'currency',
             currency: 'CLP',
@@ -218,12 +238,20 @@ export const createColumns = ({
         </span>
       )
     },
+    meta: {
+      headerClassName: 'text-right',
+      cellClassName: 'text-right',
+    },
   },
   {
     id: 'actions',
     cell: ({ row }) => (
       <ProjectActionsCell project={row.original} onProjectDeleted={onProjectDeleted} />
     ),
+    meta: {
+      headerClassName: 'text-center',
+      cellClassName: 'text-center',
+    },
   },
 ]
 

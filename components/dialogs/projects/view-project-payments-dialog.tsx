@@ -16,6 +16,7 @@ import { ProjectNameSummary } from '@/components/summarys/project-name-summary'
 import { Skeleton } from '@/components/ui/skeleton'
 import { snapdom } from '@zumer/snapdom'
 import { toast } from 'sonner'
+import { formatDate } from '@/lib/format'
 
 interface ViewProjectPaymentsDialogProps {
   projectId: string
@@ -195,9 +196,9 @@ Porcentaje Pagado: ${project.percentPaid}%
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-xl p-0 max-h-[90vh] overflow-y-auto gap-0">
         {/* Título accesible para lectores de pantalla */}
-        <DialogTitle className="sr-only">Estado de Cuenta del Proyecto</DialogTitle>
+        <DialogTitle className="sr-only">Estado de Cuenta </DialogTitle>
         {/* ❌ BARRA SUPERIOR - NO SE CAPTURA */}
-        <div className="flex items-center justify-between px-6 py-2 border-b border-gray-200 bg-pay-bg">
+        <div className="flex items-center justify-between px-6 py-2 border-b border-pay-border bg-pay-bg">
           <div className="flex items-center gap-2">
             {/* Botón Copiar */}
             <Button
@@ -224,17 +225,20 @@ Porcentaje Pagado: ${project.percentPaid}%
 
         {/* ✅ ÁREA DE CAPTURA - TODO ESTO SE CONVIERTE EN IMAGEN */}
         <div ref={contentRef} className="bg-pay-bg">
-          <div className="text-xl font-semibold text-pay-foreground px-6 py-2 ">
+          <div className="text-xl font-semibold text-pay-foreground px-4 py-2 ">
             {/* Header con información del proyecto */}
-            <div className="px-6">
-              <div className="text-pay-foreground">Estado de Cuenta</div>
+            <div className="px-4">
+              <div className="flex items-center justify-between text-pay-foreground">
+                <span>ESTADO DE CUENTA</span>
+                <span className="text-sm font-normal">{formatDate(new Date(), 'short')}</span>
+              </div>
             </div>
             {isLoading ? (
-              <div className="px-6">
+              <div className="px-4">
                 <DialogDescription className="text-pay-foreground">Cargando...</DialogDescription>
               </div>
             ) : project ? (
-              <div className="px-6 py-2 border-b border-t border-gray-300">
+              <div className="px-4 py-2 border-b border-t border-pay-border">
                 <ProjectNameSummary
                   className="text-pay-foreground"
                   projectNumber={project.projectNumber}
@@ -246,12 +250,12 @@ Porcentaje Pagado: ${project.percentPaid}%
 
             {/* Contenido: Summary + Tabla */}
             {isLoading ? (
-              <div className="space-y-4 py-6 px-6">
+              <div className="space-y-4 py-6 px-4">
                 <Skeleton className="h-32 w-full bg-pay-bg" />
                 <Skeleton className="h-64 w-full bg-pay-bg" />
               </div>
             ) : project ? (
-              <div className="space-y-6 py-4 px-6">
+              <div className="space-y-4 py-4 px-4">
                 {/* Resumen de Pagos */}
                 <PaymentSummaryCard
                   variant="dashboard"
@@ -263,7 +267,7 @@ Porcentaje Pagado: ${project.percentPaid}%
                 />
 
                 {/* Tabla de Pagos */}
-                <div className="overflow-hidden">
+                <div className="px-0">
                   <ProjectPaymentsTable projectId={projectId} hidePaymentMethod />
                 </div>
               </div>

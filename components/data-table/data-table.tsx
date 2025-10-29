@@ -16,6 +16,14 @@ import {
   TableMeta,
 } from '@tanstack/react-table'
 
+// Extender ColumnMeta para incluir clases CSS personalizadas
+declare module '@tanstack/react-table' {
+  interface ColumnMeta<TData, TValue> {
+    headerClassName?: string
+    cellClassName?: string
+  }
+}
+
 import {
   Table,
   TableBody,
@@ -24,6 +32,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
+import { cn } from '@/lib/utils'
 
 import { DataTablePagination } from './data-table-pagination'
 import { DataTableToolbar } from './data-table-toolbar'
@@ -112,7 +121,10 @@ export function DataTable<TData, TValue>({
               <TableRow key={headerGroup.id}>
                 {headerGroup.headers.map((header) => {
                   return (
-                    <TableHead key={header.id}>
+                    <TableHead
+                      key={header.id}
+                      className={cn(header.column.columnDef.meta?.headerClassName)}
+                    >
                       {header.isPlaceholder
                         ? null
                         : flexRender(header.column.columnDef.header, header.getContext())}
@@ -127,7 +139,10 @@ export function DataTable<TData, TValue>({
               table.getRowModel().rows.map((row) => (
                 <TableRow key={row.id} data-state={row.getIsSelected() && 'selected'}>
                   {row.getVisibleCells().map((cell) => (
-                    <TableCell key={cell.id}>
+                    <TableCell
+                      key={cell.id}
+                      className={cn(cell.column.columnDef.meta?.cellClassName)}
+                    >
                       {flexRender(cell.column.columnDef.cell, cell.getContext())}
                     </TableCell>
                   ))}

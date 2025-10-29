@@ -1,14 +1,6 @@
 'use client'
 
 import { useCallback, useEffect, useState } from 'react'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
 import { Card, CardContent, CardDescription, CardHeader } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { toast } from 'sonner'
@@ -91,13 +83,13 @@ export function ProjectPaymentsTable({
     return (
       <Card>
         <CardHeader>
-          <CardDescription className="text-pay-foreground">
-            Historial de pagos asociados a este proyecto
+          <CardDescription className="text-pay-foreground text-sm font-medium">
+            Historial de pagos
           </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="flex flex-col items-center justify-center py-12 text-center">
-            <p className="text-sm text-muted-foreground">
+            <p className="text-pay-foreground text-sm font-normal">
               No hay pagos registrados para este proyecto
             </p>
           </div>
@@ -108,51 +100,61 @@ export function ProjectPaymentsTable({
 
   return (
     <div className="bg-transparent">
-      <div className="text-pay-foreground pb-2">Historial de pagos asociados a este proyecto</div>
+      <div className="text-pay-foreground text-md font-normal pb-2">Historial de pagos</div>
 
-      <Table className="border border-pay-foreground rounded-md shadow-pay">
-        <TableHeader>
-          <TableRow>
-            <TableHead className="w-16 text-pay-card bg-primary">N°</TableHead>
-            <TableHead className="text-pay-card bg-primary">Fecha</TableHead>
-            {!hidePaymentMethod && <TableHead>Método</TableHead>}
-            <TableHead className="text-pay-card bg-primary">Monto Asignado</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody className="bg-pay-card">
-          {allocations.map((allocation, index) => (
-            <TableRow key={allocation.id}>
-              <TableCell className="font-medium text-pay-foreground">
-                {allocation.payment.type === 'Customer' ? '(*) ' : ''}
-                {index + 1}
-              </TableCell>
-              <TableCell className="font-medium text-pay-foreground">
-                {formatDate(allocation.payment.date, 'short', locale)}
-              </TableCell>
+      <div className="overflow-hidden">
+        <table className="w-full border border-pay-border shadow-pay-shadow rounded-md">
+          <thead className="bg-pay-border">
+            <tr className="border-b">
+              <th className="w-20 py-2 px-4 text-pay-foreground text-md bg-transparent text-end text-sm">
+                Abono
+              </th>
+              <th className="py-2 px-4 text-pay-foreground bg-transparent text-center text-sm">
+                Fecha
+              </th>
               {!hidePaymentMethod && (
-                <TableCell className="font-medium text-pay-foreground">
-                  <div className="flex items-center gap-2">
-                    {allocation.payment.paymentMethod.name}
-                  </div>
-                </TableCell>
+                <th className="py-2 px-4 text-pay-foreground bg-transparent text-sm">Método</th>
               )}
-              <TableCell className="font-medium text-pay-foreground text-right">
-                {formatCurrency(allocation.allocatedAmount, allocation.payment.currency)}
-              </TableCell>
-            </TableRow>
-          ))}
-        </TableBody>
-        <tfoot>
-          <TableRow>
-            <TableCell
-              colSpan={hidePaymentMethod ? 3 : 4}
-              className="text-xs text-pay-foreground pt-2 pb-3 px-4"
-            >
-              (*) Obtenido de pago global de cliente
-            </TableCell>
-          </TableRow>
-        </tfoot>
-      </Table>
+              <th className="w-28 py-2 px-4 text-md text-pay-foreground bg-transparent text-end text-sm">
+                Valor
+              </th>
+            </tr>
+          </thead>
+          <tbody className="bg-pay-card">
+            {allocations.map((allocation, index) => (
+              <tr key={allocation.id} className="border-b hover:bg-muted/50">
+                <td className="py-2 px-4 font-medium text-pay-foreground text-end text-sm">
+                  {allocation.payment.type === 'Customer' ? '(*) ' : ''}
+                  {index + 1}
+                </td>
+                <td className="py-2 px-4 font-medium text-pay-foreground text-center text-sm">
+                  {formatDate(allocation.payment.date, 'short', locale)}
+                </td>
+                {!hidePaymentMethod && (
+                  <td className="py-2 px-4 text-sm text-pay-foreground text-sm">
+                    <div className="flex items-center gap-2">
+                      {allocation.payment.paymentMethod.name}
+                    </div>
+                  </td>
+                )}
+                <td className="py-2 px-4 font-medium text-pay-foreground text-right text-sm">
+                  {formatCurrency(allocation.allocatedAmount, allocation.payment.currency)}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+          <tfoot>
+            <tr>
+              <td
+                colSpan={hidePaymentMethod ? 3 : 4}
+                className="text-xs font-normal text-pay-foreground pt-2 pb-3 px-4"
+              >
+                (*) Obtenido de pago global de cliente
+              </td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
     </div>
   )
 }

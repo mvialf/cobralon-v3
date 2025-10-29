@@ -61,11 +61,13 @@
 
   /* Payments */
   --pay-bg: oklch(0.928 0.006 264.531);
-  --pay-card: oklch(1 0 0);
-  --pay-foreground: oklch(0.21 0.034 264.665);
+  --pay-card: oklch(0.967 0.003 264.542);
+  --pay-foreground: oklch(0.278 0.033 256.848);
   --pay-shadow: 0 4px 6px -1px hsl(0 0% 0% / 0.1), 0 2px 4px -2px hsl(0 0% 0% / 0.1);
-  --pay-orange: oklch(0.705 0.213 47.604);
+  --pay-border: oklch(0.872 0.01 258.338);
+  --pay-orange: oklch(0.646 0.222 41.116);
   --pay-green: oklch(0.627 0.194 149.214);
+  --pay-blue: oklch(0.546 0.245 262.881);
 }
 
 .dark {
@@ -162,8 +164,10 @@
   --color-pay-bg: var(--pay-bg);
   --color-pay-card: var(--pay-card);
   --color-pay-foreground: var(--pay-foreground);
+  --color-pay-border: var(--pay-border);
   --color-pay-orange: var(--pay-orange);
   --color-pay-green: var(--pay-green);
+  --color-pay-blue: var(--pay-blue);
 
   --font-sans: var(--font-sans);
   --font-mono: var(--font-mono);
