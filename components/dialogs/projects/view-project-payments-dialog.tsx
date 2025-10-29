@@ -97,8 +97,10 @@ Porcentaje Pagado: ${project.percentPaid}%
         {/* Header con información del proyecto */}
         <div className="px-4">
           <div className="flex items-center justify-between text-capture-foreground">
-            <span>ESTADO DE CUENTA</span>
-            <span className="text-sm font-normal">{formatDate(new Date(), 'short')}</span>
+            <span className="whitespace-nowrap">ESTADO DE CUENTA</span>
+            <span className="text-xs font-normal whitespace-nowrap">
+              {formatDate(new Date(), 'short')}
+            </span>
           </div>
         </div>
         {isLoading ? (

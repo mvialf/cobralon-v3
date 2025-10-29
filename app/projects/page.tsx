@@ -51,6 +51,11 @@ export default function ProjectsPage() {
     fetchProjects()
   }
 
+  const handleProjectUpdated = () => {
+    // Recargar lista de proyectos después de editar uno
+    fetchProjects()
+  }
+
   const handleProjectDeleted = () => {
     // Recargar lista de proyectos después de eliminar uno
     fetchProjects()
@@ -93,6 +98,7 @@ export default function ProjectsPage() {
 
   const columns = createColumns({
     onProjectDeleted: handleProjectDeleted,
+    onProjectUpdated: handleProjectUpdated,
     statuses: statuses.map((s) => ({
       id: s.id,
       label: s.name,

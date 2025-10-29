@@ -131,7 +131,7 @@ export function ProjectPaymentsTable({
                   {formatDate(allocation.payment.date, 'short', locale)}
                 </td>
                 {!hidePaymentMethod && (
-                  <td className="py-2 px-4 text-sm text-capture-foreground text-sm">
+                  <td className="py-2 px-4 text-capture-foreground text-sm">
                     <div className="flex items-center gap-2">
                       {allocation.payment.paymentMethod.name}
                     </div>

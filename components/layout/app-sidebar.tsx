@@ -8,16 +8,14 @@ import {
   User2,
   FileText,
   ChevronDown,
-  DollarSign,
-  CreditCard,
-  Coins,
   Phone,
   Users,
   FolderKanban,
   Wallet,
   BadgeCheck,
-  ScrollText,
-  FileEdit,
+  MessageSquare,
+  Table,
+  Tags,
 } from 'lucide-react'
 
 import {
@@ -89,44 +87,29 @@ const navigationItems: NavigationItem[] = [
     icon: FileText,
     items: [
       {
+        title: 'DataTable',
+        url: '/examples/data-table',
+        icon: Table,
+      },
+      {
+        title: 'Regional Inputs',
+        url: '/examples/regional-inputs',
+        icon: Phone,
+      },
+      {
+        title: 'Dialogs',
+        url: '/examples/dialogs',
+        icon: MessageSquare,
+      },
+      {
         title: 'Combobox',
         url: '/examples/combobox',
         icon: ChevronDown,
       },
       {
-        title: 'Currency (Config)',
-        url: '/examples/currency',
-        icon: Coins,
-      },
-      {
-        title: 'Currency Input',
-        url: '/examples/currency-input',
-        icon: DollarSign,
-      },
-      {
-        title: 'Phone Input',
-        url: '/examples/phone-input',
-        icon: Phone,
-      },
-      {
-        title: 'RUT Input',
-        url: '/examples/rut-input',
-        icon: CreditCard,
-      },
-      {
-        title: 'Scrollable Dialog',
-        url: '/examples/scrollable-dialog',
-        icon: ScrollText,
-      },
-      {
-        title: 'Dialog con Formulario',
-        url: '/examples/form-dialog',
-        icon: FileEdit,
-      },
-      {
-        title: 'Project Dialog',
-        url: '/examples/project-dialog',
-        icon: FolderKanban,
+        title: 'Team Tags',
+        url: '/examples/team-tags',
+        icon: Tags,
       },
     ],
   },
