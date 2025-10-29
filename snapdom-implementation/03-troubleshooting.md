@@ -617,63 +617,152 @@ const handleCopy = async () => {
 
 ---
 
-## Problema 9: CircularProgressChart no aparece
+## Problema 9: CircularProgressChart no aparece ✅ RESUELTO
 
 ### Síntoma
 
 - Imagen capturada no incluye el gráfico circular de progreso
-- Aparece espacio en blanco donde debería estar el gráfico
+- El texto del porcentaje ("89%") se ve correctamente
+- Los círculos SVG (fondo gris y progreso azul) son **invisibles**
+- Aparece espacio en blanco donde deberían estar los círculos
 
-### Causa Probable
+### Causa Real Identificada
 
-SVG no renderizado completamente al momento de captura
-
-### Diagnóstico
+El componente `CircularProgressChart` usaba el patrón `stroke="currentColor"` con clases de Tailwind CSS para colorear los círculos SVG:
 
 ```tsx
-// Verificar que SVG existe en DOM
-const svg = contentRef.current?.querySelector('svg')
-console.log('SVG encontrado:', !!svg)
-console.log('SVG dimensions:', svg?.getBoundingClientRect())
+// ❌ PATRÓN PROBLEMÁTICO (antes del fix)
+<circle
+  stroke="currentColor"
+  className="text-gray-300"  // Color de fondo
+/>
+<circle
+  stroke="currentColor"
+  className="text-primary"   // Color de progreso
+/>
 ```
 
-### Solución A: Aumentar delay
+**Por qué falla con snapdom:**
+
+1. Tailwind CSS genera clases que establecen `color: rgb(...)` en el elemento
+2. `currentColor` es una keyword CSS que debe resolver dinámicamente al valor de la propiedad `color`
+3. snapdom (la librería de captura) **no puede resolver correctamente** esta cadena de herencia: `Tailwind class → computed color → currentColor → SVG stroke`
+4. Resultado: snapdom captura los elementos SVG pero con `stroke` invisible
+
+**Evidencia:**
+- El texto "89%" se veía porque usa `color` directamente (no currentColor)
+- Los círculos eran invisibles porque dependían de currentColor
+
+### ✅ Solución Definitiva Implementada
+
+Reemplazar `currentColor` con variables CSS del sistema capture-* **directamente** en el atributo `stroke`:
 
 ```tsx
-// Dar más tiempo para que SVG se renderice
+// ✅ SOLUCIÓN CORRECTA (implementada 2025-10-29)
+// components/ui/circular-progress-chart.tsx
+
+{/* Círculo de fondo (gris sutil) */}
+<circle
+  cx="60"
+  cy="60"
+  r="50"
+  fill="none"
+  stroke="var(--capture-border)"  // ← Directo, no currentColor
+  strokeWidth="10"
+/>
+
+{/* Círculo de progreso (azul) */}
+<circle
+  cx="60"
+  cy="60"
+  r="50"
+  fill="none"
+  stroke="var(--capture-blue)"    // ← Directo, no currentColor
+  strokeWidth="10"
+  strokeLinecap="round"
+  strokeDasharray={circumference}
+  strokeDashoffset={strokeDashoffset}
+/>
+
+{/* Texto del porcentaje */}
+<span className="text-capture-foreground">
+  {percentage}%
+</span>
+```
+
+**Por qué funciona:**
+
+- Las variables CSS `var(--capture-*)` se resuelven **antes** del render
+- snapdom puede leer directamente el valor resuelto (ej: `oklch(0.546 0.245 262.881)`)
+- No hay cadena de herencia que resolver, el color es explícito
+
+### Variables CSS Usadas
+
+Definidas en `app/globals.css` (líneas 68-76):
+
+```css
+--capture-border: oklch(0.872 0.01 258.338);     /* Gris sutil para fondo */
+--capture-blue: oklch(0.546 0.245 262.881);      /* Azul para progreso */
+--capture-foreground: oklch(0.278 0.033 256.848); /* Texto oscuro */
+```
+
+### ~~Soluciones Intentadas (NO Funcionaron)~~
+
+Estas soluciones fueron descartadas porque no resolvían el problema real (incompatibilidad currentColor + snapdom):
+
+#### ❌ Solución A: Aumentar delay
+
+```tsx
+// ❌ NO FUNCIONA: El SVG ya estaba renderizado, el problema era el color
 await document.fonts.ready
-await new Promise((resolve) => setTimeout(resolve, 500)) // 500ms en lugar de 300ms
+await new Promise((resolve) => setTimeout(resolve, 500))
 ```
 
-### Solución B: Forzar render del SVG
+#### ❌ Solución B: Forzar render del SVG
 
 ```tsx
-// Antes de capturar, forzar repaint
+// ❌ NO FUNCIONA: Forzar repaint no resuelve el problema de currentColor
 const svg = contentRef.current?.querySelector('svg')
 if (svg) {
   svg.style.display = 'none'
-  svg.offsetHeight  // Force reflow
+  svg.offsetHeight
   svg.style.display = ''
 }
-
-const canvas = await snapdom.toCanvas(...)
 ```
 
-### Solución C: Verificar que no tiene display:none
+#### ❌ Solución C: Verificar visibility
 
 ```tsx
-// CircularProgressChart debe estar visible
-<div className="w-1/3 flex items-center">
-  <CircularProgressChart percentage={percentPaid} /> {/* No debe tener display:none */}
-</div>
+// ❌ NO FUNCIONA: El SVG estaba visible, el problema era el stroke invisible
+<CircularProgressChart percentage={percentPaid} />
 ```
 
-### Verificación
+### Verificación de la Solución
 
-1. Inspeccionar elemento SVG en DevTools
-2. Verificar que tiene width/height
-3. Verificar que no tiene `display: none` o `visibility: hidden`
-4. Capturar y verificar imagen
+1. ✅ Componente renderiza correctamente en browser
+2. ✅ Imagen capturada muestra círculos coloreados
+3. ✅ Texto del porcentaje visible
+4. ✅ Colores consistentes con el sistema capture-* (light mode fijo)
+5. ✅ `npm run typecheck` - passed
+6. ✅ `npm run lint` - passed
+
+### Documentación Actualizada
+
+- **Componente**: JSDoc agregado en `components/ui/circular-progress-chart.tsx` (líneas 7-25)
+- **Troubleshooting**: Este documento (Problema 9 marcado como resuelto)
+- **README**: `components/custom/capture-dialog/README.md` ya menciona el sistema de theming
+
+### Trade-offs Aceptados
+
+- ✅ **Ventaja**: Componente 100% compatible con CaptureDialog
+- ✅ **Ventaja**: Colores consistentes en todas las capturas (light mode fijo)
+- ⚠️ **Trade-off**: Componente siempre usa colores capture-* (no respeta dark mode del sistema)
+  - **Decisión**: Aceptable porque el componente se usa principalmente en capturas
+  - **Alternativa futura**: Si necesitas dark mode dinámico fuera de capturas, crear variante separada del componente
+
+### Fecha de Resolución
+
+**2025-10-29** - Fix implementado y verificado como funcional
 
 ---
 
