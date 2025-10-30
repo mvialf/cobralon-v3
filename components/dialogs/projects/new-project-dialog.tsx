@@ -4,6 +4,7 @@ import * as React from 'react'
 import { Plus } from 'lucide-react'
 import { ProjectForm, ProjectFormHandle } from '@/components/forms/projects/project-form'
 import { type ProjectFormData } from '@/lib/validations/project-validations'
+import { useCreateProject } from '@/hooks/queries/use-projects'
 import { Button } from '@/components/ui/button'
 import {
   ScrollableDialog,
@@ -16,7 +17,6 @@ import {
   ScrollableDialogTitle,
   ScrollableDialogTrigger,
 } from '@/components/ui/scrollable-dialog'
-import { toast } from 'sonner'
 
 interface NewProjectDialogProps {
   onProjectCreated?: () => void
@@ -24,40 +24,29 @@ interface NewProjectDialogProps {
 
 export function NewProjectDialog({ onProjectCreated }: NewProjectDialogProps) {
   const [open, setOpen] = React.useState(false)
-  const [isSubmitting, setIsSubmitting] = React.useState(false)
   const formRef = React.useRef<ProjectFormHandle>(null)
 
+  // ✅ React Query mutation hook reemplaza fetch manual
+  const createMutation = useCreateProject()
+
   const handleSubmit = async (data: ProjectFormData) => {
-    setIsSubmitting(true)
     try {
       // Calcular total antes de enviar al backend
       const tax = data.subtotal * (data.taxRate / 100)
       const total = data.subtotal + tax
 
-      const response = await fetch('/api/projects', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          ...data,
-          total, // Enviar total calculado
-        }),
+      // ✅ Mutation hook maneja loading, errores, invalidación y toast
+      await createMutation.mutateAsync({
+        ...data,
+        total,
+        totalAmount: total, // Campo legacy requerido por schema
       })
 
-      if (!response.ok) {
-        const error = await response.json()
-        throw new Error(error.error || 'Error al crear proyecto')
-      }
-
-      toast.success('Proyecto creado exitosamente')
       setOpen(false)
       onProjectCreated?.()
     } catch (error) {
+      // Error ya manejado por el hook (toast.error)
       console.error('Error al crear proyecto:', error)
-      toast.error(error instanceof Error ? error.message : 'Error al crear proyecto')
-    } finally {
-      setIsSubmitting(false)
     }
   }
 
@@ -82,7 +71,7 @@ export function NewProjectDialog({ onProjectCreated }: NewProjectDialogProps) {
               <ProjectForm
                 ref={formRef}
                 onSubmit={handleSubmit}
-                isSubmitting={isSubmitting}
+                isSubmitting={createMutation.isPending}
                 showSubmitButton={false}
               />
             </div>
@@ -90,12 +79,12 @@ export function NewProjectDialog({ onProjectCreated }: NewProjectDialogProps) {
         </ScrollableDialogBody>
         <ScrollableDialogFooter>
           <ScrollableDialogClose asChild>
-            <Button variant="outline" disabled={isSubmitting}>
+            <Button variant="outline" disabled={createMutation.isPending}>
               Cancelar
             </Button>
           </ScrollableDialogClose>
-          <Button onClick={() => formRef.current?.submit()} disabled={isSubmitting}>
-            {isSubmitting ? 'Guardando...' : 'Guardar Proyecto'}
+          <Button onClick={() => formRef.current?.submit()} disabled={createMutation.isPending}>
+            {createMutation.isPending ? 'Guardando...' : 'Guardar Proyecto'}
           </Button>
         </ScrollableDialogFooter>
       </ScrollableDialogContent>

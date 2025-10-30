@@ -1,110 +1,42 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState } from 'react'
 import { Row } from '@tanstack/react-table'
 import { AppLayout } from '@/components/layout/app-layout'
 import { NewProjectDialog } from '@/components/dialogs/projects/new-project-dialog'
 import { DataTable } from '@/components/data-table/data-table'
 import { createColumns, type Project } from './columns'
-import { toast } from 'sonner'
-
-interface ProjectStatus {
-  id: string
-  name: string
-  color: {
-    id: string
-    bgClass: string
-  }
-}
+import { useProjectsWithMetadata, useUpdateProjectStatus } from '@/hooks/queries/use-projects'
 
 export default function ProjectsPage() {
-  const [projects, setProjects] = useState<Project[]>([])
-  const [statuses, setStatuses] = useState<ProjectStatus[]>([])
-  const [isLoading, setIsLoading] = useState(true)
-  const [projectState, setProjectState] = useState<'Activo' | 'Finalizado' | 'all'>('Activo') // Default: solo activos
-  const [updatingProjectId, setUpdatingProjectId] = useState<string | null>(null)
+  const [projectState, setProjectState] = useState<'Activo' | 'Finalizado' | 'all'>('Activo')
 
-  const fetchProjects = useCallback(async () => {
-    try {
-      setIsLoading(true)
-      // API combinada: proyectos + metadata en una sola llamada
-      const response = await fetch(`/api/projects-with-metadata?projectState=${projectState}`)
-      if (!response.ok) throw new Error('Error al cargar proyectos')
+  // ✅ React Query hook reemplaza todo el state management manual
+  const { data, isLoading } = useProjectsWithMetadata({ projectState })
 
-      const data = await response.json()
-      setProjects(data.projects)
-      setStatuses(data.metadata.projectStatuses)
-    } catch (error) {
-      console.error('Error:', error)
-    } finally {
-      setIsLoading(false)
-    }
-  }, [projectState])
+  // ✅ Mutation hook para actualizar estado de proyecto
+  const updateStatusMutation = useUpdateProjectStatus()
 
-  // Cargar proyectos y statuses desde la API combinada
-  useEffect(() => {
-    fetchProjects()
-  }, [fetchProjects]) // Refetch cuando cambia fetchProjects
+  // Extraer data del hook (con fallbacks)
+  const projects = data?.projects || []
+  const statuses = data?.metadata.projectStatuses || []
 
-  const handleProjectCreated = () => {
-    // Recargar lista de proyectos después de crear uno nuevo
-    fetchProjects()
-  }
-
-  const handleProjectUpdated = () => {
-    // Recargar lista de proyectos después de editar uno
-    fetchProjects()
-  }
-
-  const handleProjectDeleted = () => {
-    // Recargar lista de proyectos después de eliminar uno
-    fetchProjects()
-  }
-
+  // ✅ Mutation hook maneja loading state, errores y auto-invalidación
   const handleStatusChange = async (projectId: string, newStatusId: string) => {
-    try {
-      setUpdatingProjectId(projectId)
-
-      const response = await fetch(`/api/projects/${projectId}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ projectStatusId: newStatusId }),
-      })
-
-      if (!response.ok) {
-        const error = await response.json()
-        throw new Error(error.error || 'Error al actualizar estado')
-      }
-
-      // Actualizar proyecto en el estado local para feedback inmediato
-      setProjects((prev) =>
-        prev.map((p) => {
-          if (p.id === projectId) {
-            const newStatus = statuses.find((s) => s.id === newStatusId)
-            return newStatus ? { ...p, projectStatus: newStatus } : p
-          }
-          return p
-        })
-      )
-
-      toast.success('Estado actualizado correctamente')
-    } catch (error) {
-      console.error('Error al actualizar estado:', error)
-      toast.error(error instanceof Error ? error.message : 'Error al actualizar estado')
-    } finally {
-      setUpdatingProjectId(null)
-    }
+    await updateStatusMutation.mutateAsync({ projectId, statusId: newStatusId })
   }
 
   const columns = createColumns({
-    onProjectDeleted: handleProjectDeleted,
-    onProjectUpdated: handleProjectUpdated,
+    // ✅ React Query auto-invalida queries, no necesitamos callbacks manuales
     statuses: statuses.map((s) => ({
       id: s.id,
       label: s.name,
       color: { bgClass: s.color.bgClass },
     })),
-    updatingProjectId,
+    // ✅ Mutation hook expone el projectId que está siendo actualizado
+    updatingProjectId: updateStatusMutation.isPending
+      ? updateStatusMutation.variables?.projectId
+      : null,
   })
 
   // Función de filtrado global: busca en projectNumber, customer.name y projectName
@@ -154,7 +86,7 @@ export default function ProjectsPage() {
       pageTitle="Proyectos"
       pageDescription="Gestiona tus proyectos y su información"
       breadcrumbs={[{ label: 'Inicio', href: '/' }, { label: 'Proyectos' }]}
-      action={<NewProjectDialog onProjectCreated={handleProjectCreated} />}
+      action={<NewProjectDialog />}
     >
       <div className="space-y-4">
         {isLoading ? (
@@ -180,7 +112,6 @@ export default function ProjectsPage() {
                 title: 'Estado Proyecto',
                 options: projectStateFilterOptions,
                 onFilterChange: (values) => {
-                  // Si hay selección, usar el primer valor; si no, 'all'
                   const newState = values.length > 0 ? values[0] : 'all'
                   setProjectState(newState as 'Activo' | 'Finalizado' | 'all')
                 },

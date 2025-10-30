@@ -53,6 +53,22 @@ interface ColumnsProps {
   updatingProjectId?: string | null
 }
 
+/**
+ * Type-safe interface for table meta in Projects DataTable
+ * Defines callbacks available through table.options.meta
+ */
+interface ProjectsTableMeta {
+  /** Callback to handle project status change */
+  handleStatusChange?: (projectId: string, newStatusId: string) => Promise<void>
+}
+
+/**
+ * Type guard to safely access table meta with proper TypeScript inference
+ */
+function getProjectsTableMeta(table: any): ProjectsTableMeta {
+  return (table.options.meta || {}) as ProjectsTableMeta
+}
+
 export const createColumns = ({
   onProjectDeleted,
   onProjectUpdated,
@@ -84,8 +100,8 @@ export const createColumns = ({
       const project = row.original
       const status = project.projectStatus
 
-      // Obtener el callback de actualización desde meta
-      const handleStatusChange = (table.options.meta as any)?.handleStatusChange
+      // Obtener el callback de actualización desde meta (type-safe)
+      const { handleStatusChange } = getProjectsTableMeta(table)
 
       // Determinar si este proyecto específico está siendo actualizado
       const isPending = updatingProjectId === project.id
