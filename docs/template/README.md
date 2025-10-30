@@ -82,7 +82,7 @@ http://localhost:3000
 
 ### Guías de Desarrollo
 
-- [**Building Features**](guides/building-features.md) - ⭐ Guía práctica de implementación de features
+- [**Building Features**](guides/building-features/) - ⭐ Guía práctica modular de implementación de features
 - [**Create DataTable Page**](guides/create-new-datatable-page.md) - Tutorial paso a paso para crear tablas
 
 ### Metodología
@@ -90,7 +90,7 @@ http://localhost:3000
 - [**Documentation**](methodology/documentation.md) - Cómo usar ADRs + Implementation Log
 - [**Workflow**](methodology/workflow.md) - Proceso de desarrollo (WIP)
 - [**Testing**](methodology/testing.md) - Estrategia de testing (WIP)
-- [**Patterns**](methodology/patterns.md) - Code patterns recomendados
+- [**Patterns**](methodology/patterns/README.md) - Code patterns recomendados
 
 ### Decisiones Arquitecturales (ADRs)
 
@@ -195,7 +195,7 @@ Después de instalar el template:
    - Drizzle ORM
    - Supabase
 
-3. **Implementar Features** → Ver [Building Features Guide](guides/building-features.md)
+3. **Implementar Features** → Ver [Building Features Guide](guides/building-features/)
    - CRUD operations
    - Forms con React Hook Form + Zod
    - Data tables con TanStack Table

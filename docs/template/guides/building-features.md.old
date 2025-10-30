@@ -1928,7 +1928,7 @@ Is it just displaying data?
 ## Related Documentation
 
 - [Architecture Overview](../architecture/overview.md) - High-level architecture
-- [Code Patterns](../methodology/patterns.md) - Specific code patterns
+- [Code Patterns](../methodology/patterns/README.md) - Specific code patterns
 - [Testing Strategy](../methodology/testing.md) - Comprehensive testing guide
 - [Create DataTable Page](create-new-datatable-page.md) - DataTable tutorial
 - [Database Setup](database-setup.md) - Prisma + Neon setup
@@ -1961,4 +1961,4 @@ Esta guía cubre los 4 patterns más comunes en un SaaS (80% de casos):
 
 ---
 
-**Questions?** Check [Code Patterns](../methodology/patterns.md) for more specific patterns.
+**Questions?** Check [Code Patterns](../methodology/patterns/README.md) for more specific patterns.

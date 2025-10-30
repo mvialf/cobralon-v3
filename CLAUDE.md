@@ -145,12 +145,12 @@ Usa agentes cuando la búsqueda requiere **múltiples pasos** o **análisis cont
 @docs/template/README.md # Introducción rápida al template
 @docs/template/architecture/overview.md # Visión arquitectural general
 @docs/template/architecture/stack.md # Stack tecnológico, versiones y configuración
-@docs/template/guides/building-features.md # ⭐ Guía práctica: cómo implementar features paso a paso
+@docs/template/guides/building-features/ # ⭐ Guía práctica modular: cómo implementar features paso a paso
 @docs/template/components/app-layout.md # API del AppLayout
 @docs/template/components/app-sidebar.md # Configurar sidebar navegación
 @docs/template/methodology/workflow.md # Proceso de desarrollo recomendado
 @docs/template/methodology/testing.md # Estrategia de testing recomendada
-@docs/template/methodology/patterns.md # Patrones de código y anti-patrones
+@docs/template/methodology/patterns/README.md # Patrones de código y anti-patrones
 @docs/template/methodology/documentation.md # Cómo usar ADRs + Implementation Log
 
 ### 📘 Decisiones Arquitecturales del Template (ADRs)
@@ -219,7 +219,7 @@ npx shadcn@latest add [component-name]
 
 ### Implementar Features
 
-**⭐ Guía completa:** [docs/template/guides/building-features.md](docs/template/guides/building-features.md)
+**⭐ Guía completa:** [docs/template/guides/building-features/](docs/template/guides/building-features/)
 
 **4 patrones principales:**
 

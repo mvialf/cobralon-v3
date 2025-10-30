@@ -1,8 +1,24 @@
+# ⚠️ DEPRECADO - Este archivo ha sido reemplazado
+
+> **🔴 AVISO IMPORTANTE:** Este archivo monolítico ha sido dividido en una estructura modular para mejor organización y mantenibilidad.
+>
+> **📂 Nueva ubicación:** [patterns/README.md](patterns/README.md)
+>
+> **✨ Ventajas de la nueva estructura:**
+> - 16 archivos organizados por categoría (Fundamentals, UI Patterns, Anti-Patterns)
+> - Navegación más fácil y rápida
+> - Mejor para búsqueda y mantenimiento
+> - Documentación más enfocada por tema
+>
+> **➡️ Por favor, usa la nueva estructura modular:** [patterns/README.md](patterns/README.md)
+
+---
+
 # Patrones de Código y Anti-Patrones
 
 Este documento describe los patrones de código recomendados y anti-patrones a evitar en proyectos basados en este template.
 
-> **💡 Para workflow completo de implementación:** Ver [Building Features Guide](../guides/building-features.md)
+> **💡 Para workflow completo de implementación:** Ver [Building Features Guide](../guides/building-features/)
 
 > **Nota:** Esta es una guía base. Expándela según las convenciones de tu equipo.
 
