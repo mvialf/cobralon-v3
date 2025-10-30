@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
+import { logger, generateRunId } from '@/lib/logger'
 
 /**
  * POST /api/cron/mark-installments-paid
@@ -19,13 +20,25 @@ import { prisma } from '@/lib/db'
  * - Ver: https://vercel.com/docs/cron-jobs/manage-cron-jobs
  */
 export async function POST(request: Request) {
+  const runId = generateRunId()
+  const startTime = performance.now()
+
+  // Child logger con contexto del cron job
+  const cronLogger = logger.child({
+    job: 'mark-installments-paid',
+    runId,
+  })
+
+  cronLogger.info('Cron job started')
+
   try {
     // Verificar autenticación del cron job
+    cronLogger.debug('Validating authentication')
     const authHeader = request.headers.get('authorization')
     const cronSecret = process.env.CRON_SECRET
 
     if (!cronSecret) {
-      console.error('CRON_SECRET no está configurado')
+      cronLogger.error('CRON_SECRET is not configured')
       return NextResponse.json(
         { error: 'CRON_SECRET no está configurado en el servidor' },
         { status: 500 }
@@ -34,16 +47,20 @@ export async function POST(request: Request) {
 
     // Verificar que el header de autorización coincide con el secret
     if (authHeader !== `Bearer ${cronSecret}`) {
-      console.error('Intento de acceso no autorizado al cron job')
+      cronLogger.warn({ authHeader: authHeader ? 'present' : 'missing' }, 'Unauthorized access attempt')
       return NextResponse.json(
         { error: 'No autorizado. Este endpoint es solo para Vercel Cron Jobs.' },
         { status: 401 }
       )
     }
 
+    cronLogger.debug('Authentication validated')
+
     // Obtener fecha actual del servidor (sin hora para comparación)
     const today = new Date()
     today.setHours(0, 0, 0, 0)
+
+    cronLogger.debug({ today: today.toISOString() }, 'Fetching pending installments')
 
     // Buscar todas las cuotas pendientes cuya fecha de vencimiento ya pasó o es hoy
     const installmentsToPay = await prisma.installment.findMany({
@@ -64,6 +81,7 @@ export async function POST(request: Request) {
             id: true,
             customer: {
               select: {
+                id: true,
                 name: true,
               },
             },
@@ -72,8 +90,13 @@ export async function POST(request: Request) {
       },
     })
 
+    cronLogger.info({ found: installmentsToPay.length }, 'Pending installments found')
+
     // Si no hay cuotas para marcar como pagadas
     if (installmentsToPay.length === 0) {
+      const duration = Math.round(performance.now() - startTime)
+      cronLogger.info({ duration }, 'No installments to mark as paid')
+
       return NextResponse.json({
         success: true,
         message: 'No hay cuotas pendientes para marcar como pagadas',
@@ -82,7 +105,37 @@ export async function POST(request: Request) {
       })
     }
 
+    // Log detallado por cliente (para auditoría)
+    const byCustomer = installmentsToPay.reduce(
+      (acc, i) => {
+        const customerId = i.payment.customer.id
+        if (!acc[customerId]) {
+          acc[customerId] = {
+            name: i.payment.customer.name,
+            count: 0,
+            total: 0,
+          }
+        }
+        acc[customerId].count++
+        acc[customerId].total += Number(i.amount)
+        return acc
+      },
+      {} as Record<string, { name: string; count: number; total: number }>
+    )
+
+    cronLogger.debug(
+      {
+        customers: Object.values(byCustomer).map((c) => ({
+          name: c.name,
+          installments: c.count,
+          totalAmount: c.total,
+        })),
+      },
+      'Installments grouped by customer'
+    )
+
     // Marcar todas las cuotas como pagadas (batch update)
+    cronLogger.info({ count: installmentsToPay.length }, 'Updating installments to paid status')
     const installmentIds = installmentsToPay.map((i) => i.id)
     const result = await prisma.installment.updateMany({
       where: {
@@ -96,13 +149,34 @@ export async function POST(request: Request) {
       },
     })
 
-    // Log detallado para debugging
-    console.log(`[CRON] Cuotas marcadas como pagadas: ${result.count}`)
-    installmentsToPay.forEach((installment) => {
-      console.log(
-        `  - Cuota #${installment.installmentNumber} de ${installment.payment.customer.name} - Vencimiento: ${new Date(installment.dueDate).toLocaleDateString('es-CL')}`
-      )
-    })
+    const duration = Math.round(performance.now() - startTime)
+
+    // Log detallado de cada cuota (solo en debug)
+    if (logger.level === 'debug') {
+      installmentsToPay.forEach((installment) => {
+        cronLogger.debug(
+          {
+            installmentId: installment.id,
+            installmentNumber: installment.installmentNumber,
+            customerId: installment.payment.customer.id,
+            customerName: installment.payment.customer.name,
+            dueDate: installment.dueDate.toISOString(),
+            amount: Number(installment.amount),
+          },
+          'Installment marked as paid'
+        )
+      })
+    }
+
+    cronLogger.info(
+      {
+        updated: result.count,
+        customerCount: Object.keys(byCustomer).length,
+        totalAmount: Object.values(byCustomer).reduce((sum, c) => sum + c.total, 0),
+        duration,
+      },
+      'Cron job completed successfully'
+    )
 
     return NextResponse.json({
       success: true,
@@ -117,7 +191,16 @@ export async function POST(request: Request) {
       timestamp: new Date().toISOString(),
     })
   } catch (error) {
-    console.error('[CRON] Error al marcar cuotas como pagadas:', error)
+    const duration = Math.round(performance.now() - startTime)
+
+    cronLogger.error(
+      {
+        err: error,
+        duration,
+      },
+      'Cron job failed'
+    )
+
     return NextResponse.json(
       {
         error: 'Error al marcar cuotas como pagadas',

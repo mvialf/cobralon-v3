@@ -3,6 +3,7 @@ import { prisma } from '@/lib/db'
 import { Decimal } from '@prisma/client/runtime/library'
 import { ProjectWhereInput } from '@/types/api'
 import { calculateProjectBalance } from '@/lib/business-logic/project-balance'
+import { withLogging } from '@/lib/logger-middleware'
 
 /**
  * GET /api/projects
@@ -19,16 +20,30 @@ import { calculateProjectBalance } from '@/lib/business-logic/project-balance'
  *       - "Finalizado": Proyectos finalizados (status.isFinal = true AND balance = 0)
  *       - "all": Todos los proyectos
  */
-export async function GET(request: Request) {
-  try {
-    const { searchParams } = new URL(request.url)
-    const page = parseInt(searchParams.get('page') || '1')
-    const limit = Math.min(parseInt(searchParams.get('limit') || '10'), 100)
-    const search = searchParams.get('search') || ''
-    const customerId = searchParams.get('customerId') || ''
-    const projectState = searchParams.get('projectState') || 'Activo' // Default: solo activos
+export const GET = withLogging(async (request, logger) => {
+  const { searchParams } = new URL(request.url)
+  const page = parseInt(searchParams.get('page') || '1')
+  const limit = Math.min(parseInt(searchParams.get('limit') || '10'), 100)
+  const search = searchParams.get('search') || ''
+  const customerId = searchParams.get('customerId') || ''
+  const projectState = searchParams.get('projectState') || 'Activo' // Default: solo activos
 
-    const skip = (page - 1) * limit
+  logger.debug(
+    {
+      page,
+      limit,
+      filters: {
+        search: search || undefined,
+        customerId: customerId || undefined,
+        projectState,
+      },
+    },
+    'Fetching projects with filters'
+  )
+
+  const skip = (page - 1) * limit
+
+  try {
 
     // Construir filtro de búsqueda
     const where: ProjectWhereInput = {}
@@ -129,6 +144,15 @@ export async function GET(request: Request) {
       return true
     })
 
+    logger.info(
+      {
+        found: filteredProjects.length,
+        total: filteredProjects.length,
+        page,
+      },
+      'Projects fetched successfully'
+    )
+
     return NextResponse.json({
       projects: filteredProjects,
       pagination: {
@@ -139,10 +163,10 @@ export async function GET(request: Request) {
       },
     })
   } catch (error) {
-    console.error('Error fetching projects:', error)
+    logger.error({ err: error }, 'Error fetching projects')
     return NextResponse.json({ error: 'Error al obtener proyectos' }, { status: 500 })
   }
-}
+})
 
 /**
  * POST /api/projects
@@ -163,69 +187,93 @@ export async function GET(request: Request) {
  *   - squareMeters: number (default: 0)
  *   - description: string (opcional)
  */
-export async function POST(request: Request) {
-  try {
-    const body = await request.json()
-    const {
-      customerId,
-      projectNumber,
-      projectName,
-      phone,
-      street,
-      apartment,
-      comuna,
-      region,
-      projectStatusId,
-      date,
-      subtotal,
-      taxRate,
-      total,
-      totalAmount, // Para sistema de pagos
-      currency, // Para sistema de pagos
-      windowsCount,
-      squareMeters,
-      description,
-    } = body
+export const POST = withLogging(async (request, logger) => {
+  const body = await request.json()
+  const {
+    customerId,
+    projectNumber,
+    projectName,
+    phone,
+    street,
+    apartment,
+    comuna,
+    region,
+    projectStatusId,
+    date,
+    subtotal,
+    taxRate,
+    total,
+    totalAmount, // Para sistema de pagos
+    currency, // Para sistema de pagos
+    windowsCount,
+    squareMeters,
+    description,
+  } = body
 
+  // Child logger con contexto de negocio
+  const projectLogger = logger.child({
+    customerId,
+    projectNumber,
+    subtotal,
+    currency: currency || 'CLP',
+  })
+
+  projectLogger.info('Project creation requested')
+
+  try {
     // Validaciones b�sicas
+    projectLogger.debug('Starting basic validations')
+
     if (!customerId || typeof customerId !== 'string') {
+      projectLogger.warn('Missing or invalid customerId')
       return NextResponse.json({ error: 'El cliente es requerido' }, { status: 400 })
     }
 
     if (!projectNumber || typeof projectNumber !== 'string' || projectNumber.trim().length === 0) {
+      projectLogger.warn('Missing or invalid projectNumber')
       return NextResponse.json({ error: 'El n�mero de proyecto es requerido' }, { status: 400 })
     }
 
     if (!phone || typeof phone !== 'string' || phone.trim().length === 0) {
+      projectLogger.warn('Missing or invalid phone')
       return NextResponse.json({ error: 'El tel�fono es requerido' }, { status: 400 })
     }
 
     if (!street || typeof street !== 'string' || street.trim().length === 0) {
+      projectLogger.warn('Missing or invalid street')
       return NextResponse.json({ error: 'La calle es obligatoria' }, { status: 400 })
     }
 
     if (!comuna || typeof comuna !== 'string' || comuna.trim().length === 0) {
+      projectLogger.warn('Missing or invalid comuna')
       return NextResponse.json({ error: 'La comuna es obligatoria' }, { status: 400 })
     }
 
     if (!region || typeof region !== 'string' || region.trim().length === 0) {
+      projectLogger.warn('Missing or invalid region')
       return NextResponse.json({ error: 'La región es obligatoria' }, { status: 400 })
     }
 
     if (subtotal === undefined || subtotal === null || typeof subtotal !== 'number') {
+      projectLogger.warn({ subtotal }, 'Missing or invalid subtotal')
       return NextResponse.json({ error: 'El subtotal es requerido' }, { status: 400 })
     }
 
     if (subtotal <= 0) {
+      projectLogger.warn({ subtotal }, 'Subtotal must be positive')
       return NextResponse.json({ error: 'El subtotal debe ser mayor a 0' }, { status: 400 })
     }
 
+    projectLogger.debug('Basic validations passed')
+
     // Verificar que el customer existe
+    projectLogger.debug({ customerId }, 'Validating customer exists')
     const customerExists = await prisma.customer.findUnique({
       where: { id: customerId },
     })
 
     if (!customerExists) {
+      projectLogger.warn('Customer not found')
       return NextResponse.json({ error: 'El cliente no existe' }, { status: 404 })
     }
 
@@ -235,6 +283,14 @@ export async function POST(request: Request) {
 
     // totalAmount es el mismo que calculatedTotal si no viene en el body
     const finalTotalAmount = totalAmount ?? calculatedTotal
+
+    projectLogger.info(
+      {
+        calculatedTotal,
+        taxRate: finalTaxRate,
+      },
+      'Creating project in database'
+    )
 
     // Crear proyecto
     const project = await prisma.project.create({
@@ -280,9 +336,17 @@ export async function POST(request: Request) {
       },
     })
 
+    projectLogger.info(
+      {
+        projectId: project.id,
+        projectNumber: project.projectNumber,
+      },
+      'Project created successfully'
+    )
+
     return NextResponse.json(project, { status: 201 })
   } catch (error) {
-    console.error('Error creating project:', error)
+    projectLogger.error({ err: error }, 'Error creating project')
     return NextResponse.json({ error: 'Error al crear proyecto' }, { status: 500 })
   }
-}
+})

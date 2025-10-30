@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { Decimal } from '@prisma/client/runtime/library'
 import { AllocationInput, PaymentWhereInput } from '@/types/api'
+import { withLogging } from '@/lib/logger-middleware'
 
 /**
  * GET /api/payments
@@ -16,45 +17,58 @@ import { AllocationInput, PaymentWhereInput } from '@/types/api'
  *   - startDate: filtrar pagos desde esta fecha (ISO string)
  *   - endDate: filtrar pagos hasta esta fecha (ISO string)
  */
-export async function GET(request: Request) {
+export const GET = withLogging(async (request, logger) => {
+  const { searchParams } = new URL(request.url)
+  const page = parseInt(searchParams.get('page') || '1')
+  const limit = Math.min(parseInt(searchParams.get('limit') || '10'), 100)
+  const customerId = searchParams.get('customerId') || ''
+  const projectId = searchParams.get('projectId') || ''
+  const startDate = searchParams.get('startDate') || ''
+  const endDate = searchParams.get('endDate') || ''
+
+  logger.debug(
+    {
+      page,
+      limit,
+      filters: {
+        customerId: customerId || undefined,
+        projectId: projectId || undefined,
+        dateRange: startDate || endDate ? { startDate, endDate } : undefined,
+      },
+    },
+    'Fetching payments with filters'
+  )
+
+  const skip = (page - 1) * limit
+
+  // Construir filtro dinámico
+  const where: PaymentWhereInput = {}
+
+  if (customerId) {
+    where.customerId = customerId
+  }
+
+  // Filtro de rango de fechas
+  if (startDate || endDate) {
+    where.date = {}
+    if (startDate) {
+      where.date.gte = new Date(startDate)
+    }
+    if (endDate) {
+      where.date.lte = new Date(endDate)
+    }
+  }
+
+  // Filtro por proyecto (via allocations)
+  if (projectId) {
+    where.allocations = {
+      some: {
+        projectId,
+      },
+    }
+  }
+
   try {
-    const { searchParams } = new URL(request.url)
-    const page = parseInt(searchParams.get('page') || '1')
-    const limit = Math.min(parseInt(searchParams.get('limit') || '10'), 100)
-    const customerId = searchParams.get('customerId') || ''
-    const projectId = searchParams.get('projectId') || ''
-    const startDate = searchParams.get('startDate') || ''
-    const endDate = searchParams.get('endDate') || ''
-
-    const skip = (page - 1) * limit
-
-    // Construir filtro dinámico
-    const where: PaymentWhereInput = {}
-
-    if (customerId) {
-      where.customerId = customerId
-    }
-
-    // Filtro de rango de fechas
-    if (startDate || endDate) {
-      where.date = {}
-      if (startDate) {
-        where.date.gte = new Date(startDate)
-      }
-      if (endDate) {
-        where.date.lte = new Date(endDate)
-      }
-    }
-
-    // Filtro por proyecto (via allocations)
-    if (projectId) {
-      where.allocations = {
-        some: {
-          projectId,
-        },
-      }
-    }
-
     // Obtener pagos y total count
     const [payments, total] = await Promise.all([
       prisma.payment.findMany({
@@ -103,6 +117,15 @@ export async function GET(request: Request) {
       prisma.payment.count({ where }),
     ])
 
+    logger.info(
+      {
+        found: payments.length,
+        total,
+        page,
+      },
+      'Payments fetched successfully'
+    )
+
     return NextResponse.json({
       payments,
       pagination: {
@@ -113,10 +136,10 @@ export async function GET(request: Request) {
       },
     })
   } catch (error) {
-    console.error('Error fetching payments:', error)
+    logger.error({ err: error }, 'Error fetching payments')
     return NextResponse.json({ error: 'Error al obtener pagos' }, { status: 500 })
   }
-}
+})
 
 /**
  * POST /api/payments
@@ -133,24 +156,38 @@ export async function GET(request: Request) {
  *   - notes: string (opcional)
  *   - allocations: Array<{ projectId: string, allocatedAmount: number }> (min 1)
  */
-export async function POST(request: Request) {
-  try {
-    const body = await request.json()
-    const {
-      type,
-      customerId,
-      amount,
-      currency,
-      date,
-      paymentMethodId,
-      reference,
-      notes,
-      allocations,
-      selectedInstallments,
-    } = body
+export const POST = withLogging(async (request, logger) => {
+  const body = await request.json()
+  const {
+    type,
+    customerId,
+    amount,
+    currency,
+    date,
+    paymentMethodId,
+    reference,
+    notes,
+    allocations,
+    selectedInstallments,
+  } = body
 
+  // Child logger con contexto de negocio
+  const paymentLogger = logger.child({
+    type,
+    customerId,
+    amount,
+    currency,
+    allocationCount: allocations?.length,
+  })
+
+  paymentLogger.info('Payment creation requested')
+
+  try {
     // Validaciones básicas
+    paymentLogger.debug('Starting basic validations')
+
     if (!type || (type !== 'Project' && type !== 'Customer')) {
+      paymentLogger.warn({ providedType: type }, 'Invalid payment type')
       return NextResponse.json(
         { error: 'El tipo de pago debe ser "Project" o "Customer"' },
         { status: 400 }
@@ -158,14 +195,17 @@ export async function POST(request: Request) {
     }
 
     if (!customerId || typeof customerId !== 'string') {
+      paymentLogger.warn('Missing or invalid customerId')
       return NextResponse.json({ error: 'El cliente es requerido' }, { status: 400 })
     }
 
     if (!amount || typeof amount !== 'number' || amount <= 0) {
+      paymentLogger.warn({ amount }, 'Invalid amount')
       return NextResponse.json({ error: 'El monto debe ser mayor a 0' }, { status: 400 })
     }
 
     if (!currency || typeof currency !== 'string' || currency.length !== 3) {
+      paymentLogger.warn({ currency }, 'Invalid currency')
       return NextResponse.json(
         { error: 'La moneda debe ser un código de 3 letras' },
         { status: 400 }
@@ -173,14 +213,17 @@ export async function POST(request: Request) {
     }
 
     if (!date) {
+      paymentLogger.warn('Missing date')
       return NextResponse.json({ error: 'La fecha es requerida' }, { status: 400 })
     }
 
     if (!paymentMethodId || typeof paymentMethodId !== 'string') {
+      paymentLogger.warn('Missing or invalid paymentMethodId')
       return NextResponse.json({ error: 'El método de pago es requerido' }, { status: 400 })
     }
 
     if (!allocations || !Array.isArray(allocations) || allocations.length === 0) {
+      paymentLogger.warn('Missing or empty allocations')
       return NextResponse.json(
         { error: 'Debe asignar el pago a al menos un proyecto' },
         { status: 400 }
@@ -189,6 +232,10 @@ export async function POST(request: Request) {
 
     // Validación estricta: type debe coincidir con número de allocations
     if (type === 'Project' && allocations.length !== 1) {
+      paymentLogger.warn(
+        { expected: 1, actual: allocations.length },
+        'Project payment must have exactly 1 allocation'
+      )
       return NextResponse.json(
         { error: 'Un pago tipo "Project" debe tener exactamente 1 asignación' },
         { status: 400 }
@@ -196,33 +243,44 @@ export async function POST(request: Request) {
     }
 
     if (type === 'Customer' && allocations.length < 1) {
+      paymentLogger.warn(
+        { actual: allocations.length },
+        'Customer payment must have at least 1 allocation'
+      )
       return NextResponse.json(
         { error: 'Un pago tipo "Customer" debe tener al menos 1 asignación' },
         { status: 400 }
       )
     }
 
+    paymentLogger.debug('Basic validations passed')
+
     // Verificar que el customer existe
+    paymentLogger.debug('Validating customer exists')
     const customerExists = await prisma.customer.findUnique({
       where: { id: customerId },
     })
 
     if (!customerExists) {
+      paymentLogger.warn('Customer not found')
       return NextResponse.json({ error: 'El cliente no existe' }, { status: 404 })
     }
 
     // Verificar que el payment method existe
+    paymentLogger.debug({ paymentMethodId }, 'Validating payment method exists')
     const paymentMethod = await prisma.paymentMethod.findUnique({
       where: { id: paymentMethodId },
     })
 
     if (!paymentMethod) {
+      paymentLogger.warn('Payment method not found')
       return NextResponse.json({ error: 'El método de pago no existe' }, { status: 404 })
     }
 
     // Verificar que no haya projectIds duplicados
     const projectIds = allocations.map((a: AllocationInput) => a.projectId)
     if (new Set(projectIds).size !== projectIds.length) {
+      paymentLogger.warn({ projectIds }, 'Duplicate project IDs detected')
       return NextResponse.json(
         { error: 'No puede asignar el mismo proyecto dos veces' },
         { status: 400 }
@@ -230,6 +288,7 @@ export async function POST(request: Request) {
     }
 
     // Verificar que todos los proyectos existen y pertenecen al mismo cliente
+    paymentLogger.debug({ projectIds }, 'Validating projects')
     const projects = await prisma.project.findMany({
       where: {
         id: { in: projectIds },
@@ -242,12 +301,17 @@ export async function POST(request: Request) {
     })
 
     if (projects.length !== projectIds.length) {
+      paymentLogger.warn(
+        { expected: projectIds.length, found: projects.length },
+        'Some projects not found'
+      )
       return NextResponse.json({ error: 'Uno o más proyectos no existen' }, { status: 404 })
     }
 
     // Verificar que todos los proyectos pertenecen al mismo cliente
     const allSameCustomer = projects.every((p) => p.customerId === customerId)
     if (!allSameCustomer) {
+      paymentLogger.warn('Not all projects belong to same customer')
       return NextResponse.json(
         { error: 'Todos los proyectos deben pertenecer al mismo cliente' },
         { status: 400 }
@@ -257,6 +321,7 @@ export async function POST(request: Request) {
     // Verificar que todos los proyectos tienen la misma moneda
     const allSameCurrency = projects.every((p) => p.currency === currency)
     if (!allSameCurrency) {
+      paymentLogger.warn({ expected: currency, found: projects.map((p) => p.currency) }, 'Currency mismatch')
       return NextResponse.json(
         { error: 'Todos los proyectos deben tener la misma moneda que el pago' },
         { status: 400 }
@@ -268,15 +333,30 @@ export async function POST(request: Request) {
       (sum: number, a: AllocationInput) => sum + a.allocatedAmount,
       0
     )
-    if (Math.abs(totalAllocated - amount) >= 0.01) {
+    const diff = Math.abs(totalAllocated - amount)
+    if (diff >= 0.01) {
+      paymentLogger.warn(
+        { expected: amount, actual: totalAllocated, diff },
+        'Allocation sum mismatch'
+      )
       return NextResponse.json(
         { error: 'La suma de los montos asignados debe ser igual al monto total del pago' },
         { status: 400 }
       )
     }
 
+    paymentLogger.debug('All validations passed')
+
     // Crear el pago con sus allocations en una transacción
     const paymentDate = new Date(date)
+
+    paymentLogger.info(
+      {
+        installments: selectedInstallments || 1,
+        hasInstallments: !!selectedInstallments && selectedInstallments > 1,
+      },
+      'Creating payment in database'
+    )
 
     const payment = await prisma.payment.create({
       data: {
@@ -376,9 +456,18 @@ export async function POST(request: Request) {
       },
     })
 
+    paymentLogger.info(
+      {
+        paymentId: payment.id,
+        allocationsCreated: payment.allocations.length,
+        installmentsCreated: payment.installments.length,
+      },
+      'Payment created successfully'
+    )
+
     return NextResponse.json(payment, { status: 201 })
   } catch (error) {
-    console.error('Error creating payment:', error)
+    paymentLogger.error({ err: error }, 'Error creating payment')
     return NextResponse.json({ error: 'Error al crear pago' }, { status: 500 })
   }
-}
+})

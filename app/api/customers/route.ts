@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
+import { withLogging } from '@/lib/logger-middleware'
 
 /**
  * GET /api/customers
@@ -11,14 +12,24 @@ import { prisma } from '@/lib/db'
  *   - limit: registros por página (default: 10, max: 100)
  *   - search: buscar por nombre, email o teléfono
  */
-export async function GET(request: Request) {
-  try {
-    const { searchParams } = new URL(request.url)
-    const page = parseInt(searchParams.get('page') || '1')
-    const limit = Math.min(parseInt(searchParams.get('limit') || '10'), 100)
-    const search = searchParams.get('search') || ''
+export const GET = withLogging(async (request, logger) => {
+  const { searchParams } = new URL(request.url)
+  const page = parseInt(searchParams.get('page') || '1')
+  const limit = Math.min(parseInt(searchParams.get('limit') || '10'), 100)
+  const search = searchParams.get('search') || ''
 
-    const skip = (page - 1) * limit
+  logger.debug(
+    {
+      page,
+      limit,
+      search: search || undefined,
+    },
+    'Fetching customers with filters'
+  )
+
+  const skip = (page - 1) * limit
+
+  try {
 
     // Construir filtro de búsqueda
     const where = search
@@ -42,6 +53,15 @@ export async function GET(request: Request) {
       prisma.customer.count({ where }),
     ])
 
+    logger.info(
+      {
+        found: customers.length,
+        total,
+        page,
+      },
+      'Customers fetched successfully'
+    )
+
     return NextResponse.json({
       customers,
       pagination: {
@@ -52,10 +72,10 @@ export async function GET(request: Request) {
       },
     })
   } catch (error) {
-    console.error('Error fetching customers:', error)
+    logger.error({ err: error }, 'Error fetching customers')
     return NextResponse.json({ error: 'Error al obtener clientes' }, { status: 500 })
   }
-}
+})
 
 /**
  * POST /api/customers
@@ -67,18 +87,31 @@ export async function GET(request: Request) {
  *   - email: string (opcional)
  *   - phone: string (opcional)
  */
-export async function POST(request: Request) {
-  try {
-    const body = await request.json()
-    const { name, email, phone } = body
+export const POST = withLogging(async (request, logger) => {
+  const body = await request.json()
+  const { name, email, phone } = body
 
+  // Child logger con contexto de negocio
+  const customerLogger = logger.child({
+    name,
+    email: email || undefined,
+    phone,
+  })
+
+  customerLogger.info('Customer creation requested')
+
+  try {
     // Validación básica
+    customerLogger.debug('Starting validations')
+
     if (!name || typeof name !== 'string' || name.trim().length === 0) {
+      customerLogger.warn('Missing or invalid name')
       return NextResponse.json({ error: 'El nombre es requerido' }, { status: 400 })
     }
 
     // Validar teléfono (obligatorio)
     if (!phone || typeof phone !== 'string' || phone.trim().length === 0) {
+      customerLogger.warn('Missing or invalid phone')
       return NextResponse.json({ error: 'El teléfono es requerido' }, { status: 400 })
     }
 
@@ -86,19 +119,25 @@ export async function POST(request: Request) {
     if (email && typeof email === 'string') {
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
       if (!emailRegex.test(email)) {
+        customerLogger.warn({ email }, 'Invalid email format')
         return NextResponse.json({ error: 'El email no es válido' }, { status: 400 })
       }
 
       // Verificar si el email ya existe
+      customerLogger.debug({ email }, 'Checking for duplicate email')
       const existingCustomer = await prisma.customer.findFirst({
         where: { email },
       })
       if (existingCustomer) {
+        customerLogger.warn({ email }, 'Email already exists')
         return NextResponse.json({ error: 'Ya existe un cliente con ese email' }, { status: 409 })
       }
     }
 
+    customerLogger.debug('Validations passed')
+
     // Crear cliente
+    customerLogger.info('Creating customer in database')
     const customer = await prisma.customer.create({
       data: {
         name: name.trim(),
@@ -107,9 +146,16 @@ export async function POST(request: Request) {
       },
     })
 
+    customerLogger.info(
+      {
+        customerId: customer.id,
+      },
+      'Customer created successfully'
+    )
+
     return NextResponse.json(customer, { status: 201 })
   } catch (error) {
-    console.error('Error creating customer:', error)
+    customerLogger.error({ err: error }, 'Error creating customer')
     return NextResponse.json({ error: 'Error al crear cliente' }, { status: 500 })
   }
-}
+})
