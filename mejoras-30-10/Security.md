@@ -64,22 +64,22 @@ export const authOptions = {
     CredentialsProvider({
       name: 'Credentials',
       credentials: {
-        email: { label: "Email", type: "email" },
-        password: { label: "Password", type: "password" }
+        email: { label: 'Email', type: 'email' },
+        password: { label: 'Password', type: 'password' },
       },
       async authorize(credentials) {
         // Validar contra tu DB
         const user = await db.user.findUnique({
-          where: { email: credentials.email }
+          where: { email: credentials.email },
         })
 
-        if (user && await bcrypt.compare(credentials.password, user.passwordHash)) {
+        if (user && (await bcrypt.compare(credentials.password, user.passwordHash))) {
           return { id: user.id, email: user.email }
         }
 
         return null
-      }
-    })
+      },
+    }),
   ],
   session: { strategy: 'jwt' },
   pages: {
@@ -109,8 +109,8 @@ export async function GET(request: Request) {
   // ✅ Solo proyectos del usuario/organización
   const projects = await db.project.findMany({
     where: {
-      organizationId: session.user.organizationId
-    }
+      organizationId: session.user.organizationId,
+    },
   })
 
   return NextResponse.json({ projects })
@@ -162,12 +162,12 @@ Ver: [docs/template/guides/authentication-setup.md](../docs/template/guides/auth
 
 ### 📋 Cuándo Implementar
 
-| Escenario                           | Recomendación           | Urgencia |
-| ----------------------------------- | ----------------------- | -------- |
+| Escenario                           | Recomendación                     | Urgencia |
+| ----------------------------------- | --------------------------------- | -------- |
 | Solo tú usas la app (internal tool) | Opcional (considera IP whitelist) | Baja     |
-| 2-5 usuarios confiables             | Nice-to-have            | Media    |
-| >5 usuarios o datos sensibles       | **Obligatorio**         | Alta     |
-| Quieres ofrecer como SaaS           | **Obligatorio**         | Crítica  |
+| 2-5 usuarios confiables             | Nice-to-have                      | Media    |
+| >5 usuarios o datos sensibles       | **Obligatorio**                   | Alta     |
+| Quieres ofrecer como SaaS           | **Obligatorio**                   | Crítica  |
 
 ---
 
@@ -319,10 +319,7 @@ export async function POST(request: Request) {
   const { allowed, remaining } = await checkRateLimit(ip, 10, 10)
 
   if (!allowed) {
-    return NextResponse.json(
-      { error: 'Too many requests', remaining: 0 },
-      { status: 429 }
-    )
+    return NextResponse.json({ error: 'Too many requests', remaining: 0 }, { status: 429 })
   }
 
   // ... resto del endpoint
@@ -335,12 +332,12 @@ export async function POST(request: Request) {
 
 ### 📋 Cuándo Implementar
 
-| Escenario                      | Recomendación    | Urgencia |
-| ------------------------------ | ---------------- | -------- |
-| App interna (1-5 usuarios)     | Opcional         | Baja     |
-| App con usuarios externos      | Recomendado      | Media    |
-| App pública sin auth           | **Obligatorio**  | Alta     |
-| API expuesta a terceros        | **Obligatorio**  | Crítica  |
+| Escenario                  | Recomendación   | Urgencia |
+| -------------------------- | --------------- | -------- |
+| App interna (1-5 usuarios) | Opcional        | Baja     |
+| App con usuarios externos  | Recomendado     | Media    |
+| App pública sin auth       | **Obligatorio** | Alta     |
+| API expuesta a terceros    | **Obligatorio** | Crítica  |
 
 ---
 
@@ -422,7 +419,7 @@ import DOMPurify from 'isomorphic-dompurify'
 // app/api/projects/route.ts
 const sanitized = {
   ...validated,
-  description: DOMPurify.sanitize(validated.description)
+  description: DOMPurify.sanitize(validated.description),
 }
 ```
 
@@ -500,7 +497,7 @@ export class Logger {
     const sanitized = { ...obj }
 
     for (const key of Object.keys(sanitized)) {
-      if (sensitiveKeys.some(sk => key.toLowerCase().includes(sk.toLowerCase()))) {
+      if (sensitiveKeys.some((sk) => key.toLowerCase().includes(sk.toLowerCase()))) {
         sanitized[key] = '[REDACTED]'
       }
     }
@@ -516,26 +513,26 @@ export class Logger {
 
 ### Implementar AHORA (Antes de Producción)
 
-| Gap                  | Impacto | Esfuerzo | Acción                           |
-| -------------------- | ------- | -------- | -------------------------------- |
-| Rate limiting        | Alto    | 2 hrs    | Implementar con Upstash          |
-| Validación backend   | Alto    | 3 hrs    | Usar Zod schemas (ver P2)        |
-| .env en .gitignore   | Crítico | 5 min    | Verificar y limpiar historial    |
+| Gap                | Impacto | Esfuerzo | Acción                        |
+| ------------------ | ------- | -------- | ----------------------------- |
+| Rate limiting      | Alto    | 2 hrs    | Implementar con Upstash       |
+| Validación backend | Alto    | 3 hrs    | Usar Zod schemas (ver P2)     |
+| .env en .gitignore | Crítico | 5 min    | Verificar y limpiar historial |
 
 ### Implementar PRONTO (Cuando Escales)
 
-| Gap                  | Impacto | Esfuerzo | Acción                           |
-| -------------------- | ------- | -------- | -------------------------------- |
-| Autenticación        | Alto    | 2-3 días | NextAuth o Stack Auth            |
-| Logging estructurado | Medio   | 1 día    | Logger + contexto (ver P2)       |
+| Gap                  | Impacto | Esfuerzo | Acción                     |
+| -------------------- | ------- | -------- | -------------------------- |
+| Autenticación        | Alto    | 2-3 días | NextAuth o Stack Auth      |
+| Logging estructurado | Medio   | 1 día    | Logger + contexto (ver P2) |
 
 ### Opcional (Nice-to-Have)
 
-| Gap                  | Impacto | Esfuerzo | Acción                           |
-| -------------------- | ------- | -------- | -------------------------------- |
-| CSRF (con cookies)   | Bajo    | N/A      | NextAuth lo incluye              |
-| Sanitización HTML    | Bajo    | 1 hr     | DOMPurify (si usas rich text)    |
-| Security headers     | Bajo    | 30 min   | next.config headers              |
+| Gap                | Impacto | Esfuerzo | Acción                        |
+| ------------------ | ------- | -------- | ----------------------------- |
+| CSRF (con cookies) | Bajo    | N/A      | NextAuth lo incluye           |
+| Sanitización HTML  | Bajo    | 1 hr     | DOMPurify (si usas rich text) |
+| Security headers   | Bajo    | 30 min   | next.config headers           |
 
 ---
 

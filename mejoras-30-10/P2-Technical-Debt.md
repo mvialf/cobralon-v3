@@ -6,6 +6,58 @@ Estas mejoras no bloquean el desarrollo actual, pero preparan el sistema para es
 
 ---
 
+## 🎉 Estado de Implementación
+
+### ✅ Completado: Sprint 1 de P1-High-Priority.md (React Query)
+
+**Fecha de completación:** 2025-10-30
+
+**Resumen:**
+Se completó exitosamente la migración de la sección de Projects a React Query, eliminando todo el state management manual y reemplazándolo con hooks reutilizables y type-safe.
+
+**Archivos implementados:**
+- ✅ `/hooks/queries/use-projects.ts` - 7 hooks completos (382 líneas)
+  - `useProjectsWithMetadata()` - Lista con metadata en 1 query
+  - `useProjects()` - Lista simple
+  - `useProject()` - Detalle individual
+  - `useCreateProject()` - Mutation crear
+  - `useUpdateProject()` - Mutation actualizar
+  - `useDeleteProject()` - Mutation eliminar (con optimistic updates)
+  - `useUpdateProjectStatus()` - Mutation especializada para estados
+
+- ✅ `/app/projects/page.tsx` - Migrado (197→128 líneas, -35%)
+  - Eliminados: 4 useState, 1 useCallback, 1 useEffect
+  - Reemplazados con: 2 React Query hooks
+
+- ✅ `/components/dialogs/projects/new-project-dialog.tsx` - Migrado
+  - Eliminada lógica manual de fetch + state
+  - Reemplazada con `useCreateProject()` mutation
+
+- ✅ `/app/projects/columns.tsx` - Corregido type safety
+  - Eliminado `as any` con type guards
+
+- ✅ `/components/providers/query-provider.tsx` - Configurado
+  - React Query Provider con devtools
+  - Configuraciones optimizadas (staleTime, retry, refetch)
+
+**Beneficios medidos:**
+- 📉 Reducción de código: -35% en página principal
+- 📉 Hooks eliminados: -5 hooks manuales
+- ✅ Type safety: 100% (sin `as any`)
+- ✅ Auto-invalidación: Queries se refrescan automáticamente
+- ✅ Optimistic updates: Delete instantáneo con rollback
+- ✅ Loading states: Por item individual
+- ✅ Error handling: Centralizado con toasts
+
+**Documentación:**
+- 📄 Ver contexto completo en: `/mejoras-30-10/CONTEXTO-SESION-REACT-QUERY.md`
+- 📄 Plan original en: `/mejoras-30-10/P1-High-Priority.md`
+
+**Próximo Sprint:**
+- ⏳ Sprint 2: Migración de Payments y Customers a React Query (pendiente)
+
+---
+
 ## 1. Campo `balance` Denormalizado (Performance)
 
 ### 📊 Estado Actual
@@ -104,9 +156,7 @@ import { Decimal } from '@prisma/client/runtime/library'
  * @param projectId - ID del proyecto
  * @returns Nuevo balance
  */
-export async function recalculateProjectBalance(
-  projectId: string
-): Promise<number> {
+export async function recalculateProjectBalance(projectId: string): Promise<number> {
   // 1. Fetch project con allocations
   const project = await db.project.findUnique({
     where: { id: projectId },
@@ -145,12 +195,8 @@ export async function recalculateProjectBalance(
  * Recalcula balance de múltiples proyectos
  * Útil para migraciones o recalculos masivos
  */
-export async function recalculateMultipleBalances(
-  projectIds: string[]
-): Promise<void> {
-  await Promise.all(
-    projectIds.map(id => recalculateProjectBalance(id))
-  )
+export async function recalculateMultipleBalances(projectIds: string[]): Promise<void> {
+  await Promise.all(projectIds.map((id) => recalculateProjectBalance(id)))
 }
 
 /**
@@ -167,7 +213,7 @@ export async function recalculateAllBalances(): Promise<void> {
   const batchSize = 50
   for (let i = 0; i < projects.length; i += batchSize) {
     const batch = projects.slice(i, i + batchSize)
-    await recalculateMultipleBalances(batch.map(p => p.id))
+    await recalculateMultipleBalances(batch.map((p) => p.id))
     console.log(`Procesados ${Math.min(i + batchSize, projects.length)}/${projects.length}`)
   }
 
@@ -189,12 +235,16 @@ export async function POST(request: Request) {
   const payment = await db.$transaction(async (tx) => {
     // 1. Crear pago
     const payment = await tx.payment.create({
-      data: { /* ... */ }
+      data: {
+        /* ... */
+      },
     })
 
     // 2. Crear allocations
     await tx.paymentAllocation.createMany({
-      data: allocations.map(a => ({ /* ... */ }))
+      data: allocations.map((a) => ({
+        /* ... */
+      })),
     })
 
     // ✅ 3. Actualizar balance de proyectos afectados
@@ -209,16 +259,13 @@ export async function POST(request: Request) {
 }
 
 // DELETE /api/payments/[id]
-export async function DELETE(
-  request: Request,
-  { params }: { params: { id: string } }
-) {
+export async function DELETE(request: Request, { params }: { params: { id: string } }) {
   const { id } = params
 
   // Obtener allocations antes de eliminar (para recalcular después)
   const payment = await db.payment.findUnique({
     where: { id },
-    include: { allocations: { select: { projectId: true } } }
+    include: { allocations: { select: { projectId: true } } },
   })
 
   if (!payment) {
@@ -229,7 +276,7 @@ export async function DELETE(
   await db.payment.delete({ where: { id } })
 
   // ✅ Recalcular balance de proyectos afectados
-  const projectIds = [...new Set(payment.allocations.map(a => a.projectId))]
+  const projectIds = [...new Set(payment.allocations.map((a) => a.projectId))]
   await recalculateMultipleBalances(projectIds)
 
   return NextResponse.json({ success: true })
@@ -264,17 +311,17 @@ const withBalance = projectsWithBalance.filter(p => p.balance > 0)
 // app/api/projects/route.ts (DESPUÉS)
 const projects = await db.project.findMany({
   where: {
-    balance: { gt: 0 } // ✅ Filtrado en DB
+    balance: { gt: 0 }, // ✅ Filtrado en DB
   },
   orderBy: {
-    balance: 'desc' // ✅ Ordenar por balance
+    balance: 'desc', // ✅ Ordenar por balance
   },
   select: {
     id: true,
     projectNumber: true,
     balance: true, // ✅ Ya calculado
     // No necesitas paymentAllocations
-  }
+  },
 })
 
 // ✅ Sin cálculos adicionales
@@ -373,11 +420,11 @@ import { db } from '@/lib/db'
 async function main() {
   // 1. Verificar que todos los proyectos tengan total === totalAmount
   const projects = await db.project.findMany({
-    select: { id: true, total: true, totalAmount: true }
+    select: { id: true, total: true, totalAmount: true },
   })
 
   const inconsistent = projects.filter(
-    p => p.totalAmount && Math.abs(Number(p.total) - Number(p.totalAmount)) > 0.01
+    (p) => p.totalAmount && Math.abs(Number(p.total) - Number(p.totalAmount)) > 0.01
   )
 
   if (inconsistent.length > 0) {
@@ -423,8 +470,8 @@ async function main() {
   const legacyProjects = await db.project.findMany({
     where: {
       projectStatusLegacy: { not: '' },
-      projectStatusId: null
-    }
+      projectStatusId: null,
+    },
   })
 
   console.log(`Encontrados ${legacyProjects.length} proyectos legacy`)
@@ -432,8 +479,8 @@ async function main() {
   // 2. Mapping de legacy strings a nuevos IDs
   const statusMapping: Record<string, string> = {
     'En Proceso': 'uuid-en-proceso',
-    'Finalizado': 'uuid-finalizado',
-    'Presupuesto': 'uuid-presupuesto',
+    Finalizado: 'uuid-finalizado',
+    Presupuesto: 'uuid-presupuesto',
     // ... agregar todos los mappings
   }
 
@@ -449,7 +496,7 @@ async function main() {
           colorId: 'default-color-id',
           isInitial: false,
           isFinal: false,
-        }
+        },
       })
     }
   }
@@ -467,8 +514,8 @@ async function main() {
       where: { id: project.id },
       data: {
         projectStatusId: newStatusId,
-        projectStatusLegacy: '' // Limpiar
-      }
+        projectStatusLegacy: '', // Limpiar
+      },
     })
   }
 
@@ -498,10 +545,10 @@ npx prisma migrate dev --name remove-legacy-status
 
 ### 📋 Plan de Acción
 
-| Migración              | Tiempo | Riesgo | Cuándo                     |
-| ---------------------- | ------ | ------ | -------------------------- |
-| Eliminar `totalAmount` | 2 hrs  | Bajo   | Sprint próximo             |
-| Migrar status legacy   | 4 hrs  | Medio  | Después de tests robustos  |
+| Migración              | Tiempo | Riesgo | Cuándo                    |
+| ---------------------- | ------ | ------ | ------------------------- |
+| Eliminar `totalAmount` | 2 hrs  | Bajo   | Sprint próximo            |
+| Migrar status legacy   | 4 hrs  | Medio  | Después de tests robustos |
 
 ---
 
@@ -562,21 +609,20 @@ export async function POST(request: Request) {
 
     // Crear proyecto con datos validados
     const project = await db.project.create({
-      data: validated
+      data: validated,
     })
 
     return NextResponse.json(project, { status: 201 })
-
   } catch (error) {
     // ✅ Manejar errores de validación Zod
     if (error instanceof z.ZodError) {
       return NextResponse.json(
         {
           error: 'Validación fallida',
-          details: error.errors.map(e => ({
+          details: error.errors.map((e) => ({
             field: e.path.join('.'),
-            message: e.message
-          }))
+            message: e.message,
+          })),
         },
         { status: 400 }
       )
@@ -584,10 +630,7 @@ export async function POST(request: Request) {
 
     // Error genérico
     console.error('Error creando proyecto:', error)
-    return NextResponse.json(
-      { error: 'Error interno del servidor' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: 'Error interno del servidor' }, { status: 500 })
   }
 }
 ```
@@ -730,7 +773,6 @@ export async function POST(request: Request) {
     })
 
     return NextResponse.json(project, { status: 201 })
-
   } catch (error) {
     Logger.error('Error creando proyecto', error as Error, {
       customerId: body?.customerId,
@@ -748,12 +790,12 @@ export async function POST(request: Request) {
 
 ## 🎯 Resumen P2
 
-| Mejora                        | Impacto                        | Cuándo Implementar         | Esfuerzo |
-| ----------------------------- | ------------------------------ | -------------------------- | -------- |
-| Campo `balance` denormalizado | Queries 10x más rápidas        | Cuando >1000 proyectos     | 1 día    |
-| Eliminar campos legacy        | Menos confusión, menos storage | Próximo sprint             | 6 hrs    |
-| Usar Zod en APIs              | Single source of truth         | Próximo sprint             | 3 hrs    |
-| Logger estructurado           | Debugging más fácil            | Antes de producción        | 1 día    |
+| Mejora                        | Impacto                        | Cuándo Implementar     | Esfuerzo |
+| ----------------------------- | ------------------------------ | ---------------------- | -------- |
+| Campo `balance` denormalizado | Queries 10x más rápidas        | Cuando >1000 proyectos | 1 día    |
+| Eliminar campos legacy        | Menos confusión, menos storage | Próximo sprint         | 6 hrs    |
+| Usar Zod en APIs              | Single source of truth         | Próximo sprint         | 3 hrs    |
+| Logger estructurado           | Debugging más fácil            | Antes de producción    | 1 día    |
 
 **Total estimado:** 3-4 días de trabajo
 

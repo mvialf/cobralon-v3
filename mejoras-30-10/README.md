@@ -43,10 +43,10 @@ Este directorio contiene el análisis detallado de mejoras recomendadas para el 
 
 ### P0: Crítico (Implementar ANTES de Producción)
 
-| Problema                      | Impacto                     | Esfuerzo | Página       |
-| ----------------------------- | --------------------------- | -------- | ------------ |
-| **Tests inexistentes**        | Bugs en producción          | 4-6 días | [P0](P0-Critical.md#1-tests-inexistentes-score-210) |
-| **Client-side filtering**     | Paginación rota, UX confusa | 4 hrs    | [P0](P0-Critical.md#2-client-side-filtering-rompe-paginación) |
+| Problema                  | Impacto                     | Esfuerzo | Página                                                        |
+| ------------------------- | --------------------------- | -------- | ------------------------------------------------------------- |
+| **Tests inexistentes**    | Bugs en producción          | 4-6 días | [P0](P0-Critical.md#1-tests-inexistentes-score-210)           |
+| **Client-side filtering** | Paginación rota, UX confusa | 4 hrs    | [P0](P0-Critical.md#2-client-side-filtering-rompe-paginación) |
 
 **Total estimado:** 5-7 días de trabajo
 
@@ -54,11 +54,11 @@ Este directorio contiene el análisis detallado de mejoras recomendadas para el 
 
 ### P1: Alta Prioridad (2-4 Semanas)
 
-| Problema                      | Impacto                         | Esfuerzo | Página       |
-| ----------------------------- | ------------------------------- | -------- | ------------ |
-| **React Query no usado**      | Código duplicado, sin cache     | 2 días   | [P1](P1-High-Priority.md#1-react-query-no-implementado-instalado-pero-no-usado) |
-| **Form de 471 líneas**        | Difícil mantener/testear        | 1 día    | [P1](P1-High-Priority.md#2-formulario-de-471-líneas-project-formtsx) |
-| **TypeScript `any`**          | Pierde type safety              | 30 min   | [P1](P1-High-Priority.md#3-typescript-any-rompe-type-safety) |
+| Problema                 | Impacto                     | Esfuerzo | Página                                                                          |
+| ------------------------ | --------------------------- | -------- | ------------------------------------------------------------------------------- |
+| **React Query no usado** | Código duplicado, sin cache | 2 días   | [P1](P1-High-Priority.md#1-react-query-no-implementado-instalado-pero-no-usado) |
+| **Form de 471 líneas**   | Difícil mantener/testear    | 1 día    | [P1](P1-High-Priority.md#2-formulario-de-471-líneas-project-formtsx)            |
+| **TypeScript `any`**     | Pierde type safety          | 30 min   | [P1](P1-High-Priority.md#3-typescript-any-rompe-type-safety)                    |
 
 **Total estimado:** 3-4 días de trabajo
 
@@ -68,12 +68,12 @@ Este directorio contiene el análisis detallado de mejoras recomendadas para el 
 
 ### P2: Deuda Técnica (Cuando Escales)
 
-| Mejora                         | Impacto                        | Cuándo              | Página       |
-| ------------------------------ | ------------------------------ | ------------------- | ------------ |
-| **Campo `balance` denormal.**  | Queries 10x más rápidas        | >1000 proyectos     | [P2](P2-Technical-Debt.md#1-campo-balance-denormalizado-performance) |
-| **Eliminar campos legacy**     | Menos confusión, storage       | Próximo sprint      | [P2](P2-Technical-Debt.md#2-campos-legacy-redundantes) |
-| **Usar Zod en APIs**           | Single source of truth         | Próximo sprint      | [P2](P2-Technical-Debt.md#3-validaciones-zod-no-usadas-en-api) |
-| **Logger estructurado**        | Debugging más fácil            | Antes de producción | [P2](P2-Technical-Debt.md#4-error-handling-inconsistente) |
+| Mejora                        | Impacto                  | Cuándo              | Página                                                               |
+| ----------------------------- | ------------------------ | ------------------- | -------------------------------------------------------------------- |
+| **Campo `balance` denormal.** | Queries 10x más rápidas  | >1000 proyectos     | [P2](P2-Technical-Debt.md#1-campo-balance-denormalizado-performance) |
+| **Eliminar campos legacy**    | Menos confusión, storage | Próximo sprint      | [P2](P2-Technical-Debt.md#2-campos-legacy-redundantes)               |
+| **Usar Zod en APIs**          | Single source of truth   | Próximo sprint      | [P2](P2-Technical-Debt.md#3-validaciones-zod-no-usadas-en-api)       |
+| **Logger estructurado**       | Debugging más fácil      | Antes de producción | [P2](P2-Technical-Debt.md#4-error-handling-inconsistente)            |
 
 **Total estimado:** 3-4 días de trabajo
 
@@ -81,22 +81,22 @@ Este directorio contiene el análisis detallado de mejoras recomendadas para el 
 
 ### Seguridad (Según Contexto)
 
-| Gap                    | Impacto | Cuándo                      | Página       |
-| ---------------------- | ------- | --------------------------- | ------------ |
-| **Rate limiting**      | Alto    | Antes de producción         | [Security](Security.md#2-sin-rate-limiting-dos-fácil) |
+| Gap                    | Impacto | Cuándo                      | Página                                                                  |
+| ---------------------- | ------- | --------------------------- | ----------------------------------------------------------------------- |
+| **Rate limiting**      | Alto    | Antes de producción         | [Security](Security.md#2-sin-rate-limiting-dos-fácil)                   |
 | **Autenticación**      | Alto    | Cuando >5 usuarios externos | [Security](Security.md#1-sin-autenticación-mvp-aceptable-producción-no) |
-| **.env en .gitignore** | Crítico | ✅ Verificar YA             | [Security](Security.md#5-secrets-expuestos-cuidado-con-env) |
+| **.env en .gitignore** | Crítico | ✅ Verificar YA             | [Security](Security.md#5-secrets-expuestos-cuidado-con-env)             |
 
 ---
 
 ### Performance (Optimizar Cuando Sea Necesario)
 
-| Optimización           | Impacto | Cuándo                        | Página       |
-| ---------------------- | ------- | ----------------------------- | ------------ |
-| **Server filtering**   | Alto    | P0 - Inmediato                | [Performance](Performance.md#3-queries-ineficientes-client-side-filtering) |
-| **Balance denormal.**  | Alto    | >1000 proyectos               | [Performance](Performance.md#1-n1-queries-resuelto-) |
-| **Cursor pagination**  | Medio   | >10k registros, páginas altas | [Performance](Performance.md#4-sin-pagination-server-side-completa) |
-| **Code splitting**     | Bajo    | Bundle >5MB                   | [Performance](Performance.md#6-bundle-size-aceptable-actualmente) |
+| Optimización          | Impacto | Cuándo                        | Página                                                                     |
+| --------------------- | ------- | ----------------------------- | -------------------------------------------------------------------------- |
+| **Server filtering**  | Alto    | P0 - Inmediato                | [Performance](Performance.md#3-queries-ineficientes-client-side-filtering) |
+| **Balance denormal.** | Alto    | >1000 proyectos               | [Performance](Performance.md#1-n1-queries-resuelto-)                       |
+| **Cursor pagination** | Medio   | >10k registros, páginas altas | [Performance](Performance.md#4-sin-pagination-server-side-completa)        |
+| **Code splitting**    | Bajo    | Bundle >5MB                   | [Performance](Performance.md#6-bundle-size-aceptable-actualmente)          |
 
 **Ya implementado ✅:**
 

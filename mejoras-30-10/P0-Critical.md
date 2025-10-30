@@ -130,9 +130,7 @@ describe('extractProjectAllocations', () => {
       {
         id: 'p1',
         date: new Date('2025-01-15'),
-        allocations: [
-          { id: 'a1', projectId: 'proj-2', allocatedAmount: 500 },
-        ],
+        allocations: [{ id: 'a1', projectId: 'proj-2', allocatedAmount: 500 }],
       },
     ]
 
@@ -154,9 +152,7 @@ describe('extractProjectAllocations', () => {
       {
         id: 'p2',
         date: new Date('2025-01-20'),
-        allocations: [
-          { id: 'a3', projectId: 'proj-1', allocatedAmount: 2000 },
-        ],
+        allocations: [{ id: 'a3', projectId: 'proj-1', allocatedAmount: 2000 }],
       },
     ]
 
@@ -202,9 +198,7 @@ describe('processProjectPayments (integration)', () => {
       {
         id: 'p1',
         date: new Date('2025-01-20'),
-        allocations: [
-          { id: 'a1', projectId: 'proj-1', allocatedAmount: 2000 },
-        ],
+        allocations: [{ id: 'a1', projectId: 'proj-1', allocatedAmount: 2000 }],
       },
       {
         id: 'p2',
@@ -373,7 +367,7 @@ describe('POST /api/payments', () => {
           paymentMethodId: 'pm-1',
           date: new Date().toISOString(),
           allocations: [
-            { projectId: 'proj-1', allocatedAmount: 1000.00 }, // ✅ diff < 0.01
+            { projectId: 'proj-1', allocatedAmount: 1000.0 }, // ✅ diff < 0.01
           ],
         }),
       })
@@ -407,9 +401,7 @@ describe('POST /api/payments', () => {
           currency: 'CLP',
           paymentMethodId: 'pm-1',
           date: new Date().toISOString(),
-          allocations: [
-            { projectId: 'proj-1', allocatedAmount: 1000 },
-          ],
+          allocations: [{ projectId: 'proj-1', allocatedAmount: 1000 }],
         }),
       })
 
@@ -426,6 +418,7 @@ describe('POST /api/payments', () => {
 **Coverage esperado:** 70%+ de las API routes
 
 **Esfuerzo:**
+
 - `POST /api/payments`: 1 día (es compleja)
 - `GET /api/projects`: 4 horas
 - `POST /api/projects`: 4 horas
@@ -464,7 +457,8 @@ test.describe('Flujo de Pago a Proyecto', () => {
 
     // 7. Verificar que balance se actualizó
     await page.waitForTimeout(1000)
-    const balanceCell = page.locator('text=P 0001-2025')
+    const balanceCell = page
+      .locator('text=P 0001-2025')
       .locator('xpath=ancestor::tr')
       .locator('[data-column="balance"]')
 
@@ -503,12 +497,12 @@ test.describe('Flujo de Pago a Proyecto', () => {
 
 ### 📋 Plan de Acción
 
-| Fase | Tiempo  | Archivos a Testear                       | Beneficio                        |
-| ---- | ------- | ---------------------------------------- | -------------------------------- |
-| 1    | 1 día   | Pure functions (transformers)            | Quick wins, base sólida          |
-| 2    | 2-3 día | API routes (payments, projects)          | Backend confiable                |
-| 3    | 1-2 día | E2E (flujos de pago, creación proyecto)  | Confianza en features completas  |
-| 4    | Ongoing | Agregar tests con cada PR                | Mantener cobertura               |
+| Fase | Tiempo  | Archivos a Testear                      | Beneficio                       |
+| ---- | ------- | --------------------------------------- | ------------------------------- |
+| 1    | 1 día   | Pure functions (transformers)           | Quick wins, base sólida         |
+| 2    | 2-3 día | API routes (payments, projects)         | Backend confiable               |
+| 3    | 1-2 día | E2E (flujos de pago, creación proyecto) | Confianza en features completas |
+| 4    | Ongoing | Agregar tests con cada PR               | Mantener cobertura              |
 
 **Target de Coverage:**
 
@@ -625,14 +619,14 @@ export async function GET(request: Request) {
     `
 
     where.id = {
-      notIn: fullyPaidProjectIds.map(p => p.id)
+      notIn: fullyPaidProjectIds.map((p) => p.id),
     }
   }
 
   // ✅ Nuevo: Filtrado de proyectos finalizados
   if (hideFinale) {
     where.projectStatus = {
-      isFinal: false
+      isFinal: false,
     }
   }
 
@@ -701,7 +695,7 @@ const fetchProjects = async () => {
       page: currentPage.toString(),
       limit: pageSize.toString(),
       hideFullyPaid: hideFullyPaid.toString(), // ✅ Pasar al backend
-      hideFinale: hideFinale.toString(),       // ✅ Pasar al backend
+      hideFinale: hideFinale.toString(), // ✅ Pasar al backend
       ...(customerFilter && { customerId: customerFilter }),
       ...(statusFilter && { projectStatusId: statusFilter }),
     })
@@ -752,11 +746,11 @@ useEffect(() => {
   let filtered = allProjects
 
   if (hideFullyPaid) {
-    filtered = filtered.filter(p => p.balance > 0)
+    filtered = filtered.filter((p) => p.balance > 0)
   }
 
   if (hideFinale) {
-    filtered = filtered.filter(p => !p.projectStatus?.isFinal)
+    filtered = filtered.filter((p) => !p.projectStatus?.isFinal)
   }
 
   // Paginar client-side
@@ -778,21 +772,21 @@ useEffect(() => {
 
 ### 📋 Plan de Acción
 
-| Paso | Acción                                        | Tiempo | Prioridad |
-| ---- | --------------------------------------------- | ------ | --------- |
-| 1    | Implementar Opción B (temporal)               | 30 min | P0        |
-| 2    | Implementar Opción A (server-side correcto)   | 4 hrs  | P0        |
-| 3    | Tests de API con filtros                      | 2 hrs  | P0        |
-| 4    | Tests E2E de paginación con filtros           | 2 hrs  | P1        |
+| Paso | Acción                                      | Tiempo | Prioridad |
+| ---- | ------------------------------------------- | ------ | --------- |
+| 1    | Implementar Opción B (temporal)             | 30 min | P0        |
+| 2    | Implementar Opción A (server-side correcto) | 4 hrs  | P0        |
+| 3    | Tests de API con filtros                    | 2 hrs  | P0        |
+| 4    | Tests E2E de paginación con filtros         | 2 hrs  | P1        |
 
 ---
 
 ## 🎯 Resumen P0
 
-| Problema                  | Impacto                      | Solución                       | Esfuerzo |
-| ------------------------- | ---------------------------- | ------------------------------ | -------- |
-| Tests inexistentes        | Bugs en producción           | Vitest + Playwright (fases)    | 4-6 días |
-| Client-side filtering     | Paginación rota, UX confusa  | Server-side filtering          | 4 hrs    |
+| Problema              | Impacto                     | Solución                    | Esfuerzo |
+| --------------------- | --------------------------- | --------------------------- | -------- |
+| Tests inexistentes    | Bugs en producción          | Vitest + Playwright (fases) | 4-6 días |
+| Client-side filtering | Paginación rota, UX confusa | Server-side filtering       | 4 hrs    |
 
 **Total estimado:** 5-7 días de trabajo
 

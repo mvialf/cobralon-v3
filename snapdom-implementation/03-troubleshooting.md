@@ -650,44 +650,49 @@ El componente `CircularProgressChart` usaba el patrón `stroke="currentColor"` c
 4. Resultado: snapdom captura los elementos SVG pero con `stroke` invisible
 
 **Evidencia:**
+
 - El texto "89%" se veía porque usa `color` directamente (no currentColor)
 - Los círculos eran invisibles porque dependían de currentColor
 
 ### ✅ Solución Definitiva Implementada
 
-Reemplazar `currentColor` con variables CSS del sistema capture-* **directamente** en el atributo `stroke`:
+Reemplazar `currentColor` con variables CSS del sistema capture-\* **directamente** en el atributo `stroke`:
 
 ```tsx
 // ✅ SOLUCIÓN CORRECTA (implementada 2025-10-29)
 // components/ui/circular-progress-chart.tsx
 
-{/* Círculo de fondo (gris sutil) */}
-<circle
+{
+  /* Círculo de fondo (gris sutil) */
+}
+;<circle
   cx="60"
   cy="60"
   r="50"
   fill="none"
-  stroke="var(--capture-border)"  // ← Directo, no currentColor
+  stroke="var(--capture-border)" // ← Directo, no currentColor
   strokeWidth="10"
 />
 
-{/* Círculo de progreso (azul) */}
-<circle
+{
+  /* Círculo de progreso (azul) */
+}
+;<circle
   cx="60"
   cy="60"
   r="50"
   fill="none"
-  stroke="var(--capture-blue)"    // ← Directo, no currentColor
+  stroke="var(--capture-blue)" // ← Directo, no currentColor
   strokeWidth="10"
   strokeLinecap="round"
   strokeDasharray={circumference}
   strokeDashoffset={strokeDashoffset}
 />
 
-{/* Texto del porcentaje */}
-<span className="text-capture-foreground">
-  {percentage}%
-</span>
+{
+  /* Texto del porcentaje */
+}
+;<span className="text-capture-foreground">{percentage}%</span>
 ```
 
 **Por qué funciona:**
@@ -701,8 +706,8 @@ Reemplazar `currentColor` con variables CSS del sistema capture-* **directamente
 Definidas en `app/globals.css` (líneas 68-76):
 
 ```css
---capture-border: oklch(0.872 0.01 258.338);     /* Gris sutil para fondo */
---capture-blue: oklch(0.546 0.245 262.881);      /* Azul para progreso */
+--capture-border: oklch(0.872 0.01 258.338); /* Gris sutil para fondo */
+--capture-blue: oklch(0.546 0.245 262.881); /* Azul para progreso */
 --capture-foreground: oklch(0.278 0.033 256.848); /* Texto oscuro */
 ```
 
@@ -742,7 +747,7 @@ if (svg) {
 1. ✅ Componente renderiza correctamente en browser
 2. ✅ Imagen capturada muestra círculos coloreados
 3. ✅ Texto del porcentaje visible
-4. ✅ Colores consistentes con el sistema capture-* (light mode fijo)
+4. ✅ Colores consistentes con el sistema capture-\* (light mode fijo)
 5. ✅ `npm run typecheck` - passed
 6. ✅ `npm run lint` - passed
 
@@ -756,7 +761,7 @@ if (svg) {
 
 - ✅ **Ventaja**: Componente 100% compatible con CaptureDialog
 - ✅ **Ventaja**: Colores consistentes en todas las capturas (light mode fijo)
-- ⚠️ **Trade-off**: Componente siempre usa colores capture-* (no respeta dark mode del sistema)
+- ⚠️ **Trade-off**: Componente siempre usa colores capture-\* (no respeta dark mode del sistema)
   - **Decisión**: Aceptable porque el componente se usa principalmente en capturas
   - **Alternativa futura**: Si necesitas dark mode dinámico fuera de capturas, crear variante separada del componente
 

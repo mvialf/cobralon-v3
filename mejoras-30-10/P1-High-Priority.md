@@ -24,7 +24,9 @@ Estos problemas deben resolverse en las próximas 2-4 semanas para mantener velo
 const fetchProjects = async () => {
   setIsLoadingPage(true)
   try {
-    const params = new URLSearchParams({ /* ... */ })
+    const params = new URLSearchParams({
+      /* ... */
+    })
     const response = await fetch(`/api/projects?${params}`)
 
     if (!response.ok) throw new Error('Error al cargar proyectos')
@@ -115,7 +117,9 @@ const fetchProjects = async () => {
 function ProjectsPage() {
   // Component A fetchea projects
   const [projects] = useState([])
-  useEffect(() => { fetchProjects() }, [])
+  useEffect(() => {
+    fetchProjects()
+  }, [])
 
   return (
     <>
@@ -128,7 +132,9 @@ function ProjectsPage() {
 function ProjectsSummary() {
   // Component B fetchea OTRA VEZ projects
   const [projects] = useState([])
-  useEffect(() => { fetchProjects() }, [])
+  useEffect(() => {
+    fetchProjects()
+  }, [])
 }
 ```
 
@@ -172,14 +178,12 @@ const { mutate } = useMutation({
   mutationFn: deleteProject,
   onMutate: async (id) => {
     // ✅ Update UI inmediatamente (optimistic)
-    queryClient.setQueryData(['projects'], (old) =>
-      old.filter(p => p.id !== id)
-    )
+    queryClient.setQueryData(['projects'], (old) => old.filter((p) => p.id !== id))
   },
   onError: (err, id, context) => {
     // ✅ Revertir si falla (rollback automático)
     queryClient.setQueryData(['projects'], context.previousData)
-  }
+  },
 })
 ```
 
@@ -553,15 +557,15 @@ import { ReactQueryDevtools } from '@tanstack/react-query-devtools'
 
 ### 📋 Plan de Acción
 
-| Fase | Tarea                               | Tiempo | Archivos                      |
-| ---- | ----------------------------------- | ------ | ----------------------------- |
-| 1    | Setup Provider                      | 30 min | `app/providers.tsx`           |
-| 2    | Crear hooks de projects             | 2 hrs  | `hooks/queries/use-projects.ts` |
-| 3    | Migrar `app/projects/page.tsx`      | 1 hr   | Página principal              |
-| 4    | Crear hooks de payments             | 2 hrs  | `hooks/queries/use-payments.ts` |
-| 5    | Migrar `app/payments/page.tsx`      | 1 hr   | Página de pagos               |
-| 6    | Crear hooks de customers            | 1 hr   | `hooks/queries/use-customers.ts` |
-| 7    | Migrar `app/customers/page.tsx`     | 1 hr   | Página de clientes            |
+| Fase | Tarea                           | Tiempo | Archivos                         |
+| ---- | ------------------------------- | ------ | -------------------------------- |
+| 1    | Setup Provider                  | 30 min | `app/providers.tsx`              |
+| 2    | Crear hooks de projects         | 2 hrs  | `hooks/queries/use-projects.ts`  |
+| 3    | Migrar `app/projects/page.tsx`  | 1 hr   | Página principal                 |
+| 4    | Crear hooks de payments         | 2 hrs  | `hooks/queries/use-payments.ts`  |
+| 5    | Migrar `app/payments/page.tsx`  | 1 hr   | Página de pagos                  |
+| 6    | Crear hooks de customers        | 1 hr   | `hooks/queries/use-customers.ts` |
+| 7    | Migrar `app/customers/page.tsx` | 1 hr   | Página de clientes               |
 
 **Total:** 2 días de trabajo
 
@@ -950,14 +954,14 @@ export const ProjectForm = React.forwardRef<ProjectFormHandle, ProjectFormProps>
 
 ### 📋 Plan de Acción
 
-| Fase | Tarea                                  | Tiempo | Archivo                              |
-| ---- | -------------------------------------- | ------ | ------------------------------------ |
-| 1    | Extraer CustomerSelection              | 1 hr   | `customer-selection.tsx`             |
-| 2    | Extraer ProjectStatusField             | 30 min | `project-status-field.tsx`           |
-| 3    | Extraer FinancialFields                | 1 hr   | `financial-fields.tsx`               |
-| 4    | Extraer ProjectDetailsFields           | 1 hr   | `project-details-fields.tsx`         |
-| 5    | Refactorizar project-form.tsx          | 1 hr   | `project-form.tsx`                   |
-| 6    | Tests de FinancialFields (crítico)     | 1 hr   | `financial-fields.test.tsx`          |
+| Fase | Tarea                              | Tiempo | Archivo                      |
+| ---- | ---------------------------------- | ------ | ---------------------------- |
+| 1    | Extraer CustomerSelection          | 1 hr   | `customer-selection.tsx`     |
+| 2    | Extraer ProjectStatusField         | 30 min | `project-status-field.tsx`   |
+| 3    | Extraer FinancialFields            | 1 hr   | `financial-fields.tsx`       |
+| 4    | Extraer ProjectDetailsFields       | 1 hr   | `project-details-fields.tsx` |
+| 5    | Refactorizar project-form.tsx      | 1 hr   | `project-form.tsx`           |
+| 6    | Tests de FinancialFields (crítico) | 1 hr   | `financial-fields.test.tsx`  |
 
 **Total:** 1 día
 
@@ -1022,11 +1026,11 @@ export const projectColumns: ColumnDef<ProjectWithRelations>[] = [
 
 ## 🎯 Resumen P1
 
-| Problema                     | Impacto                         | Solución                      | Esfuerzo |
-| ---------------------------- | ------------------------------- | ----------------------------- | -------- |
-| React Query no usado         | Código duplicado, sin cache     | Implementar hooks + provider  | 2 días   |
-| Form de 471 líneas           | Difícil mantener/testear        | Extraer sub-componentes       | 1 día    |
-| TypeScript `any`             | Pierde type safety              | Definir types correctos       | 30 min   |
+| Problema             | Impacto                     | Solución                     | Esfuerzo |
+| -------------------- | --------------------------- | ---------------------------- | -------- |
+| React Query no usado | Código duplicado, sin cache | Implementar hooks + provider | 2 días   |
+| Form de 471 líneas   | Difícil mantener/testear    | Extraer sub-componentes      | 1 día    |
+| TypeScript `any`     | Pierde type safety          | Definir types correctos      | 30 min   |
 
 **Total estimado:** 3-4 días de trabajo
 

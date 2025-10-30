@@ -24,7 +24,7 @@ generator client {
 ```typescript
 // ANTES (sin join strategy):
 const projects = await db.project.findMany({
-  include: { customer: true, projectStatus: true }
+  include: { customer: true, projectStatus: true },
 })
 // → 1 query para projects
 // → N queries para customers (1 por proyecto)
@@ -100,12 +100,12 @@ model Payment {
 ```typescript
 // ❌ ACTUAL: Fetch + filtrar client-side
 const projects = await db.project.findMany({ take: 10 })
-const filtered = projects.filter(p => p.balance > 0)
+const filtered = projects.filter((p) => p.balance > 0)
 
 // ✅ SOLUCIÓN: Filtrar en DB
 const projects = await db.project.findMany({
   where: { balance: { gt: 0 } },
-  take: 10
+  take: 10,
 })
 ```
 
@@ -137,6 +137,7 @@ const projects = await db.project.findMany({
 **Problemas cuando escala (>100k registros):**
 
 1. **Offset/Limit es lento en páginas altas:**
+
    ```sql
    SELECT * FROM projects LIMIT 10 OFFSET 9990;
    -- DB tiene que leer 10,000 filas para skipear 9,990
@@ -215,7 +216,7 @@ const loadMore = async () => {
   const response = await fetch(`/api/projects?${params}`)
   const data = await response.json()
 
-  setProjects(prev => [...prev, ...data.projects])
+  setProjects((prev) => [...prev, ...data.projects])
   setNextCursor(data.pagination.nextCursor)
 }
 
@@ -271,10 +272,10 @@ useEffect(() => {
 
 ```json
 {
-  "@tanstack/react-table": "8.21.3",  // ~150kb
-  "recharts": "2.15.4",                 // ~500kb (!!)
-  "@radix-ui/*": "múltiples",           // ~200kb total
-  "date-fns": "4.1.0"                   // ~300kb
+  "@tanstack/react-table": "8.21.3", // ~150kb
+  "recharts": "2.15.4", // ~500kb (!!)
+  "@radix-ui/*": "múltiples", // ~200kb total
+  "date-fns": "4.1.0" // ~300kb
 }
 ```
 
@@ -406,7 +407,7 @@ export function EditProjectDialog({ open, onOpenChange }) {
 ```tsx
 import Image from 'next/image'
 
-<Image
+;<Image
   src="/project-photo.jpg"
   alt="Proyecto"
   width={800}
@@ -498,10 +499,10 @@ DIRECT_DATABASE_URL="postgres://..." # ← Sin pooling (migrations)
 
 ### Implementar AHORA (Si Aplica)
 
-| Optimización          | Impacto | Cuándo                        | Esfuerzo |
-| --------------------- | ------- | ----------------------------- | -------- |
-| Server-side filtering | Alto    | P0 - Inmediato                | 4 hrs    |
-| React Query           | Alto    | P1 - Próximo sprint           | 2 días   |
+| Optimización          | Impacto | Cuándo              | Esfuerzo |
+| --------------------- | ------- | ------------------- | -------- |
+| Server-side filtering | Alto    | P0 - Inmediato      | 4 hrs    |
+| React Query           | Alto    | P1 - Próximo sprint | 2 días   |
 
 ### Implementar PRONTO (Cuando Escales)
 
@@ -512,21 +513,21 @@ DIRECT_DATABASE_URL="postgres://..." # ← Sin pooling (migrations)
 
 ### Opcional (Nice-to-Have)
 
-| Optimización          | Impacto | Cuándo                        | Esfuerzo |
-| --------------------- | ------- | ----------------------------- | -------- |
-| Code splitting        | Bajo    | Bundle >5MB                   | 3 hrs    |
-| Image optimization    | Bajo    | Muchas imágenes en app        | 30 min   |
-| Reemplazar Recharts   | Bajo    | Gráficos en todas las páginas | 1 día    |
+| Optimización        | Impacto | Cuándo                        | Esfuerzo |
+| ------------------- | ------- | ----------------------------- | -------- |
+| Code splitting      | Bajo    | Bundle >5MB                   | 3 hrs    |
+| Image optimization  | Bajo    | Muchas imágenes en app        | 30 min   |
+| Reemplazar Recharts | Bajo    | Gráficos en todas las páginas | 1 día    |
 
 ### Ya Implementado ✅
 
-| Feature                | Estado | Beneficio                  |
-| ---------------------- | ------ | -------------------------- |
-| N+1 prevention (join)  | ✅     | 10x más rápido             |
-| Índices de DB          | ✅     | Queries optimizadas        |
-| Pagination básica      | ✅     | Funciona hasta 10k records |
-| Connection pooling     | ✅     | Prisma lo maneja           |
-| CDN (Vercel)           | ✅     | Global edge network        |
+| Feature               | Estado | Beneficio                  |
+| --------------------- | ------ | -------------------------- |
+| N+1 prevention (join) | ✅     | 10x más rápido             |
+| Índices de DB         | ✅     | Queries optimizadas        |
+| Pagination básica     | ✅     | Funciona hasta 10k records |
+| Connection pooling    | ✅     | Prisma lo maneja           |
+| CDN (Vercel)          | ✅     | Global edge network        |
 
 ---
 
@@ -534,29 +535,29 @@ DIRECT_DATABASE_URL="postgres://..." # ← Sin pooling (migrations)
 
 ### Configuración Actual (100-1000 registros)
 
-| Métrica                | Tiempo | Estado |
-| ---------------------- | ------ | ------ |
-| Load /projects         | <200ms | ✅     |
-| Create project (API)   | <100ms | ✅     |
-| Load project detail    | <150ms | ✅     |
-| Load payments (table)  | <200ms | ✅     |
-| TTFB (Time to First Byte) | <300ms | ✅  |
+| Métrica                   | Tiempo | Estado |
+| ------------------------- | ------ | ------ |
+| Load /projects            | <200ms | ✅     |
+| Create project (API)      | <100ms | ✅     |
+| Load project detail       | <150ms | ✅     |
+| Load payments (table)     | <200ms | ✅     |
+| TTFB (Time to First Byte) | <300ms | ✅     |
 
 ### Con Optimizaciones P0+P1 (1k-10k registros)
 
-| Métrica                | Tiempo | Mejora |
-| ---------------------- | ------ | ------ |
-| Load /projects         | <100ms | 2x     |
-| Create project         | <50ms  | 2x     |
-| Navegación con cache   | <10ms  | 20x    |
+| Métrica              | Tiempo | Mejora |
+| -------------------- | ------ | ------ |
+| Load /projects       | <100ms | 2x     |
+| Create project       | <50ms  | 2x     |
+| Navegación con cache | <10ms  | 20x    |
 
 ### Con Optimizaciones P2 (10k-100k registros)
 
-| Métrica                | Tiempo | Mejora |
-| ---------------------- | ------ | ------ |
-| Queries complejas      | <50ms  | 4x     |
-| Paginación (cualquier página) | <50ms | Constante |
-| Filtrado server-side   | <100ms | 3x     |
+| Métrica                       | Tiempo | Mejora    |
+| ----------------------------- | ------ | --------- |
+| Queries complejas             | <50ms  | 4x        |
+| Paginación (cualquier página) | <50ms  | Constante |
+| Filtrado server-side          | <100ms | 3x        |
 
 ---
 
@@ -583,6 +584,7 @@ npm run dev
    - Serverless function metrics
 
 2. **Sentry** (errores + performance)
+
    ```bash
    npm install @sentry/nextjs
    ```

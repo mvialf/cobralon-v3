@@ -147,10 +147,10 @@ No bloquea nada actualmente, pero saber que existe:
 
 **Antes de producción:**
 
-| Feature          | Urgencia       | Costo      | Impacto                  |
-| ---------------- | -------------- | ---------- | ------------------------ |
-| Rate limiting    | ⭐⭐⭐ Alta   | 2 horas    | Prevenir spam/DoS        |
-| Autenticación    | ⭐⭐ Media    | 2-3 días   | Solo si >5 usuarios      |
+| Feature            | Urgencia       | Costo     | Impacto                  |
+| ------------------ | -------------- | --------- | ------------------------ |
+| Rate limiting      | ⭐⭐⭐ Alta    | 2 horas   | Prevenir spam/DoS        |
+| Autenticación      | ⭐⭐ Media     | 2-3 días  | Solo si >5 usuarios      |
 | .env en .gitignore | ⭐⭐⭐ Crítica | 5 minutos | Prevenir leak de secrets |
 
 **Recomendación:** Rate limiting + verificar .gitignore ANTES de producción
@@ -169,8 +169,8 @@ No bloquea nada actualmente, pero saber que existe:
 
 **Optimizar cuando:**
 
-- >1000 proyectos: Agregar campo `balance` denormalizado
-- >10k proyectos: Cursor pagination
+- > 1000 proyectos: Agregar campo `balance` denormalizado
+- > 10k proyectos: Cursor pagination
 - Bundle >5MB: Code splitting
 
 ---
@@ -179,11 +179,11 @@ No bloquea nada actualmente, pero saber que existe:
 
 ### Para Deploy a Producción (Mínimo)
 
-| Tarea                   | Tiempo  | ROI                                |
-| ----------------------- | ------- | ---------------------------------- |
-| **P0: Tests**           | 4-6 días | Confianza en el código, menos bugs |
-| **P0: Fix filtering**   | 4 horas | UX correcta, paginación funcional  |
-| **Security básica**     | 2 horas | Protección contra spam             |
+| Tarea                 | Tiempo   | ROI                                |
+| --------------------- | -------- | ---------------------------------- |
+| **P0: Tests**         | 4-6 días | Confianza en el código, menos bugs |
+| **P0: Fix filtering** | 4 horas  | UX correcta, paginación funcional  |
+| **Security básica**   | 2 horas  | Protección contra spam             |
 
 **Total:** ~1 semana de trabajo
 
@@ -193,11 +193,11 @@ No bloquea nada actualmente, pero saber que existe:
 
 ### Para Escalar y Mejorar DX (Recomendado)
 
-| Tarea                   | Tiempo  | ROI                                |
-| ----------------------- | ------- | ---------------------------------- |
-| **P1: React Query**     | 2 días  | +40% velocidad agregando features  |
-| **P1: Refactor form**   | 1 día   | Mantenimiento más fácil            |
-| **P2: Usar Zod en APIs**| 3 horas | Menos código, más consistente      |
+| Tarea                    | Tiempo  | ROI                               |
+| ------------------------ | ------- | --------------------------------- |
+| **P1: React Query**      | 2 días  | +40% velocidad agregando features |
+| **P1: Refactor form**    | 1 día   | Mantenimiento más fácil           |
+| **P2: Usar Zod en APIs** | 3 horas | Menos código, más consistente     |
 
 **Total adicional:** 3-4 días
 
