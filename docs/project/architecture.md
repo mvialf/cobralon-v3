@@ -8,9 +8,10 @@ Sistema completo de gestión de proyectos, clientes y pagos construido con Next.
 2. [Modelo de Datos](#modelo-de-datos)
 3. [Flujos de Negocio](#flujos-de-negocio)
 4. [Arquitectura de Capas](#arquitectura-de-capas)
-5. [Decisiones Técnicas Clave](#decisiones-técnicas-clave)
-6. [APIs Implementadas](#apis-implementadas)
-7. [Configuración Regional](#configuración-regional)
+5. [Sistema de Logging Estructurado](#sistema-de-logging-estructurado)
+6. [Decisiones Técnicas Clave](#decisiones-técnicas-clave)
+7. [APIs Implementadas](#apis-implementadas)
+8. [Configuración Regional](#configuración-regional)
 
 ---
 
@@ -501,6 +502,247 @@ Sistema actualiza en tiempo real el Combobox de ProjectForm
 │  relationLoadStrategy: 'join' (N+1 fix)                   │
 └───────────────────────────────────────────────────────────┘
 ```
+
+---
+
+## Sistema de Logging Estructurado
+
+### Arquitectura de Logging
+
+El proyecto implementa un sistema de logging estructurado basado en **Pino 9.7.0** para debugging eficiente, auditoría y monitoring en producción.
+
+```
+┌───────────────────────────────────────────────────────────┐
+│                      LOGGING LAYER                         │
+│  (Pino Structured Logger)                                 │
+├───────────────────────────────────────────────────────────┤
+│  lib/logger.ts               → Singleton Pino instance    │
+│  lib/logger-middleware.ts    → withLogging() wrapper      │
+│                                                           │
+│  Features:                                                │
+│  ├── Environment-aware config (debug dev, info prod)      │
+│  ├── Pretty-print en desarrollo                           │
+│  ├── JSON estructurado en producción                      │
+│  ├── Request correlation (requestId UUID v4)              │
+│  ├── Child loggers con contexto de negocio                │
+│  ├── Automatic sensitive data redaction                   │
+│  ├── Error serialization con stack traces                 │
+│  ├── Performance tracking (duration en ms)                │
+│  └── Cron job tracking (runId con timestamp)              │
+└───────────────────────────────────────────────────────────┘
+                          ↓
+┌───────────────────────────────────────────────────────────┐
+│                   LOGGING INTEGRATION                      │
+├───────────────────────────────────────────────────────────┤
+│  API Routes (Next.js):                                    │
+│  ├── app/api/payments/route.ts      ✅ Migrated          │
+│  ├── app/api/projects/route.ts      ✅ Migrated          │
+│  ├── app/api/customers/route.ts     ✅ Migrated          │
+│  └── app/api/cron/mark-installments-paid/ ✅ Migrated    │
+│                                                           │
+│  Pattern usado:                                           │
+│  export const POST = withLogging(async (request, logger) => {
+│    const childLogger = logger.child({ customerId, amount })
+│    childLogger.info('Operation started')                  │
+│    // ... business logic ...                              │
+│    childLogger.info({ result }, 'Operation completed')    │
+│  })                                                       │
+└───────────────────────────────────────────────────────────┘
+```
+
+### Componentes Principales
+
+#### 1. Logger Singleton (`lib/logger.ts`)
+
+```typescript
+export const logger = pino({
+  level: getLogLevel(), // info (prod) / debug (dev)
+  formatters: { level, bindings },
+  serializers: { err, req, res }, // Pino built-in
+  redact: {
+    paths: ['password', 'token', 'apiKey', 'creditCard', ...],
+    censor: '[REDACTED]'
+  },
+  timestamp: pino.stdTimeFunctions.isoTime,
+  ...(isDev ? { transport: 'pino-pretty' } : {}),
+})
+```
+
+**Features:**
+- ✅ Performance óptima (~30ns per log, 10x más rápido que Winston)
+- ✅ Bundle size mínimo (~10KB)
+- ✅ Zero blocking I/O (ideal para serverless)
+- ✅ Automatic redaction de campos sensibles
+
+#### 2. Middleware Pattern (`lib/logger-middleware.ts`)
+
+```typescript
+export function withLogging(handler: APIHandler) {
+  return async (request: NextRequest, context?) => {
+    const requestId = generateRequestId() // UUID v4
+    const requestLogger = logger.child({ requestId, method, path })
+
+    requestLogger.info('Request received')
+
+    const startTime = performance.now()
+    const response = await handler(request, requestLogger, context)
+    const duration = Math.round(performance.now() - startTime)
+
+    requestLogger.info({ status, duration }, 'Request completed')
+    return response
+  }
+}
+```
+
+**Features:**
+- ✅ Request correlation automática (requestId en todos los logs)
+- ✅ Duration tracking (performance.now())
+- ✅ Child logger con contexto HTTP (method, path)
+- ✅ Error handling con logging estructurado
+
+### Niveles de Log
+
+| Nivel   | Uso                                    | Ambiente      |
+| ------- | -------------------------------------- | ------------- |
+| `debug` | Flow tracking, validaciones detalladas | Development   |
+| `info`  | Operaciones exitosas, milestones       | Production    |
+| `warn`  | Validaciones fallidas, estados inválidos | Todos       |
+| `error` | Errores capturados, excepciones        | Todos         |
+
+**Configuración por ambiente:**
+- **Development**: `debug` level (todo visible) + pino-pretty (colored output)
+- **Production**: `info` level (solo importante) + JSON (Vercel logs)
+- **Override**: Variable de entorno `LOG_LEVEL`
+
+### Patrones de Uso
+
+#### API Route con Child Logger
+
+```typescript
+export const POST = withLogging(async (request, logger) => {
+  const body = await request.json()
+
+  // Child logger con contexto de negocio
+  const paymentLogger = logger.child({
+    customerId: body.customerId,
+    amount: body.amount,
+  })
+
+  paymentLogger.info('Payment creation requested')
+  paymentLogger.debug('Starting validations')
+
+  if (!customerId) {
+    paymentLogger.warn('Missing customerId')
+    return NextResponse.json({ error: '...' }, { status: 400 })
+  }
+
+  paymentLogger.info({ paymentId }, 'Payment created successfully')
+  return NextResponse.json(payment, { status: 201 })
+})
+```
+
+**Beneficios:**
+- ✅ Context inheritance (requestId + customerId + amount)
+- ✅ Búsqueda fácil en logs: `grep customerId=abc-123`
+- ✅ No manual context passing
+
+#### Cron Job Tracking
+
+```typescript
+export async function POST(request: Request) {
+  const runId = generateRunId() // run-2025-10-30T14-32-15-uuid
+  const cronLogger = logger.child({
+    job: 'mark-installments-paid',
+    runId,
+  })
+
+  cronLogger.info('Cron job started')
+  // ... business logic ...
+  cronLogger.info({ updated: result.count }, 'Cron job completed')
+}
+```
+
+### Output Examples
+
+**Development (pino-pretty):**
+```
+[14:32:15] INFO: Request received
+    requestId: "550e8400-e29b-41d4-a716-446655440000"
+    method: "POST"
+    path: "/api/payments"
+
+[14:32:15] INFO: Payment creation requested
+    requestId: "550e8400-e29b-41d4-a716-446655440000"
+    customerId: "customer-123"
+    amount: 1500000
+
+[14:32:15] INFO: Request completed
+    requestId: "550e8400-e29b-41d4-a716-446655440000"
+    status: 201
+    duration: 342
+```
+
+**Production (JSON):**
+```json
+{"level":"info","time":1698765135000,"requestId":"550e8400-e29b-41d4-a716-446655440000","method":"POST","path":"/api/payments","msg":"Request received"}
+{"level":"info","time":1698765135050,"requestId":"550e8400-e29b-41d4-a716-446655440000","customerId":"customer-123","amount":1500000,"msg":"Payment creation requested"}
+{"level":"info","time":1698765135342,"requestId":"550e8400-e29b-41d4-a716-446655440000","status":201,"duration":342,"msg":"Request completed"}
+```
+
+### Sensitive Data Redaction
+
+Campos redactados automáticamente:
+```typescript
+redact: {
+  paths: [
+    'password', 'token', 'apiKey', 'api_key',
+    'accessToken', 'access_token',
+    'refreshToken', 'refresh_token',
+    'secret', 'creditCard', 'credit_card',
+    'cardNumber', 'card_number', 'cvv', 'ssn',
+  ],
+  censor: '[REDACTED]',
+}
+```
+
+**Ejemplo:**
+```typescript
+logger.info({
+  userId: '123',
+  password: 'secret123' // ❌ Sensible
+})
+
+// Output: { userId: '123', password: '[REDACTED]' } ✅
+```
+
+### Performance Benchmark
+
+Comparativa con alternativas (fuente: Pino GitHub):
+
+```
+benchBunyan*10000:  2496.613ms
+benchWinston*10000: 2994.308ms
+benchPino*10000:    303.419ms  ← 10x más rápido
+```
+
+**Por qué Pino:**
+- ✅ 8-10x más rápido que Winston/Bunyan
+- ✅ Crítico para ambientes serverless (Vercel)
+- ✅ Bundle size mínimo
+- ✅ Zero blocking I/O
+
+### Integración con Vercel
+
+- ✅ Logs automáticamente capturados por Vercel
+- ✅ JSON parseable para log aggregators
+- ✅ Queryable en Vercel Logs UI
+- ✅ Compatible con Datadog, LogRocket, etc.
+
+### Referencias
+
+- **Decisión completa:** [ADR-012: Pino Structured Logging](decisions/012-pino-structured-logging.md)
+- **Pino Documentation:** https://getpino.io
+- **Vercel Logging:** https://vercel.com/docs/observability/runtime-logs
 
 ---
 
