@@ -128,7 +128,6 @@ Porcentaje Pagado: ${project.percentPaid}%
           <div className="space-y-4 py-4 px-4">
             {/* Resumen de Pagos */}
             <PaymentSummaryCard
-              variant="dashboard"
               totalAmount={project.totalAmount}
               currency={project.currency}
               totalPaid={project.totalPaid}
