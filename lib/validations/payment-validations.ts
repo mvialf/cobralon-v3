@@ -48,6 +48,7 @@ export type PaymentAllocation = {
  */
 export type Payment = {
   id: string
+  type: 'Project' | 'Customer'
   amount: number
   currency: string
   date: Date

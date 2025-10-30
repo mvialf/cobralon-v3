@@ -8,7 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Badge } from '@/components/ui/badge'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Separator } from '@/components/ui/separator'
-import { Info, Plus, Copy, FileText, Image, Loader2, CheckCircle2 } from 'lucide-react'
+import { Info, Plus, Copy, FileText, Image, Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
 
 // Form Dialog imports

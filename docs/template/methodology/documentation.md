@@ -229,4 +229,4 @@ Si encuentras que:
 - [ADRs del Template](../decisions/) - Ejemplos reales
 - [Workflow](workflow.md) - Proceso de desarrollo
 - [Testing](testing.md) - Estrategia de testing
-- [Patterns](patterns.md) - Code patterns
+- [Patterns](patterns/README.md) - Code patterns

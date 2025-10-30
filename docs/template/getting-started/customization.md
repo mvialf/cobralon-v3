@@ -274,4 +274,4 @@ Explora [Componentes UI](../components/ui-components.md) o lee [Methodology](../
 
 - [Stack Tecnológico](../architecture/stack.md)
 - [ADRs](../decisions/) - Decisiones arquitecturales
-- [Patterns](../methodology/patterns.md) - Code patterns
+- [Patterns](../methodology/patterns/README.md) - Code patterns

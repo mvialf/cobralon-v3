@@ -148,7 +148,7 @@ Usa agentes cuando la búsqueda requiere **múltiples pasos** o **análisis cont
 @docs/template/components/app-sidebar.md # Configurar sidebar navegación
 @docs/template/methodology/workflow.md # Proceso de desarrollo recomendado
 @docs/template/methodology/testing.md # Estrategia de testing recomendada
-@docs/template/methodology/patterns.md # Patrones de código y anti-patrones
+@docs/template/methodology/patterns/README.md # Patrones de código y anti-patrones
 @docs/template/methodology/documentation.md # Cómo usar ADRs + Implementation Log
 
 ### 📘 Decisiones Arquitecturales del Template (ADRs)

@@ -598,7 +598,7 @@ Luego valida en DB:
 
 ### Arquitectura de Componentes
 
-El sistema sigue los patrones del template (ver [docs/template/methodology/patterns.md](docs/template/methodology/patterns.md)):
+El sistema sigue los patrones del template (ver [docs/template/methodology/patterns/README.md](docs/template/methodology/patterns/README.md)):
 
 - **Dialogs:** `components/dialogs/payments/`
 - **Forms:** `components/forms/payments/`

@@ -288,7 +288,7 @@ await new Promise((resolve) => setTimeout(resolve, 500)) // Incrementar a 500ms
 ## 📖 Documentación Adicional
 
 - **ADR:** [docs/template/decisions/011-capture-dialog-pattern.md](../../../docs/template/decisions/011-capture-dialog-pattern.md)
-- **Patrones:** [docs/template/methodology/patterns.md](../../../docs/template/methodology/patterns.md#9-patrón-de-captura-de-diálogos)
+- **Patrones:** [docs/template/methodology/patterns/ui-patterns/capture-dialog.md](../../../docs/template/methodology/patterns/ui-patterns/capture-dialog.md)
 - **Ejemplo:** [app/examples/capture-dialog/page.tsx](../../../app/examples/capture-dialog/page.tsx)
 
 ## 📜 Licencia

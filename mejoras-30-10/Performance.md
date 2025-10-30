@@ -406,7 +406,6 @@ export function EditProjectDialog({ open, onOpenChange }) {
 
 ```tsx
 import Image from 'next/image'
-
 ;<Image
   src="/project-photo.jpg"
   alt="Proyecto"
