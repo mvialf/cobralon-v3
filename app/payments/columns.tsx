@@ -1,7 +1,7 @@
 'use client'
 
 import { type ColumnDef } from '@tanstack/react-table'
-import { Eye, XCircle } from 'lucide-react'
+import { Eye, XCircle, Loader2 } from 'lucide-react'
 import { DataTableDropdown } from '@/components/data-table'
 import {
   DropdownMenuItem,
@@ -11,7 +11,6 @@ import {
 import { StatusBadge } from '@/components/ui/status-badge'
 import { DataTableColumnHeader } from '@/components/data-table'
 import { ProjectNameSummary } from '@/components/summarys/project-name-summary'
-import { toast } from 'sonner'
 import { formatDate } from '@/lib/format'
 
 export interface Payment {
@@ -19,13 +18,13 @@ export interface Payment {
   type: 'Project' | 'Customer' // ← Tipo de pago
   amount: number
   currency: string
-  date: string
+  date: Date | string // Compatible con API response
   reference: string | null
-  customer: {
+  customer?: {
     id: string
     name: string
   }
-  paymentMethod: {
+  paymentMethod?: {
     id: string
     name: string
   }
@@ -40,22 +39,38 @@ export interface Payment {
   }>
 }
 
+// ============================================================================
+// TABLE META TYPE (Type-safe access)
+// ============================================================================
+
+/**
+ * Type-safe interface para table.options.meta
+ * Permite pasar callbacks y estado desde la página a las columnas
+ */
+interface PaymentsTableMeta {
+  handleDelete?: (paymentId: string) => void
+  deletingPaymentId?: string | null
+}
+
+/**
+ * Helper type-safe para extraer meta del table sin usar `as any`
+ */
+function getPaymentsTableMeta(table: any): PaymentsTableMeta {
+  return (table.options.meta || {}) as PaymentsTableMeta
+}
+
 interface ColumnsProps {
-  onPaymentUpdated?: () => void
   onViewDetails?: (payment: Payment) => void
 }
 
-export const createColumns = ({
-  onPaymentUpdated,
-  onViewDetails,
-}: ColumnsProps = {}): ColumnDef<Payment>[] => [
+export const createColumns = ({ onViewDetails }: ColumnsProps = {}): ColumnDef<Payment>[] => [
   // Cliente/Proyecto (fusionado)
   {
     id: 'associated',
     accessorFn: (row) => {
       // Para sorting: extraer nombre relevante
       if (row.type === 'Customer') {
-        return row.customer.name
+        return row.customer?.name || ''
       }
       if (row.type === 'Project' && row.allocations.length === 1) {
         return row.allocations[0].project.projectName || row.allocations[0].project.projectNumber
@@ -68,7 +83,7 @@ export const createColumns = ({
 
       // Customer payment → customer name
       if (payment.type === 'Customer') {
-        return <span className="font-medium">{payment.customer.name}</span>
+        return <span className="font-medium">{payment.customer?.name || '-'}</span>
       }
 
       // Project payment 1:1 → ProjectNameSummary
@@ -77,7 +92,7 @@ export const createColumns = ({
         return (
           <ProjectNameSummary
             projectNumber={project.projectNumber}
-            customerName={payment.customer.name}
+            customerName={payment.customer?.name || '-'}
             projectName={project.projectName}
           />
         )
@@ -113,10 +128,10 @@ export const createColumns = ({
     accessorKey: 'paymentMethod.name',
     id: 'paymentMethodName',
     header: 'Método',
-    cell: ({ row }) => row.original.paymentMethod.name,
+    cell: ({ row }) => row.original.paymentMethod?.name || '-',
     filterFn: (row, _id, filterValue) => {
-      const methodName = row.original.paymentMethod.name
-      return filterValue.includes(methodName)
+      const methodName = row.original.paymentMethod?.name
+      return methodName ? filterValue.includes(methodName) : false
     },
   },
 
@@ -150,32 +165,25 @@ export const createColumns = ({
   // Acciones
   {
     id: 'actions',
-    cell: ({ row }) => {
+    cell: ({ row, table }) => {
       const payment = row.original
       const isCustomerPayment = payment.type === 'Customer'
 
-      const handleDelete = async () => {
-        if (!confirm(`¿Estás seguro de eliminar este pago de ${payment.customer.name}?`)) {
+      // ✅ Extraer callbacks del table meta (type-safe)
+      const { handleDelete, deletingPaymentId } = getPaymentsTableMeta(table)
+
+      const onDelete = async () => {
+        if (
+          !confirm(
+            `¿Estás seguro de eliminar este pago de ${payment.customer?.name || 'este cliente'}?`
+          )
+        ) {
           return
         }
-
-        try {
-          const response = await fetch(`/api/payments/${payment.id}`, {
-            method: 'DELETE',
-          })
-
-          if (!response.ok) {
-            const error = await response.json()
-            throw new Error(error.error || 'Error al eliminar pago')
-          }
-
-          toast.success('Pago eliminado exitosamente')
-          onPaymentUpdated?.()
-        } catch (error) {
-          console.error('Error al eliminar pago:', error)
-          toast.error(error instanceof Error ? error.message : 'Error al eliminar pago')
-        }
+        handleDelete?.(payment.id)
       }
+
+      const isDeleting = deletingPaymentId === payment.id
 
       return (
         <DataTableDropdown>
@@ -193,9 +201,18 @@ export const createColumns = ({
           )}
 
           {/* Eliminar pago */}
-          <DropdownMenuItem className="text-destructive" onClick={handleDelete}>
-            <XCircle className="mr-2 h-4 w-4" />
-            Eliminar pago
+          <DropdownMenuItem className="text-destructive" onClick={onDelete} disabled={isDeleting}>
+            {isDeleting ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Eliminando...
+              </>
+            ) : (
+              <>
+                <XCircle className="mr-2 h-4 w-4" />
+                Eliminar pago
+              </>
+            )}
           </DropdownMenuItem>
         </DataTableDropdown>
       )

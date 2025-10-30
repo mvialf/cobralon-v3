@@ -44,7 +44,9 @@ export function usePayments() {
 
   // Obtener métodos de pago únicos para filtro
   const uniquePaymentMethods = useMemo(() => {
-    const methods = new Set(payments.map((p) => p.paymentMethod.name))
+    const methods = new Set(
+      payments.filter((p) => p.paymentMethod).map((p) => p.paymentMethod!.name)
+    )
     return Array.from(methods).map((method) => ({
       label: method,
       value: method,

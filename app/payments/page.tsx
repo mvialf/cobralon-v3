@@ -15,11 +15,27 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { usePayments } from '@/hooks/use-payments'
+import { usePayments, useDeletePayment } from '@/hooks/queries/use-payments'
+import type { Payment as APIPayment } from '@/lib/validations/payment-validations'
 
 export default function PaymentsPage() {
-  // Estado de pagos (extraído a hook custom)
-  const { payments, isLoading, fetchPayments, uniquePaymentMethods } = usePayments()
+  // ✅ React Query hooks reemplazan state management manual
+  const { data, isLoading, refetch } = usePayments({ limit: 1000 })
+  const deleteMutation = useDeletePayment()
+
+  // Extraer data del hook (con fallbacks) y cast a tipo local
+  const payments = useMemo(() => (data?.payments || []) as Payment[], [data?.payments])
+
+  // Calcular métodos de pago únicos para filtros (movido del hook viejo)
+  const uniquePaymentMethods = useMemo(() => {
+    const methods = new Set(
+      payments.filter((p) => p.paymentMethod).map((p) => p.paymentMethod!.name)
+    )
+    return Array.from(methods).map((method) => ({
+      label: method,
+      value: method,
+    }))
+  }, [payments])
 
   // Estado de dialogs
   const [selectedPayment, setSelectedPayment] = useState<Payment | null>(null)
@@ -32,13 +48,17 @@ export default function PaymentsPage() {
     setIsDetailsDialogOpen(true)
   }
 
+  // Handler para eliminar pagos (pasa via meta a columns)
+  const handleDelete = async (paymentId: string) => {
+    await deleteMutation.mutateAsync(paymentId)
+  }
+
   const columns = useMemo(
     () =>
       createColumns({
-        onPaymentUpdated: fetchPayments,
         onViewDetails: handleViewDetails,
       }),
-    [fetchPayments]
+    []
   )
 
   return (
@@ -91,13 +111,17 @@ export default function PaymentsPage() {
                 options: uniquePaymentMethods,
               },
             ]}
+            meta={{
+              handleDelete,
+              deletingPaymentId: deleteMutation.variables || null,
+            }}
           />
         )}
       </div>
 
       {/* Modal de detalles */}
       <PaymentDetailsDialog
-        payment={selectedPayment}
+        payment={selectedPayment as APIPayment | null}
         open={isDetailsDialogOpen}
         onOpenChange={setIsDetailsDialogOpen}
       />
@@ -106,14 +130,14 @@ export default function PaymentsPage() {
       <PaymentToProjectDialog
         open={isPaymentToProjectDialogOpen}
         onOpenChange={setIsPaymentToProjectDialogOpen}
-        onSuccess={fetchPayments}
+        onSuccess={refetch}
       />
 
       {/* Modal de registro de pago a cliente */}
       <PaymentToCustomerDialog
         open={isPaymentToCustomerDialogOpen}
         onOpenChange={setIsPaymentToCustomerDialogOpen}
-        onSuccess={fetchPayments}
+        onSuccess={refetch}
       />
     </AppLayout>
   )
