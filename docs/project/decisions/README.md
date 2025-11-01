@@ -11,9 +11,37 @@ Los **Architecture Decision Records (ADRs)** son documentos que capturan decisio
 - **Alternativas consideradas:** Qué otras opciones evaluamos y por qué NO las elegimos
 - **Consecuencias:** Qué beneficios y trade-offs resultan de esta decisión
 
+## Filosofía de Documentación (Dual-Track)
+
+Este proyecto usa **dos tipos de ADRs** optimizados para diferentes propósitos:
+
+### Tipo A: ADRs Técnicos (Slim ~80-120 líneas)
+
+**Para:** Decisiones de stack/herramientas donde la decisión ya está tomada.
+**Enfoque:** "Cómo usar esto en Cobralon" > "Por qué NO otras opciones"
+**Template:** [template-slim.md](template-slim.md)
+
+**Ejemplos:**
+- ✅ ADR-012 (Pino Logging): 367 → 97 líneas (-73.6%)
+- ✅ ADR-004 (Neon PostgreSQL): 642 → 121 líneas (-81.2%)
+
+### Tipo B: ADRs de Negocio (Extended ~200-400 líneas)
+
+**Para:** Decisiones de arquitectura/producto donde el contexto ES el valor.
+**Enfoque:** Quick Start + Contexto completo + Alternativas bien justificadas
+**Template:** [template-extended.md](template-extended.md)
+
+**Ejemplos:**
+- 📋 ADR-001 (Payment Allocation) - Modelado N:M crítico
+- 📋 ADR-002 (Dual Payment Flows) - Decisión de UX/producto
+- 📋 ADR-003 (Installments) - Lógica de negocio financiera
+- 📋 ADR-005 (No Auth MVP) - Estrategia de producto
+
+---
+
 ## Índice de ADRs del Proyecto
 
-### [ADR-001: PaymentAllocation Architecture (Tabla Intermedia N:M)](001-payment-allocation-architecture.md)
+### [ADR-001: PaymentAllocation Architecture (Tabla Intermedia N:M)](001-payment-allocation-architecture.md) 📋
 
 **Status:** ✅ Aceptado | **Fecha:** 2025-10-21
 
@@ -37,7 +65,7 @@ Los **Architecture Decision Records (ADRs)** son documentos que capturan decisio
 
 ---
 
-### [ADR-002: Dual Payment Flows (Project vs Customer)](002-dual-payment-flows.md)
+### [ADR-002: Dual Payment Flows (Project vs Customer)](002-dual-payment-flows.md) 📋
 
 **Status:** ✅ Aceptado | **Fecha:** 2025-10-21
 
@@ -64,7 +92,7 @@ Los **Architecture Decision Records (ADRs)** son documentos que capturan decisio
 
 ---
 
-### [ADR-003: Installments Without Interest (Cuotas Sin Interés)](003-installments-without-interest.md)
+### [ADR-003: Installments Without Interest (Cuotas Sin Interés)](003-installments-without-interest.md) 📋
 
 **Status:** ✅ Aceptado | **Fecha:** 2025-10-21
 
@@ -91,7 +119,7 @@ Los **Architecture Decision Records (ADRs)** son documentos que capturan decisio
 
 ---
 
-### [ADR-004: Neon PostgreSQL Database Provider](004-neon-postgresql.md)
+### [ADR-004: Neon PostgreSQL Database Provider](004-neon-postgresql.md) ⚡
 
 **Status:** ✅ Aceptado | **Fecha:** 2025-10-22
 
@@ -119,7 +147,28 @@ Los **Architecture Decision Records (ADRs)** son documentos que capturan decisio
 
 ---
 
-### [ADR-005: No Authentication System (MVP Phase)](005-no-authentication-mvp.md)
+### [ADR-005: No Authentication System (MVP Phase)](005-no-authentication-mvp.md) 📋
+
+---
+
+### [ADR-012: Pino Structured Logging](012-pino-structured-logging.md) ⚡
+
+**Status:** ✅ Aceptado | **Fecha:** 2025-10-30
+
+**Decisión:** Usar Pino 9.7.0 como sistema de logging estructurado con middleware pattern y request correlation automática.
+
+**Por qué es importante:**
+
+- Performance óptima (~30ns per log, 10x más rápido que Winston)
+- Request correlation automática vía UUID
+- JSON estructurado en producción (queryable)
+- DX superior (pretty-print en dev)
+
+**Consecuencias clave:**
+
+- ✅ Production-ready para serverless (Vercel)
+- ✅ Security built-in (redaction automática)
+- ⚠️ JSON no human-readable en prod (mitigado con Vercel UI)
 
 **Status:** ✅ Aceptado | **Fecha:** 2025-10-25
 
@@ -198,84 +247,25 @@ Documentados en este directorio ([docs/project/decisions/](./)):
 
 ---
 
-## Template de ADR
+## Templates de ADR
 
-Cuando agregues un nuevo ADR, usa esta estructura:
+### ¿Cuál Template Usar?
 
-```markdown
-# ADR-XXX: Título Descriptivo
+**Decisión técnica (stack/herramienta):** → [template-slim.md](template-slim.md)
+- Pino, ESLint, Neon, librerías, frameworks
+- Target: 80-120 líneas
+- Enfoque: Quick Start + Trade-offs
 
-## Estado
+**Decisión de negocio/arquitectura:** → [template-extended.md](template-extended.md)
+- Modelado de datos, flujos de UX, lógica de negocio, estrategia de producto
+- Target: 200-400 líneas
+- Enfoque: Quick Start + Contexto completo + Alternativas bien justificadas
 
-**Aceptado** | **Propuesto** | **Deprecado** | **Superseded by ADR-YYY**
+### Template Slim (Referencia Rápida)
 
-**Fecha:** YYYY-MM-DD
+Cuando agregues un ADR técnico, usa esta estructura:
 
-## Contexto
-
-¿Por qué necesitamos tomar esta decisión?
-
-- Problema que resolver
-- Requisitos de negocio
-- Restricciones técnicas
-- Casos de uso reales
-
-## Decisión
-
-¿Qué decidimos hacer? (Ser específico y conciso)
-
-## Alternativas Consideradas
-
-### Alternativa 1: [Nombre]
-
-- **Pros:**
-  - Ventaja 1
-  - Ventaja 2
-- **Contras:**
-  - Desventaja 1
-  - Desventaja 2
-- **Por qué NO:** Razón principal de rechazo
-
-### Alternativa 2: [Nombre]
-
-(Repetir estructura)
-
-## Consecuencias
-
-### Positivas ✅
-
-1. **Beneficio 1**
-   - Descripción
-   - Cuantificado (si aplica)
-
-### Negativas / Trade-offs ⚠️
-
-1. **Trade-off 1**
-   - Descripción
-   - Mitigación
-
-## Implementación
-
-Detalles técnicos:
-
-- Archivos modificados
-- Código de ejemplo
-- Configuración necesaria
-
-## Referencias
-
-- Código: Links a archivos relevantes
-- Documentación: Links a docs externas
-- ADRs relacionados
-
-## Notas Adicionales
-
-Información adicional relevante que no encaja en las secciones anteriores.
-
----
-
-**Última actualización:** YYYY-MM-DD
-```
+Ver [template-slim.md](template-slim.md) o [template-extended.md](template-extended.md) para templates completos.
 
 ---
 
@@ -349,14 +339,19 @@ Información adicional relevante que no encaja en las secciones anteriores.
 
 ## Métricas del Proyecto
 
-| Métrica                  | Valor  |
-| ------------------------ | ------ |
-| **ADRs Totales**         | 5      |
-| **Aceptados**            | 5      |
-| **Propuestos**           | 0      |
-| **Deprecados**           | 0      |
-| **Total Líneas de Docs** | ~3,200 |
-| **Tiempo Invertido**     | ~5h    |
+| Métrica                  | Valor Actual | Post-Refactor | Reducción |
+| ------------------------ | ------------ | ------------- | --------- |
+| **ADRs Totales**         | 6            | 6             | -         |
+| **Aceptados**            | 6            | 6             | -         |
+| **ADRs Tipo A (Slim)**   | 0            | 2             | +2        |
+| **ADRs Tipo B (Extended)** | 0          | 4             | +4        |
+| **Total Líneas de Docs** | ~3,566       | ~2,450        | **-31.3%** |
+| **Tiempo Lectura (avg)** | ~12 min      | ~8 min        | **-33%**  |
+
+**Refactor Details:**
+- **ADR-012 (Pino):** 367 → 97 líneas (-73.6%)
+- **ADR-004 (Neon):** 642 → 121 líneas (-81.2%)
+- **ADR-001, 002, 003, 005:** Mejorados con Quick Start (mantienen longitud)
 
 ---
 
@@ -392,6 +387,6 @@ grep -l "**Propuesto**" docs/project/decisions/*.md
 
 ---
 
-**Última actualización:** 2025-10-25
+**Última actualización:** 2025-11-01 (Refactor selectivo aplicado)
 
-**Próxima revisión:** Cuando se agregue ADR-006
+**Filosofía:** ADRs técnicos (Slim) vs ADRs de negocio (Extended)
