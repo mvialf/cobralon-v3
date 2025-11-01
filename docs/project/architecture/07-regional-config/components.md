@@ -470,7 +470,7 @@ const { region } = useConfiguration()
 'use client'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { AddressFields } from '@/components/forms/address-fields'
+import { AddressFields } from '@/components/forms/fields/address-fields'
 import { projectFormSchema } from '@/lib/validations/project-validations'
 
 export function ProjectForm() {
@@ -601,7 +601,7 @@ import { useConfiguration } from '@/hooks/use-configuration'
 import { CurrencyInput } from '@/components/ui/currency-input'
 import { PhoneInput } from '@/components/ui/phone-input'
 import { RutInput } from '@/components/ui/rut-input'
-import { AddressFields } from '@/components/forms/address-fields'
+import { AddressFields } from '@/components/forms/fields/address-fields'
 
 export function ProjectForm() {
   const { pais, region } = useConfiguration()

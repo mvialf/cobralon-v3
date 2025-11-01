@@ -163,7 +163,7 @@ Componentes regionales que consumen configuración:
 'use client'
 import { useConfiguration } from '@/hooks/use-configuration'
 import { CurrencyInput } from '@/components/ui/currency-input'
-import { AddressFields } from '@/components/forms/address-fields'
+import { AddressFields } from '@/components/forms/fields/address-fields'
 
 export function ProjectForm() {
   const { currency } = useConfiguration()

@@ -24,9 +24,10 @@ Patrones específicos para componentes de interfaz:
 
 6. [Patrón de Formularios](ui-patterns/form-pattern.md) - Formularios como componentes reutilizables
 7. [Patrón de Diálogos](ui-patterns/dialog-pattern.md) - Diálogos encapsulados con lógica interna
-8. [Contenido Wide (Overflow)](ui-patterns/wide-content-overflow.md) - Manejo de scroll horizontal
-9. [Capture Dialog](ui-patterns/capture-dialog.md) - ⚠️ Experimental: Copiar contenido como imagen
-10. [Form + Dialog Asíncrono](ui-patterns/form-dialog-async-edit.md) - Patrón avanzado de edición
+8. [Composición de Secciones de Formularios](ui-patterns/form-field-composition.md) - ⭐ Sub-componentes reutilizables con React Hook Form
+9. [Contenido Wide (Overflow)](ui-patterns/wide-content-overflow.md) - Manejo de scroll horizontal
+10. [Capture Dialog](ui-patterns/capture-dialog.md) - ⚠️ Experimental: Copiar contenido como imagen
+11. [Form + Dialog Asíncrono](ui-patterns/form-dialog-async-edit.md) - Patrón avanzado de edición
 
 ### ❌ Anti-Patrones
 
@@ -77,4 +78,4 @@ Esta documentación está en construcción continua. Se recomienda agregar:
 
 ---
 
-**Última actualización:** 2025-10-30
+**Última actualización:** 2025-11-01
