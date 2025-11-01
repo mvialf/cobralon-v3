@@ -5,18 +5,16 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 
 import { projectFormSchema, type ProjectFormData } from '@/lib/validations/project-validations'
-import { calculateProjectTotal } from '@/lib/business-logic/totals'
 
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Textarea } from '@/components/ui/textarea'
 import { PhoneInput } from '@/components/ui/phone-input'
-import { CurrencyInput } from '@/components/ui/currency-input'
-import { PercentageInput } from '@/components/ui/percentage-input'
 import { FormGrid } from '@/components/ui/form-grid'
 import { StatusBadge } from '@/components/ui/status-badge'
 import { Combobox } from '@/components/ui/combobox'
 import { AddressFields } from '@/components/forms/address-fields'
+import { ProjectFinancialFields } from '@/components/forms/project-financial-fields'
+import { ProjectDetailsFields } from '@/components/forms/project-details-fields'
 import { useConfiguration } from '@/hooks/use-configuration'
 import {
   Form,
@@ -187,16 +185,6 @@ export const ProjectForm = React.forwardRef<ProjectFormHandle, ProjectFormProps>
       // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [])
 
-    // Watch subtotal y taxRate para calcular total
-    const subtotal = form.watch('subtotal')
-    const taxRate = form.watch('taxRate')
-
-    // Calcular total automáticamente usando business logic
-    const total = React.useMemo(() => {
-      if (!subtotal) return 0
-      return calculateProjectTotal(subtotal, taxRate || 0)
-    }, [subtotal, taxRate])
-
     // Cuando se selecciona un customer, autocompletar phone
     const handleCustomerSelect = (customerId: string) => {
       const selectedCustomer = customers.find((c) => c.id === customerId)
@@ -352,108 +340,9 @@ export const ProjectForm = React.forwardRef<ProjectFormHandle, ProjectFormProps>
 
           <AddressFields control={form.control} defaultRegion={configuration.region} />
 
-          <FormGrid columns={3}>
-            {/* Subtotal */}
-            <FormField
-              control={form.control}
-              name="subtotal"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Subtotal *</FormLabel>
-                  <FormControl>
-                    <CurrencyInput value={field.value} onChange={field.onChange} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+          <ProjectFinancialFields control={form.control} currency={form.watch('currency')} />
 
-            {/* Impuesto */}
-            <FormField
-              control={form.control}
-              name="taxRate"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Impuesto</FormLabel>
-                  <FormControl>
-                    <PercentageInput
-                      value={field.value}
-                      onValueChange={(value) => field.onChange(value || 0)}
-                      placeholder="19.0"
-                      decimalScale={1}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            {/* Total (calculado automáticamente, read-only) */}
-            <FormItem>
-              <FormLabel>Total</FormLabel>
-              <FormControl>
-                <CurrencyInput value={total} onChange={() => {}} disabled className="bg-muted" />
-              </FormControl>
-            </FormItem>
-          </FormGrid>
-
-          <FormGrid columns={2}>
-            {/* Elementos */}
-            <FormField
-              control={form.control}
-              name="windowsCount"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Elementos</FormLabel>
-                  <FormControl>
-                    <Input
-                      type="number"
-                      min="0"
-                      {...field}
-                      onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            {/* m² */}
-            <FormField
-              control={form.control}
-              name="squareMeters"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>m²</FormLabel>
-                  <FormControl>
-                    <Input
-                      type="number"
-                      step="0.01"
-                      min="0"
-                      {...field}
-                      onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          </FormGrid>
-
-          {/* Descripción */}
-          <FormField
-            control={form.control}
-            name="description"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Descripción</FormLabel>
-                <FormControl>
-                  <Textarea {...field} placeholder="Descripción detallada del proyecto" rows={4} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+          <ProjectDetailsFields control={form.control} />
 
           {showSubmitButton && (
             <div className="flex justify-end gap-2">

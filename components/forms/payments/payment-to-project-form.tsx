@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useQuery } from '@tanstack/react-query'
@@ -11,11 +11,8 @@ import {
   type ProjectWithBalance,
 } from '@/lib/validations/payment-validations'
 import { formatCurrency } from '@/lib/format'
-import { useDebounce } from '@/hooks/use-debounce'
 
-import { Combobox } from '@/components/ui/combobox'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
 import {
   Form,
   FormControl,
@@ -25,18 +22,10 @@ import {
   FormMessage,
   FormRoot,
 } from '@/components/ui/form'
-import { FormGrid } from '@/components/ui/form-grid'
-import { CurrencyInput } from '@/components/ui/currency-input'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
-import { Card, CardContent } from '@/components/ui/card'
-import { ProjectNameSummary } from '@/components/summarys/project-name-summary'
+import { ProjectSearchField } from '@/components/forms/project-search-field'
+import { PaymentMethodFields } from '@/components/forms/payment-method-fields'
+import { PaymentAmountDateFields } from '@/components/forms/payment-amount-date-fields'
 
 interface PaymentToProjectFormProps {
   onSubmit: (data: PaymentToProjectFormValues, project: ProjectWithBalance) => void | Promise<void>
@@ -59,11 +48,7 @@ export function PaymentToProjectForm({
   isSubmitting = false,
   preselectedProjectId,
 }: PaymentToProjectFormProps) {
-  // State para búsqueda de proyectos
-  const [searchTerm, setSearchTerm] = useState('')
-  const debouncedSearch = useDebounce(searchTerm, 300)
-
-  // State para proyecto seleccionado
+  // State para proyecto seleccionado (actualizado via callback de ProjectSearchField)
   const [selectedProject, setSelectedProject] = useState<ProjectWithBalance | null>(null)
 
   // Form setup
@@ -76,28 +61,6 @@ export function PaymentToProjectForm({
       paymentMethodId: '',
       notes: '',
     },
-  })
-
-  // Fetch proyecto pre-seleccionado (si viene el ID)
-  const { data: preselectedProject, isLoading: loadingPreselected } = useQuery({
-    queryKey: ['project-with-balance', preselectedProjectId],
-    queryFn: async () => {
-      const res = await fetch(`/api/projects/${preselectedProjectId}?withBalance=true`)
-      if (!res.ok) throw new Error('Error al cargar el proyecto')
-      return res.json() as Promise<ProjectWithBalance>
-    },
-    enabled: !!preselectedProjectId,
-  })
-
-  // Fetch proyectos (server-side search) - solo si NO hay proyecto pre-seleccionado
-  const { data: projects = [], isLoading: loadingProjects } = useQuery({
-    queryKey: ['projects-search', debouncedSearch],
-    queryFn: async () => {
-      const res = await fetch(`/api/payments/search-projects?q=${debouncedSearch}&limit=20`)
-      if (!res.ok) throw new Error('Error al buscar proyectos')
-      return res.json() as Promise<ProjectWithBalance[]>
-    },
-    enabled: !preselectedProjectId && debouncedSearch.length >= 2,
   })
 
   // Fetch payment methods
@@ -117,30 +80,6 @@ export function PaymentToProjectForm({
       return data.paymentMethods || []
     },
   })
-
-  // Cuando cambia el proyecto seleccionado o llega el proyecto pre-seleccionado
-  const watchedProjectId = form.watch('projectId')
-  useEffect(() => {
-    // Si hay proyecto pre-seleccionado y ya se cargó
-    if (preselectedProjectId && preselectedProject) {
-      setSelectedProject(preselectedProject)
-      return
-    }
-
-    // Si no, buscar en los resultados de búsqueda
-    if (watchedProjectId && projects.length > 0) {
-      const project = projects.find((p: ProjectWithBalance) => p.id === watchedProjectId)
-      if (project) {
-        setSelectedProject(project)
-      }
-    } else {
-      setSelectedProject(null)
-    }
-  }, [watchedProjectId, projects, preselectedProjectId, preselectedProject])
-
-  // Watch payment method para mostrar campo de cuotas
-  const watchedPaymentMethodId = form.watch('paymentMethodId')
-  const selectedPaymentMethod = paymentMethods.find((m) => m.id === watchedPaymentMethodId)
 
   // Submit handler
   const handleSubmit = (values: PaymentToProjectFormValues) => {
@@ -163,205 +102,26 @@ export function PaymentToProjectForm({
   return (
     <Form {...form}>
       <FormRoot onSubmit={form.handleSubmit(handleSubmit)}>
-        {/* 1. Proyecto: Mostrar ProjectNameSummary si está pre-seleccionado, sino Combobox */}
-        {preselectedProjectId ? (
-          // Proyecto pre-seleccionado (no editable)
-          <div className="space-y-2">
-            <FormLabel>Proyecto</FormLabel>
-            {loadingPreselected ? (
-              <div className="text-sm text-muted-foreground">Cargando proyecto...</div>
-            ) : selectedProject ? (
-              <div className="rounded-lg border bg-muted/50 p-3">
-                <ProjectNameSummary
-                  projectNumber={selectedProject.projectNumber}
-                  customerName={selectedProject.customer.name}
-                  projectName={selectedProject.projectName}
-                />
-              </div>
-            ) : (
-              <div className="text-sm text-destructive">Error al cargar el proyecto</div>
-            )}
-          </div>
-        ) : (
-          // Combobox normal (búsqueda de proyectos)
-          <FormField
-            control={form.control}
-            name="projectId"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Proyecto *</FormLabel>
-                <FormControl>
-                  <Combobox<ProjectWithBalance>
-                    value={field.value}
-                    onValueChange={field.onChange}
-                    options={projects}
-                    getOptionValue={(p) => p.id}
-                    getOptionLabel={(p) => `${p.projectNumber} - ${p.customer.name}`}
-                    renderOption={(project) => (
-                      <div className="space-y-0.5">
-                        <div className="text-sm text-muted-foreground">
-                          Proyecto #{project.projectNumber}
-                        </div>
-                        <div className="font-medium">
-                          {project.customer.name}
-                          {project.projectName && ` - ${project.projectName}`}
-                        </div>
-                      </div>
-                    )}
-                    placeholder="Buscar proyecto..."
-                    searchPlaceholder="Escribe número, nombre o cliente..."
-                    emptyMessage={
-                      debouncedSearch.length < 2
-                        ? 'Escribe al menos 2 caracteres para buscar'
-                        : 'No se encontraron proyectos con balance pendiente'
-                    }
-                    loading={loadingProjects}
-                    loadingText="Buscando proyectos..."
-                    contentWidth="400px"
-                    onSearchChange={setSearchTerm}
-                    disableFiltering={true}
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-        )}
-
-        {/* 2. Cards: Balance Pendiente */}
-        {selectedProject && (
-          <div className="flex justify-center gap-4">
-            <Card className="p-2">
-              <CardContent className="flex flex-col ">
-                <p className="text-sm text-center text-muted-foreground">Saldo pendiente</p>
-                <p className="text-lg text-center font-semibold">
-                  {formatCurrency(selectedProject.balance, selectedProject.currency)}
-                </p>
-              </CardContent>
-            </Card>
-            <Card className="p-2">
-              <CardContent className="flex flex-col">
-                <p className="text-sm text-center text-muted-foreground">Total del proyecto</p>
-                <p className="text-lg text-center font-semibold">
-                  {formatCurrency(selectedProject.totalAmount, selectedProject.currency)}
-                </p>
-              </CardContent>
-            </Card>
-          </div>
-        )}
-
-        <FormGrid columns={2}>
-          {/* Monto del Pago */}
-          <FormField
-            control={form.control}
-            name="amount"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Monto del Pago *</FormLabel>
-                <FormControl>
-                  <CurrencyInput
-                    value={field.value}
-                    onChange={field.onChange}
-                    currency={selectedProject?.currency}
-                    disabled={!selectedProject}
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
-          {/* Fecha */}
-          <FormField
-            control={form.control}
-            name="date"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Fecha del Pago *</FormLabel>
-                <FormControl>
-                  <Input
-                    type="date"
-                    value={
-                      field.value instanceof Date
-                        ? field.value.toISOString().split('T')[0]
-                        : field.value
-                    }
-                    onChange={(e) => field.onChange(new Date(e.target.value))}
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-        </FormGrid>
-
-        {/* 3. Método de Pago */}
-        <FormField
+        {/* 1. Búsqueda de Proyecto + Cards de Balance */}
+        <ProjectSearchField
           control={form.control}
-          name="paymentMethodId"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Método de Pago *</FormLabel>
-              <Select
-                onValueChange={(value) => {
-                  field.onChange(value)
-                  // Reset cuotas si cambia el método
-                  form.setValue('selectedInstallments', null)
-                }}
-                value={field.value}
-              >
-                <FormControl>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Seleccionar método" />
-                  </SelectTrigger>
-                </FormControl>
-                <SelectContent>
-                  {paymentMethods.map((method) => (
-                    <SelectItem key={method.id} value={method.id}>
-                      {method.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <FormMessage />
-            </FormItem>
-          )}
+          preselectedProjectId={preselectedProjectId}
+          onProjectSelect={setSelectedProject}
         />
 
-        {/* 3.5. Número de Cuotas (condicional) */}
-        {selectedPaymentMethod?.hasInstallments && (
-          <FormField
-            control={form.control}
-            name="selectedInstallments"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Número de Cuotas</FormLabel>
-                <Select
-                  onValueChange={(value) => field.onChange(value === '1' ? null : Number(value))}
-                  value={field.value?.toString() || '1'}
-                >
-                  <FormControl>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Seleccionar cuotas" />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
-                    <SelectItem value="1">1 cuota (contado)</SelectItem>
-                    {Array.from(
-                      { length: (selectedPaymentMethod?.maxInstallments || 2) - 1 },
-                      (_, i) => i + 2
-                    ).map((num) => (
-                      <SelectItem key={num} value={num.toString()}>
-                        {num} cuotas sin interés
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-        )}
+        {/* 2. Monto y Fecha */}
+        <PaymentAmountDateFields
+          control={form.control}
+          currency={selectedProject?.currency}
+          disabled={!selectedProject}
+        />
+
+        {/* 3. Método de Pago + Cuotas */}
+        <PaymentMethodFields
+          control={form.control}
+          paymentMethods={paymentMethods}
+          onPaymentMethodChange={() => form.setValue('selectedInstallments', null)}
+        />
 
         {/* 4. Notas (opcional) */}
         <FormField

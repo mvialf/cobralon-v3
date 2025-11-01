@@ -5,7 +5,6 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useQuery } from '@tanstack/react-query'
 import { Trash2 } from 'lucide-react'
-import { FormGrid } from '@/components/ui/form-grid'
 import {
   paymentToCustomerSchema,
   type PaymentToCustomerFormValues,
@@ -13,10 +12,8 @@ import {
 } from '@/lib/validations/payment-validations'
 import { calculateFIFO } from '@/lib/business-logic/payment-fifo'
 import { formatCurrency } from '@/lib/format'
-import { useDebounce } from '@/hooks/use-debounce'
 import { cn } from '@/lib/utils'
 
-import { Combobox } from '@/components/ui/combobox'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import {
@@ -27,15 +24,7 @@ import {
   FormLabel,
   FormMessage,
 } from '@/components/ui/form'
-import { Input } from '@/components/ui/input'
 import { CurrencyInput } from '@/components/ui/currency-input'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
 import {
   Table,
@@ -45,21 +34,9 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import { CustomerNameSummary } from '@/components/summarys/customer-name-summary'
-
-interface PaymentMethod {
-  id: string
-  name: string
-  hasInstallments: boolean
-  maxInstallments: number | null
-}
-
-interface Customer {
-  id: string
-  name: string
-  email?: string
-  phone?: string
-}
+import { PaymentMethodFields } from '@/components/forms/payment-method-fields'
+import { PaymentAmountDateFields } from '@/components/forms/payment-amount-date-fields'
+import { CustomerSearchField } from '@/components/forms/customer-search-field'
 
 interface PaymentToCustomerFormProps {
   onSubmit: (data: PaymentToCustomerFormValues, currency: string) => void | Promise<void>
@@ -83,10 +60,6 @@ export function PaymentToCustomerForm({
   isSubmitting = false,
   preselectedCustomerId,
 }: PaymentToCustomerFormProps) {
-  // State para búsqueda de clientes
-  const [customerSearch, setCustomerSearch] = useState('')
-  const debouncedCustomerSearch = useDebounce(customerSearch, 300)
-
   // State para cliente seleccionado
   const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(null)
 
@@ -117,29 +90,6 @@ export function PaymentToCustomerForm({
   const form = useForm<PaymentToCustomerFormValues>({
     resolver: zodResolver(paymentToCustomerSchema),
     defaultValues,
-  })
-
-  // Fetch cliente pre-seleccionado (si viene el ID)
-  const { data: preselectedCustomer, isLoading: loadingPreselected } = useQuery({
-    queryKey: ['customer', preselectedCustomerId],
-    queryFn: async () => {
-      const res = await fetch(`/api/customers/${preselectedCustomerId}`)
-      if (!res.ok) throw new Error('Error al cargar el cliente')
-      return res.json() as Promise<Customer>
-    },
-    enabled: !!preselectedCustomerId,
-  })
-
-  // Fetch clientes (para Combobox) - solo si NO hay cliente pre-seleccionado
-  const { data: customersData, isLoading: loadingCustomers } = useQuery({
-    queryKey: ['customers-search', debouncedCustomerSearch],
-    queryFn: async () => {
-      const res = await fetch(`/api/customers?search=${debouncedCustomerSearch}&limit=20`)
-      if (!res.ok) throw new Error('Error al buscar clientes')
-      const data = await res.json()
-      return data.customers || []
-    },
-    enabled: !preselectedCustomerId && debouncedCustomerSearch.length >= 2,
   })
 
   // Fetch proyectos del cliente seleccionado
@@ -173,19 +123,6 @@ export function PaymentToCustomerForm({
 
   // Watch amount para calcular FIFO
   const watchedAmount = form.watch('amount')
-
-  // Watch payment method para mostrar campo de cuotas
-  const watchedPaymentMethodId = form.watch('paymentMethodId')
-  const selectedPaymentMethod = paymentMethods.find(
-    (m: PaymentMethod) => m.id === watchedPaymentMethodId
-  )
-
-  // Auto-establecer selectedCustomerId cuando se carga el cliente pre-seleccionado
-  useEffect(() => {
-    if (preselectedCustomerId && preselectedCustomer) {
-      setSelectedCustomerId(preselectedCustomerId)
-    }
-  }, [preselectedCustomerId, preselectedCustomer])
 
   // Actualizar customerProjects cuando se cargan
   useEffect(() => {
@@ -273,177 +210,36 @@ export function PaymentToCustomerForm({
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-3">
-        {/* 1. Cliente: Mostrar CustomerNameSummary si está pre-seleccionado, sino Combobox */}
-        {preselectedCustomerId ? (
-          // Cliente pre-seleccionado (no editable)
-          <div className="space-y-2">
-            <FormLabel>Cliente</FormLabel>
-            {loadingPreselected ? (
-              <div className="text-sm text-muted-foreground">Cargando cliente...</div>
-            ) : preselectedCustomer ? (
-              <div className="rounded-lg border bg-muted/50 p-3">
-                <CustomerNameSummary
-                  name={preselectedCustomer.name}
-                  phone={preselectedCustomer.phone!}
-                  email={preselectedCustomer.email || undefined}
-                />
-              </div>
-            ) : (
-              <div className="text-sm text-destructive">Error al cargar el cliente</div>
-            )}
-          </div>
-        ) : (
-          // Combobox normal (búsqueda de clientes)
-          <FormField
-            control={form.control}
-            name="customerId"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Cliente *</FormLabel>
-                <FormControl>
-                  <Combobox<Customer>
-                    value={field.value}
-                    onValueChange={(value) => {
-                      field.onChange(value)
-                      setSelectedCustomerId(value)
-                      // Reset allocations y modo cuando cambia cliente
-                      setAllocations([])
-                      setDistributionMode('manual')
-                    }}
-                    options={customersData || []}
-                    getOptionValue={(c) => c.id}
-                    getOptionLabel={(c) => c.name}
-                    placeholder="Buscar cliente..."
-                    searchPlaceholder="Escribe nombre, email o teléfono..."
-                    emptyMessage={
-                      debouncedCustomerSearch.length < 2
-                        ? 'Escribe al menos 2 caracteres para buscar'
-                        : 'No se encontraron clientes'
-                    }
-                    loading={loadingCustomers}
-                    loadingText="Buscando clientes..."
-                    contentWidth="400px"
-                    onSearchChange={setCustomerSearch}
-                    disableFiltering={true}
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-        )}
-
-        <FormGrid columns="2-1">
-          {/* 3. Monto del Pago */}
-          <FormField
-            control={form.control}
-            name="amount"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Monto Total del Pago *</FormLabel>
-                <FormControl>
-                  <CurrencyInput
-                    value={field.value}
-                    onChange={field.onChange}
-                    currency={customerProjects[0]?.currency}
-                    disabled={!selectedCustomerId || customerProjects.length === 0}
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
-          {/* 4. Fecha */}
-          <FormField
-            control={form.control}
-            name="date"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Fecha del Pago *</FormLabel>
-                <FormControl>
-                  <Input
-                    type="date"
-                    value={
-                      field.value instanceof Date
-                        ? field.value.toISOString().split('T')[0]
-                        : field.value
-                    }
-                    onChange={(e) => field.onChange(new Date(e.target.value))}
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-        </FormGrid>
-        {/* 5. Método de Pago */}
-        <FormField
+        {/* 1. Cliente: Búsqueda o Pre-seleccionado */}
+        <CustomerSearchField
           control={form.control}
-          name="paymentMethodId"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Método de Pago *</FormLabel>
-              <Select
-                onValueChange={(value) => {
-                  field.onChange(value)
-                  // Reset cuotas si cambia el método
-                  form.setValue('selectedInstallments', null)
-                }}
-                value={field.value}
-              >
-                <FormControl>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Seleccionar método" />
-                  </SelectTrigger>
-                </FormControl>
-                <SelectContent>
-                  {paymentMethods.map((method: PaymentMethod) => (
-                    <SelectItem key={method.id} value={method.id}>
-                      {method.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <FormMessage />
-            </FormItem>
-          )}
+          preselectedCustomerId={preselectedCustomerId}
+          onCustomerSelect={(customer) => {
+            if (customer) {
+              setSelectedCustomerId(customer.id)
+            } else {
+              setSelectedCustomerId(null)
+            }
+            // Reset allocations y modo cuando cambia cliente
+            setAllocations([])
+            setDistributionMode('manual')
+          }}
         />
 
-        {/* 5.5. Número de Cuotas (condicional) */}
-        {selectedPaymentMethod?.hasInstallments && (
-          <FormField
-            control={form.control}
-            name="selectedInstallments"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Número de Cuotas</FormLabel>
-                <Select
-                  onValueChange={(value) => field.onChange(value === '1' ? null : Number(value))}
-                  value={field.value?.toString() || '1'}
-                >
-                  <FormControl>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Seleccionar cuotas" />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
-                    <SelectItem value="1">1 cuota (contado)</SelectItem>
-                    {Array.from(
-                      { length: (selectedPaymentMethod?.maxInstallments || 2) - 1 },
-                      (_, i) => i + 2
-                    ).map((num) => (
-                      <SelectItem key={num} value={num.toString()}>
-                        {num} cuotas sin interés
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-        )}
+        {/* 3. Monto y Fecha */}
+        <PaymentAmountDateFields
+          control={form.control}
+          currency={customerProjects[0]?.currency}
+          disabled={!selectedCustomerId || customerProjects.length === 0}
+          amountLabel="Monto Total del Pago *"
+        />
+
+        {/* 5. Método de Pago + Cuotas */}
+        <PaymentMethodFields
+          control={form.control}
+          paymentMethods={paymentMethods}
+          onPaymentMethodChange={() => form.setValue('selectedInstallments', null)}
+        />
 
         {/* 6. Sección de Allocations (solo si hay cliente seleccionado) */}
         {selectedCustomerId && (
