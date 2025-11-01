@@ -8,20 +8,13 @@
 
 ## Contexto
 
-Después de experimentar con Chrome DevTools MCP (ADR-006), identificamos limitaciones críticas:
-
-1. **Tests no persisten:** Las pruebas eran conversaciones ad-hoc, no generaban código reutilizable
-2. **Solo Chrome:** No permitía cross-browser testing (Firefox, Safari)
-3. **No CI/CD friendly:** Requería interacción manual con Claude, no automatizable
-4. **Sin ecosystem:** Herramientas limitadas vs ecosystem completo de Playwright
-
-Necesitábamos una solución que:
+Necesitábamos una solución de E2E testing que:
 
 - Aproveche la IA de Claude para escribir tests
 - Genere tests persistentes (.spec.ts) versionados en Git
-- Soporte multi-browser testing
+- Soporte multi-browser testing (Chrome, Firefox, Safari)
 - Sea ejecutable en CI/CD sin Claude
-- Tenga ecosystem robusto (trace viewer, codegen, etc.)
+- Tenga ecosystem robusto (trace viewer, codegen, debugging tools)
 
 ## Decisión
 
@@ -50,8 +43,6 @@ Adoptar **Playwright MCP** + **@playwright/test** como estrategia dual para E2E 
 └────────────────────────────────────────────┘
 ```
 
-**Reemplaza:** ADR-006 (Chrome DevTools MCP) - marcado como deprecado
-
 ## Alternativas Consideradas
 
 ### Alternativa 1: Solo @playwright/test (Sin IA)
@@ -69,23 +60,7 @@ Adoptar **Playwright MCP** + **@playwright/test** como estrategia dual para E2E 
   - No aprovecha Claude para generación/debugging
 - **Por qué NO (como única opción):** Playwright MCP ofrece lo mejor de ambos mundos - generación con IA + tooling tradicional
 
-### Alternativa 2: Chrome DevTools MCP (Anterior decisión)
-
-- **Pros:**
-  - Debugging conversacional con Claude
-  - Útil para exploración rápida
-  - Sin archivos .spec.ts que mantener
-- **Contras:**
-  - **Tests NO persisten** (conversaciones ad-hoc)
-  - **Solo Chrome** (no Firefox/Safari)
-  - **No CI/CD** (requiere interacción manual)
-  - **No genera código** reutilizable
-  - Ecosystem limitado
-- **Por qué NO:** Playwright MCP hace TODO lo que Chrome DevTools hace PLUS genera tests persistentes y soporta multi-browser
-
-**Ver deprecación:** [ADR-006](006-chrome-devtools-mcp-experimental.md)
-
-### Alternativa 3: Cypress
+### Alternativa 2: Cypress
 
 - **Pros:**
   - Muy popular
@@ -99,7 +74,7 @@ Adoptar **Playwright MCP** + **@playwright/test** como estrategia dual para E2E 
   - Network stubbing más complejo
 - **Por qué NO:** Playwright es técnicamente superior y tiene MCP integration
 
-### Alternativa 4: Testing Library + Happy DOM
+### Alternativa 3: Testing Library + Happy DOM
 
 - **Pros:**
   - Ligero y rápido
@@ -112,7 +87,7 @@ Adoptar **Playwright MCP** + **@playwright/test** como estrategia dual para E2E 
   - Sin soporte para workflows complejos
 - **Por qué NO:** Necesitamos E2E real con browser para validar experiencia completa
 
-### Alternativa 5: Solo Playwright MCP (Sin @playwright/test)
+### Alternativa 4: Solo Playwright MCP (Sin @playwright/test)
 
 - **Pros:**
   - Simplifica stack (solo MCP)
@@ -490,7 +465,6 @@ Consideraremos esta decisión exitosa si en 3 meses:
 - [Playwright Documentation](https://playwright.dev/)
 - [Playwright MCP](https://github.com/modelcontextprotocol/servers/tree/main/src/playwright)
 - [Best Practices E2E Testing](https://playwright.dev/docs/best-practices)
-- [ADR-006: Chrome DevTools MCP (Deprecado)](006-chrome-devtools-mcp-experimental.md)
 - [ADR-005: Vitest + Testing Library](005-vitest-testing-library.md)
 
 ## Próximos Pasos
@@ -510,14 +484,12 @@ Consideraremos esta decisión exitosa si en 3 meses:
 Playwright MCP + @playwright/test es la combinación ideal para E2E testing porque:
 
 1. **Aprovecha IA:** Claude genera tests conversacionalmente
-2. **Tests persisten:** Código versionado en Git (vs Chrome DevTools)
+2. **Tests persisten:** Código versionado en Git
 3. **Multi-browser:** Valida en Chrome, Firefox, Safari
 4. **CI/CD ready:** Ejecutable sin Claude
 5. **Ecosystem robusto:** Trace viewer, codegen, UI mode, etc.
 6. **Industry standard:** Playwright es líder en E2E testing moderno
 
-**Reemplaza completamente** a Chrome DevTools MCP con solución superior en todos los aspectos.
-
 ---
 
-**Última actualización:** 2025-10-21
+**Última actualización:** 2025-11-01
