@@ -698,6 +698,81 @@ Registrar **implementaciones significativas** de este proyecto con:
 
 ---
 
+### 📚 Refactorización Completa de ADRs del Template
+
+- **Status:** ✅ Complete | **Date:** 2025-11-01 | **Impact:** Medium
+- **ADR:** [template-slim.md](../../template/decisions/template-slim.md) (nuevo template)
+- **Problema Original:** ADRs sobre-ingenierizados con ~50% de contenido dedicado a justificar por qué NO usar alternativas. Esto generaba ruido en lugar de valor, y dificultaba la lectura rápida.
+- **Benefits:**
+  - **-71.8% reducción global:** 3,385 → 955 líneas totales (9 ADRs refactorizados)
+  - **106 líneas promedio:** Dentro de rango objetivo 50-120 líneas
+  - **4.1 min lectura promedio:** Mejora drástica vs ~12-15 min anteriores
+  - **100% Quick Start:** Todos los ADRs incluyen ejemplos prácticos de código
+  - **0-1 alternativa máximo:** Eliminadas justificaciones exhaustivas de alternativas NO elegidas
+  - **Mejor señal-ruido:** Focus en "cómo usar" no en "por qué NO otras opciones"
+  - **DX mejorada:** Usuarios nuevos encuentran info práctica inmediatamente
+- **Implementación:**
+  - **FASE 1:** Preparación y backup (no destructivo)
+    - Crear `.archive/` con backups de 11 ADRs originales
+    - Crear `template-slim.md` con nueva estructura (50-100 líneas)
+    - Documentar criterios en `REFACTORING-PLAN.md`
+  - **FASE 2:** Refactor ADRs Críticos (los más verbose primero)
+    - ADR-008 (Prisma + Neon): 494 → 98 líneas (-80.1%)
+    - ADR-010 (Playwright MCP): 495 → 117 líneas (-76.4%)
+    - ADR-005 (Vitest): 325 → 117 líneas (-64.0%)
+    - ADR-007 (ESLint): 335 → 110 líneas (-67.2%)
+    - ADR-011 (Capture Dialog): 341 → 154 líneas (-54.8%)
+  - **FASE 3:** Refactor ADRs Moderados
+    - ADR-001 (Next.js): 155 → 80 líneas (-48.4%)
+    - ADR-002 (Tailwind): 230 → 87 líneas (-62.2%)
+    - ADR-003 (shadcn/ui): 293 → 95 líneas (-67.6%)
+    - ADR-004 (Layout System): 318 → 97 líneas (-69.5%)
+  - **FASE 4:** SKIPPED (ADR-009 Authentication - mantener extenso como guía de comparación)
+  - **FASE 5:** Actualizar documentación meta
+    - Refactor `README.md` con nueva filosofía ADR
+    - Actualizar tabla de ADRs con métricas reales
+    - Agregar sección "Cuándo hacer ADR largo vs corto"
+  - **FASE 6:** Validación y ajustes
+    - Validar claridad y completitud desde perspectiva usuario nuevo
+    - Corregir 2 referencias rotas (ADR-001 filename)
+    - Verificar métricas: 8/9 ADRs dentro de rango 50-120 líneas ✅
+  - **FASE 7:** Finalización
+    - Actualizar `CLAUDE.md` para ignorar `.archive/`
+    - Crear esta entrada en implementation log
+    - Commit de refactorización
+- **Archivos modificados:**
+  - `docs/template/decisions/.archive/` - Backups de 11 ADRs originales
+  - `docs/template/decisions/template-slim.md` - Nuevo template slim
+  - `docs/template/decisions/REFACTORING-PLAN.md` - Plan y criterios de refactorización
+  - `docs/template/decisions/README.md` - Nueva filosofía y guías
+  - `docs/template/decisions/001-nextjs-15-app-router.md` - Refactorizado (-48.4%)
+  - `docs/template/decisions/002-tailwind-css-v4.md` - Refactorizado (-62.2%)
+  - `docs/template/decisions/003-shadcn-ui-new-york.md` - Refactorizado (-67.6%)
+  - `docs/template/decisions/004-layout-system-dos-capas.md` - Refactorizado (-69.5%)
+  - `docs/template/decisions/005-vitest-testing-library.md` - Refactorizado (-64.0%)
+  - `docs/template/decisions/007-eslint-prettier.md` - Refactorizado (-67.2%)
+  - `docs/template/decisions/008-prisma-neon.md` - Refactorizado (-80.1%)
+  - `docs/template/decisions/010-playwright-mcp.md` - Refactorizado (-76.4%)
+  - `docs/template/decisions/011-capture-dialog-pattern.md` - Refactorizado (-54.8%)
+  - `docs/template/README.md` - Corregir referencia a ADR-001
+  - `docs/template/architecture/overview.md` - Corregir referencia a ADR-001
+  - `CLAUDE.md` - Agregar `.archive/` a archivos ignorados + corregir referencia ADR-001
+  - `docs/project/implementation/2025-current.md` - Esta entrada
+- **Validación:** ✅ Contenido: 9/9 ADRs claros | Métricas: 8/9 dentro de rango | Quick Start: 100% | Referencias: Corregidas
+- **Filosofía nueva:**
+  - ✅ ADR Slim (50-120 líneas): Default para decisiones ya tomadas
+  - ✅ ADR Extenso (200-400 líneas): Solo para guías de comparación donde usuario debe elegir
+  - ✅ Focus en "cómo usar" > "por qué NO alternativas"
+  - ✅ Quick Start con ejemplos prácticos en todos los ADRs
+  - ✅ Consecuencias cuantificadas cuando sea posible
+- **Métricas finales:**
+  - 9 ADRs Slim: Promedio 106 líneas (rango 80-154)
+  - 1 ADR Extenso (Authentication): 515 líneas (guía de comparación)
+  - Reducción total FASE 2+3: 3,385 → 955 líneas (-71.8%)
+  - Tiempo lectura: 12-15 min → 4.1 min promedio
+
+---
+
 ## Quick Reference Index
 
 | #   | Implementación                                                   | Status      | Fecha      | Impact |
@@ -728,19 +803,20 @@ Registrar **implementaciones significativas** de este proyecto con:
 | 24  | Migración PaymentAllocation Architecture                         | ✅ Complete | 2025-10-21 | High   |
 | 25  | Documentación Arquitectural Completa (5 ADRs)                    | ✅ Complete | 2025-10-25 | High   |
 | 26  | Migración: Cálculo de percentPaid al Backend                     | ✅ Complete | 2025-10-26 | Medium |
+| 27  | Refactorización Completa de ADRs del Template                    | ✅ Complete | 2025-11-01 | Medium |
 
 ---
 
 ## Statistics
 
-- **Total Implementaciones:** 26
-- **Completadas:** 26
+- **Total Implementaciones:** 27
+- **Completadas:** 27
 - **En Progreso:** 0
 - **Pendientes:** 0
 
 ---
 
-**Última actualización:** 2025-10-26
+**Última actualización:** 2025-11-01
 
 **Nota:** Entrada #13 corregida el 2025-10-22 tras investigación con git-searcher - información previa sobre "refactor 490→242 líneas" era incorrecta.
 

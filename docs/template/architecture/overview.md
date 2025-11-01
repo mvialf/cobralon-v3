@@ -164,7 +164,7 @@ El template incluye un sistema de layout SaaS profesional de **2 capas**:
 
 Las decisiones arquitecturales importantes están documentadas en:
 
-- [ADR-001: Next.js 15 + App Router](../decisions/001-nextjs-14-app-router.md)
+- [ADR-001: Next.js 15 + App Router](../decisions/001-nextjs-15-app-router.md)
 - [ADR-002: Tailwind CSS v4](../decisions/002-tailwind-css-v4.md)
 - [ADR-003: shadcn/ui New York Style](../decisions/003-shadcn-ui-new-york.md)
 - [ADR-004: Sistema de Layout 2 Capas](../decisions/004-layout-system-dos-capas.md)

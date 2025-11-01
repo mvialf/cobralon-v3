@@ -4,98 +4,112 @@ Este directorio contiene los **Architecture Decision Records (ADRs)** del templa
 
 ## ¿Qué son los ADRs?
 
-Los ADRs son documentos que capturan **decisiones arquitecturales importantes** con su contexto, razonamiento y consecuencias. No son simplemente logs de cambios, sino **memoria técnica** del proyecto.
+Los ADRs son documentos que capturan **decisiones arquitecturales importantes** con su contexto, consecuencias y cómo usarlas. No son git log ni changelog, sino **memoria técnica práctica** del proyecto.
 
 ### ADRs responden:
 
-- ❓ **¿Por qué existe este código?** → Contexto arquitectural
-- 🤔 **¿Qué alternativas se consideraron?** → Opciones descartadas y por qué
-- ✅ **¿Qué problemas resolvió?** → Beneficios cuantificados
-- 📚 **¿Dónde está el proceso documentado?** → Links a implementación
+- ❓ **¿Qué decidimos y por qué?** → Decisión y contexto breve
+- 🚀 **¿Cómo lo uso?** → Quick Start con ejemplos prácticos
+- ✅ **¿Qué impacto tiene?** → Consecuencias (beneficios + trade-offs)
+- 🔗 **¿Dónde aprendo más?** → Referencias oficiales
 
 ### ADRs NO son:
 
-- ❌ Un git log (eso ya existe en git)
-- ❌ Documentación de código (eso va en comments/docs)
-- ❌ Un changelog de versiones (eso va en CHANGELOG.md)
+- ❌ Justificaciones exhaustivas de por qué NO usar alternativas
+- ❌ Git log (ya existe en git)
+- ❌ Changelog de versiones (va en CHANGELOG.md)
 
 ---
 
 ## Template de ADR
 
-Cada ADR sigue este formato:
+### Versión Slim (50-120 líneas) - Predeterminada
+
+Ver [template-slim.md](template-slim.md) para el template completo.
 
 ```markdown
-# ADR-XXX: Título Descriptivo de la Decisión
+# ADR-XXX: Título
 
 ## Estado
-
-[Propuesto | Aceptado | Deprecado | Reemplazado por ADR-YYY]
-
-**Fecha:** YYYY-MM-DD
-
-## Contexto
-
-¿Qué problema o necesidad motivó esta decisión?
-¿Qué constraints o requirements existían?
+**Aceptado** | **Fecha:** YYYY-MM-DD
 
 ## Decisión
+¿Qué decidimos? (1-2 líneas)
 
-¿Qué decidimos hacer? (clara y concisa)
+## Contexto
+¿Por qué? Contexto breve (2-3 líneas)
 
-## Alternativas Consideradas
-
-¿Qué otras opciones evaluamos?
-
-### Alternativa 1: [Nombre]
-
-- **Pros:** ...
-- **Contras:** ...
-- **Por qué NO:** ...
-
-### Alternativa 2: [Nombre]
-
-- **Pros:** ...
-- **Contras:** ...
-- **Por qué NO:** ...
+## Alternativa Principal (opcional)
+**[Nombre]:** Breve descripción + por qué NO (2-3 líneas MAX)
 
 ## Consecuencias
 
 ### Positivas ✅
-
 - Beneficio 1 (cuantificado si es posible)
 - Beneficio 2
-- Beneficio 3
 
-### Negativas / Trade-offs ⚠️
+### Negativas ⚠️
+**Trade-off:** Descripción + mitigación (2-3 líneas)
 
-- Trade-off 1 (y cómo lo mitigamos)
-- Trade-off 2
-- Limitación conocida
-
-## Implementación
-
-- **Commits relevantes:** `hash1`, `hash2`
-- **Archivos principales:** `path/to/file.ts`, `path/to/config.json`
-- **Documentación:** [Link a docs relacionadas]
+## Quick Start
+Código/ejemplos prácticos de cómo usar esto
 
 ## Referencias
-
-- Link a issue/PR
-- Documentación oficial
-- Artículos/recursos que influyeron en la decisión
+- [Docs oficiales](url)
 ```
+
+**Target:** 50-120 líneas | **Tiempo de lectura:** 3-5 minutos
 
 ---
 
 ## ADRs de Este Template
 
-| ADR                                    | Título                    | Estado   | Fecha      |
-| -------------------------------------- | ------------------------- | -------- | ---------- |
-| [001](001-nextjs-14-app-router.md)     | Next.js 14 + App Router   | Aceptado | 2025-01-XX |
-| [002](002-tailwind-css-v4.md)          | Tailwind CSS v4           | Aceptado | 2025-01-XX |
-| [003](003-shadcn-ui-new-york.md)       | shadcn/ui New York Style  | Aceptado | 2025-01-XX |
-| [004](004-layout-system-tres-capas.md) | Sistema de Layout 3 Capas | Aceptado | 2025-01-XX |
+| ADR                                         | Título                                | Líneas | Tipo      | Estado   |
+| ------------------------------------------- | ------------------------------------- | ------ | --------- | -------- |
+| [001](001-nextjs-15-app-router.md)          | Next.js 15 + App Router               | 80     | Slim ⚡   | Aceptado |
+| [002](002-tailwind-css-v4.md)               | Tailwind CSS v4                       | 87     | Slim ⚡   | Aceptado |
+| [003](003-shadcn-ui-new-york.md)            | shadcn/ui New York Style              | 95     | Slim ⚡   | Aceptado |
+| [004](004-layout-system-dos-capas.md)       | Sistema de Layout 2 Capas             | 97     | Slim ⚡   | Aceptado |
+| [005](005-vitest-testing-library.md)        | Vitest + Testing Library              | 117    | Slim ⚡   | Aceptado |
+| [007](007-eslint-prettier.md)               | ESLint 9 + Prettier                   | 110    | Slim ⚡   | Aceptado |
+| [008](008-prisma-neon.md)                   | Prisma + Neon PostgreSQL              | 98     | Slim ⚡   | Aceptado |
+| [009](009-authentication-options.md)        | No Incluir Auth por Defecto (+ Guía)  | 515    | Extenso 📚| Aceptado |
+| [010](010-playwright-mcp.md)                | Playwright MCP + @playwright/test     | 117    | Slim ⚡   | Aceptado |
+| [011](011-capture-dialog-pattern.md)        | Capture Dialog Pattern (Experimental) | 154    | Slim ⚡   | Aceptado |
+
+**Promedio ADRs Slim:** 106 líneas | **Rango objetivo:** 50-120 líneas
+
+---
+
+## Cuándo Hacer ADR Largo vs Corto
+
+### ADR Slim (50-120 líneas) - PREDETERMINADO ⚡
+
+Usa ADR slim para **decisiones ya tomadas** donde necesitas documentar:
+
+- ✅ **Qué decidiste** y contexto breve
+- ✅ **Cómo usarlo** (Quick Start con código)
+- ✅ **Impacto práctico** (consecuencias)
+- ✅ **0-1 alternativa principal** mencionada brevemente
+
+**Ejemplos:** Elección de framework (Next.js), librería de estilos (Tailwind), sistema de componentes (shadcn/ui)
+
+**Filosofía:** Focus en "cómo usar lo elegido", NO en justificar exhaustivamente por qué NO otras opciones.
+
+### ADR Extenso (200-400 líneas) - SOLO CASOS ESPECIALES 📚
+
+Usa ADR extenso SOLO cuando el ADR es **guía de comparación** para usuarios:
+
+- ✅ **Usuario debe elegir** entre múltiples opciones (ej: Stack Auth vs NextAuth vs Clerk)
+- ✅ **Comparación detallada** es el valor principal del documento
+- ✅ **Quick comparison table** al inicio (decisión rápida)
+- ✅ **Secciones detalladas** para quien necesite profundizar
+
+**Ejemplos en este template:**
+
+- [ADR-009: Authentication Options](009-authentication-options.md) - Usuario debe elegir proveedor de auth
+
+**⚠️ Importante:** Si TÚ ya decidiste (no el usuario), usa ADR Slim. Los ADRs extensos son **guías de comparación**, no justificaciones.
 
 ---
 

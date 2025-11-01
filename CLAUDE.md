@@ -6,6 +6,7 @@ Este archivo proporciona orientación a Claude Code (claude.ai/code) cuando trab
 
 - gemini.md
 - .gemini/
+- docs/template/decisions/.archive/
 
 ## Proyecto
 
@@ -155,7 +156,7 @@ Usa agentes cuando la búsqueda requiere **múltiples pasos** o **análisis cont
 
 ### 📘 Decisiones Arquitecturales del Template (ADRs)
 
-@docs/template/decisions/001-nextjs-14-app-router.md # Por qué Next.js 15 + App Router
+@docs/template/decisions/001-nextjs-15-app-router.md # Por qué Next.js 15 + App Router
 @docs/template/decisions/002-tailwind-css-v4.md # Por qué Tailwind CSS v4
 @docs/template/decisions/003-shadcn-ui-new-york.md # Por qué shadcn/ui estilo New York
 @docs/template/decisions/004-layout-system-dos-capas.md # Por qué sistema de layout 2 capas
