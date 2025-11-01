@@ -12,9 +12,9 @@ import { PhoneInput } from '@/components/ui/phone-input'
 import { FormGrid } from '@/components/ui/form-grid'
 import { StatusBadge } from '@/components/ui/status-badge'
 import { Combobox } from '@/components/ui/combobox'
-import { AddressFields } from '@/components/forms/address-fields'
-import { ProjectFinancialFields } from '@/components/forms/project-financial-fields'
-import { ProjectDetailsFields } from '@/components/forms/project-details-fields'
+import { AddressFields } from '@/components/forms/fields/address-fields'
+import { ProjectFinancialFields } from '@/components/forms/fields/project-financial-fields'
+import { ProjectDetailsFields } from '@/components/forms/fields/project-details-fields'
 import { useConfiguration } from '@/hooks/use-configuration'
 import {
   Form,

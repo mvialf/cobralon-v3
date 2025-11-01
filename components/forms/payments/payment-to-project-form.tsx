@@ -23,9 +23,9 @@ import {
   FormRoot,
 } from '@/components/ui/form'
 import { Textarea } from '@/components/ui/textarea'
-import { ProjectSearchField } from '@/components/forms/project-search-field'
-import { PaymentMethodFields } from '@/components/forms/payment-method-fields'
-import { PaymentAmountDateFields } from '@/components/forms/payment-amount-date-fields'
+import { ProjectSearchField } from '@/components/forms/search/project-search-field'
+import { PaymentMethodFields } from '@/components/forms/fields/payment-method-fields'
+import { PaymentAmountDateFields } from '@/components/forms/fields/payment-amount-date-fields'
 
 interface PaymentToProjectFormProps {
   onSubmit: (data: PaymentToProjectFormValues, project: ProjectWithBalance) => void | Promise<void>

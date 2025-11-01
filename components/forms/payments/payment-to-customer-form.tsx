@@ -34,9 +34,9 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import { PaymentMethodFields } from '@/components/forms/payment-method-fields'
-import { PaymentAmountDateFields } from '@/components/forms/payment-amount-date-fields'
-import { CustomerSearchField } from '@/components/forms/customer-search-field'
+import { PaymentMethodFields } from '@/components/forms/fields/payment-method-fields'
+import { PaymentAmountDateFields } from '@/components/forms/fields/payment-amount-date-fields'
+import { CustomerSearchField } from '@/components/forms/search/customer-search-field'
 
 interface PaymentToCustomerFormProps {
   onSubmit: (data: PaymentToCustomerFormValues, currency: string) => void | Promise<void>
