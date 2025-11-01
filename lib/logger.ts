@@ -169,11 +169,6 @@ export function sanitizeForLogging<T>(obj: T): T {
   }
 }
 
-/**
- * Type helper para child loggers con contexto tipado
- */
-export type LoggerWithContext<T extends Record<string, unknown>> = pino.Logger<T>
-
 // Log de inicialización
 logger.info(
   {
