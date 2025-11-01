@@ -1,0 +1,157 @@
+'use client'
+
+import * as React from 'react'
+import { Control } from 'react-hook-form'
+import { useQuery } from '@tanstack/react-query'
+
+import { useDebounce } from '@/hooks/use-debounce'
+
+import { FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form'
+import { Combobox } from '@/components/ui/combobox'
+import { CustomerNameSummary } from '@/components/summarys/customer-name-summary'
+
+interface Customer {
+  id: string
+  name: string
+  email?: string
+  phone?: string
+}
+
+interface CustomerSearchFieldProps {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  control: Control<any>
+  preselectedCustomerId?: string
+  onCustomerSelect?: (customer: Customer | null) => void
+}
+
+/**
+ * Componente reutilizable para búsqueda y selección de cliente
+ * Incluye:
+ * - Combobox de búsqueda server-side (si NO hay preselectedCustomerId)
+ * - CustomerNameSummary read-only (si hay preselectedCustomerId)
+ *
+ * Maneja internamente:
+ * - Query de cliente pre-seleccionado
+ * - Query de búsqueda de clientes (server-side search)
+ * - Debounce de búsqueda
+ * - Estado de cliente seleccionado
+ *
+ * Usado en PaymentToCustomerForm para simplificar la lógica de selección de cliente.
+ */
+export function CustomerSearchField({
+  control,
+  preselectedCustomerId,
+  onCustomerSelect,
+}: CustomerSearchFieldProps) {
+  // State para búsqueda de clientes
+  const [customerSearch, setCustomerSearch] = React.useState('')
+  const debouncedCustomerSearch = useDebounce(customerSearch, 300)
+
+  // State para cliente seleccionado
+  const [selectedCustomer, setSelectedCustomer] = React.useState<Customer | null>(null)
+
+  // Fetch cliente pre-seleccionado (si viene el ID)
+  const { data: preselectedCustomer, isLoading: loadingPreselected } = useQuery({
+    queryKey: ['customer', preselectedCustomerId],
+    queryFn: async () => {
+      const res = await fetch(`/api/customers/${preselectedCustomerId}`)
+      if (!res.ok) throw new Error('Error al cargar el cliente')
+      return res.json() as Promise<Customer>
+    },
+    enabled: !!preselectedCustomerId,
+  })
+
+  // Fetch clientes (server-side search) - solo si NO hay cliente pre-seleccionado
+  const { data: customersData, isLoading: loadingCustomers } = useQuery({
+    queryKey: ['customers-search', debouncedCustomerSearch],
+    queryFn: async () => {
+      const res = await fetch(`/api/customers?search=${debouncedCustomerSearch}&limit=20`)
+      if (!res.ok) throw new Error('Error al buscar clientes')
+      const data = await res.json()
+      return data.customers || []
+    },
+    enabled: !preselectedCustomerId && debouncedCustomerSearch.length >= 2,
+  })
+
+  // Cuando cambia el cliente seleccionado o llega el cliente pre-seleccionado
+  React.useEffect(() => {
+    // Si hay cliente pre-seleccionado y ya se cargó
+    if (preselectedCustomerId && preselectedCustomer) {
+      setSelectedCustomer(preselectedCustomer)
+      onCustomerSelect?.(preselectedCustomer)
+    }
+  }, [preselectedCustomerId, preselectedCustomer, onCustomerSelect])
+
+  // Callback cuando se selecciona un cliente del Combobox
+  const handleCustomerChange = (customerId: string) => {
+    const customer = customersData?.find((c: Customer) => c.id === customerId)
+    if (customer) {
+      setSelectedCustomer(customer)
+      onCustomerSelect?.(customer)
+    } else {
+      setSelectedCustomer(null)
+      onCustomerSelect?.(null)
+    }
+  }
+
+  return (
+    <>
+      {/* 1. Cliente: Mostrar CustomerNameSummary si está pre-seleccionado, sino Combobox */}
+      {preselectedCustomerId ? (
+        // Cliente pre-seleccionado (no editable)
+        <div className="space-y-2">
+          <FormLabel>Cliente</FormLabel>
+          {loadingPreselected ? (
+            <div className="text-sm text-muted-foreground">Cargando cliente...</div>
+          ) : selectedCustomer ? (
+            <div className="rounded-lg border bg-muted/50 p-3">
+              <CustomerNameSummary
+                name={selectedCustomer.name}
+                phone={selectedCustomer.phone!}
+                email={selectedCustomer.email || undefined}
+              />
+            </div>
+          ) : (
+            <div className="text-sm text-destructive">Error al cargar el cliente</div>
+          )}
+        </div>
+      ) : (
+        // Combobox normal (búsqueda de clientes)
+        <FormField
+          control={control}
+          name="customerId"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Cliente *</FormLabel>
+              <FormControl>
+                <Combobox<Customer>
+                  value={field.value}
+                  onValueChange={(value) => {
+                    field.onChange(value)
+                    handleCustomerChange(value)
+                  }}
+                  options={customersData || []}
+                  getOptionValue={(c) => c.id}
+                  getOptionLabel={(c) => c.name}
+                  placeholder="Buscar cliente..."
+                  searchPlaceholder="Escribe nombre, email o teléfono..."
+                  emptyMessage={
+                    debouncedCustomerSearch.length < 2
+                      ? 'Escribe al menos 2 caracteres para buscar'
+                      : 'No se encontraron clientes'
+                  }
+                  loading={loadingCustomers}
+                  loadingText="Buscando clientes..."
+                  contentWidth="400px"
+                  onSearchChange={setCustomerSearch}
+                  disableFiltering={true}
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+      )}
+    </>
+  )
+}
