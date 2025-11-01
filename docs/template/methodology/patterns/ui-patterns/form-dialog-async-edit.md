@@ -214,6 +214,10 @@ export function ProjectDialog({
 
 ## Layer 3: Edit Dialog (Asynchronous Loading)
 
+> ⚠️ **LEGACY APPROACH:** Este ejemplo usa fetch manual con `useState`. Es funcional pero requiere más código y manejo manual de estados.
+>
+> **✨ Recomendación:** Ver [🚀 Evolución: Migración a React Query](#-evolución-migración-a-react-query) para el approach moderno que reduce código en ~27% y mejora UX con cache automático.
+
 ```typescript
 // components/dialogs/projects/edit-project-dialog.tsx
 'use client'
@@ -361,6 +365,350 @@ export function NewProjectDialog({ open, onOpenChange, onProjectCreated }: NewPr
 }
 ```
 
+---
+
+## 🚀 Evolución: Migración a React Query
+
+### El Problema con Fetch Manual
+
+El código legacy (Layer 3 Edit Dialog mostrado arriba) funciona, pero tiene limitaciones significativas:
+
+```typescript
+// ❌ Problemas del approach legacy:
+- 133 líneas de código (edit-project-dialog.tsx)
+- Manejo manual de loading state (useState)
+- Manejo manual de error handling (try/catch)
+- Manejo manual de toasts (toast.success/error)
+- Sin cache (refetch cada vez que se abre el dialog)
+- Código duplicado entre create/edit
+- State manual de defaultValues
+```
+
+### La Solución: React Query Hooks
+
+React Query (TanStack Query) elimina todo el boilerplate de manejo de datos asincrónicos:
+
+**Beneficios automáticos:**
+- ✅ Cache inteligente (segunda apertura es instantánea)
+- ✅ Loading/error states automáticos
+- ✅ Invalidación automática de queries
+- ✅ Retry automático en errores
+- ✅ Toasts centralizados en hooks
+- ✅ Menos líneas de código (-27% en nuestro caso)
+
+### Comparación: Antes vs Después
+
+| Aspecto | Fetch Manual (ANTES) | React Query (DESPUÉS) | Mejora |
+|---------|----------------------|----------------------|--------|
+| **Líneas de código** | 133 | 97 | -27% |
+| **Cache** | ❌ Sin cache | ✅ Automático | ✅ |
+| **Loading state** | Manual (useState) | Automático (isPending) | ✅ |
+| **Error handling** | try/catch manual | Automático (onError) | ✅ |
+| **Toasts** | Manual en component | Automático en hooks | ✅ |
+| **Invalidación** | Manual refetch | Automática | ✅ |
+| **UX en re-apertura** | Refetch siempre | Cache instant | ✅ |
+
+### Código Refactorizado (React Query)
+
+```typescript
+// components/dialogs/projects/edit-project-dialog.tsx
+'use client'
+
+import * as React from 'react'
+import { ProjectDialog } from '@/components/dialogs/projects/project-dialog'
+import { type ProjectFormData } from '@/lib/validations/project-validations'
+import { useProject, useUpdateProject } from '@/hooks/queries/use-projects'
+
+interface EditProjectDialogProps {
+  projectId: string
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  onProjectUpdated?: () => void
+}
+
+/**
+ * Dialog controlado para editar un proyecto existente
+ *
+ * ✅ MODERN APPROACH: Usa React Query hooks para manejo automático de:
+ * - Loading states (isPending)
+ * - Error handling (onError)
+ * - Cache (segunda apertura es instantánea)
+ * - Invalidación (lista se actualiza automáticamente)
+ * - Toasts (success/error automáticos)
+ */
+export function EditProjectDialog({
+  projectId,
+  open,
+  onOpenChange,
+  onProjectUpdated,
+}: EditProjectDialogProps) {
+  // ✅ React Query hook para GET - Reemplaza fetch + useState + useEffect
+  const { data: project, isLoading } = useProject(open ? projectId : undefined)
+
+  // ✅ React Query hook para PUT - Reemplaza fetch + try/catch + toast
+  const updateMutation = useUpdateProject()
+
+  // Transformar datos del API al formato del formulario
+  const defaultValues = React.useMemo(() => {
+    if (!project) return undefined
+
+    return {
+      customerId: project.customer.id,
+      projectNumber: project.projectNumber,
+      projectName: project.projectName || '',
+      phone: project.phone,
+      street: project.street,
+      apartment: project.apartment || '',
+      comuna: project.comuna,
+      region: project.region,
+      projectStatusId: project.projectStatus?.id || '',
+      date: new Date(project.date),
+      subtotal: Number(project.subtotal),
+      taxRate: Number(project.taxRate),
+      currency: project.currency,
+      windowsCount: project.windowsCount,
+      squareMeters: Number(project.squareMeters),
+      description: project.description || '',
+    }
+  }, [project])
+
+  const handleSubmit = async (data: ProjectFormData) => {
+    // Calcular total antes de enviar al backend
+    const tax = data.subtotal * (data.taxRate / 100)
+    const total = data.subtotal + tax
+
+    // ✅ Mutation automáticamente:
+    // - Muestra toast.success al completar
+    // - Muestra toast.error en errores
+    // - Invalida queries de projects (lista se actualiza sola)
+    // - Maneja loading state (updateMutation.isPending)
+    await updateMutation.mutateAsync({
+      id: projectId,
+      ...data,
+      total,
+      totalAmount: total,
+    })
+
+    onOpenChange(false)
+    onProjectUpdated?.()
+  }
+
+  // No renderizar dialog hasta que los datos estén cargados
+  if (open && isLoading) {
+    return null // O mostrar skeleton loader
+  }
+
+  return (
+    <ProjectDialog
+      open={open}
+      onOpenChange={onOpenChange}
+      onSubmit={handleSubmit}
+      defaultValues={defaultValues}
+      mode="edit"
+    />
+  )
+}
+```
+
+**Reducción de código:**
+- **ANTES:** 133 líneas (fetch manual)
+- **DESPUÉS:** 97 líneas (React Query)
+- **AHORRO:** -36 líneas (-27%)
+
+### Hooks Necesarios
+
+Para que este patrón funcione, necesitas crear hooks de React Query en `hooks/queries/use-{entity}.ts`:
+
+```typescript
+// hooks/queries/use-projects.ts
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { toast } from 'sonner'
+
+// Tipo completo con todos los campos (para GET /api/projects/:id)
+export interface ProjectDetail extends Project {
+  phone: string
+  street: string
+  apartment: string | null
+  comuna: string
+  region: string
+  subtotal: number
+  taxRate: number
+  currency: string
+  windowsCount: number
+  squareMeters: number
+  description: string | null
+}
+
+/**
+ * Hook para obtener un proyecto específico por ID
+ */
+export function useProject(id: string | undefined) {
+  return useQuery({
+    queryKey: ['projects', id],
+    queryFn: async (): Promise<ProjectDetail> => {
+      if (!id) throw new Error('ID de proyecto requerido')
+
+      const response = await fetch(`/api/projects/${id}`)
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.error || 'Error al cargar proyecto')
+      }
+
+      return response.json()
+    },
+    enabled: !!id, // Solo ejecutar si hay ID
+  })
+}
+
+/**
+ * Hook para actualizar un proyecto existente
+ */
+export function useUpdateProject() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async ({ id, ...data }: UpdateProjectData): Promise<Project> => {
+      const response = await fetch(`/api/projects/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      })
+
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.error || 'Error al actualizar proyecto')
+      }
+
+      return response.json()
+    },
+    onSuccess: (updatedProject) => {
+      // ✅ Invalidar automáticamente queries relacionadas
+      queryClient.invalidateQueries({ queryKey: ['projects'] })
+      queryClient.invalidateQueries({ queryKey: ['projects', updatedProject.id] })
+
+      // ✅ Toast automático
+      toast.success('Proyecto actualizado exitosamente')
+    },
+    onError: (error: Error) => {
+      // ✅ Toast automático en errores
+      toast.error(error.message)
+    },
+  })
+}
+```
+
+### Guía de Migración Paso a Paso
+
+**Checklist para migrar otros dialogs (customers, payments, etc.):**
+
+1. **✅ Crear tipos completos**
+   ```typescript
+   // Si tu tipo base es simplificado (ej: para tabla)
+   export interface EntityDetail extends Entity {
+     // Agregar campos adicionales que vienen del API
+     field1: string
+     field2: number
+   }
+   ```
+
+2. **✅ Crear hook useEntity(id)**
+   - Copiar patrón de `useProject(id)`
+   - Ajustar endpoint y tipo de retorno
+   - `enabled: !!id` es crítico
+
+3. **✅ Crear hook useUpdateEntity()**
+   - Copiar patrón de `useUpdateProject()`
+   - Ajustar endpoint y invalidación
+   - onSuccess/onError con toasts
+
+4. **✅ Refactorizar Edit Dialog**
+   - Eliminar: `useState` de defaultValues
+   - Eliminar: `useEffect` de loadData
+   - Eliminar: `fetch` manual GET
+   - Eliminar: `fetch` manual PUT
+   - Eliminar: try/catch + toast manual
+   - Agregar: `useEntity()` hook
+   - Agregar: `useUpdateEntity()` hook
+   - Agregar: `useMemo()` para defaultValues
+
+5. **✅ Testing**
+   - Abrir dialog → verifica loading state
+   - Editar datos → verifica submit
+   - Cerrar y reabrir → verifica cache (instantáneo)
+   - Forzar error → verifica toast.error
+
+6. **✅ Cleanup (opcional)**
+   - Agregar skeleton loader mientras `isLoading`
+   - Agregar optimistic updates si aplicable
+   - Agregar retry logic customizado si necesario
+
+### Beneficios Medibles del Refactor
+
+**Caso real:** `edit-project-dialog.tsx`
+
+| Métrica | Antes | Después | Mejora |
+|---------|-------|---------|--------|
+| Líneas totales | 133 | 97 | -27% |
+| Lógica de fetch | ~40 líneas | 1 línea hook | -97% |
+| Manejo errores | try/catch manual | Automático | ✅ |
+| Loading states | useState manual | isPending auto | ✅ |
+| Toasts | 2 llamadas manual | 0 (en hooks) | ✅ |
+| Cache UX | Sin cache | Cache instant | ✅ |
+| Invalidación | Manual refetch | Auto | ✅ |
+
+**Tiempo de desarrollo:**
+- Crear 1er dialog con fetch: ~45 min
+- Crear 1er dialog con RQ: ~30 min (una vez tienes hooks)
+- Migrar dialog existente: ~15 min
+
+### Cuándo Usar Este Approach
+
+**✅ USA React Query cuando:**
+- Tienes múltiples dialogs que hacen fetch similar
+- Quieres cache automático (mejor UX)
+- Quieres centralizar manejo de errores/loading
+- Quieres reducir boilerplate
+- El proyecto usa React Query en otros lugares
+
+**⚠️ Stick con fetch manual cuando:**
+- Dialog muy simple (1-2 campos, sin edición)
+- Proyecto pequeño sin React Query
+- Caso de uso único sin reutilización
+- Prefer simplicidad sobre architecture
+
+### Próximos Pasos
+
+Después de migrar tus dialogs:
+
+1. **Agregar optimistic updates** (opcional)
+   ```typescript
+   onMutate: async (newData) => {
+     // Update cache inmediatamente antes de API response
+     await queryClient.cancelQueries({ queryKey: ['projects'] })
+     queryClient.setQueryData(['projects', id], newData)
+   }
+   ```
+
+2. **Agregar skeleton loader** (mejor UX)
+   ```typescript
+   if (open && isLoading) {
+     return <DialogSkeleton /> // En vez de `return null`
+   }
+   ```
+
+3. **Centralizar configuración de React Query**
+   ```typescript
+   // lib/react-query-config.ts
+   export const queryConfig = {
+     defaultOptions: {
+       queries: { staleTime: 5 * 60 * 1000 }, // 5 min
+       mutations: { retry: 1 },
+     },
+   }
+   ```
+
+---
+
 ## Uso en Parent Component
 
 ```typescript
@@ -499,9 +847,19 @@ const form = useForm({
 
 ## Referencias
 
-- **React Hook Form defaultValues:** https://react-hook-form.com/docs/useform#defaultValues
-- **React Hook Form reset:** https://react-hook-form.com/docs/useform/reset
-- **Radix UI Dialog:** https://www.radix-ui.com/primitives/docs/components/dialog
+### React Hook Form
+- **defaultValues:** https://react-hook-form.com/docs/useform#defaultValues
+- **reset:** https://react-hook-form.com/docs/useform/reset
+
+### Radix UI
+- **Dialog:** https://www.radix-ui.com/primitives/docs/components/dialog
+
+### React Query (TanStack Query)
+- **Documentación oficial:** https://tanstack.com/query/latest
+- **useQuery hook:** https://tanstack.com/query/latest/docs/react/reference/useQuery
+- **useMutation hook:** https://tanstack.com/query/latest/docs/react/reference/useMutation
+- **Query Invalidation:** https://tanstack.com/query/latest/docs/react/guides/query-invalidation
+- **Best Practices:** https://tkdodo.eu/blog/practical-react-query
 
 ---
 

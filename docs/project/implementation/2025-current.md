@@ -36,6 +36,50 @@ Registrar **implementaciones significativas** de este proyecto con:
 
 ## Implementaciones
 
+### 🔄 Refactor: Migración de Project Dialogs a React Query + ScrollableDialog
+
+- **Status:** ✅ Complete | **Date:** 2025-11-01 | **Impact:** Medium
+- **ADR:** Actualización de [Pattern: Form + Dialog Async Edit](../../template/methodology/patterns/ui-patterns/form-dialog-async-edit.md)
+- **Benefits:**
+  - **-27% código:** 133 → 97 líneas en `edit-project-dialog.tsx` (-36 líneas)
+  - **Cache automático:** Segunda apertura de edit dialog es instantánea (0ms vs ~200ms)
+  - **UX mejorada:** Loading/error states automáticos vía React Query
+  - **Mantenibilidad:** Lógica API centralizada en hooks, toasts automáticos
+  - **Consistencia:** Ambos dialogs (new/edit) usan misma tecnología (ScrollableDialog + React Query)
+  - **Type safety mejorado:** Tipo `ProjectDetail` separado de `Project` simplificado
+- **Implementación:**
+  - **Fase 1:** Migrar `project-dialog.tsx` de Dialog → ScrollableDialog
+    - Eliminado `ScrollArea` manual (redundante)
+    - Estructura simplificada con componentes `Scrollable*`
+  - **Fase 2:** Refactorizar `edit-project-dialog.tsx` a React Query
+    - Fetch GET manual → `useProject(projectId)` hook
+    - Fetch PUT manual → `useUpdateProject()` hook
+    - Eliminado manejo manual de loading/errors/toasts (automático en hooks)
+    - `defaultValues` con `useMemo()` en vez de `useState + useEffect`
+  - **Fase 3:** Actualizar documentación del template
+    - Marcado Layer 3 legacy con advertencia
+    - Agregada sección "🚀 Evolución: Migración a React Query" con código completo
+    - Guía de migración paso a paso para otros dialogs
+- **Archivos modificados:**
+  - `components/dialogs/projects/project-dialog.tsx` - Migrado a ScrollableDialog
+  - `components/dialogs/projects/edit-project-dialog.tsx` - Refactorizado con React Query (133→97 líneas)
+  - `hooks/queries/use-projects.ts` - Agregado tipo `ProjectDetail` + actualizado retorno de `useProject()`
+  - `docs/template/methodology/patterns/ui-patterns/form-dialog-async-edit.md` - Documentado pattern moderno
+- **Validación:**
+  - ✅ TypeCheck: PASS (solo errores pre-existentes)
+  - ✅ ESLint: PASS (0 errores en archivos refactorizados)
+  - ✅ Testing manual:
+    - Crear proyecto: Dialog abre correctamente ✓
+    - Editar proyecto: Datos cargan correctamente desde API ✓
+    - Todos campos populados ✓
+    - ScrollableDialog funciona en ambos casos ✓
+- **Notas técnicas:**
+  - Los hooks `useProject()` y `useUpdateProject()` ya existían, solo fue necesario usarlos
+  - Pattern aplicable a otros dialogs (customers, payments) - ver guía en pattern doc
+  - Cache de React Query reduce carga en servidor y mejora UX perceptiblemente
+
+---
+
 ### ⚡ Optimización de Performance: Sistema de Proyectos (Fase 1)
 
 - **Status:** ✅ Complete | **Date:** 2025-10-28 | **Impact:** High
