@@ -2,9 +2,51 @@
 
 ## Estado
 
-**Aceptado**
+**Aceptado** | **Fecha:** 2025-10-22
 
-**Fecha:** 2025-10-22
+## Quick Start (Cómo Usar)
+
+> **💡 TL;DR:** Dos flujos especializados: `PaymentToProjectForm` (simple, 1:1) y `PaymentToCustomerForm` (avanzado, 1:N).
+
+```typescript
+// Flow A: Pago a proyecto (caso común 90%)
+import { PaymentToProjectForm } from '@/components/forms/payments/payment-to-project-form'
+
+// UI simplificada: [Proyecto dropdown] → [Monto] → [Método] → Submit
+<PaymentToProjectForm />
+
+// Flow B: Pago a cliente (caso avanzado 10%)
+import { PaymentToCustomerForm } from '@/components/forms/payments/payment-to-customer-form'
+
+// UI avanzada: [Cliente dropdown] → [Tabla asignación multi-proyecto] → Submit
+<PaymentToCustomerForm />
+```
+
+**Schemas Zod:**
+```typescript
+// lib/validations/payment-validations.ts
+export const paymentToProjectSchema = z.object({
+  projectId: z.string().cuid(),
+  amount: z.number().positive(),
+  // ... campos simplificados
+})
+
+export const paymentToCustomerSchema = z.object({
+  customerId: z.string().cuid(),
+  allocations: z.array(z.object({
+    projectId: z.string().cuid(),
+    allocatedAmount: z.number().positive()
+  }))
+  // ... validación SUM(allocations) === amount
+})
+```
+
+**Archivos clave:**
+- `components/forms/payments/payment-to-project-form.tsx` - Flow A (simple)
+- `components/forms/payments/payment-to-customer-form.tsx` - Flow B (avanzado)
+- `app/api/payments/route.ts:POST` - Maneja ambos tipos
+
+---
 
 ## Contexto
 

@@ -2,9 +2,45 @@
 
 ## Estado
 
-**Aceptado**
+**Aceptado** | **Fecha:** 2025-10-25
 
-**Fecha:** 2025-10-25
+## Quick Start (Cómo Actuar)
+
+> **💡 TL;DR:** MVP NO tiene auth. Estrategia en 3 fases: MVP sin auth (validación) → Production con auth (escalar) → Enterprise (si crece).
+
+**Estado actual:**
+- ✅ Aplicación funcional completa (CRUD, pagos, cuotas)
+- ✅ Deploy: Red interna O localhost
+- ✅ Usuarios: 1-2 personas (dueño + asistente)
+- ❌ NO autenticación
+- ❌ NO accesible públicamente
+
+**Próximos pasos (cuando escalar a producción):**
+
+1. **Agregar autenticación:** Implementar [Template ADR-009 guía de auth](../../template/decisions/009-authentication-options.md)
+   - Recomendado: NextAuth.js (10-15 hrs) O Stack Auth (5-10 hrs)
+
+2. **Restricciones de seguridad:**
+   ```typescript
+   // middleware.ts
+   export default withAuth(function middleware(req) {
+     // Proteger todas las rutas
+   })
+
+   export const config = {
+     matcher: ['/((?!api|_next/static|_next/image|favicon.ico).*)']
+   }
+   ```
+
+3. **Migrar datos:** Sin impacto (schema DB no cambia)
+
+**Archivos a modificar (futuro):**
+- `app/middleware.ts` - Crear nuevo (protección de rutas)
+- `app/api/[...resource]/route.ts` - Agregar auth checks
+- `components/layout/app-sidebar.tsx` - Agregar user menu
+- `prisma/schema.prisma` - Agregar models User, Session, etc. (si NextAuth)
+
+---
 
 ## Contexto
 

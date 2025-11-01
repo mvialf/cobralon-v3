@@ -2,9 +2,53 @@
 
 ## Estado
 
-**Aceptado**
+**Aceptado** | **Fecha:** 2025-10-22
 
-**Fecha:** 2025-10-22
+## Quick Start (Cómo Usar)
+
+> **💡 TL;DR:** División aritmética simple del monto en N cuotas, última cuota absorbe residuo para garantizar suma exacta.
+
+```typescript
+// Crear pago con cuotas (en PaymentToProjectForm)
+const payment = await prisma.payment.create({
+  data: {
+    type: 'Project',
+    amount: 1000000,
+    selectedInstallments: 6, // ← Cuotas sin interés
+    allocations: { create: [{ projectId, allocatedAmount: 1000000 }] },
+    installments: {
+      create: generateInstallments(1000000, 6, new Date())
+    }
+  }
+})
+
+// Resultado automático:
+// Cuota 1-5: $166,666.66 cada una (c/30 días)
+// Cuota 6: $166,666.70 (absorbe residuo)
+// Total: $1,000,000 exacto
+```
+
+**Función generadora:**
+```typescript
+// app/api/payments/route.ts:299-331
+function generateInstallments(
+  amount: Decimal,
+  selectedInstallments: number,
+  paymentDate: Date
+): Installment[] {
+  const baseAmount = amount.dividedBy(selectedInstallments)
+    .toDecimalPlaces(2, Decimal.ROUND_DOWN)
+  const lastAmount = amount.minus(baseAmount.times(selectedInstallments - 1))
+  // ... genera array con dueDates +30 días cada una
+}
+```
+
+**Archivos clave:**
+- `app/api/payments/route.ts:299-331` - Lógica de generación
+- `prisma/schema.prisma` - Model Installment
+- `app/api/cron/mark-installments-paid/route.ts` - Auto-mark paid (cron)
+
+---
 
 ## Contexto
 
