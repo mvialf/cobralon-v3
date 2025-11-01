@@ -174,14 +174,11 @@ Flujo completo desde la selección del cliente hasta la persistencia del proyect
 ```typescript
 // ✅ Cliente debe existir
 const customer = await prisma.customer.findUnique({
-  where: { id: customerId }
+  where: { id: customerId },
 })
 
 if (!customer) {
-  return NextResponse.json(
-    { error: 'Cliente no encontrado' },
-    { status: 404 }
-  )
+  return NextResponse.json({ error: 'Cliente no encontrado' }, { status: 404 })
 }
 ```
 
@@ -191,14 +188,11 @@ if (!customer) {
 // ✅ Estado debe existir y estar activo
 if (projectStatusId) {
   const status = await prisma.projectStatus.findUnique({
-    where: { id: projectStatusId }
+    where: { id: projectStatusId },
   })
 
   if (!status || !status.isActive) {
-    return NextResponse.json(
-      { error: 'Estado no válido o inactivo' },
-      { status: 400 }
-    )
+    return NextResponse.json({ error: 'Estado no válido o inactivo' }, { status: 400 })
   }
 }
 ```
@@ -208,16 +202,12 @@ if (projectStatusId) {
 ```typescript
 // Zod schema
 export const projectSchema = z.object({
-  subtotal: z.coerce
-    .number()
-    .positive('Subtotal debe ser positivo'),
+  subtotal: z.coerce.number().positive('Subtotal debe ser positivo'),
   taxRate: z.coerce
     .number()
     .min(0, 'Tasa de impuesto no puede ser negativa')
     .max(100, 'Tasa de impuesto no puede exceder 100%'),
-  total: z.coerce
-    .number()
-    .positive('Total debe ser positivo'),
+  total: z.coerce.number().positive('Total debe ser positivo'),
 })
 ```
 
@@ -375,6 +365,7 @@ async function generateProjectNumber(): Promise<string> {
 ```
 
 **Features:**
+
 - ✅ Secuencia auto-incremental por año
 - ✅ Formato consistente: "P 0001-YYYY"
 - ✅ Padding con ceros (4 dígitos mínimo)
@@ -395,6 +386,7 @@ const roundedTotal = Math.round(total * 100) / 100
 ```
 
 **Ejemplo:**
+
 ```
 Subtotal: 1,000,000
 Tax Rate: 19%
@@ -422,6 +414,7 @@ Total: 1,190,000 ✅
 ```
 
 **Balance inicial:**
+
 ```
 balance = total - SUM(allocations.allocatedAmount)
 balance = 1,190,000 - 0 = 1,190,000 ✅

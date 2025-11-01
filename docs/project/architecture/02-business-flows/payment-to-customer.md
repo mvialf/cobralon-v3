@@ -42,8 +42,8 @@ export function calculateFIFOAllocation(
   let remainingAmount = paymentAmount
 
   // Ordenar proyectos por fecha (más antiguos primero)
-  const sortedProjects = [...projects].sort((a, b) =>
-    new Date(a.date).getTime() - new Date(b.date).getTime()
+  const sortedProjects = [...projects].sort(
+    (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
   )
 
   for (const project of sortedProjects) {
@@ -69,6 +69,7 @@ export function calculateFIFOAllocation(
 ### Ejemplo FIFO
 
 **Proyectos del cliente:**
+
 ```
 P 0001-2025: Total $1,000,000, Pagado $500,000, Balance $500,000, Fecha: 2025-01-15
 P 0002-2025: Total $800,000, Pagado $0, Balance $800,000, Fecha: 2025-02-20
@@ -78,6 +79,7 @@ P 0003-2025: Total $600,000, Pagado $100,000, Balance $500,000, Fecha: 2025-03-1
 **Pago del cliente: $1,200,000**
 
 **FIFO Allocation:**
+
 ```
 1. P 0001-2025 (más antiguo): $500,000 (balance completo)
 2. P 0002-2025: $700,000 (parcial de $800,000)
@@ -113,11 +115,11 @@ if (Math.abs(totalAllocated - amount) > tolerance) {
 
 ```typescript
 const projects = await prisma.project.findMany({
-  where: { id: { in: allocations.map(a => a.projectId) } },
-  select: { id: true, customerId: true, currency: true }
+  where: { id: { in: allocations.map((a) => a.projectId) } },
+  select: { id: true, customerId: true, currency: true },
 })
 
-const uniqueCustomers = new Set(projects.map(p => p.customerId))
+const uniqueCustomers = new Set(projects.map((p) => p.customerId))
 
 if (uniqueCustomers.size > 1) {
   throw new Error('Todos los proyectos deben pertenecer al mismo cliente')
@@ -127,7 +129,7 @@ if (uniqueCustomers.size > 1) {
 ### 4. Misma Currency
 
 ```typescript
-const uniqueCurrencies = new Set(projects.map(p => p.currency))
+const uniqueCurrencies = new Set(projects.map((p) => p.currency))
 
 if (uniqueCurrencies.size > 1) {
   throw new Error('Todos los proyectos deben tener la misma moneda')
@@ -137,7 +139,7 @@ if (uniqueCurrencies.size > 1) {
 ### 5. No Duplicados
 
 ```typescript
-const uniqueProjectIds = new Set(allocations.map(a => a.projectId))
+const uniqueProjectIds = new Set(allocations.map((a) => a.projectId))
 
 if (uniqueProjectIds.size !== allocations.length) {
   throw new Error('No puede haber projectIds duplicados en allocations')

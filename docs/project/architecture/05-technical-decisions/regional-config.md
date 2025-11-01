@@ -29,14 +29,14 @@ Implementar **Context API** con configuración regional simple:
 ```typescript
 interface ConfigurationContextType {
   // Ubicación
-  pais: string         // "CL", "AR", "MX"
-  region: string       // "Metropolitana (RM)"
-  ciudad: string       // "Santiago"
-  comuna: string       // "Providencia"
+  pais: string // "CL", "AR", "MX"
+  region: string // "Metropolitana (RM)"
+  ciudad: string // "Santiago"
+  comuna: string // "Providencia"
 
   // Derivados automáticamente del país
-  currency: string     // "CLP", "ARS", "MXN"
-  locale: string       // "es-CL", "es-AR", "es-MX"
+  currency: string // "CLP", "ARS", "MXN"
+  locale: string // "es-CL", "es-AR", "es-MX"
 
   // Setters
   setPais: (value: string) => void
@@ -63,12 +63,14 @@ function MyComponent() {
 ```
 
 **Pros:**
+
 - ✅ Sistema i18n completo
 - ✅ Traducción de strings
 - ✅ Formateo de fechas/números
 - ✅ SSR/RSC compatible
 
 **Contras:**
+
 - ❌ **Overkill** para solo configuración regional
 - ❌ **Requiere archivos de traducción** (actualmente solo español)
 - ❌ **Setup complejo** (middleware, locale detection, routing)
@@ -82,15 +84,17 @@ function MyComponent() {
 
 ```typescript
 // Hardcoded en todos lados
-const CURRENCY = "CLP"
-const LOCALE = "es-CL"
+const CURRENCY = 'CLP'
+const LOCALE = 'es-CL'
 ```
 
 **Pros:**
+
 - ✅ Más simple
 - ✅ Sin abstracción
 
 **Contras:**
+
 - ❌ **No extensible** a otros países
 - ❌ **Cambiar país = refactor masivo**
 - ❌ **Sin preparación para futuro**
@@ -111,10 +115,12 @@ function MyComponent() {
 ```
 
 **Pros:**
+
 - ✅ Muy popular
 - ✅ Muchas features
 
 **Contras:**
+
 - ❌ **Client-side only** (problemas con RSC)
 - ❌ **Requiere traducción completa**
 - ❌ **Bundle size significativo**
@@ -133,10 +139,12 @@ NEXT_PUBLIC_LOCALE=es-CL
 ```
 
 **Pros:**
+
 - ✅ Simple
 - ✅ Sin Context API
 
 **Contras:**
+
 - ❌ **No configurable por usuario** (requiere rebuild)
 - ❌ **No persiste en browser**
 - ❌ **Todos los usuarios mismo país** (no multi-tenant)
@@ -281,41 +289,47 @@ export function RutInput({ ...props }) {
 // lib/constants/paises-config.ts
 export const PAISES_CONFIG = {
   CL: {
-    name: "Chile",
-    code: "CL",
-    currency: "CLP",
-    currencySymbol: "$",
-    locale: "es-CL",
+    name: 'Chile',
+    code: 'CL',
+    currency: 'CLP',
+    currencySymbol: '$',
+    locale: 'es-CL',
     regiones: [
       {
-        name: "Metropolitana (RM)",
-        code: "RM",
-        ciudades: ["Santiago"],
+        name: 'Metropolitana (RM)',
+        code: 'RM',
+        ciudades: ['Santiago'],
         comunas: [
-          "Providencia", "Las Condes", "Vitacura", "Lo Barnechea",
-          "Ñuñoa", "Santiago Centro", "Maipú", "La Florida",
+          'Providencia',
+          'Las Condes',
+          'Vitacura',
+          'Lo Barnechea',
+          'Ñuñoa',
+          'Santiago Centro',
+          'Maipú',
+          'La Florida',
           // ... 52 comunas
-        ]
+        ],
       },
       // ... 15 regiones
-    ]
+    ],
   },
   AR: {
-    name: "Argentina",
-    code: "AR",
-    currency: "ARS",
-    currencySymbol: "$",
-    locale: "es-AR",
+    name: 'Argentina',
+    code: 'AR',
+    currency: 'ARS',
+    currencySymbol: '$',
+    locale: 'es-AR',
     regiones: [
       {
-        name: "Buenos Aires",
-        code: "BA",
-        ciudades: ["CABA", "La Plata"],
-        comunas: []  // Argentina usa "barrios" en CABA
+        name: 'Buenos Aires',
+        code: 'BA',
+        ciudades: ['CABA', 'La Plata'],
+        comunas: [], // Argentina usa "barrios" en CABA
       },
       // ... otras provincias
-    ]
-  }
+    ],
+  },
 }
 ```
 
@@ -635,13 +649,13 @@ Context API requiere client-side:
 ```typescript
 // ❌ NO disponible en Server Components
 export default async function ServerComponent() {
-  const { currency } = useConfiguration()  // ERROR
+  const { currency } = useConfiguration() // ERROR
 }
 
 // ✅ Disponible en Client Components
-'use client'
+;('use client')
 export function ClientComponent() {
-  const { currency } = useConfiguration()  // OK
+  const { currency } = useConfiguration() // OK
 }
 ```
 
@@ -705,11 +719,11 @@ export function ConfigurationProvider({ orgId, children }) {
 
   useEffect(() => {
     fetch(`/api/organizations/${orgId}/configuration`)
-      .then(res => res.json())
+      .then((res) => res.json())
       .then(setConfig)
   }, [orgId])
 
-  const pais = config?.pais || "CL"
+  const pais = config?.pais || 'CL'
   // ...
 }
 ```

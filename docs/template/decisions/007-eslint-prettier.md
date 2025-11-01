@@ -7,9 +7,14 @@ Implementar **ESLint 9.37.0** + **Prettier 3.4.2** con configuración estricta y
 ## Contexto
 
 El template originalmente **NO tenía linting** y tenía configuración peligrosa:
+
 ```javascript
 // ⚠️ ANTES (PELIGROSO)
-{ eslint: { ignoreDuringBuilds: true } }  // Builds OK con errores
+{
+  eslint: {
+    ignoreDuringBuilds: true
+  }
+} // Builds OK con errores
 ```
 
 **Problema:** Builds exitosos con errores de TypeScript, imports rotos y código inconsistente.
@@ -31,6 +36,7 @@ El template originalmente **NO tenía linting** y tenía configuración peligros
 2. **Detección temprana de bugs:** ESLint detecta unused variables, missing React keys, incorrect hooks dependencies, usar `<a>` en lugar de `<Link>` en Next.js.
 
 3. **Builds seguros:**
+
    ```javascript
    // ✅ AHORA (SEGURO)
    {
@@ -46,13 +52,15 @@ El template originalmente **NO tenía linting** y tenía configuración peligros
 ### Trade-offs ⚠️
 
 1. **Warnings permisivos (por flexibilidad):**
+
    ```json
    {
-     "prettier/prettier": "warn",  // No error, solo warning
+     "prettier/prettier": "warn", // No error, solo warning
      "@typescript-eslint/no-unused-vars": "warn",
      "@typescript-eslint/no-explicit-any": "warn"
    }
    ```
+
    - **Razón:** Template debe ser flexible. Cambiar a "error" en producción.
 
 2. **Tiempo adicional en CI/CD:** Linting agrega ~10-30s al pipeline.
@@ -81,10 +89,13 @@ npm run build
   "plugins": ["prettier"],
   "rules": {
     "prettier/prettier": "warn",
-    "@typescript-eslint/no-unused-vars": ["warn", {
-      "argsIgnorePattern": "^_",
-      "varsIgnorePattern": "^_"
-    }]
+    "@typescript-eslint/no-unused-vars": [
+      "warn",
+      {
+        "argsIgnorePattern": "^_",
+        "varsIgnorePattern": "^_"
+      }
+    ]
   }
 }
 ```

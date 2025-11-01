@@ -40,17 +40,17 @@ model Payment {
 
 ### Campos
 
-| Campo                  | Tipo          | Obligatorio | Descripción                                     |
-| ---------------------- | ------------- | ----------- | ----------------------------------------------- |
-| `type`                 | String        | ✅          | "Project" (1:1) o "Customer" (1:N)              |
-| `amount`               | Decimal(12,2) | ✅          | Monto total del pago                            |
-| `currency`             | String        | ✅          | Moneda (ej: "CLP", "USD")                       |
-| `date`                 | DateTime      | ✅          | Fecha del pago                                  |
-| `reference`            | String        | ❌          | Número de referencia (ej: voucher, boleta)      |
-| `notes`                | String        | ❌          | Notas adicionales                               |
-| `customerId`           | UUID (FK)     | ✅          | Referencia a Customer                           |
-| `paymentMethodId`      | UUID (FK)     | ✅          | Referencia a PaymentMethod                      |
-| `selectedInstallments` | Int           | ❌          | Número de cuotas (null = pago único)            |
+| Campo                  | Tipo          | Obligatorio | Descripción                                |
+| ---------------------- | ------------- | ----------- | ------------------------------------------ |
+| `type`                 | String        | ✅          | "Project" (1:1) o "Customer" (1:N)         |
+| `amount`               | Decimal(12,2) | ✅          | Monto total del pago                       |
+| `currency`             | String        | ✅          | Moneda (ej: "CLP", "USD")                  |
+| `date`                 | DateTime      | ✅          | Fecha del pago                             |
+| `reference`            | String        | ❌          | Número de referencia (ej: voucher, boleta) |
+| `notes`                | String        | ❌          | Notas adicionales                          |
+| `customerId`           | UUID (FK)     | ✅          | Referencia a Customer                      |
+| `paymentMethodId`      | UUID (FK)     | ✅          | Referencia a PaymentMethod                 |
+| `selectedInstallments` | Int           | ❌          | Número de cuotas (null = pago único)       |
 
 ### Tipos de Pago
 
@@ -61,6 +61,7 @@ model Payment {
 - Caso de uso: Pago específico a un proyecto
 
 **Ejemplo:**
+
 ```typescript
 {
   type: "Project",
@@ -78,6 +79,7 @@ model Payment {
 - Caso de uso: Pago global de cliente (FIFO o manual)
 
 **Ejemplo:**
+
 ```typescript
 {
   type: "Customer",
@@ -109,28 +111,30 @@ const totalAllocated = allocations.reduce((sum, a) => sum + a.allocatedAmount, 0
 const tolerance = 0.01
 
 if (Math.abs(totalAllocated - amount) > tolerance) {
-  throw new Error(`La suma de allocations (${totalAllocated}) no coincide con el monto del pago (${amount})`)
+  throw new Error(
+    `La suma de allocations (${totalAllocated}) no coincide con el monto del pago (${amount})`
+  )
 }
 
 // 3. Validar mismo cliente
 const projects = await prisma.project.findMany({
-  where: { id: { in: allocations.map(a => a.projectId) } },
-  select: { id: true, customerId: true, currency: true }
+  where: { id: { in: allocations.map((a) => a.projectId) } },
+  select: { id: true, customerId: true, currency: true },
 })
 
-const uniqueCustomers = new Set(projects.map(p => p.customerId))
+const uniqueCustomers = new Set(projects.map((p) => p.customerId))
 if (uniqueCustomers.size > 1) {
   throw new Error('Todos los proyectos deben pertenecer al mismo cliente')
 }
 
 // 4. Validar misma currency
-const uniqueCurrencies = new Set(projects.map(p => p.currency))
+const uniqueCurrencies = new Set(projects.map((p) => p.currency))
 if (uniqueCurrencies.size > 1) {
   throw new Error('Todos los proyectos deben tener la misma moneda')
 }
 
 // 5. Validar no duplicados
-const uniqueProjectIds = new Set(allocations.map(a => a.projectId))
+const uniqueProjectIds = new Set(allocations.map((a) => a.projectId))
 if (uniqueProjectIds.size !== allocations.length) {
   throw new Error('No puede haber projectIds duplicados en allocations')
 }
@@ -222,8 +226,8 @@ export function calculateFIFOAllocation(
   let remainingAmount = paymentAmount
 
   // Ordenar proyectos por fecha (más antiguos primero)
-  const sortedProjects = [...projects].sort((a, b) =>
-    new Date(a.date).getTime() - new Date(b.date).getTime()
+  const sortedProjects = [...projects].sort(
+    (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
   )
 
   for (const project of sortedProjects) {
@@ -280,13 +284,13 @@ model Installment {
 
 ### Campos
 
-| Campo               | Tipo          | Obligatorio | Descripción                               |
-| ------------------- | ------------- | ----------- | ----------------------------------------- |
-| `installmentNumber` | Int           | ✅          | Número de cuota (1, 2, 3...)              |
-| `amount`            | Decimal(12,2) | ✅          | Monto de la cuota                         |
-| `dueDate`           | DateTime      | ✅          | Fecha de vencimiento                      |
-| `paidDate`          | DateTime      | ❌          | Fecha de pago (null si pendiente)         |
-| `status`            | String        | ✅          | "pending" o "paid"                        |
+| Campo               | Tipo          | Obligatorio | Descripción                       |
+| ------------------- | ------------- | ----------- | --------------------------------- |
+| `installmentNumber` | Int           | ✅          | Número de cuota (1, 2, 3...)      |
+| `amount`            | Decimal(12,2) | ✅          | Monto de la cuota                 |
+| `dueDate`           | DateTime      | ✅          | Fecha de vencimiento              |
+| `paidDate`          | DateTime      | ❌          | Fecha de pago (null si pendiente) |
+| `status`            | String        | ✅          | "pending" o "paid"                |
 
 ### Creación Automática
 
@@ -303,7 +307,7 @@ if (selectedInstallments && selectedInstallments > 1) {
 
     // Última cuota absorbe centavos residuales
     const cuotaAmount = isLast
-      ? amount - (installmentAmount * (selectedInstallments - 1))
+      ? amount - installmentAmount * (selectedInstallments - 1)
       : installmentAmount
 
     installments.push({
@@ -318,9 +322,9 @@ if (selectedInstallments && selectedInstallments > 1) {
     data: {
       ...paymentData,
       installments: {
-        create: installments
-      }
-    }
+        create: installments,
+      },
+    },
   })
 }
 ```
@@ -343,23 +347,26 @@ const today = new Date()
 const result = await prisma.installment.updateMany({
   where: {
     status: 'pending',
-    dueDate: { lte: today }
+    dueDate: { lte: today },
   },
   data: {
     status: 'paid',
-    paidDate: today
-  }
+    paidDate: today,
+  },
 })
 ```
 
 **Configuración Vercel:**
+
 ```json
 // vercel.json
 {
-  "crons": [{
-    "path": "/api/cron/mark-installments-paid",
-    "schedule": "0 0 * * *" // Diario a medianoche UTC
-  }]
+  "crons": [
+    {
+      "path": "/api/cron/mark-installments-paid",
+      "schedule": "0 0 * * *" // Diario a medianoche UTC
+    }
+  ]
 }
 ```
 
@@ -372,6 +379,7 @@ GET /api/installments?status=pending&customerId=abc&page=1&limit=10
 ```
 
 **Features:**
+
 - Filtros: status, paymentId, customerId, dateRange
 - Paginación
 - Includes: payment.customer, payment.allocations.project
@@ -468,11 +476,13 @@ const paymentMethods = [
 ### Configuración desde UI
 
 **Pendiente de implementar:**
+
 - CRUD completo de métodos de pago
 - Toggle active/inactive
 - Reordenar (drag & drop)
 
 **Actualmente:**
+
 - Métodos seedeados en DB
 - Query filtra por `active: true`
 - Combobox usa `order` para ordenar

@@ -47,7 +47,10 @@ export async function POST(request: Request) {
 
     // Verificar que el header de autorización coincide con el secret
     if (authHeader !== `Bearer ${cronSecret}`) {
-      cronLogger.warn({ authHeader: authHeader ? 'present' : 'missing' }, 'Unauthorized access attempt')
+      cronLogger.warn(
+        { authHeader: authHeader ? 'present' : 'missing' },
+        'Unauthorized access attempt'
+      )
       return NextResponse.json(
         { error: 'No autorizado. Este endpoint es solo para Vercel Cron Jobs.' },
         { status: 401 }

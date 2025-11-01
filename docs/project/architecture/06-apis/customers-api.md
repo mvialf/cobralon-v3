@@ -23,10 +23,10 @@ Listar clientes con paginación y búsqueda.
 
 ### Query Parameters
 
-| Parámetro | Tipo   | Default | Descripción                                |
-| --------- | ------ | ------- | ------------------------------------------ |
-| `page`    | number | 1       | Número de página                           |
-| `limit`   | number | 10      | Items por página (max: 100)                |
+| Parámetro | Tipo   | Default | Descripción                                     |
+| --------- | ------ | ------- | ----------------------------------------------- |
+| `page`    | number | 1       | Número de página                                |
+| `limit`   | number | 10      | Items por página (max: 100)                     |
 | `search`  | string | -       | Buscar en name, email, phone (case-insensitive) |
 
 ### Request Example
@@ -76,8 +76,8 @@ export const GET = withLogging(async (request, logger) => {
         OR: [
           { name: { contains: search, mode: 'insensitive' } },
           { email: { contains: search, mode: 'insensitive' } },
-          { phone: { contains: search } }
-        ]
+          { phone: { contains: search } },
+        ],
       }
     : {}
 
@@ -86,9 +86,9 @@ export const GET = withLogging(async (request, logger) => {
       where,
       orderBy: { createdAt: 'desc' },
       skip: (page - 1) * limit,
-      take: limit
+      take: limit,
     }),
-    prisma.customer.count({ where })
+    prisma.customer.count({ where }),
   ])
 
   logger.info({ count: customers.length, total }, 'Customers retrieved')
@@ -99,8 +99,8 @@ export const GET = withLogging(async (request, logger) => {
       page,
       limit,
       total,
-      totalPages: Math.ceil(total / limit)
-    }
+      totalPages: Math.ceil(total / limit),
+    },
   })
 })
 ```
@@ -117,7 +117,7 @@ Crear nuevo cliente.
 {
   "name": "María González",
   "phone": "+56987654321",
-  "email": "maria@example.com"  // Opcional
+  "email": "maria@example.com" // Opcional
 }
 ```
 
@@ -126,9 +126,9 @@ Crear nuevo cliente.
 ```typescript
 // lib/validations/customer-validations.ts
 export const customerFormSchema = z.object({
-  name: z.string().min(1, "Nombre es requerido"),
-  phone: z.string().min(1, "Teléfono es requerido"),
-  email: z.string().email("Email inválido").optional().or(z.literal(""))
+  name: z.string().min(1, 'Nombre es requerido'),
+  phone: z.string().min(1, 'Teléfono es requerido'),
+  email: z.string().email('Email inválido').optional().or(z.literal('')),
 })
 ```
 
@@ -157,7 +157,7 @@ export const POST = withLogging(async (request, logger) => {
     const validatedData = customerFormSchema.parse(body)
 
     const customer = await prisma.customer.create({
-      data: validatedData
+      data: validatedData,
     })
 
     logger.info({ customerId: customer.id }, 'Customer created')
@@ -186,8 +186,8 @@ Obtener detalle de cliente específico.
 
 ### Path Parameters
 
-| Parámetro | Tipo | Descripción |
-| --------- | ---- | ----------- |
+| Parámetro | Tipo | Descripción    |
+| --------- | ---- | -------------- |
 | `id`      | UUID | ID del cliente |
 
 ### Request Example
@@ -225,24 +225,18 @@ export const GET = withLogging(async (request, logger, context) => {
   const { id } = context?.params || {}
 
   if (!id) {
-    return NextResponse.json(
-      { error: 'Customer ID is required' },
-      { status: 400 }
-    )
+    return NextResponse.json({ error: 'Customer ID is required' }, { status: 400 })
   }
 
   logger.info({ customerId: id }, 'Fetching customer')
 
   const customer = await prisma.customer.findUnique({
-    where: { id }
+    where: { id },
   })
 
   if (!customer) {
     logger.warn({ customerId: id }, 'Customer not found')
-    return NextResponse.json(
-      { error: 'Customer not found' },
-      { status: 404 }
-    )
+    return NextResponse.json({ error: 'Customer not found' }, { status: 404 })
   }
 
   logger.info({ customerId: id }, 'Customer retrieved')
@@ -300,7 +294,7 @@ export const PUT = withLogging(async (request, logger, context) => {
 
     const customer = await prisma.customer.update({
       where: { id },
-      data: validatedData
+      data: validatedData,
     })
 
     logger.info({ customerId: id }, 'Customer updated')
@@ -317,10 +311,7 @@ export const PUT = withLogging(async (request, logger, context) => {
 
     if (error.code === 'P2025') {
       logger.warn({ customerId: id }, 'Customer not found')
-      return NextResponse.json(
-        { error: 'Customer not found' },
-        { status: 404 }
-      )
+      return NextResponse.json({ error: 'Customer not found' }, { status: 404 })
     }
 
     logger.error({ err: error }, 'Failed to update customer')
@@ -370,22 +361,19 @@ export const DELETE = withLogging(async (request, logger, context) => {
 
   try {
     await prisma.customer.delete({
-      where: { id }
+      where: { id },
     })
 
     logger.info({ customerId: id }, 'Customer deleted')
 
     return NextResponse.json({
       success: true,
-      message: 'Customer deleted successfully'
+      message: 'Customer deleted successfully',
     })
   } catch (error) {
     if (error.code === 'P2025') {
       logger.warn({ customerId: id }, 'Customer not found')
-      return NextResponse.json(
-        { error: 'Customer not found' },
-        { status: 404 }
-      )
+      return NextResponse.json({ error: 'Customer not found' }, { status: 404 })
     }
 
     logger.error({ err: error }, 'Failed to delete customer')
@@ -428,9 +416,9 @@ export const GET = withLogging(async (request, logger) => {
     select: {
       id: true,
       name: true,
-      phone: true
+      phone: true,
     },
-    orderBy: { name: 'asc' }
+    orderBy: { name: 'asc' },
   })
 
   logger.info({ count: customers.length }, 'Customer list retrieved')

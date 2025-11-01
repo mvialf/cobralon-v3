@@ -7,12 +7,14 @@ Este directorio contiene las **versiones originales completas** de los ADRs ante
 Los ADRs originales (300-500 líneas) fueron refactorizados a un formato "slim" (50-100 líneas) para mejorar la experiencia del usuario del template.
 
 **Problema original:**
+
 - ADRs muy largos (promedio 350 líneas)
 - 50% del contenido sobre alternativas NO elegidas
 - Confundía más que ayudaba
 - Tiempo de lectura: 10-15 minutos
 
 **Solución aplicada:**
+
 - Refactorizar a formato "slim" (50-100 líneas)
 - Enfoque en "cómo usar lo elegido" vs "por qué NO elegimos X"
 - Tiempo de lectura: 3-5 minutos
@@ -21,6 +23,7 @@ Los ADRs originales (300-500 líneas) fueron refactorizados a un formato "slim" 
 ## Contenido de este directorio
 
 **Versiones originales (backup):**
+
 - `001-nextjs-15-app-router.md` (155 líneas)
 - `002-tailwind-css-v4.md` (223 líneas)
 - `003-shadcn-ui-new-york.md` (289 líneas)
@@ -38,12 +41,14 @@ Los ADRs originales (300-500 líneas) fueron refactorizados a un formato "slim" 
 ## ¿Cuándo consultar este directorio?
 
 ### ✅ Consultar versiones originales cuando:
+
 - Necesitas entender la historia completa de una decisión
 - Quieres ver análisis detallado de alternativas
 - Estás investigando por qué NO se eligió una tecnología específica
 - Necesitas contexto histórico profundo
 
 ### ❌ NO necesitas este directorio para:
+
 - Usar el template normalmente
 - Entender cómo funciona una tecnología elegida
 - Quick start o setup inicial
@@ -81,6 +86,7 @@ Estas versiones originales están versionadas en Git. Si necesitas recuperar una
 ## Eliminación futura
 
 Este directorio puede ser eliminado en el futuro (6-12 meses) si:
+
 - Nadie consulta estas versiones originales
 - Las versiones slim se consolidan como estándar
 - Ocupan espacio innecesario en el repositorio

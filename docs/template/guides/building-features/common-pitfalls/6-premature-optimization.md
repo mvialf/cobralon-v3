@@ -21,4 +21,3 @@ function ProductCard({ product }) {
 // - Users reportan lag
 // - Métricas muestran problema
 ```
-

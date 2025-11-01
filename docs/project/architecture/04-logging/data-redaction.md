@@ -28,8 +28,8 @@ export const logger = pino({
       'cvv',
       'ssn',
     ],
-    censor: '[REDACTED]'
-  }
+    censor: '[REDACTED]',
+  },
 })
 ```
 
@@ -63,11 +63,14 @@ export const logger = pino({
 ### ❌ Sin Redaction (Peligroso)
 
 ```typescript
-logger.info({
-  userId: '123',
-  password: 'super-secret-123',
-  email: 'user@example.com'
-}, 'User logged in')
+logger.info(
+  {
+    userId: '123',
+    password: 'super-secret-123',
+    email: 'user@example.com',
+  },
+  'User logged in'
+)
 ```
 
 **Output:**
@@ -86,11 +89,14 @@ logger.info({
 ### ✅ Con Redaction (Seguro)
 
 ```typescript
-logger.info({
-  userId: '123',
-  password: 'super-secret-123', // ← Será censurado
-  email: 'user@example.com'
-}, 'User logged in')
+logger.info(
+  {
+    userId: '123',
+    password: 'super-secret-123', // ← Será censurado
+    email: 'user@example.com',
+  },
+  'User logged in'
+)
 ```
 
 **Output:**
@@ -113,15 +119,18 @@ logger.info({
 Redaction funciona en objetos anidados:
 
 ```typescript
-logger.info({
-  user: {
-    id: '123',
-    credentials: {
-      password: 'secret',
-      apiKey: 'abc-xyz-123'
-    }
-  }
-}, 'User data')
+logger.info(
+  {
+    user: {
+      id: '123',
+      credentials: {
+        password: 'secret',
+        apiKey: 'abc-xyz-123',
+      },
+    },
+  },
+  'User data'
+)
 ```
 
 **Output:**
@@ -146,12 +155,15 @@ logger.info({
 Redaction funciona en arrays:
 
 ```typescript
-logger.info({
-  tokens: [
-    { type: 'access', token: 'abc-123' },
-    { type: 'refresh', token: 'xyz-789' }
-  ]
-}, 'Tokens issued')
+logger.info(
+  {
+    tokens: [
+      { type: 'access', token: 'abc-123' },
+      { type: 'refresh', token: 'xyz-789' },
+    ],
+  },
+  'Tokens issued'
+)
 ```
 
 **Output:**
@@ -211,12 +223,12 @@ redact: {
 
 ```typescript
 logger.info({
-  user: { password: 'abc' },  // ← Redacted (*.password)
+  user: { password: 'abc' }, // ← Redacted (*.password)
   admin: { password: 'xyz' }, // ← Redacted (*.password)
   credentials: {
-    key: '123',               // ← Redacted (credentials.*)
-    secret: '456'             // ← Redacted (credentials.*)
-  }
+    key: '123', // ← Redacted (credentials.*)
+    secret: '456', // ← Redacted (credentials.*)
+  },
 })
 ```
 
@@ -345,7 +357,7 @@ redact: {
     ...DEFAULT_REDACT_PATHS,
     'rut',
     'bankAccount',
-    'companyId' // Si es sensible
+    'companyId', // Si es sensible
   ]
 }
 ```
@@ -372,12 +384,8 @@ describe('Logger redaction', () => {
 
     logger.info({ password: 'secret123' }, 'Test log')
 
-    expect(logSpy).toHaveBeenCalledWith(
-      expect.stringContaining('[REDACTED]')
-    )
-    expect(logSpy).not.toHaveBeenCalledWith(
-      expect.stringContaining('secret123')
-    )
+    expect(logSpy).toHaveBeenCalledWith(expect.stringContaining('[REDACTED]'))
+    expect(logSpy).not.toHaveBeenCalledWith(expect.stringContaining('secret123'))
   })
 })
 ```

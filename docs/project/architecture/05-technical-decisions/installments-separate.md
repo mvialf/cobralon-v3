@@ -49,10 +49,12 @@ model Payment {
 ```
 
 **Pros:**
+
 - ✅ Más simple (sin JOIN)
 - ✅ Menos tablas
 
 **Contras:**
+
 - ❌ **No queryable** (sin WHERE por cuota individual)
 - ❌ **No indexable** (no índices en JSON)
 - ❌ **Cron job complejo** (parse JSON → update → serialize)
@@ -72,10 +74,12 @@ model Payment {
 ```
 
 **Pros:**
+
 - ✅ Queries individuales posibles
 - ✅ Consistente con modelo Payment
 
 **Contras:**
+
 - ❌ **Confunde historial** (1 pago ≠ N pagos)
 - ❌ **Duplica datos** (customer, date, reference repetidos)
 - ❌ **Complejidad en UI** (mostrar como 1 pago o N?)
@@ -127,19 +131,19 @@ Con JSON field sería:
 ```javascript
 // ❌ Complejo y lento
 const payments = await prisma.payment.findMany({
-  where: { selectedInstallments: { gt: 1 } }
+  where: { selectedInstallments: { gt: 1 } },
 })
 
 for (const payment of payments) {
   let installments = JSON.parse(payment.installments)
-  installments = installments.map(i =>
+  installments = installments.map((i) =>
     i.status === 'pending' && new Date(i.dueDate) <= today
       ? { ...i, status: 'paid', paidDate: today }
       : i
   )
   await prisma.payment.update({
     where: { id: payment.id },
-    data: { installments: JSON.stringify(installments) }
+    data: { installments: JSON.stringify(installments) },
   })
 }
 ```
@@ -200,6 +204,7 @@ WHERE selected_installments > 1
 ```
 
 **Mitigación:**
+
 - Índice optimizado: `[paymentId]`
 - Prisma include automático con `relationLoadStrategy: 'join'`
 - Denormalizar campos críticos si es necesario (ej: `customerId` en Installment)
@@ -215,6 +220,7 @@ Más complejidad en schema:
 - Validaciones adicionales (orden de cuotas, suma de amounts)
 
 **Mitigación:**
+
 - Creación automática al crear Payment con cuotas
 - Business logic encapsulada en API route
 - Validaciones en Zod schema
@@ -237,9 +243,7 @@ export const POST = withLogging(async (request, logger) => {
 
     for (let i = 1; i <= selectedInstallments; i++) {
       const isLast = i === selectedInstallments
-      const installmentAmount = isLast
-        ? remaining
-        : baseAmount
+      const installmentAmount = isLast ? remaining : baseAmount
 
       installments.push({
         installmentNumber: i,
@@ -263,8 +267,10 @@ export const POST = withLogging(async (request, logger) => {
     },
   })
 
-  logger.info({ paymentId: payment.id, installmentsCount: installments.length },
-    'Payment with installments created')
+  logger.info(
+    { paymentId: payment.id, installmentsCount: installments.length },
+    'Payment with installments created'
+  )
 })
 ```
 
@@ -295,12 +301,11 @@ export async function POST(request: Request) {
     },
   })
 
-  logger.info({ updated: result.count, date: today },
-    'Installments marked as paid')
+  logger.info({ updated: result.count, date: today }, 'Installments marked as paid')
 
   return NextResponse.json({
     success: true,
-    updated: result.count
+    updated: result.count,
   })
 }
 ```

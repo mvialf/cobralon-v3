@@ -47,10 +47,12 @@ model Payment {
 ```
 
 **Pros:**
+
 - ✅ Más simple
 - ✅ Menos JOINs
 
 **Contras:**
+
 - ❌ **No soporta pago a múltiples proyectos**
 - ❌ Limitado a 1:1
 
@@ -67,10 +69,12 @@ model Payment {
 ```
 
 **Pros:**
+
 - ✅ Flexible
 - ✅ Sin JOIN
 
 **Contras:**
+
 - ❌ **No queryable** (sin WHERE en allocation específica)
 - ❌ **Pierde normalización**
 - ❌ Sin type-safety
@@ -87,14 +91,12 @@ Un pago puede asignarse a 1 o N proyectos sin cambiar estructura.
 
 ```typescript
 // Pago 1:1
-allocations: [
-  { projectId: 'A', allocatedAmount: 1000 }
-]
+allocations: [{ projectId: 'A', allocatedAmount: 1000 }]
 
 // Pago 1:N
 allocations: [
   { projectId: 'A', allocatedAmount: 600 },
-  { projectId: 'B', allocatedAmount: 400 }
+  { projectId: 'B', allocatedAmount: 400 },
 ]
 ```
 
@@ -140,6 +142,7 @@ type: "Customer" → allocations.length >= 1
 Requiere validación: `SUM(allocations) === payment.amount`
 
 **Mitigación:**
+
 - Validación en frontend (Zod schema)
 - Validación en backend (API route)
 - Business logic centralizada: `lib/validations/payment-validations.ts`
@@ -164,6 +167,7 @@ LEFT JOIN payments ON payments.project_id = p.id
 ```
 
 **Mitigación:**
+
 - Índices optimizados en `paymentId` y `projectId`
 - `relationLoadStrategy: 'join'` en Prisma (previene N+1)
 - Considerar campo denormalizado `project.balance` si escala

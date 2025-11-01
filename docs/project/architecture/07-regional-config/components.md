@@ -6,12 +6,12 @@ Componentes UI que consumen la configuración regional del Context API para adap
 
 ## 📦 Componentes Disponibles
 
-| Componente       | Archivo                                  | Consume Config    | Propósito                          |
-| ---------------- | ---------------------------------------- | ----------------- | ---------------------------------- |
-| CurrencyInput    | `components/ui/currency-input.tsx`       | `currency, locale`| Input de montos con formateo       |
-| PhoneInput       | `components/ui/phone-input.tsx`          | `pais`            | Input de teléfono con validación   |
-| RutInput         | `components/ui/rut-input.tsx`            | _(solo Chile)_    | Input de RUT chileno               |
-| AddressFields    | `components/forms/address-fields.tsx`    | `region` (inicial)| Campos de dirección con cascada    |
+| Componente    | Archivo                               | Consume Config     | Propósito                        |
+| ------------- | ------------------------------------- | ------------------ | -------------------------------- |
+| CurrencyInput | `components/ui/currency-input.tsx`    | `currency, locale` | Input de montos con formateo     |
+| PhoneInput    | `components/ui/phone-input.tsx`       | `pais`             | Input de teléfono con validación |
+| RutInput      | `components/ui/rut-input.tsx`         | _(solo Chile)_     | Input de RUT chileno             |
+| AddressFields | `components/forms/address-fields.tsx` | `region` (inicial) | Campos de dirección con cascada  |
 
 ---
 
@@ -24,6 +24,7 @@ Input numérico con formateo automático de moneda en tiempo real.
 **Archivo:** `components/ui/currency-input.tsx`
 
 **Features:**
+
 - ✅ Formateo mientras escribes: `1234567` → `$1.234.567`
 - ✅ Separadores de miles/decimales automáticos según locale
 - ✅ Símbolo de moneda derivado del país configurado
@@ -35,12 +36,12 @@ Input numérico con formateo automático de moneda en tiempo real.
 
 ```typescript
 interface CurrencyInputProps {
-  value: number              // Valor numérico
+  value: number // Valor numérico
   onChange: (value: number) => void
-  currency?: string          // ISO 4217 (ej: "CLP", "USD", "EUR")
-  locale?: string            // ej: "es-CL", "en-US"
-  min?: number               // Valor mínimo
-  max?: number               // Valor máximo
+  currency?: string // ISO 4217 (ej: "CLP", "USD", "EUR")
+  locale?: string // ej: "es-CL", "en-US"
+  min?: number // Valor mínimo
+  max?: number // Valor máximo
   placeholder?: string
   disabled?: boolean
   className?: string
@@ -90,6 +91,7 @@ export function ProjectForm() {
 ```
 
 **Resultado:**
+
 - Si `pais = "CL"` → Muestra `$ 1.234.567` (sin decimales)
 - Si `pais = "AR"` → Muestra `$ 1.234.567,00` (con decimales)
 - Si `pais = "MX"` → Muestra `$ 1,234,567.00` (separadores USA)
@@ -135,12 +137,12 @@ export function ProjectForm() {
 
 ### Comportamiento Regional
 
-| País | Currency | Formato        | Decimales |
-| ---- | -------- | -------------- | --------- |
-| CL   | CLP      | `$ 1.234.567`  | ❌ No      |
-| AR   | ARS      | `$ 1.234.567,00` | ✅ Sí   |
-| MX   | MXN      | `$ 1,234.56`   | ✅ Sí     |
-| US   | USD      | `$ 1,234.56`   | ✅ Sí     |
+| País | Currency | Formato          | Decimales |
+| ---- | -------- | ---------------- | --------- |
+| CL   | CLP      | `$ 1.234.567`    | ❌ No     |
+| AR   | ARS      | `$ 1.234.567,00` | ✅ Sí     |
+| MX   | MXN      | `$ 1,234.56`     | ✅ Sí     |
+| US   | USD      | `$ 1,234.56`     | ✅ Sí     |
 
 **Monedas sin decimales:** CLP, JPY, KRW (centavos eliminados automáticamente)
 
@@ -155,6 +157,7 @@ Input de teléfono con validación E.164 y prefijo de país automático.
 **Archivo:** `components/ui/phone-input.tsx`
 
 **Features:**
+
 - ✅ Prefijo de país automático (ej: `+56` para Chile)
 - ✅ Validación de formato E.164 en tiempo real
 - ✅ Icono de validación visual (checkmark/x)
@@ -165,12 +168,12 @@ Input de teléfono con validación E.164 y prefijo de país automático.
 
 ```typescript
 interface PhoneInputProps {
-  value: string              // Formato E.164 (ej: "+56912345678")
+  value: string // Formato E.164 (ej: "+56912345678")
   onChange: (value: string) => void
-  defaultCountry?: Country   // ISO 3166-1 alpha-2 ("CL", "US")
+  defaultCountry?: Country // ISO 3166-1 alpha-2 ("CL", "US")
   showValidationIcon?: boolean // Default: false
-  showCountryPrefix?: boolean  // Default: true
-  autoAddPrefix?: boolean      // Default: true
+  showCountryPrefix?: boolean // Default: true
+  autoAddPrefix?: boolean // Default: true
   className?: string
   disabled?: boolean
   placeholder?: string
@@ -183,8 +186,7 @@ interface PhoneInputProps {
 const { configuration } = useConfiguration()
 
 // Prioridad: props > context > default (Chile)
-const defaultCountry =
-  countryProp ?? (configuration.pais.toUpperCase() as Country) ?? 'CL'
+const defaultCountry = countryProp ?? (configuration.pais.toUpperCase() as Country) ?? 'CL'
 
 // Prefijo automático
 const countryCallingCode = getCountryCallingCode(defaultCountry) // "56"
@@ -214,6 +216,7 @@ export function CustomerForm() {
 ```
 
 **Comportamiento:**
+
 - Usuario escribe: `912345678`
 - Sistema auto-añade prefijo: `+56912345678`
 - Muestra checkmark verde si válido ✅
@@ -245,6 +248,7 @@ export function CustomerForm() {
 ### Validación Regional
 
 **Chile (estricta):**
+
 ```typescript
 // Validación actual: solo Chile
 const chilePhonePattern = /^\+56[2-9]\d{8}$/
@@ -272,6 +276,7 @@ Input especializado para RUT chileno con formateo y validación automática.
 **Archivo:** `components/ui/rut-input.tsx`
 
 **Features:**
+
 - ✅ Formateo automático: `123456789` → `12.345.678-9`
 - ✅ Validación de dígito verificador
 - ✅ Sanitización de input (solo números, K, puntos, guión)
@@ -283,10 +288,10 @@ Input especializado para RUT chileno con formateo y validación automática.
 
 ```typescript
 interface RutInputProps {
-  value?: string                   // RUT formateado o limpio
+  value?: string // RUT formateado o limpio
   onRutChange?: (cleanRut: string) => void
-  showValidationIcon?: boolean     // Default: false
-  formatOnChange?: boolean         // Default: true
+  showValidationIcon?: boolean // Default: false
+  formatOnChange?: boolean // Default: true
   className?: string
   disabled?: boolean
 }
@@ -319,6 +324,7 @@ export function ChileanCustomerForm() {
 ```
 
 **Comportamiento:**
+
 - Usuario escribe: `123456789`
 - Sistema formatea: `12.345.678-9`
 - Valida dígito verificador: ✅ o ❌
@@ -390,6 +396,7 @@ export function DocumentInput() {
 ### Validación
 
 **Algoritmo Módulo 11:**
+
 ```typescript
 // lib/validations/rut-validations.ts
 export function validateRut(rut: string): boolean {
@@ -425,6 +432,7 @@ Componente compuesto para campos de dirección con selección cascada de región
 **Archivo:** `components/forms/address-fields.tsx`
 
 **Features:**
+
 - ✅ 4 campos: calle, casa/dpto, región, comuna
 - ✅ Selección cascada: al cambiar región → filtra comunas
 - ✅ Combobox con búsqueda para región y comuna
@@ -435,7 +443,7 @@ Componente compuesto para campos de dirección con selección cascada de región
 
 ```typescript
 interface AddressFieldsProps {
-  control: Control<any>  // React Hook Form control
+  control: Control<any> // React Hook Form control
   defaultRegion?: string // Región inicial (ej: "Metropolitana (RM)")
 }
 ```
@@ -536,14 +544,16 @@ export function ProjectForm() {
 ### Comportamiento Cascada
 
 1. **Usuario selecciona región:**
+
    ```typescript
-   setSelectedRegion("Metropolitana (RM)")
+   setSelectedRegion('Metropolitana (RM)')
    ```
 
 2. **Sistema filtra comunas:**
+
    ```typescript
-   const regionCodigo = regiones.find(r =>
-     `${r.nombre_corto} (${r.numero_romano})` === selectedRegion
+   const regionCodigo = regiones.find(
+     (r) => `${r.nombre_corto} (${r.numero_romano})` === selectedRegion
    )?.codigo
 
    const comunasDisponibles = getComunasByRegion(regionCodigo)
@@ -668,6 +678,7 @@ export function ProjectForm() {
 ```
 
 **Resultado:**
+
 - Si `pais = "CL"`: Muestra RutInput, PhoneInput con +56, CurrencyInput con $ sin decimales
 - Si `pais = "AR"`: Muestra Input normal, PhoneInput con +54, CurrencyInput con $ con decimales
 - Región pre-populada desde configuración global

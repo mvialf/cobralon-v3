@@ -34,4 +34,3 @@ export function ProductsTable({ products }) {
   return <table>...</table>
 }
 ```
-

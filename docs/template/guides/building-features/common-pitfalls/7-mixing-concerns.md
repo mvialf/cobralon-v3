@@ -1,4 +1,3 @@
-
 ### ❌ Anti-Pattern 7: Mixing Concerns in Components
 
 **Problem:** Componente que fetchea + transforma + renderiza.
@@ -35,4 +34,3 @@ export default async function ProductsPage() {
   return <ProductsTable data={enriched} />  // 3. Client Component
 }
 ```
-

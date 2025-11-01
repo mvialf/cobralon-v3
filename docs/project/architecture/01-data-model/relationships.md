@@ -6,18 +6,18 @@ Tabla completa de relaciones entre entidades con políticas de eliminación y ju
 
 ## Tabla de Relaciones Principales
 
-| Relación                              | Tipo | onDelete Policy     | Razón                                                |
-| ------------------------------------- | ---- | ------------------- | ---------------------------------------------------- |
-| **Customer → Project**                | 1:N  | CASCADE             | Eliminar cliente implica eliminar sus proyectos      |
-| **Customer → Payment**                | 1:N  | _(no especificado)_ | Preservar historial de pagos                         |
-| **Project → ProjectStatus**           | N:1  | RESTRICT            | No eliminar estado si hay proyectos usándolo         |
-| **Project ← PaymentAllocation**       | 1:N  | _(default)_         | Preservar asignaciones a proyecto                    |
-| **Payment → PaymentAllocation**       | 1:N  | CASCADE             | Eliminar pago debe eliminar asignaciones             |
-| **Payment → Installment**             | 1:N  | CASCADE             | Eliminar pago debe eliminar cuotas                   |
-| **Payment → PaymentMethod**           | N:1  | _(no especificado)_ | Preservar métodos históricos                         |
-| **PaymentAllocation → Payment**       | N:1  | CASCADE             | Eliminar pago elimina allocation (inverso)           |
-| **PaymentAllocation → Project**       | N:1  | _(default)_         | Preservar allocation si proyecto existe              |
-| **ProjectStatus → BadgeColor**        | N:1  | _(no especificado)_ | Preservar color si se usa en estado                  |
+| Relación                        | Tipo | onDelete Policy     | Razón                                           |
+| ------------------------------- | ---- | ------------------- | ----------------------------------------------- |
+| **Customer → Project**          | 1:N  | CASCADE             | Eliminar cliente implica eliminar sus proyectos |
+| **Customer → Payment**          | 1:N  | _(no especificado)_ | Preservar historial de pagos                    |
+| **Project → ProjectStatus**     | N:1  | RESTRICT            | No eliminar estado si hay proyectos usándolo    |
+| **Project ← PaymentAllocation** | 1:N  | _(default)_         | Preservar asignaciones a proyecto               |
+| **Payment → PaymentAllocation** | 1:N  | CASCADE             | Eliminar pago debe eliminar asignaciones        |
+| **Payment → Installment**       | 1:N  | CASCADE             | Eliminar pago debe eliminar cuotas              |
+| **Payment → PaymentMethod**     | N:1  | _(no especificado)_ | Preservar métodos históricos                    |
+| **PaymentAllocation → Payment** | N:1  | CASCADE             | Eliminar pago elimina allocation (inverso)      |
+| **PaymentAllocation → Project** | N:1  | _(default)_         | Preservar allocation si proyecto existe         |
+| **ProjectStatus → BadgeColor**  | N:1  | _(no especificado)_ | Preservar color si se usa en estado             |
 
 ---
 
@@ -35,12 +35,14 @@ model Project {
 **Política:** `onDelete: CASCADE`
 
 **Razón:**
+
 - Un proyecto **pertenece** a un cliente (ownership)
 - Sin cliente, el proyecto pierde sentido de negocio
 - Caso de uso: Cliente eliminado accidentalmente → proyectos también se eliminan
 - ✅ **Trade-off aceptable:** Si se necesita preservar proyectos, usar soft delete en Customer
 
 **Alternativa considerada:**
+
 - `RESTRICT`: Impediría eliminar cliente con proyectos
 - ❌ **Rechazada:** Fuerza limpieza manual de proyectos, mala UX
 
@@ -58,16 +60,19 @@ model Payment {
 **Política:** `onDelete: (default)` - No especificado, comportamiento por defecto de Prisma
 
 **Razón:**
+
 - Los pagos son **historial financiero** crítico
 - Nunca eliminar pagos aunque se elimine el cliente
 - Caso de uso: Auditoría, contabilidad, reporting
 - ✅ **Mejor práctica:** Preservar data financiera siempre
 
 **Alternativa considerada:**
+
 - `CASCADE`: Eliminaría historial financiero
 - ❌ **Rechazada:** Pérdida de auditoría inaceptable
 
 **Recomendación futura:**
+
 - Implementar soft delete en Customer (`deletedAt: DateTime?`)
 - Evitar eliminación física de clientes con historial
 
@@ -85,12 +90,14 @@ model Project {
 **Política:** `onDelete: RESTRICT`
 
 **Razón:**
+
 - ProjectStatus es **configuración** del sistema, no dato de negocio
 - No eliminar estado si hay proyectos activos usándolo
 - Caso de uso: Proteger contra eliminación accidental de estados en uso
 - ✅ **Fuerza workflow correcto:** Admin debe reasignar proyectos antes de eliminar estado
 
 **Flujo correcto:**
+
 ```
 1. Admin intenta eliminar estado "En Proceso"
 2. Sistema verifica: ¿Hay proyectos con projectStatusId = "En Proceso"?
@@ -100,6 +107,7 @@ model Project {
 ```
 
 **Alternativa considerada:**
+
 - `SET NULL`: Dejaría proyectos sin estado
 - ❌ **Rechazada:** Proyectos sin estado pierden tracking
 
@@ -117,12 +125,14 @@ model PaymentAllocation {
 **Política:** `onDelete: CASCADE`
 
 **Razón:**
+
 - PaymentAllocation **depende completamente** de Payment (existence dependency)
 - Sin pago, la allocation pierde sentido
 - Caso de uso: Eliminar pago debe limpiar asignaciones automáticamente
 - ✅ **Coherencia de datos:** Evita allocations huérfanas
 
 **Alternativa considerada:**
+
 - `RESTRICT`: Impediría eliminar pago con allocations
 - ❌ **Rechazada:** UX pobre, fuerza limpieza manual innecesaria
 
@@ -140,12 +150,14 @@ model Installment {
 **Política:** `onDelete: CASCADE`
 
 **Razón:**
+
 - Installment **es parte** del Payment (composition relationship)
 - Sin pago, las cuotas no tienen sentido
 - Caso de uso: Cancelar pago debe eliminar cuotas automáticamente
 - ✅ **Coherencia de datos:** Evita cuotas huérfanas
 
 **Alternativa considerada:**
+
 - `RESTRICT`: Impediría eliminar pago con cuotas pendientes
 - ❌ **Rechazada:** UX pobre para cancelación de pagos
 
@@ -163,11 +175,13 @@ model PaymentAllocation {
 **Política:** `onDelete: (default)` - No especificado
 
 **Razón:**
+
 - Si se elimina proyecto, ¿qué pasa con sus allocations?
 - **Comportamiento actual:** Error si se intenta eliminar proyecto con allocations
 - ✅ **Protección implícita:** Evita eliminar proyectos con historial financiero
 
 **Recomendación futura:**
+
 - Evaluar `RESTRICT` explícito para claridad
 - O `SET NULL` si se quiere permitir eliminar proyectos con historial
 
@@ -185,11 +199,13 @@ model ProjectStatus {
 **Política:** `onDelete: (default)` - No especificado
 
 **Razón:**
+
 - BadgeColor es configuración base (seedeada)
 - **Nunca se elimina** en operación normal
 - ✅ **Asunción:** 7 colores predefinidos son permanentes
 
 **Recomendación futura:**
+
 - Si se permite eliminar colores, agregar `RESTRICT`
 
 ---
@@ -199,6 +215,7 @@ model ProjectStatus {
 ### CASCADE - Ownership
 
 Usa `CASCADE` cuando:
+
 - ✅ Child **pertenece** a Parent (composition)
 - ✅ Child **no tiene sentido** sin Parent
 - ✅ Ejemplo: Payment → Allocation, Payment → Installment
@@ -206,6 +223,7 @@ Usa `CASCADE` cuando:
 ### RESTRICT - Protection
 
 Usa `RESTRICT` cuando:
+
 - ✅ Child **referencia** configuración
 - ✅ Eliminar Parent **rompería integridad**
 - ✅ Ejemplo: Project → ProjectStatus
@@ -213,6 +231,7 @@ Usa `RESTRICT` cuando:
 ### Default - Financial Data
 
 Usa `default` (sin especificar) cuando:
+
 - ✅ Preservar historial es crítico
 - ✅ Relación de "logging" o "auditoría"
 - ✅ Ejemplo: Customer → Payment
@@ -230,9 +249,10 @@ Usa `default` (sin especificar) cuando:
 **Propósito:** Un pago no puede asignarse dos veces al mismo proyecto.
 
 **Validación adicional backend:**
+
 ```typescript
 // app/api/payments/route.ts
-const uniqueProjectIds = new Set(allocations.map(a => a.projectId))
+const uniqueProjectIds = new Set(allocations.map((a) => a.projectId))
 if (uniqueProjectIds.size !== allocations.length) {
   throw new Error('No puede haber projectIds duplicados')
 }
@@ -242,17 +262,17 @@ if (uniqueProjectIds.size !== allocations.length) {
 
 ## Índices Relacionados con FKs
 
-| Modelo                | Índice                          | Propósito                              |
-| --------------------- | ------------------------------- | -------------------------------------- |
-| **Project**           | `[customerId]`                  | Queries: "proyectos del cliente X"     |
-| **Project**           | `[projectStatusId]`             | Queries: "proyectos en estado Y"       |
-| **Project**           | `[customerId, projectStatusId]` | Filtros combinados                     |
-| **Payment**           | `[customerId]`                  | Queries: "pagos del cliente X"         |
-| **Payment**           | `[paymentMethodId]`             | Queries: "pagos con método Y"          |
-| **PaymentAllocation** | `[paymentId]`                   | Joins: payment.allocations             |
-| **PaymentAllocation** | `[projectId]`                   | Queries: "allocations del proyecto X"  |
-| **Installment**       | `[paymentId]`                   | Joins: payment.installments            |
-| **Installment**       | `[status, dueDate]`             | Cron job: cuotas pendientes vencidas   |
+| Modelo                | Índice                          | Propósito                             |
+| --------------------- | ------------------------------- | ------------------------------------- |
+| **Project**           | `[customerId]`                  | Queries: "proyectos del cliente X"    |
+| **Project**           | `[projectStatusId]`             | Queries: "proyectos en estado Y"      |
+| **Project**           | `[customerId, projectStatusId]` | Filtros combinados                    |
+| **Payment**           | `[customerId]`                  | Queries: "pagos del cliente X"        |
+| **Payment**           | `[paymentMethodId]`             | Queries: "pagos con método Y"         |
+| **PaymentAllocation** | `[paymentId]`                   | Joins: payment.allocations            |
+| **PaymentAllocation** | `[projectId]`                   | Queries: "allocations del proyecto X" |
+| **Installment**       | `[paymentId]`                   | Joins: payment.installments           |
+| **Installment**       | `[status, dueDate]`             | Cron job: cuotas pendientes vencidas  |
 
 ---
 
@@ -272,10 +292,11 @@ await prisma.customer.delete({ where: { id: customerId } })
 ```
 
 **Recomendación:** Implementar soft delete:
+
 ```typescript
 await prisma.customer.update({
   where: { id: customerId },
-  data: { deletedAt: new Date() }
+  data: { deletedAt: new Date() },
 })
 ```
 

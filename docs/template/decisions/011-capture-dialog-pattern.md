@@ -11,6 +11,7 @@ Validar con ≥3 casos de uso reales antes de marcar como estable.
 Crear componente reutilizable `<CaptureDialog>` que permite copiar contenido de diálogos como imagen PNG al portapapeles con un clic.
 
 **Arquitectura:**
+
 - Hook separado: `useCaptureDialog` (lógica pura, reutilizable)
 - Componente wrapper: `<CaptureDialog>` (UI + accesibilidad)
 - Variables CSS: `capture-*` (theme fijo light mode para consistencia)
@@ -20,6 +21,7 @@ Crear componente reutilizable `<CaptureDialog>` que permite copiar contenido de 
 Necesitábamos que usuarios puedan **copiar contenido de diálogos como imágenes** para compartir por WhatsApp, email, tickets de soporte, etc.
 
 **Requisitos:**
+
 - Convertir HTML → PNG de alta calidad
 - Copia automática al portapapeles
 - Fallback a texto si falla
@@ -75,16 +77,17 @@ npm install @zumer/snapdom
 ```tsx
 // Uso básico
 import { CaptureDialog } from '@/components/custom/capture-dialog'
-
-<CaptureDialog
+;<CaptureDialog
   open={open}
   onOpenChange={setOpen}
   title="Estado de Cuenta"
-  getFallbackText={() => `
+  getFallbackText={() =>
+    `
     ESTADO DE CUENTA
     Proyecto: ${project.number}
     Total: ${project.total}
-  `.trim()}
+  `.trim()
+  }
 >
   <div className="bg-capture-bg text-capture-foreground p-6">
     <ProjectSummaryCard project={project} />
@@ -132,12 +135,14 @@ return (
 ## Validación
 
 **Criterios para marcar como Stable:**
+
 - [ ] Implementado en ≥3 casos de uso
 - [ ] API no requiere cambios entre casos
 - [ ] Performance <1s de captura
 - [ ] Tests unitarios del hook
 
 **Casos de uso:**
+
 1. ✅ ViewProjectPaymentsDialog - Implementado
 2. ⏳ CustomerSummaryDialog
 3. ⏳ InstallmentScheduleDialog

@@ -37,7 +37,7 @@ export default function ProjectsPage() {
 Solo componentes con interactividad son Client Components:
 
 ```tsx
-"use client" // Solo donde se necesita
+'use client' // Solo donde se necesita
 
 import { useState } from 'react'
 
@@ -70,6 +70,7 @@ export default function Page() {
 ```
 
 **Beneficios:**
+
 - ✅ Sidebar automático
 - ✅ Header consistente
 - ✅ Breadcrumbs integrados
@@ -82,12 +83,14 @@ export default function Page() {
 ### 1. Customers (`/customer`)
 
 DataTable con columnas:
+
 - Nombre
 - Email
 - Teléfono
 - Acciones (Ver, Editar, Eliminar)
 
 **Features:**
+
 - Búsqueda por nombre/email/teléfono
 - Paginación
 - Crear nuevo cliente (dialog)
@@ -95,6 +98,7 @@ DataTable con columnas:
 ### 2. Projects (`/projects`)
 
 DataTable con columnas:
+
 - Número proyecto
 - Cliente
 - Estado (badge con color)
@@ -104,6 +108,7 @@ DataTable con columnas:
 - Acciones
 
 **Features:**
+
 - Filtros: cliente, estado, rango fechas
 - Paginación
 - Crear proyecto (dialog)
@@ -112,6 +117,7 @@ DataTable con columnas:
 ### 3. Payments (`/payments`)
 
 DataTable con columnas:
+
 - Fecha
 - Cliente
 - Monto
@@ -121,6 +127,7 @@ DataTable con columnas:
 - Acciones
 
 **Features:**
+
 - Filtros: cliente, proyecto, rango fechas
 - Paginación
 - Ver detalle de asignaciones
@@ -131,6 +138,7 @@ DataTable con columnas:
 Vista global de todas las cuotas:
 
 **Features:**
+
 - Filtros: estado (pending/paid), cliente, rango vencimiento
 - Paginación
 - Orden por dueDate ASC

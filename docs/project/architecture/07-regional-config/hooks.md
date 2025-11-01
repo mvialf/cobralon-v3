@@ -38,26 +38,26 @@ export function MyComponent() {
 
 ### Estado (Read-Only)
 
-| Propiedad | Tipo   | Default           | Descripción                        |
-| --------- | ------ | ----------------- | ---------------------------------- |
-| `pais`    | string | `"CL"`            | Código de país (ISO 3166-1 alpha-2) |
-| `region`  | string | `"Metropolitana (RM)"` | Nombre de región               |
-| `ciudad`  | string | `"Santiago"`      | Nombre de ciudad                   |
-| `comuna`  | string | `""`              | Nombre de comuna                   |
-| `currency`| string | `"CLP"`           | Código de moneda (derivado de país) |
-| `locale`  | string | `"es-CL"`         | Locale (derivado de país)          |
+| Propiedad  | Tipo   | Default                | Descripción                         |
+| ---------- | ------ | ---------------------- | ----------------------------------- |
+| `pais`     | string | `"CL"`                 | Código de país (ISO 3166-1 alpha-2) |
+| `region`   | string | `"Metropolitana (RM)"` | Nombre de región                    |
+| `ciudad`   | string | `"Santiago"`           | Nombre de ciudad                    |
+| `comuna`   | string | `""`                   | Nombre de comuna                    |
+| `currency` | string | `"CLP"`                | Código de moneda (derivado de país) |
+| `locale`   | string | `"es-CL"`              | Locale (derivado de país)           |
 
 ---
 
 ### Setters (Write)
 
-| Función              | Parámetros          | Descripción                |
-| -------------------- | ------------------- | -------------------------- |
-| `setPais`            | `(value: string)`   | Cambiar país               |
-| `setRegion`          | `(value: string)`   | Cambiar región             |
-| `setCiudad`          | `(value: string)`   | Cambiar ciudad             |
-| `setComuna`          | `(value: string)`   | Cambiar comuna             |
-| `resetConfiguration` | `()`                | Restaurar valores default  |
+| Función              | Parámetros        | Descripción               |
+| -------------------- | ----------------- | ------------------------- |
+| `setPais`            | `(value: string)` | Cambiar país              |
+| `setRegion`          | `(value: string)` | Cambiar región            |
+| `setCiudad`          | `(value: string)` | Cambiar ciudad            |
+| `setComuna`          | `(value: string)` | Cambiar comuna            |
+| `resetConfiguration` | `()`              | Restaurar valores default |
 
 ---
 
@@ -338,7 +338,7 @@ export function ResetConfigButton() {
 
 ```typescript
 // Usuario cambia país
-setPais("AR")
+setPais('AR')
 
 // Automáticamente actualiza:
 // currency: "CLP" → "ARS"
@@ -347,8 +347,8 @@ setPais("AR")
 
 **Tabla de derivación:**
 
-| setPais("...") | currency | locale  |
-| -------------- | -------- | ------- |
+| setPais("...") | currency | locale    |
+| -------------- | -------- | --------- |
 | `"CL"`         | `"CLP"`  | `"es-CL"` |
 | `"AR"`         | `"ARS"`  | `"es-AR"` |
 | `"MX"`         | `"MXN"`  | `"es-MX"` |
@@ -363,7 +363,7 @@ Todos los cambios se persisten automáticamente:
 
 ```typescript
 // Usuario cambia región
-setRegion("Valparaíso (V)")
+setRegion('Valparaíso (V)')
 
 // Automáticamente persiste en localStorage:
 // localStorage.setItem('configuration', JSON.stringify({
@@ -427,7 +427,7 @@ Error: useConfiguration must be used within ConfigurationProvider
 
 ```typescript
 // Usuario intenta país no soportado
-setPais("ZZ")
+setPais('ZZ')
 
 // Fallback automático a default:
 // currency: PAISES_CONFIG["ZZ"]?.currency || "CLP"  → "CLP"
@@ -521,17 +521,17 @@ export function ProjectForm() {
 // __mocks__/use-configuration.ts
 export function useConfiguration() {
   return {
-    pais: "CL",
-    region: "Metropolitana (RM)",
-    ciudad: "Santiago",
-    comuna: "Providencia",
-    currency: "CLP",
-    locale: "es-CL",
+    pais: 'CL',
+    region: 'Metropolitana (RM)',
+    ciudad: 'Santiago',
+    comuna: 'Providencia',
+    currency: 'CLP',
+    locale: 'es-CL',
     setPais: jest.fn(),
     setRegion: jest.fn(),
     setCiudad: jest.fn(),
     setComuna: jest.fn(),
-    resetConfiguration: jest.fn()
+    resetConfiguration: jest.fn(),
   }
 }
 ```

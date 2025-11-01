@@ -125,12 +125,12 @@ const logger = pino() // Base logger
 const requestLogger = logger.child({
   requestId: 'abc',
   method: 'POST',
-  path: '/api/payments'
+  path: '/api/payments',
 })
 
 const paymentLogger = requestLogger.child({
   customerId: '123',
-  amount: 1500000
+  amount: 1500000,
 })
 
 paymentLogger.info('Processing payment')
@@ -152,6 +152,7 @@ Vercel Logs UI (queryable, filterable)
 ```
 
 **Features de Vercel Logs:**
+
 - ✅ JSON parsing automático
 - ✅ Búsqueda por campos (`customerId:abc`)
 - ✅ Filtros por nivel (`level:error`)

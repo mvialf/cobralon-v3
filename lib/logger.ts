@@ -54,9 +54,9 @@ const pinoConfig: pino.LoggerOptions = {
 
   // Serialización de objetos especiales
   serializers: {
-    err: pino.stdSerializers.err,     // Serializa Error objects con stack trace
-    req: pino.stdSerializers.req,     // Serializa Request objects
-    res: pino.stdSerializers.res,     // Serializa Response objects
+    err: pino.stdSerializers.err, // Serializa Error objects con stack trace
+    req: pino.stdSerializers.req, // Serializa Request objects
+    res: pino.stdSerializers.res, // Serializa Response objects
   },
 
   // Redacción automática de campos sensibles

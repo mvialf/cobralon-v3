@@ -9,11 +9,13 @@ Los 4 principios fundamentales que guían todas las decisiones arquitecturales e
 **Regla:** Usa Server Components para fetching de datos cuando sea posible.
 
 **Beneficios:**
+
 - ✅ Mejor performance (pre-renderizado)
 - ✅ Mejor SEO (HTML completo desde el server)
 - ✅ Menos JavaScript al cliente
 
 **Cuándo usar Client Component:**
+
 - Solo cuando necesites interactividad
 - Browser APIs (localStorage, navigator)
 - Hooks de React (useState, useEffect)
@@ -25,6 +27,7 @@ Los 4 principios fundamentales que guían todas las decisiones arquitecturales e
 **Regla:** Mantén lógica inline inicialmente. Extrae cuando duela.
 
 **Extrae cuando:**
+
 - ✅ Lógica es >10 líneas
 - ✅ Se usa en 2+ lugares
 - ✅ Es transformación pura (input → output)
@@ -39,6 +42,7 @@ Los 4 principios fundamentales que guían todas las decisiones arquitecturales e
 **Regla:** Componentes reciben data como props, emiten eventos vía callbacks.
 
 **Pattern:**
+
 ```
 [Parent Component]
     ↓ data (props)
@@ -48,6 +52,7 @@ Los 4 principios fundamentales que guían todas las decisiones arquitecturales e
 ```
 
 **Beneficios:**
+
 - ✅ Componentes reutilizables
 - ✅ Testing más fácil
 - ✅ Menos acoplamiento
@@ -59,6 +64,7 @@ Los 4 principios fundamentales que guían todas las decisiones arquitecturales e
 **Regla:** Testea pure functions primero, componentes solo si son críticos.
 
 **Priority:**
+
 1. **Transformers (pure functions)** - High value, easy to test
 2. **API Routes** - Medium value, medium effort
 3. **Components** - Only if business-critical
@@ -81,11 +87,13 @@ Estos 4 principios están diseñados para:
 ## 🚀 Cómo usarlos
 
 **Durante desarrollo:**
+
 - Lee los 4 principios antes de empezar (15 min)
 - Consúltalos cuando tengas dudas
 - Úsalos como checklist en code review
 
 **No los veas como reglas rígidas:**
+
 - Son **guidelines**, no dogma
 - Usa tu criterio
 - Si romperlos tiene sentido, explica por qué en comments/docs

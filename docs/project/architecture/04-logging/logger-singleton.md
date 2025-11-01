@@ -42,6 +42,7 @@ function getLogLevel(): string {
 ```
 
 **Niveles:**
+
 - `debug` - Development (todo visible)
 - `info` - Production (solo importante)
 - `warn` - Warnings en todos
@@ -109,7 +110,7 @@ timestamp: pino.stdTimeFunctions.isoTime
 **Output:**
 
 ```json
-{"time":"2025-10-30T14:32:15.123Z","msg":"..."}
+{ "time": "2025-10-30T14:32:15.123Z", "msg": "..." }
 ```
 
 ### 6. Transport (Development Only)
@@ -178,10 +179,13 @@ logger.error('Operation failed')
 ### Logs con Contexto
 
 ```typescript
-logger.info({
-  userId: '123',
-  action: 'create_payment'
-}, 'User action logged')
+logger.info(
+  {
+    userId: '123',
+    action: 'create_payment',
+  },
+  'User action logged'
+)
 ```
 
 **Output (JSON):**
@@ -201,7 +205,7 @@ logger.info({
 ```typescript
 const childLogger = logger.child({
   component: 'payment-processor',
-  version: '1.0'
+  version: '1.0',
 })
 
 childLogger.info('Processing payment')
@@ -212,13 +216,13 @@ childLogger.info('Processing payment')
 
 ## Comparativa de Configuración
 
-| Feature             | Pino       | Winston    | Bunyan     |
-| ------------------- | ---------- | ---------- | ---------- |
-| Log Level Config    | ✅ Simple  | ✅ Simple  | ✅ Simple  |
-| Formatters          | ✅ Built-in| ⚠️ Custom  | ⚠️ Custom  |
-| Redaction           | ✅ Built-in| ❌ Manual  | ❌ Manual  |
-| Pretty Print (dev)  | ✅ Built-in| ⚠️ Package | ⚠️ Package |
-| Performance         | ✅ 10x     | ❌ Slow    | ❌ Slow    |
+| Feature            | Pino        | Winston    | Bunyan     |
+| ------------------ | ----------- | ---------- | ---------- |
+| Log Level Config   | ✅ Simple   | ✅ Simple  | ✅ Simple  |
+| Formatters         | ✅ Built-in | ⚠️ Custom  | ⚠️ Custom  |
+| Redaction          | ✅ Built-in | ❌ Manual  | ❌ Manual  |
+| Pretty Print (dev) | ✅ Built-in | ⚠️ Package | ⚠️ Package |
+| Performance        | ✅ 10x      | ❌ Slow    | ❌ Slow    |
 
 ---
 

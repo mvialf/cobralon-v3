@@ -58,6 +58,7 @@ export default async function ProductsPage() {
 **Solo cuando necesites:**
 
 1. **Interactividad del navegador**
+
    ```tsx
    'use client'
 
@@ -69,6 +70,7 @@ export default async function ProductsPage() {
    ```
 
 2. **Browser APIs**
+
    ```tsx
    'use client'
 
@@ -79,6 +81,7 @@ export default async function ProductsPage() {
    ```
 
 3. **React Hooks**
+
    ```tsx
    'use client'
 
@@ -91,6 +94,7 @@ export default async function ProductsPage() {
    ```
 
 4. **Event Handlers**
+
    ```tsx
    'use client'
 
@@ -121,7 +125,7 @@ export default async function ProductsPage() {
 }
 
 // components/products-search.tsx
-'use client' // Solo este componente es cliente
+;('use client') // Solo este componente es cliente
 
 export function ProductsSearch({ products }) {
   const [search, setSearch] = useState('')

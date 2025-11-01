@@ -1,6 +1,5 @@
 # When To Create Service Layer
 
-
 ### When to Create Service Layer
 
 **Create service if:**
@@ -34,4 +33,3 @@ export class ProductService {
 // Mejor esto:
 const products = await db.product.findMany()
 ```
-

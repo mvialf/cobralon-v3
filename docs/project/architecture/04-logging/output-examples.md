@@ -53,6 +53,7 @@ Comparativa de outputs de logging en Development vs Production.
 ```
 
 **Características:**
+
 - ✅ Coloreado por nivel (verde=info, amarillo=warn, rojo=error)
 - ✅ Timestamp human-readable
 - ✅ Indentación de objetos
@@ -80,6 +81,7 @@ Comparativa de outputs de logging en Development vs Production.
 ```
 
 **Características:**
+
 - ✅ Parseable (jq, grep, log aggregators)
 - ✅ Queryable en Vercel Logs UI
 - ✅ Timestamp numérico (Unix epoch)

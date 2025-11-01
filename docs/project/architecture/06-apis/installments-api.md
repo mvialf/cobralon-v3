@@ -20,15 +20,15 @@ Listar todas las cuotas del sistema con paginación y filtros.
 
 ### Query Parameters
 
-| Parámetro    | Tipo   | Default | Descripción                                   |
-| ------------ | ------ | ------- | --------------------------------------------- |
-| `page`       | number | 1       | Número de página                              |
-| `limit`      | number | 20      | Items por página (max: 100)                   |
-| `status`     | string | -       | Filtrar por status ("pending" \| "paid")      |
-| `paymentId`  | UUID   | -       | Filtrar por pago específico                   |
-| `customerId` | UUID   | -       | Filtrar por cliente (via payment)             |
-| `startDate`  | string | -       | Fecha inicio vencimiento (dueDate, ISO 8601)  |
-| `endDate`    | string | -       | Fecha fin vencimiento (dueDate, ISO 8601)     |
+| Parámetro    | Tipo   | Default | Descripción                                  |
+| ------------ | ------ | ------- | -------------------------------------------- |
+| `page`       | number | 1       | Número de página                             |
+| `limit`      | number | 20      | Items por página (max: 100)                  |
+| `status`     | string | -       | Filtrar por status ("pending" \| "paid")     |
+| `paymentId`  | UUID   | -       | Filtrar por pago específico                  |
+| `customerId` | UUID   | -       | Filtrar por cliente (via payment)            |
+| `startDate`  | string | -       | Fecha inicio vencimiento (dueDate, ISO 8601) |
+| `endDate`    | string | -       | Fecha fin vencimiento (dueDate, ISO 8601)    |
 
 ### Request Example
 
@@ -45,13 +45,13 @@ GET /api/installments?status=pending&page=1&limit=20
       "id": "uuid-inst-1",
       "paymentId": "uuid-pay-1",
       "installmentNumber": 1,
-      "amount": 500000.00,
+      "amount": 500000.0,
       "dueDate": "2025-01-16T00:00:00Z",
       "paidDate": null,
       "status": "pending",
       "payment": {
         "id": "uuid-pay-1",
-        "amount": 1500000.00,
+        "amount": 1500000.0,
         "currency": "CLP",
         "date": "2025-01-16T00:00:00Z",
         "reference": "TRF-001",
@@ -67,7 +67,7 @@ GET /api/installments?status=pending&page=1&limit=20
         },
         "allocations": [
           {
-            "allocatedAmount": 1500000.00,
+            "allocatedAmount": 1500000.0,
             "project": {
               "id": "uuid-proj-1",
               "projectNumber": "P 0001-2025",
@@ -84,21 +84,25 @@ GET /api/installments?status=pending&page=1&limit=20
       "id": "uuid-inst-2",
       "paymentId": "uuid-pay-1",
       "installmentNumber": 2,
-      "amount": 500000.00,
+      "amount": 500000.0,
       "dueDate": "2025-02-15T00:00:00Z",
       "paidDate": null,
       "status": "pending",
-      "payment": { /* ... mismo payment ... */ }
+      "payment": {
+        /* ... mismo payment ... */
+      }
     },
     {
       "id": "uuid-inst-3",
       "paymentId": "uuid-pay-1",
       "installmentNumber": 3,
-      "amount": 500000.00,
+      "amount": 500000.0,
       "dueDate": "2025-03-17T00:00:00Z",
       "paidDate": null,
       "status": "pending",
-      "payment": { /* ... mismo payment ... */ }
+      "payment": {
+        /* ... mismo payment ... */
+      }
     }
   ],
   "pagination": {
@@ -137,7 +141,7 @@ export const GET = withLogging(async (request, logger) => {
   if (paymentId) where.paymentId = paymentId
   if (customerId) {
     where.payment = {
-      customerId
+      customerId,
     }
   }
   if (startDate || endDate) {
@@ -163,15 +167,15 @@ export const GET = withLogging(async (request, logger) => {
               select: {
                 id: true,
                 name: true,
-                phone: true
-              }
+                phone: true,
+              },
             },
             paymentMethod: {
               select: {
                 id: true,
                 name: true,
-                icon: true
-              }
+                icon: true,
+              },
             },
             allocations: {
               select: {
@@ -182,22 +186,22 @@ export const GET = withLogging(async (request, logger) => {
                     id: true,
                     projectNumber: true,
                     projectName: true,
-                    currency: true
-                  }
-                }
-              }
-            }
-          }
-        }
+                    currency: true,
+                  },
+                },
+              },
+            },
+          },
+        },
       },
       orderBy: [
-        { dueDate: 'asc' },           // Vencimientos próximos primero
-        { installmentNumber: 'asc' }  // Número de cuota
+        { dueDate: 'asc' }, // Vencimientos próximos primero
+        { installmentNumber: 'asc' }, // Número de cuota
       ],
       skip: (page - 1) * limit,
-      take: limit
+      take: limit,
     }),
-    prisma.installment.count({ where })
+    prisma.installment.count({ where }),
   ])
 
   logger.info({ count: installments.length, total }, 'Installments retrieved')
@@ -208,8 +212,8 @@ export const GET = withLogging(async (request, logger) => {
       page,
       limit,
       total,
-      totalPages: Math.ceil(total / limit)
-    }
+      totalPages: Math.ceil(total / limit),
+    },
   })
 })
 ```
@@ -264,8 +268,8 @@ GET /api/installments?paymentId=uuid-pay-1
 
 ```typescript
 orderBy: [
-  { dueDate: 'asc' },           // ← Más urgentes primero
-  { installmentNumber: 'asc' }
+  { dueDate: 'asc' }, // ← Más urgentes primero
+  { installmentNumber: 'asc' },
 ]
 ```
 
@@ -291,7 +295,7 @@ Cada installment incluye:
 ```typescript
 if (customerId) {
   where.payment = {
-    customerId
+    customerId,
   }
 }
 ```
@@ -376,7 +380,7 @@ const installments = await fetch(`/api/installments?customerId=${id}`)
 const { data } = await installments.json()
 
 const totalPending = data
-  .filter(i => i.status === 'pending')
+  .filter((i) => i.status === 'pending')
   .reduce((sum, i) => sum + Number(i.amount), 0)
 ```
 

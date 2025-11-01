@@ -33,9 +33,7 @@ test.describe('Flujo Crítico: Proyecto → Pago → Balance', () => {
   const paymentAmount = 2000000 // $2,000,000 CLP
   const expectedBalance = projectTotal - paymentAmount // $3,000,000 CLP
 
-  test('flujo completo: crear proyecto → registrar pago → verificar balance', async ({
-    page,
-  }) => {
+  test('flujo completo: crear proyecto → registrar pago → verificar balance', async ({ page }) => {
     // ========================================
     // FASE 1: CREAR PROYECTO
     // ========================================
@@ -50,9 +48,7 @@ test.describe('Flujo Crítico: Proyecto → Pago → Balance', () => {
     await page.getByRole('button', { name: /nuevo proyecto/i }).click()
 
     const projectDialog = page.getByRole('dialog')
-    await expect(
-      projectDialog.getByRole('heading', { name: /nuevo proyecto/i })
-    ).toBeVisible()
+    await expect(projectDialog.getByRole('heading', { name: /nuevo proyecto/i })).toBeVisible()
 
     // PASO 1.3: Seleccionar cliente
     const customerCombobox = projectDialog.getByRole('combobox', { name: /cliente/i })
@@ -67,9 +63,7 @@ test.describe('Flujo Crítico: Proyecto → Pago → Balance', () => {
 
     // Verificar que hay clientes disponibles
     if (customerCount === 0) {
-      throw new Error(
-        '❌ No hay clientes en la base de datos. Ejecutar: npm run db:seed'
-      )
+      throw new Error('❌ No hay clientes en la base de datos. Ejecutar: npm run db:seed')
     }
 
     // Seleccionar primer cliente
@@ -102,9 +96,7 @@ test.describe('Flujo Crítico: Proyecto → Pago → Balance', () => {
     const statusCount = await statusOptions.count()
 
     if (statusCount === 0) {
-      throw new Error(
-        '❌ No hay estados de proyecto. Crear al menos uno en Settings.'
-      )
+      throw new Error('❌ No hay estados de proyecto. Crear al menos uno en Settings.')
     }
 
     // Seleccionar primer estado
@@ -145,9 +137,9 @@ test.describe('Flujo Crítico: Proyecto → Pago → Balance', () => {
     await expect(projectDialog).not.toBeVisible({ timeout: 5000 })
 
     // Verificar toast de éxito
-    await expect(
-      page.locator('text=/proyecto creado|éxito|exitoso/i')
-    ).toBeVisible({ timeout: 5000 })
+    await expect(page.locator('text=/proyecto creado|éxito|exitoso/i')).toBeVisible({
+      timeout: 5000,
+    })
 
     console.log('✅ Proyecto creado exitosamente')
 
@@ -181,9 +173,7 @@ test.describe('Flujo Crítico: Proyecto → Pago → Balance', () => {
     await page.getByRole('menuitem', { name: /pago a proyecto \(1:1\)/i }).click()
 
     const paymentDialog = page.getByRole('dialog')
-    await expect(
-      paymentDialog.getByRole('heading', { name: /pago a proyecto/i })
-    ).toBeVisible()
+    await expect(paymentDialog.getByRole('heading', { name: /pago a proyecto/i })).toBeVisible()
 
     // PASO 2.3: Seleccionar el proyecto recién creado
     const projectCombobox = paymentDialog.getByRole('combobox', { name: /proyecto/i })
@@ -197,9 +187,7 @@ test.describe('Flujo Crítico: Proyecto → Pago → Balance', () => {
     const projectOptionCount = await projectOptions.count()
 
     if (projectOptionCount === 0) {
-      throw new Error(
-        `❌ No se encontró el proyecto ${projectNumber} en el combobox`
-      )
+      throw new Error(`❌ No se encontró el proyecto ${projectNumber} en el combobox`)
     }
 
     // Seleccionar el proyecto
@@ -225,9 +213,7 @@ test.describe('Flujo Crítico: Proyecto → Pago → Balance', () => {
     const paymentMethodCount = await paymentMethodOptions.count()
 
     if (paymentMethodCount === 0) {
-      throw new Error(
-        '❌ No hay métodos de pago. Verificar seeder o crear manualmente.'
-      )
+      throw new Error('❌ No hay métodos de pago. Verificar seeder o crear manualmente.')
     }
 
     const firstPaymentMethod = paymentMethodOptions.first()
@@ -242,9 +228,7 @@ test.describe('Flujo Crítico: Proyecto → Pago → Balance', () => {
     // PASO 2.7: Llenar notas
     const notesTextarea = paymentDialog.getByLabel(/notas/i)
     if (await notesTextarea.isVisible()) {
-      await notesTextarea.fill(
-        'Pago de prueba del test E2E crítico - Verificación de balance'
-      )
+      await notesTextarea.fill('Pago de prueba del test E2E crítico - Verificación de balance')
     }
 
     // PASO 2.8: Tomar screenshot antes de enviar
@@ -260,9 +244,9 @@ test.describe('Flujo Crítico: Proyecto → Pago → Balance', () => {
     await expect(paymentDialog).not.toBeVisible({ timeout: 5000 })
 
     // Verificar toast de éxito
-    await expect(
-      page.locator('text=/pago registrado|éxito|exitoso/i')
-    ).toBeVisible({ timeout: 5000 })
+    await expect(page.locator('text=/pago registrado|éxito|exitoso/i')).toBeVisible({
+      timeout: 5000,
+    })
 
     console.log('✅ Pago registrado exitosamente')
 

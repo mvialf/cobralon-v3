@@ -7,6 +7,7 @@ Usar **Prisma 6.7.0** como ORM + **Neon PostgreSQL** como database hosting recom
 ## Contexto
 
 Necesitábamos una solución de base de datos que sea:
+
 - **Type-safe:** Integración perfecta con TypeScript strict mode
 - **Serverless-friendly:** Compatible con Next.js App Router y Vercel
 - **Sin vendor lock-in:** Capacidad de migrar a otras soluciones
@@ -76,8 +77,8 @@ const user = await prisma.user.findUnique({
   where: { id: '123' },
   select: {
     email: true,
-    posts: { select: { title: true } }
-  }
+    posts: { select: { title: true } },
+  },
 })
 
 // TypeScript infiere tipos automáticamente:

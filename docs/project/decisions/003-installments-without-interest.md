@@ -17,9 +17,9 @@ const payment = await prisma.payment.create({
     selectedInstallments: 6, // ← Cuotas sin interés
     allocations: { create: [{ projectId, allocatedAmount: 1000000 }] },
     installments: {
-      create: generateInstallments(1000000, 6, new Date())
-    }
-  }
+      create: generateInstallments(1000000, 6, new Date()),
+    },
+  },
 })
 
 // Resultado automático:
@@ -29,6 +29,7 @@ const payment = await prisma.payment.create({
 ```
 
 **Función generadora:**
+
 ```typescript
 // app/api/payments/route.ts:299-331
 function generateInstallments(
@@ -36,14 +37,14 @@ function generateInstallments(
   selectedInstallments: number,
   paymentDate: Date
 ): Installment[] {
-  const baseAmount = amount.dividedBy(selectedInstallments)
-    .toDecimalPlaces(2, Decimal.ROUND_DOWN)
+  const baseAmount = amount.dividedBy(selectedInstallments).toDecimalPlaces(2, Decimal.ROUND_DOWN)
   const lastAmount = amount.minus(baseAmount.times(selectedInstallments - 1))
   // ... genera array con dueDates +30 días cada una
 }
 ```
 
 **Archivos clave:**
+
 - `app/api/payments/route.ts:299-331` - Lógica de generación
 - `prisma/schema.prisma` - Model Installment
 - `app/api/cron/mark-installments-paid/route.ts` - Auto-mark paid (cron)

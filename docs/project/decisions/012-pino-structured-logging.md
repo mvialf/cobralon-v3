@@ -7,6 +7,7 @@
 ## Decisión
 
 Usar **Pino 9.7.0** como sistema de logging estructurado del proyecto Cobralon con:
+
 - Singleton logger configurado por ambiente
 - Middleware `withLogging` para API routes
 - Request correlation automática (UUID requestId)
@@ -15,6 +16,7 @@ Usar **Pino 9.7.0** como sistema de logging estructurado del proyecto Cobralon c
 ## Contexto
 
 Cobralon requiere logging robusto para producción:
+
 - Debugging eficiente en serverless (Vercel)
 - Auditoría de operaciones críticas (pagos, proyectos, cron jobs)
 - Request correlation para rastrear flujos completos
@@ -68,11 +70,13 @@ export const POST = withLogging(async (request, logger) => {
 ```
 
 **Archivos clave:**
+
 - `lib/logger.ts` - Singleton Pino instance con config
 - `lib/logger-middleware.ts` - withLogging wrapper para API routes
 - Migradas: `/api/payments`, `/api/projects`, `/api/customers`, `/api/cron/*`
 
 **Logs en desarrollo:**
+
 ```
 [14:32:15] INFO: Payment created successfully
     paymentId: "abc-123"
@@ -81,8 +85,15 @@ export const POST = withLogging(async (request, logger) => {
 ```
 
 **Logs en producción:**
+
 ```json
-{"level":"info","time":1698765135000,"msg":"Payment created successfully","requestId":"uuid-123","paymentId":"abc-123"}
+{
+  "level": "info",
+  "time": 1698765135000,
+  "msg": "Payment created successfully",
+  "requestId": "uuid-123",
+  "paymentId": "abc-123"
+}
 ```
 
 ## Referencias

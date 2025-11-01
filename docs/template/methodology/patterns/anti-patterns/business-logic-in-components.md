@@ -141,7 +141,11 @@ export function ProjectCard({ project }) {
 ```typescript
 // lib/business-logic/__tests__/project-calculations.test.ts
 import { describe, it, expect } from 'vitest'
-import { calculateProjectBalance, getProjectPaymentStatus, getProjectPriority } from '../project-calculations'
+import {
+  calculateProjectBalance,
+  getProjectPaymentStatus,
+  getProjectPriority,
+} from '../project-calculations'
 
 describe('calculateProjectBalance', () => {
   it('should calculate correct balance', () => {
@@ -230,7 +234,7 @@ export function useProjectSearch(projects: Project[]) {
 }
 
 // components/projects-list.tsx
-'use client'
+;('use client')
 
 export function ProjectsList({ projects }) {
   const { search, setSearch, filters, setFilters, filtered } = useProjectSearch(projects)

@@ -89,10 +89,10 @@ useEffect(() => {
     const config = JSON.parse(stored)
 
     // Hidratar estado
-    setPais(config.pais || "CL")
-    setRegion(config.region || "Metropolitana (RM)")
-    setCiudad(config.ciudad || "Santiago")
-    setComuna(config.comuna || "")
+    setPais(config.pais || 'CL')
+    setRegion(config.region || 'Metropolitana (RM)')
+    setCiudad(config.ciudad || 'Santiago')
+    setComuna(config.comuna || '')
   }
 }, [])
 ```
@@ -113,17 +113,17 @@ useEffect(() => {
 
 ```typescript
 // En ConfigurationProvider
-const currency = PAISES_CONFIG[pais]?.currency || "CLP"
-const locale = PAISES_CONFIG[pais]?.locale || "es-CL"
+const currency = PAISES_CONFIG[pais]?.currency || 'CLP'
+const locale = PAISES_CONFIG[pais]?.locale || 'es-CL'
 ```
 
 **Tabla de derivación:**
 
-| pais | currency | locale  |
-| ---- | -------- | ------- |
-| CL   | CLP      | es-CL   |
-| AR   | ARS      | es-AR   |
-| MX   | MXN      | es-MX   |
+| pais | currency | locale |
+| ---- | -------- | ------ |
+| CL   | CLP      | es-CL  |
+| AR   | ARS      | es-AR  |
+| MX   | MXN      | es-MX  |
 
 **Ventaja:** Componentes no necesitan saber el mapping, solo usan `currency` y `locale`.
 
@@ -452,13 +452,13 @@ Context API requiere client-side:
 ```typescript
 // ❌ ERROR en Server Component
 export default async function ServerPage() {
-  const { currency } = useConfiguration()  // Error: Context no disponible
+  const { currency } = useConfiguration() // Error: Context no disponible
 }
 
 // ✅ OK en Client Component
-'use client'
+;('use client')
 export function ClientPage() {
-  const { currency } = useConfiguration()  // OK
+  const { currency } = useConfiguration() // OK
 }
 ```
 
@@ -507,11 +507,11 @@ export function ConfigurationProvider({ orgId, children }) {
   // Cargar config de DB (server)
   useEffect(() => {
     fetch(`/api/organizations/${orgId}/configuration`)
-      .then(res => res.json())
+      .then((res) => res.json())
       .then(setConfig)
   }, [orgId])
 
-  const pais = config?.pais || "CL"
+  const pais = config?.pais || 'CL'
   // ...
 }
 ```

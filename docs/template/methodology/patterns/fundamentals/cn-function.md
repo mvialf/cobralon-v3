@@ -8,14 +8,7 @@
 
 ```tsx
 import { cn } from '@/lib/utils'
-
-<div
-  className={cn(
-    'base-classes',
-    condition && 'conditional-classes',
-    className
-  )}
-/>
+;<div className={cn('base-classes', condition && 'conditional-classes', className)} />
 ```
 
 ## ❌ Incorrecto
@@ -102,17 +95,11 @@ interface CardProps {
 }
 
 function Card({ className, children }: CardProps) {
-  return (
-    <div className={cn('rounded-lg border bg-card p-4', className)}>
-      {children}
-    </div>
-  )
+  return <div className={cn('rounded-lg border bg-card p-4', className)}>{children}</div>
 }
 
 // Uso
-<Card className="shadow-lg">
-  {/* className se mergea con las clases base */}
-</Card>
+;<Card className="shadow-lg">{/* className se mergea con las clases base */}</Card>
 ```
 
 ### Con Objetos (clsx syntax)
@@ -160,7 +147,7 @@ function Button({ size = 'md', className }) {
 }
 
 // Si pasas className="px-8" solo se aplica px-8 (no px-4, px-2 o px-6)
-<Button size="sm" className="px-8" />
+;<Button size="sm" className="px-8" />
 ```
 
 ## Patrón Común: Component Variants
@@ -197,11 +184,7 @@ interface ButtonProps extends VariantProps<typeof buttonVariants> {
 }
 
 export function Button({ variant, size, className, children }: ButtonProps) {
-  return (
-    <button className={cn(buttonVariants({ variant, size }), className)}>
-      {children}
-    </button>
-  )
+  return <button className={cn(buttonVariants({ variant, size }), className)}>{children}</button>
 }
 ```
 

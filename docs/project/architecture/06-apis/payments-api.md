@@ -43,7 +43,7 @@ Listar pagos con paginación, filtros y datos relacionados complejos.
     {
       "id": "uuid-pay-1",
       "type": "Project",
-      "amount": 500000.00,
+      "amount": 500000.0,
       "currency": "CLP",
       "date": "2025-01-16T00:00:00Z",
       "reference": "TRF-001",
@@ -65,7 +65,7 @@ Listar pagos con paginación, filtros y datos relacionados complejos.
         {
           "id": "uuid-alloc-1",
           "projectId": "uuid-proj-1",
-          "allocatedAmount": 500000.00,
+          "allocatedAmount": 500000.0,
           "project": {
             "id": "uuid-proj-1",
             "projectNumber": "P 0001-2025",
@@ -102,10 +102,7 @@ export const GET = withLogging(async (request, logger) => {
   const startDate = searchParams.get('startDate')
   const endDate = searchParams.get('endDate')
 
-  logger.info(
-    { page, limit, customerId, projectId, startDate, endDate },
-    'Listing payments'
-  )
+  logger.info({ page, limit, customerId, projectId, startDate, endDate }, 'Listing payments')
 
   // Build filters
   const where: any = {}
@@ -113,7 +110,7 @@ export const GET = withLogging(async (request, logger) => {
   if (customerId) where.customerId = customerId
   if (projectId) {
     where.allocations = {
-      some: { projectId }
+      some: { projectId },
     }
   }
   if (startDate || endDate) {
@@ -128,10 +125,10 @@ export const GET = withLogging(async (request, logger) => {
       relationLoadStrategy: 'join',
       include: {
         customer: {
-          select: { id: true, name: true, phone: true }
+          select: { id: true, name: true, phone: true },
         },
         paymentMethod: {
-          select: { id: true, name: true, icon: true }
+          select: { id: true, name: true, icon: true },
         },
         allocations: {
           select: {
@@ -143,10 +140,10 @@ export const GET = withLogging(async (request, logger) => {
                 id: true,
                 projectNumber: true,
                 projectName: true,
-                currency: true
-              }
-            }
-          }
+                currency: true,
+              },
+            },
+          },
         },
         installments: {
           select: {
@@ -155,16 +152,16 @@ export const GET = withLogging(async (request, logger) => {
             amount: true,
             dueDate: true,
             paidDate: true,
-            status: true
+            status: true,
           },
-          orderBy: { installmentNumber: 'asc' }
-        }
+          orderBy: { installmentNumber: 'asc' },
+        },
       },
       orderBy: { date: 'desc' },
       skip: (page - 1) * limit,
-      take: limit
+      take: limit,
     }),
-    prisma.payment.count({ where })
+    prisma.payment.count({ where }),
   ])
 
   logger.info({ count: payments.length, total }, 'Payments retrieved')
@@ -175,8 +172,8 @@ export const GET = withLogging(async (request, logger) => {
       page,
       limit,
       total,
-      totalPages: Math.ceil(total / limit)
-    }
+      totalPages: Math.ceil(total / limit),
+    },
   })
 })
 ```
@@ -193,7 +190,7 @@ Crear pago con allocations a proyectos e installments opcionales.
 {
   "type": "Project",
   "customerId": "uuid-123",
-  "amount": 500000.00,
+  "amount": 500000.0,
   "currency": "CLP",
   "date": "2025-01-16T00:00:00Z",
   "paymentMethodId": "uuid-method-1",
@@ -203,7 +200,7 @@ Crear pago con allocations a proyectos e installments opcionales.
   "allocations": [
     {
       "projectId": "uuid-proj-1",
-      "allocatedAmount": 500000.00
+      "allocatedAmount": 500000.0
     }
   ]
 }
@@ -215,15 +212,15 @@ Crear pago con allocations a proyectos e installments opcionales.
 {
   "type": "Project",
   "customerId": "uuid-123",
-  "amount": 1500000.00,
+  "amount": 1500000.0,
   "currency": "CLP",
   "date": "2025-01-16T00:00:00Z",
   "paymentMethodId": "uuid-method-1",
-  "selectedInstallments": 3,  // ← 3 cuotas sin interés
+  "selectedInstallments": 3, // ← 3 cuotas sin interés
   "allocations": [
     {
       "projectId": "uuid-proj-1",
-      "allocatedAmount": 1500000.00
+      "allocatedAmount": 1500000.0
     }
   ]
 }
@@ -234,32 +231,36 @@ Crear pago con allocations a proyectos e installments opcionales.
 ```typescript
 // lib/validations/payment-validations.ts
 export const paymentToProjectSchema = z.object({
-  type: z.literal("Project"),
+  type: z.literal('Project'),
   customerId: z.string().min(1),
   amount: z.number().positive(),
-  currency: z.string().default("CLP"),
+  currency: z.string().default('CLP'),
   date: z.coerce.date(),
   paymentMethodId: z.string().min(1),
   reference: z.string().optional(),
   notes: z.string().optional(),
   selectedInstallments: z.number().int().min(1).max(12).optional(),
-  allocations: z.array(
-    z.object({
-      projectId: z.string().min(1),
-      allocatedAmount: z.number().positive()
-    })
-  ).length(1, "Pago a proyecto debe tener exactamente 1 allocation")
+  allocations: z
+    .array(
+      z.object({
+        projectId: z.string().min(1),
+        allocatedAmount: z.number().positive(),
+      })
+    )
+    .length(1, 'Pago a proyecto debe tener exactamente 1 allocation'),
 })
 
 export const paymentToCustomerSchema = z.object({
-  type: z.literal("Customer"),
+  type: z.literal('Customer'),
   // ... mismos campos ...
-  allocations: z.array(
-    z.object({
-      projectId: z.string().min(1),
-      allocatedAmount: z.number().positive()
-    })
-  ).min(1, "Pago a cliente debe tener al menos 1 allocation")
+  allocations: z
+    .array(
+      z.object({
+        projectId: z.string().min(1),
+        allocatedAmount: z.number().positive(),
+      })
+    )
+    .min(1, 'Pago a cliente debe tener al menos 1 allocation'),
 })
 ```
 
@@ -267,10 +268,7 @@ export const paymentToCustomerSchema = z.object({
 
 ```typescript
 // 1. Suma de allocations === amount (tolerancia 0.01)
-const totalAllocated = allocations.reduce(
-  (sum, a) => sum + a.allocatedAmount,
-  0
-)
+const totalAllocated = allocations.reduce((sum, a) => sum + a.allocatedAmount, 0)
 
 if (Math.abs(totalAllocated - amount) > 0.01) {
   return NextResponse.json(
@@ -282,12 +280,12 @@ if (Math.abs(totalAllocated - amount) > 0.01) {
 // 2. Todos los projects pertenecen al mismo customer
 const projects = await prisma.project.findMany({
   where: {
-    id: { in: allocations.map(a => a.projectId) }
+    id: { in: allocations.map((a) => a.projectId) },
   },
-  select: { id: true, customerId: true, currency: true }
+  select: { id: true, customerId: true, currency: true },
 })
 
-const uniqueCustomers = new Set(projects.map(p => p.customerId))
+const uniqueCustomers = new Set(projects.map((p) => p.customerId))
 if (uniqueCustomers.size > 1) {
   return NextResponse.json(
     { error: 'Todos los proyectos deben pertenecer al mismo cliente' },
@@ -303,7 +301,7 @@ if (!uniqueCustomers.has(customerId)) {
 }
 
 // 3. Todos los projects tienen misma currency
-const uniqueCurrencies = new Set(projects.map(p => p.currency))
+const uniqueCurrencies = new Set(projects.map((p) => p.currency))
 if (uniqueCurrencies.size > 1) {
   return NextResponse.json(
     { error: 'Todos los proyectos deben tener la misma moneda' },
@@ -319,7 +317,7 @@ if (![...uniqueCurrencies][0] === currency) {
 }
 
 // 4. No projectIds duplicados
-const projectIds = allocations.map(a => a.projectId)
+const projectIds = allocations.map((a) => a.projectId)
 const uniqueIds = new Set(projectIds)
 if (uniqueIds.size !== projectIds.length) {
   return NextResponse.json(
@@ -335,7 +333,7 @@ if (uniqueIds.size !== projectIds.length) {
 {
   "id": "uuid-pay-1",
   "type": "Project",
-  "amount": 500000.00,
+  "amount": 500000.0,
   "currency": "CLP",
   "date": "2025-01-16T00:00:00Z",
   "reference": "TRF-001",
@@ -352,7 +350,7 @@ if (uniqueIds.size !== projectIds.length) {
     {
       "id": "uuid-alloc-1",
       "projectId": "uuid-proj-1",
-      "allocatedAmount": 500000.00
+      "allocatedAmount": 500000.0
     }
   ],
   "installments": [],
@@ -366,14 +364,14 @@ if (uniqueIds.size !== projectIds.length) {
 export const POST = withLogging(async (request, logger) => {
   const body = await request.json()
 
-  logger.info({ type: body.type, customerId: body.customerId, amount: body.amount },
-    'Creating payment')
+  logger.info(
+    { type: body.type, customerId: body.customerId, amount: body.amount },
+    'Creating payment'
+  )
 
   try {
     // 1. Validar con Zod
-    const schema = body.type === 'Project'
-      ? paymentToProjectSchema
-      : paymentToCustomerSchema
+    const schema = body.type === 'Project' ? paymentToProjectSchema : paymentToCustomerSchema
 
     const validatedData = schema.parse(body)
 
@@ -399,7 +397,7 @@ export const POST = withLogging(async (request, logger) => {
           installmentNumber: i,
           amount: installmentAmount,
           dueDate,
-          status: 'pending'
+          status: 'pending',
         })
 
         remaining -= installmentAmount
@@ -419,18 +417,18 @@ export const POST = withLogging(async (request, logger) => {
         customerId: validatedData.customerId,
         paymentMethodId: validatedData.paymentMethodId,
         allocations: {
-          create: validatedData.allocations
+          create: validatedData.allocations,
         },
         installments: {
-          create: installments
-        }
+          create: installments,
+        },
       },
       include: {
         customer: {
-          select: { id: true, name: true, phone: true }
+          select: { id: true, name: true, phone: true },
         },
         paymentMethod: {
-          select: { id: true, name: true, icon: true }
+          select: { id: true, name: true, icon: true },
         },
         allocations: {
           select: {
@@ -441,10 +439,10 @@ export const POST = withLogging(async (request, logger) => {
               select: {
                 id: true,
                 projectNumber: true,
-                projectName: true
-              }
-            }
-          }
+                projectName: true,
+              },
+            },
+          },
         },
         installments: {
           select: {
@@ -452,18 +450,18 @@ export const POST = withLogging(async (request, logger) => {
             installmentNumber: true,
             amount: true,
             dueDate: true,
-            status: true
+            status: true,
           },
-          orderBy: { installmentNumber: 'asc' }
-        }
-      }
+          orderBy: { installmentNumber: 'asc' },
+        },
+      },
     })
 
     logger.info(
       {
         paymentId: payment.id,
         allocationsCount: payment.allocations.length,
-        installmentsCount: payment.installments.length
+        installmentsCount: payment.installments.length,
       },
       'Payment created'
     )
@@ -522,6 +520,7 @@ model Installment {
 ```
 
 **Eliminar payment automáticamente elimina:**
+
 - Todas las allocations
 - Todos los installments
 
@@ -537,10 +536,10 @@ Buscar proyectos con balance > 0 para asignar pagos.
 
 ### Query Parameters
 
-| Parámetro | Tipo   | Descripción                |
-| --------- | ------ | -------------------------- |
+| Parámetro | Tipo   | Descripción                          |
+| --------- | ------ | ------------------------------------ |
 | `search`  | string | Buscar en projectNumber, projectName |
-| `limit`   | number | Max resultados (default: 10) |
+| `limit`   | number | Max resultados (default: 10)         |
 
 ### Request Example
 
@@ -561,9 +560,9 @@ GET /api/payments/search-projects?search=P 0001&limit=5
       "id": "uuid-123",
       "name": "Juan Pérez"
     },
-    "total": 1785000.00,
+    "total": 1785000.0,
     "currency": "CLP",
-    "balance": 1285000.00  // Calculado
+    "balance": 1285000.0 // Calculado
   }
 ]
 ```
@@ -583,31 +582,33 @@ export const GET = withLogging(async (request, logger) => {
   const projects = await prisma.project.findMany({
     where: {
       AND: [
-        search ? {
-          OR: [
-            { projectNumber: { contains: search, mode: 'insensitive' } },
-            { projectName: { contains: search, mode: 'insensitive' } }
-          ]
-        } : {},
+        search
+          ? {
+              OR: [
+                { projectNumber: { contains: search, mode: 'insensitive' } },
+                { projectName: { contains: search, mode: 'insensitive' } },
+              ],
+            }
+          : {},
         // Opcional: Filtrar solo proyectos con balance > 0
         // Requiere consulta más compleja con aggregation
-      ]
+      ],
     },
     include: {
       customer: {
-        select: { id: true, name: true }
+        select: { id: true, name: true },
       },
       paymentAllocations: {
-        select: { allocatedAmount: true }
-      }
+        select: { allocatedAmount: true },
+      },
     },
     orderBy: { projectNumber: 'desc' },
-    take: limit
+    take: limit,
   })
 
   // Calcular balance y filtrar
   const projectsWithBalance = projects
-    .map(project => {
+    .map((project) => {
       const totalPaid = project.paymentAllocations.reduce(
         (sum, a) => sum + Number(a.allocatedAmount),
         0
@@ -622,10 +623,10 @@ export const GET = withLogging(async (request, logger) => {
         customer: project.customer,
         total: Number(project.total),
         currency: project.currency,
-        balance
+        balance,
       }
     })
-    .filter(p => p.balance > 0.01)  // Solo con balance pendiente
+    .filter((p) => p.balance > 0.01) // Solo con balance pendiente
 
   logger.info({ found: projectsWithBalance.length }, 'Projects found')
 
@@ -641,8 +642,8 @@ Obtener proyectos de un cliente específico (para pago a cliente).
 
 ### Query Parameters
 
-| Parámetro    | Tipo | Descripción         |
-| ------------ | ---- | ------------------- |
+| Parámetro    | Tipo | Descripción               |
+| ------------ | ---- | ------------------------- |
 | `customerId` | UUID | ID del cliente (required) |
 
 ### Response
@@ -675,22 +676,19 @@ export const POST = withLogging(async (request, logger, context) => {
 
   try {
     await prisma.payment.delete({
-      where: { id }
+      where: { id },
     })
 
     logger.info({ paymentId: id }, 'Payment cancelled')
 
     return NextResponse.json({
       success: true,
-      message: 'Payment cancelled successfully'
+      message: 'Payment cancelled successfully',
     })
   } catch (error) {
     if (error.code === 'P2025') {
       logger.warn({ paymentId: id }, 'Payment not found')
-      return NextResponse.json(
-        { error: 'Payment not found' },
-        { status: 404 }
-      )
+      return NextResponse.json({ error: 'Payment not found' }, { status: 404 })
     }
 
     logger.error({ err: error }, 'Failed to cancel payment')
@@ -783,7 +781,7 @@ export function allocatePaymentFIFO(
     if (toAllocate > 0.01) {
       allocations.push({
         projectId: project.id,
-        allocatedAmount: toAllocate
+        allocatedAmount: toAllocate,
       })
       remaining -= toAllocate
     }

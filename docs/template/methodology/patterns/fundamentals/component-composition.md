@@ -14,10 +14,7 @@ export default function DashboardPage() {
     <AppLayout
       pageTitle="Dashboard"
       pageDescription="Vista general del sistema"
-      breadcrumbs={[
-        { label: 'Inicio', href: '/' },
-        { label: 'Dashboard' }
-      ]}
+      breadcrumbs={[{ label: 'Inicio', href: '/' }, { label: 'Dashboard' }]}
     >
       <div>Contenido de la página</div>
     </AppLayout>
@@ -94,11 +91,11 @@ function UserCard({ user }) {
 ```typescript
 interface AppLayoutProps {
   children: React.ReactNode
-  pageTitle?: string         // Default: "Dashboard"
-  pageDescription?: string   // Opcional
+  pageTitle?: string // Default: "Dashboard"
+  pageDescription?: string // Opcional
   breadcrumbs?: Array<{
     label: string
-    href?: string           // Último breadcrumb sin href
+    href?: string // Último breadcrumb sin href
   }>
 }
 ```
@@ -114,10 +111,7 @@ export default function SettingsPage() {
     <AppLayout
       pageTitle="Configuración"
       pageDescription="Administra las configuraciones de tu cuenta"
-      breadcrumbs={[
-        { label: 'Inicio', href: '/' },
-        { label: 'Configuración' },
-      ]}
+      breadcrumbs={[{ label: 'Inicio', href: '/' }, { label: 'Configuración' }]}
     >
       <div className="grid gap-6">
         <Card>
@@ -158,14 +152,12 @@ import {
 } from '@/components/ui/card'
 
 // ✅ CORRECTO: Componer piezas pequeñas
-<Card>
+;<Card>
   <CardHeader>
     <CardTitle>Título</CardTitle>
     <CardDescription>Descripción opcional</CardDescription>
   </CardHeader>
-  <CardContent>
-    Contenido principal
-  </CardContent>
+  <CardContent>Contenido principal</CardContent>
   <CardFooter>
     <Button>Acción</Button>
   </CardFooter>
@@ -186,7 +178,7 @@ import {
 } from '@/components/ui/form'
 
 // ✅ CORRECTO: Componer fields pequeños
-<Form {...form}>
+;<Form {...form}>
   <form onSubmit={form.handleSubmit(onSubmit)}>
     <FormField
       control={form.control}
@@ -197,9 +189,7 @@ import {
           <FormControl>
             <Input placeholder="johndoe" {...field} />
           </FormControl>
-          <FormDescription>
-            Tu nombre de usuario público.
-          </FormDescription>
+          <FormDescription>Tu nombre de usuario público.</FormDescription>
           <FormMessage />
         </FormItem>
       )}

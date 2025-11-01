@@ -25,12 +25,12 @@ declare global {
   var prisma: PrismaClient | undefined
 }
 
-export const prisma = global.prisma || new PrismaClient({
-  log: process.env.NODE_ENV === 'development'
-    ? ['error', 'warn']
-    : ['error'],
-  relationLoadStrategy: 'join' // ✅ Fix N+1 queries
-})
+export const prisma =
+  global.prisma ||
+  new PrismaClient({
+    log: process.env.NODE_ENV === 'development' ? ['error', 'warn'] : ['error'],
+    relationLoadStrategy: 'join', // ✅ Fix N+1 queries
+  })
 
 if (process.env.NODE_ENV !== 'production') {
   global.prisma = prisma
@@ -38,6 +38,7 @@ if (process.env.NODE_ENV !== 'production') {
 ```
 
 **Features:**
+
 - ✅ Singleton pattern (evita múltiples instancias)
 - ✅ Hot reload en desarrollo (usa globalThis)
 - ✅ Logging condicional por ambiente
@@ -109,12 +110,12 @@ model Payment {
 
 ### onDelete Policies
 
-| Relación              | Policy   | Razón                        |
-| --------------------- | -------- | ---------------------------- |
-| Customer → Project    | CASCADE  | Ownership (parent owns child)|
-| Payment → Allocation  | CASCADE  | Coherencia de datos          |
-| Payment → Installment | CASCADE  | Coherencia de datos          |
-| Project → Status      | RESTRICT | Proteger configuración       |
+| Relación              | Policy   | Razón                         |
+| --------------------- | -------- | ----------------------------- |
+| Customer → Project    | CASCADE  | Ownership (parent owns child) |
+| Payment → Allocation  | CASCADE  | Coherencia de datos           |
+| Payment → Installment | CASCADE  | Coherencia de datos           |
+| Project → Status      | RESTRICT | Proteger configuración        |
 
 ---
 
@@ -156,7 +157,7 @@ async function main() {
       { name: 'Azul', key: 'blue', bgClass: 'bg-blue-500' },
       { name: 'Verde', key: 'green', bgClass: 'bg-green-500' },
       // ...
-    ]
+    ],
   })
 
   // 2. Payment Methods
@@ -165,7 +166,7 @@ async function main() {
       { name: 'Efectivo', hasInstallments: false },
       { name: 'Tarjeta de Crédito', hasInstallments: true, maxInstallments: 12 },
       // ...
-    ]
+    ],
   })
 
   // 3. Project Statuses
@@ -174,8 +175,8 @@ async function main() {
       name: 'Presupuesto',
       order: 1,
       isInitial: true,
-      colorId: blueColor.id
-    }
+      colorId: blueColor.id,
+    },
   })
 }
 ```
@@ -229,7 +230,7 @@ import { Prisma, Customer, Project } from '@prisma/client'
 
 // Tipo inferido automáticamente
 const customer: Customer = await prisma.customer.findUnique({
-  where: { id: 'abc' }
+  where: { id: 'abc' },
 })
 
 // Tipo con relaciones
@@ -239,7 +240,7 @@ type ProjectWithCustomer = Prisma.ProjectGetPayload<{
 
 const project: ProjectWithCustomer = await prisma.project.findUnique({
   where: { id: 'xyz' },
-  include: { customer: true }
+  include: { customer: true },
 })
 ```
 
@@ -256,7 +257,7 @@ const customer = await prisma.customer.findUnique({ where: { id } })
 // ✅ MEJOR: Solo lo necesario
 const customer = await prisma.customer.findUnique({
   where: { id },
-  select: { id: true, name: true, phone: true }
+  select: { id: true, name: true, phone: true },
 })
 ```
 
@@ -276,14 +277,14 @@ await prisma.$transaction(async (tx) => {
 // ✅ BIEN: Una query
 await prisma.installment.updateMany({
   where: { status: 'pending', dueDate: { lte: new Date() } },
-  data: { status: 'paid', paidDate: new Date() }
+  data: { status: 'paid', paidDate: new Date() },
 })
 
 // ❌ EVITAR: N queries
 for (const installment of installments) {
   await prisma.installment.update({
     where: { id: installment.id },
-    data: { status: 'paid' }
+    data: { status: 'paid' },
   })
 }
 ```

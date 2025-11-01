@@ -82,7 +82,7 @@ export async function POST(request: NextRequest) {
 
   const cronLogger = logger.child({
     job: 'mark-installments-paid',
-    runId
+    runId,
   })
 
   // 1. Autenticación
@@ -91,18 +91,12 @@ export async function POST(request: NextRequest) {
 
   if (!cronSecret) {
     cronLogger.error('CRON_SECRET not configured')
-    return NextResponse.json(
-      { error: 'Server configuration error' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: 'Server configuration error' }, { status: 500 })
   }
 
   if (authHeader !== `Bearer ${cronSecret}`) {
     cronLogger.warn({ authHeader }, 'Unauthorized cron request')
-    return NextResponse.json(
-      { error: 'Unauthorized' },
-      { status: 401 }
-    )
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
   cronLogger.info('Cron job started')
@@ -115,13 +109,13 @@ export async function POST(request: NextRequest) {
       where: {
         status: 'pending',
         dueDate: {
-          lte: today
-        }
+          lte: today,
+        },
       },
       data: {
         status: 'paid',
-        paidDate: today
-      }
+        paidDate: today,
+      },
     })
 
     cronLogger.info(
@@ -134,15 +128,12 @@ export async function POST(request: NextRequest) {
       updated: result.count,
       message: `${result.count} installments marked as paid`,
       runId,
-      timestamp: today.toISOString()
+      timestamp: today.toISOString(),
     })
   } catch (error) {
     cronLogger.error({ err: error }, 'Cron job failed')
 
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }
 ```
@@ -179,12 +170,12 @@ export async function POST(request: NextRequest) {
 
 **Ejemplos:**
 
-| Schedule    | Descripción                  |
-| ----------- | ---------------------------- |
-| `0 0 * * *` | Diario a medianoche UTC      |
-| `0 12 * * *`| Diario a mediodía UTC        |
-| `0 0 1 * *` | Primer día de cada mes       |
-| `0 0 * * 1` | Cada lunes a medianoche      |
+| Schedule     | Descripción             |
+| ------------ | ----------------------- |
+| `0 0 * * *`  | Diario a medianoche UTC |
+| `0 12 * * *` | Diario a mediodía UTC   |
+| `0 0 1 * *`  | Primer día de cada mes  |
+| `0 0 * * 1`  | Cada lunes a medianoche |
 
 ---
 
@@ -213,7 +204,7 @@ WHERE status = 'pending'
 ```typescript
 const cronLogger = logger.child({
   job: 'mark-installments-paid',
-  runId: 'run-2025-01-20T00-00-15-abc'
+  runId: 'run-2025-01-20T00-00-15-abc',
 })
 ```
 
@@ -315,10 +306,7 @@ Si hay requests 401 → Posible ataque.
 ```typescript
 if (!cronSecret) {
   cronLogger.error('CRON_SECRET not configured')
-  return NextResponse.json(
-    { error: 'Server configuration error' },
-    { status: 500 }
-  )
+  return NextResponse.json({ error: 'Server configuration error' }, { status: 500 })
 }
 ```
 
@@ -331,10 +319,7 @@ if (!cronSecret) {
 ```typescript
 if (authHeader !== `Bearer ${cronSecret}`) {
   cronLogger.warn({ authHeader }, 'Unauthorized cron request')
-  return NextResponse.json(
-    { error: 'Unauthorized' },
-    { status: 401 }
-  )
+  return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 }
 ```
 
@@ -369,7 +354,7 @@ Vercel Cron ejecuta en UTC, no en timezone local (ej: Chile UTC-3).
 
 ```json
 {
-  "schedule": "0 3 * * *"  // 3 AM UTC = medianoche Chile
+  "schedule": "0 3 * * *" // 3 AM UTC = medianoche Chile
 }
 ```
 
@@ -390,9 +375,13 @@ let updated = 0
 
 while (true) {
   const result = await prisma.installment.updateMany({
-    where: { /* ... */ },
-    data: { /* ... */ },
-    take: BATCH_SIZE
+    where: {
+      /* ... */
+    },
+    data: {
+      /* ... */
+    },
+    take: BATCH_SIZE,
   })
 
   updated += result.count

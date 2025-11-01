@@ -13,6 +13,7 @@ benchPino*10000:    303.419ms  ← 10x más rápido ⚡
 ```
 
 **Conclusión:**
+
 - Pino: **303ms** para 10,000 logs
 - Winston: **2,994ms** (10x más lento)
 - Bunyan: **2,497ms** (8x más lento)
@@ -32,10 +33,10 @@ logger.info('Message') // ← No bloquea event loop
 
 **Comparativa:**
 
-| Logger  | Write Strategy | Blocking |
-| ------- | -------------- | -------- |
-| Pino    | Async          | ❌ No    |
-| Winston | Sync           | ✅ Sí    |
+| Logger  | Write Strategy | Blocking   |
+| ------- | -------------- | ---------- |
+| Pino    | Async          | ❌ No      |
+| Winston | Sync           | ✅ Sí      |
 | Bunyan  | Sync/Async mix | ⚠️ Parcial |
 
 ### 2. Minimal Formatting
@@ -61,6 +62,7 @@ bunyan: ~50KB
 ```
 
 **Impacto:**
+
 - ✅ Menor bundle size
 - ✅ Faster require/import
 - ✅ Menos overhead en serverless
@@ -73,9 +75,9 @@ bunyan: ~50KB
 
 | Logger  | Cold Start Overhead |
 | ------- | ------------------- |
-| Pino    | +5ms               |
-| Winston | +25ms              |
-| Bunyan  | +15ms              |
+| Pino    | +5ms                |
+| Winston | +25ms               |
+| Bunyan  | +15ms               |
 
 **Crítico en Vercel Functions** donde cold starts frecuentes.
 
@@ -125,16 +127,16 @@ logger.info({ userId: '123', action: 'login' }, 'User action')
 
 ```typescript
 export const POST = withLogging(async (request, logger) => {
-  logger.info('Request received')        // 1
-  logger.debug('Validating data')        // 2
-  logger.debug('Data validated')         // 3
-  logger.info('Creating payment')        // 4
-  logger.debug('Payment created')        // 5
-  logger.debug('Creating allocations')   // 6
-  logger.debug('Allocations created')    // 7
-  logger.debug('Creating installments')  // 8
-  logger.debug('Installments created')   // 9
-  logger.info('Request completed')       // 10
+  logger.info('Request received') // 1
+  logger.debug('Validating data') // 2
+  logger.debug('Data validated') // 3
+  logger.info('Creating payment') // 4
+  logger.debug('Payment created') // 5
+  logger.debug('Creating allocations') // 6
+  logger.debug('Allocations created') // 7
+  logger.debug('Creating installments') // 8
+  logger.debug('Installments created') // 9
+  logger.info('Request completed') // 10
 })
 ```
 
@@ -168,6 +170,7 @@ logger.info('Message')
 ```
 
 **Conclusión:**
+
 - ✅ En development (pino-pretty): Aceptable
 - ✅ En production (JSON): Máxima performance
 
@@ -216,18 +219,21 @@ npm run build
 ```
 
 **Sin logger:**
+
 ```
 Page                     Size     First Load JS
 ├ /api/payments         1.2 KB    85.2 KB
 ```
 
 **Con Pino:**
+
 ```
 Page                     Size     First Load JS
 ├ /api/payments         1.3 KB    95.2 KB  (+10KB)
 ```
 
 **Con Winston:**
+
 ```
 Page                     Size     First Load JS
 ├ /api/payments         1.5 KB    185.2 KB  (+100KB)
@@ -283,15 +289,21 @@ logger.info('Important milestone')
 
 ```typescript
 // ❌ EVITAR: Cálculo costoso antes de loggear
-logger.debug({
-  complexData: expensiveComputation(data) // Se evalúa SIEMPRE
-}, 'Debug info')
+logger.debug(
+  {
+    complexData: expensiveComputation(data), // Se evalúa SIEMPRE
+  },
+  'Debug info'
+)
 
 // ✅ MEJOR: Computación solo si nivel habilitado
 if (logger.isLevelEnabled('debug')) {
-  logger.debug({
-    complexData: expensiveComputation(data)
-  }, 'Debug info')
+  logger.debug(
+    {
+      complexData: expensiveComputation(data),
+    },
+    'Debug info'
+  )
 }
 ```
 
@@ -323,7 +335,7 @@ export const POST = withLogging(async (request, logger) => {
   const metrics = {
     dbQueries: 0,
     dbDuration: 0,
-    logCalls: 0
+    logCalls: 0,
   }
 
   const startTime = performance.now()
@@ -344,13 +356,13 @@ export const POST = withLogging(async (request, logger) => {
 
 ## Comparativa Final
 
-| Feature           | Pino    | Winston | Bunyan  |
-| ----------------- | ------- | ------- | ------- |
-| **Performance**   | ⚡ 10x   | ❌ Slow | ⚠️ OK   |
-| **Bundle Size**   | ✅ 10KB | ❌ 100KB| ⚠️ 50KB |
-| **Serverless**    | ✅ Ideal| ❌ Heavy| ⚠️ OK   |
-| **Cold Starts**   | ✅ +5ms | ❌ +25ms| ⚠️ +15ms|
-| **Memory**        | ✅ 2MB  | ❌ 10MB | ⚠️ 5MB  |
+| Feature         | Pino     | Winston  | Bunyan   |
+| --------------- | -------- | -------- | -------- |
+| **Performance** | ⚡ 10x   | ❌ Slow  | ⚠️ OK    |
+| **Bundle Size** | ✅ 10KB  | ❌ 100KB | ⚠️ 50KB  |
+| **Serverless**  | ✅ Ideal | ❌ Heavy | ⚠️ OK    |
+| **Cold Starts** | ✅ +5ms  | ❌ +25ms | ⚠️ +15ms |
+| **Memory**      | ✅ 2MB   | ❌ 10MB  | ⚠️ 5MB   |
 
 **Conclusión:** Pino es la mejor opción para Next.js + Vercel.
 

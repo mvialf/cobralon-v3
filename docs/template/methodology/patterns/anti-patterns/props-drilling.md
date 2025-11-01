@@ -77,7 +77,7 @@ export default function RootLayout({ children }) {
 }
 
 // components/user-menu.tsx
-'use client'
+;('use client')
 
 import { useUser } from '@/contexts/user-context'
 

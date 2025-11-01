@@ -147,6 +147,7 @@ export function ViewProductDialog({ product, children }: ViewProductDialogProps)
 ```
 
 ---
+
 \n---
 
 ## Related

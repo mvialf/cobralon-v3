@@ -52,15 +52,15 @@ El template tiene los siguientes aliases configurados en `tsconfig.json`:
 
 ### Mapeo de Rutas
 
-| Alias                 | Ruta Real                |
-| --------------------- | ------------------------ |
-| `@/components`        | `/components`            |
-| `@/lib`               | `/lib`                   |
-| `@/hooks`             | `/hooks`                 |
-| `@/app`               | `/app`                   |
-| `@/components/ui`     | `/components/ui`         |
-| `@/components/custom` | `/components/custom`     |
-| `@/components/layout` | `/components/layout`     |
+| Alias                 | Ruta Real            |
+| --------------------- | -------------------- |
+| `@/components`        | `/components`        |
+| `@/lib`               | `/lib`               |
+| `@/hooks`             | `/hooks`             |
+| `@/app`               | `/app`               |
+| `@/components/ui`     | `/components/ui`     |
+| `@/components/custom` | `/components/custom` |
+| `@/components/layout` | `/components/layout` |
 
 ## Ejemplos
 
@@ -136,6 +136,7 @@ Soporta automáticamente los paths de `tsconfig.json`.
 Las únicas rutas relativas aceptables son:
 
 1. **Archivos en el mismo directorio**
+
    ```tsx
    // ✅ Aceptable
    import { columns } from './columns'

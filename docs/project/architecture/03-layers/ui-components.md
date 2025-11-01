@@ -40,18 +40,15 @@ import { schema } from '@/lib/validations'
 export function EntityForm({ initialData, onSubmit }) {
   const form = useForm({
     resolver: zodResolver(schema),
-    defaultValues: initialData
+    defaultValues: initialData,
   })
 
-  return (
-    <Form {...form}>
-      {/* Form fields */}
-    </Form>
-  )
+  return <Form {...form}>{/* Form fields */}</Form>
 }
 ```
 
 **Forms implementados:**
+
 - `CustomerForm` - Crear/editar cliente
 - `ProjectForm` - Crear/editar proyecto
 - `PaymentToProjectForm` - Pago 1:1
@@ -81,6 +78,7 @@ export function NewEntityDialog({ trigger }) {
 ### DataTable (TanStack Table)
 
 Sistema de tablas reutilizable con:
+
 - Sorting
 - Filtering
 - Pagination
@@ -88,6 +86,7 @@ Sistema de tablas reutilizable con:
 - Row selection
 
 **Implementado en:**
+
 - `app/customer/page.tsx`
 - `app/projects/page.tsx`
 - `app/payments/page.tsx`
@@ -100,18 +99,22 @@ Ver: [DataTable Pattern](../../template/components/data-table-pattern.md)
 Base de componentes reutilizables:
 
 **Inputs:**
+
 - `Input`, `Textarea`, `Select`, `Checkbox`, `Radio`
 - `CurrencyInput` (custom con formato regional)
 - `PhoneInput` (custom con E.164)
 - `RutInput` (custom para Chile)
 
 **Display:**
+
 - `Card`, `Table`, `Badge`, `Avatar`, `Separator`
 
 **Feedback:**
+
 - `Alert`, `Toast`, `Dialog`, `Sheet`, `Drawer`
 
 **Navigation:**
+
 - `Tabs`, `Breadcrumb`, `Pagination`, `Command`
 
 ### Componentes Regionales
@@ -129,6 +132,7 @@ Componentes que consumen `ConfigurationContext`:
 ```
 
 Formatea con:
+
 - Separador de miles: `.`
 - Separador decimal: `,`
 - Símbolo: `$`, `USD`, etc.
@@ -136,11 +140,7 @@ Formatea con:
 #### PhoneInput
 
 ```tsx
-<PhoneInput
-  value={phone}
-  onChange={setPhone}
-  defaultCountry="CL"
-/>
+<PhoneInput value={phone} onChange={setPhone} defaultCountry="CL" />
 ```
 
 Valida formato E.164 internacional.
@@ -148,13 +148,11 @@ Valida formato E.164 internacional.
 #### RutInput
 
 ```tsx
-<RutInput
-  value={rut}
-  onChange={setRut}
-/>
+<RutInput value={rut} onChange={setRut} />
 ```
 
 Solo para Chile:
+
 - Formato: `12.345.678-9`
 - Validación dígito verificador
 

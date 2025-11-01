@@ -1,4 +1,3 @@
-
 ### ❌ Anti-Pattern 4: Testing Everything
 
 **Problem:** Intentar 100% coverage desde día 1.

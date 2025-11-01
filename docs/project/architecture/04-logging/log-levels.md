@@ -6,13 +6,13 @@ Configuración de niveles de logging por ambiente.
 
 ## Niveles Disponibles
 
-| Nivel   | Valor | Uso                                          | Ambiente      |
-| ------- | ----- | -------------------------------------------- | ------------- |
-| `debug` | 20    | Flow tracking, validaciones detalladas       | Development   |
-| `info`  | 30    | Operaciones exitosas, milestones importantes | Production    |
-| `warn`  | 40    | Validaciones fallidas, estados inválidos     | Todos         |
-| `error` | 50    | Errores capturados, excepciones              | Todos         |
-| `fatal` | 60    | Errores críticos (raramente usado)           | Todos         |
+| Nivel   | Valor | Uso                                          | Ambiente    |
+| ------- | ----- | -------------------------------------------- | ----------- |
+| `debug` | 20    | Flow tracking, validaciones detalladas       | Development |
+| `info`  | 30    | Operaciones exitosas, milestones importantes | Production  |
+| `warn`  | 40    | Validaciones fallidas, estados inválidos     | Todos       |
+| `error` | 50    | Errores capturados, excepciones              | Todos       |
+| `fatal` | 60    | Errores críticos (raramente usado)           | Todos       |
 
 ---
 
@@ -30,10 +30,10 @@ level: 'debug'
 **Ejemplo:**
 
 ```typescript
-logger.debug('Starting validation')    // ✅ Visible
-logger.info('Validation completed')    // ✅ Visible
-logger.warn('Invalid field')           // ✅ Visible
-logger.error({ err }, 'Failed')        // ✅ Visible
+logger.debug('Starting validation') // ✅ Visible
+logger.info('Validation completed') // ✅ Visible
+logger.warn('Invalid field') // ✅ Visible
+logger.error({ err }, 'Failed') // ✅ Visible
 ```
 
 ### Production
@@ -48,10 +48,10 @@ level: 'info'
 **Ejemplo:**
 
 ```typescript
-logger.debug('Starting validation')    // ❌ No visible
-logger.info('Validation completed')    // ✅ Visible
-logger.warn('Invalid field')           // ✅ Visible
-logger.error({ err }, 'Failed')        // ✅ Visible
+logger.debug('Starting validation') // ❌ No visible
+logger.info('Validation completed') // ✅ Visible
+logger.warn('Invalid field') // ✅ Visible
+logger.error({ err }, 'Failed') // ✅ Visible
 ```
 
 ---
@@ -99,6 +99,7 @@ logger.debug('Saving to database')
 ```
 
 **Características:**
+
 - ❌ NO visible en producción
 - ✅ Útil para debugging local
 - ✅ Puede ser verbose
@@ -114,6 +115,7 @@ logger.info({ count: 5 }, 'Installments marked as paid')
 ```
 
 **Características:**
+
 - ✅ Visible en producción
 - ✅ Métricas y auditoría
 - ✅ Siempre útil en logs
@@ -129,6 +131,7 @@ logger.warn('Payment method does not support installments')
 ```
 
 **Características:**
+
 - ✅ Visible en producción
 - ⚠️ Requiere atención eventual
 - ⚠️ No bloquea operación
@@ -144,6 +147,7 @@ logger.error('Database connection failed')
 ```
 
 **Características:**
+
 - ✅ Visible en producción
 - 🚨 Requiere atención inmediata
 - 🚨 Operación falló

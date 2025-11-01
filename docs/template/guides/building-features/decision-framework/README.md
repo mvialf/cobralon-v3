@@ -9,6 +9,7 @@ Respuestas a las preguntas que te haces TODO EL TIEMPO.
 **Pregunta:** ¿Inline o `lib/transformers/`?
 
 **Extract cuando:**
+
 - ✅ Logic is >10 lines
 - ✅ Used in 2+ places
 - ✅ Pure transformation
@@ -21,6 +22,7 @@ Respuestas a las preguntas que te haces TODO EL TIEMPO.
 **Pregunta:** ¿Props o `useCustomHook()`?
 
 **Create hook cuando:**
+
 - ✅ Complex client-side state
 - ✅ Reusable across 3+ components
 - ✅ Side effects (fetch, localStorage)
@@ -32,11 +34,13 @@ Respuestas a las preguntas que te haces TODO EL TIEMPO.
 **Pregunta:** ¿`async function` o `"use client"`?
 
 **Server Component si:**
+
 - ✅ Just displaying data
 - ✅ Fetching from database
 - ✅ SEO matters
 
 **Client Component si:**
+
 - ✅ User interaction
 - ✅ Browser APIs
 - ✅ Real-time updates
@@ -48,6 +52,7 @@ Respuestas a las preguntas que te haces TODO EL TIEMPO.
 **Pregunta:** ¿Prisma directo o `ProductService` class?
 
 **Create service si:**
+
 - ✅ Abstraction over third-party API
 - ✅ Complex retry/error handling
 - ✅ Need to mock in tests
@@ -66,4 +71,3 @@ Respuestas a las preguntas que te haces TODO EL TIEMPO.
 - [Core Principles](../core-principles/) - Principios base
 - [Patterns](../patterns/) - Implementación práctica
 - [Common Pitfalls](../common-pitfalls/) - Qué evitar
-

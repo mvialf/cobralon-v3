@@ -106,6 +106,7 @@ Implementar **Pino 9.7.0** como sistema de logging estructurado con:
    - Zero blocking I/O
 
 2. **Developer Experience Superior**
+
    ```typescript
    // Pretty-print en desarrollo
    [14:32:15] INFO: Payment created successfully
@@ -118,6 +119,7 @@ Implementar **Pino 9.7.0** como sistema de logging estructurado con:
    ```
 
 3. **Request Correlation Automática**
+
    ```typescript
    export const POST = withLogging(async (request, logger) => {
      // logger ya incluye requestId automáticamente
@@ -204,6 +206,7 @@ Implementar **Pino 9.7.0** como sistema de logging estructurado con:
 ### Archivos Principales
 
 1. **lib/logger.ts** (Singleton)
+
    ```typescript
    export const logger = pino({
      level: getLogLevel(), // info (prod) / debug (dev)
@@ -216,6 +219,7 @@ Implementar **Pino 9.7.0** como sistema de logging estructurado con:
    ```
 
 2. **lib/logger-middleware.ts** (withLogging wrapper)
+
    ```typescript
    export function withLogging(handler: APIHandler) {
      return async (request: NextRequest, context?) => {
@@ -272,14 +276,14 @@ export const POST = withLogging(async (request, logger) => {
 
 ### Log Levels
 
-| Level   | Uso                                    | Ejemplo                                  |
-| ------- | -------------------------------------- | ---------------------------------------- |
-| `trace` | Debugging muy detallado (NO usado)     | -                                        |
-| `debug` | Flow tracking, validaciones            | `'Starting validations'`                 |
-| `info`  | Operaciones exitosas, milestones       | `'Payment created successfully'`         |
-| `warn`  | Validaciones fallidas, estados inválidos | `'Missing customerId'`                  |
-| `error` | Errores capturados, excepciones        | `'Error creating payment'`               |
-| `fatal` | Errores críticos (NO usado)            | -                                        |
+| Level   | Uso                                      | Ejemplo                          |
+| ------- | ---------------------------------------- | -------------------------------- |
+| `trace` | Debugging muy detallado (NO usado)       | -                                |
+| `debug` | Flow tracking, validaciones              | `'Starting validations'`         |
+| `info`  | Operaciones exitosas, milestones         | `'Payment created successfully'` |
+| `warn`  | Validaciones fallidas, estados inválidos | `'Missing customerId'`           |
+| `error` | Errores capturados, excepciones          | `'Error creating payment'`       |
+| `fatal` | Errores críticos (NO usado)              | -                                |
 
 **Configuración por ambiente:**
 
@@ -309,7 +313,7 @@ redact: {
 ```typescript
 logger.info({
   userId: '123',
-  password: 'secret123' // ❌ Sensible
+  password: 'secret123', // ❌ Sensible
 })
 
 // Output:
@@ -335,12 +339,14 @@ logger.info({
 ### Métricas de Éxito
 
 **Antes (console.log):**
+
 - ❌ Sin formato estructurado
 - ❌ Sin request correlation
 - ❌ Sin niveles de log
 - ❌ Difícil debugging en producción
 
 **Después (Pino):**
+
 - ✅ JSON estructurado (queryable)
 - ✅ Request correlation automática (requestId)
 - ✅ Niveles de log configurables

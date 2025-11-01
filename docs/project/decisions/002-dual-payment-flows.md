@@ -23,6 +23,7 @@ import { PaymentToCustomerForm } from '@/components/forms/payments/payment-to-cu
 ```
 
 **Schemas Zod:**
+
 ```typescript
 // lib/validations/payment-validations.ts
 export const paymentToProjectSchema = z.object({
@@ -33,15 +34,18 @@ export const paymentToProjectSchema = z.object({
 
 export const paymentToCustomerSchema = z.object({
   customerId: z.string().cuid(),
-  allocations: z.array(z.object({
-    projectId: z.string().cuid(),
-    allocatedAmount: z.number().positive()
-  }))
+  allocations: z.array(
+    z.object({
+      projectId: z.string().cuid(),
+      allocatedAmount: z.number().positive(),
+    })
+  ),
   // ... validación SUM(allocations) === amount
 })
 ```
 
 **Archivos clave:**
+
 - `components/forms/payments/payment-to-project-form.tsx` - Flow A (simple)
 - `components/forms/payments/payment-to-customer-form.tsx` - Flow B (avanzado)
 - `app/api/payments/route.ts:POST` - Maneja ambos tipos

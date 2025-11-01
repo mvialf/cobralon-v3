@@ -26,11 +26,11 @@
 
 ### ✅ Completado (Sprint 2 - Día 3)
 
-| Tarea                     | Archivo(s)                 | Líneas Reducidas | Status  |
-| ------------------------- | -------------------------- | ---------------- | ------- |
-| 7. Migrar página Payments | `app/payments/page.tsx`    | -2 líneas (neto) | ✅ DONE |
-| 7. Fix TypeScript errors  | Múltiples archivos         | 5 archivos       | ✅ DONE |
-| 7. CRUD testing completo  | Manual + Playwright        | 3 operaciones    | ✅ DONE |
+| Tarea                     | Archivo(s)              | Líneas Reducidas | Status  |
+| ------------------------- | ----------------------- | ---------------- | ------- |
+| 7. Migrar página Payments | `app/payments/page.tsx` | -2 líneas (neto) | ✅ DONE |
+| 7. Fix TypeScript errors  | Múltiples archivos      | 5 archivos       | ✅ DONE |
+| 7. CRUD testing completo  | Manual + Playwright     | 3 operaciones    | ✅ DONE |
 
 ### ⏳ Pendiente (Sprint 2 - Día 4)
 
@@ -863,6 +863,6 @@ cat hooks/queries/use-payments.ts  # ← Hooks disponibles
 **Última actualización:** 2025-10-30 (Sprint 2 - Día 3)
 **Autor:** Claude Code
 **Sprint 2 - Día 1:** ✅ COMPLETADO (hooks/queries/use-payments.ts - 576 líneas)
-**Sprint 2 - Día 2:** ✅ COMPLETADO (hooks/queries/__tests__/use-payments.test.tsx - 934 líneas, 28 tests)
+**Sprint 2 - Día 2:** ✅ COMPLETADO (hooks/queries/**tests**/use-payments.test.tsx - 934 líneas, 28 tests)
 **Sprint 2 - Día 3:** ✅ COMPLETADO (app/payments/page.tsx migrado + 5 archivos TypeScript fixed + CRUD testing)
 **Próxima acción:** Implementar `hooks/queries/use-customers.ts` y migrar `app/customers/page.tsx`

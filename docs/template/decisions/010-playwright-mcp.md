@@ -3,12 +3,14 @@
 ## Decisión
 
 Adoptar **Playwright MCP + @playwright/test** como estrategia dual para E2E testing:
+
 - **Playwright MCP:** Claude genera tests conversacionalmente
 - **@playwright/test:** Ejecuta tests de forma independiente (CI/CD)
 
 ## Contexto
 
 Necesitábamos E2E testing que:
+
 - Aproveche IA de Claude para escribir tests
 - Genere tests persistentes (.spec.ts) versionados en Git
 - Soporte multi-browser (Chrome, Firefox, Safari)
@@ -27,6 +29,7 @@ Necesitábamos E2E testing que:
 1. **Tests persistentes y versionados:** Claude genera archivos `.spec.ts` que se guardan en Git. Code review posible.
 
 2. **Generación con IA + Ejecución independiente:**
+
    ```
    Con Claude (Playwright MCP):
    - Usuario: "Crea test para flujo de pago"
@@ -95,11 +98,13 @@ test('login exitoso', async ({ page }) => {
 ## Casos de Uso
 
 **✅ Usar Playwright MCP (con Claude) para:**
+
 - Generar tests iniciales rápidamente
 - Debugging interactivo de tests
 - Exploración de bugs con IA
 
 **✅ Usar @playwright/test (sin Claude) para:**
+
 - CI/CD regression testing
 - Pre-commit hooks
 - Desarrollo local (watch mode)

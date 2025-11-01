@@ -1,6 +1,5 @@
 # Server Vs Client
 
-
 ### Server vs Client Component
 
 **Use Server Component if:**
@@ -35,4 +34,3 @@ export function ProductsList({ products }) {
   )
 }
 ```
-

@@ -67,6 +67,7 @@ El sistema de configuración regional permite:
 **Responsabilidad:** Proveer configuración regional global
 
 **Features:**
+
 - Estado de ubicación (país, región, comuna)
 - Derivación automática de currency y locale
 - Persistencia en localStorage
@@ -81,11 +82,7 @@ El sistema de configuración regional permite:
 **Uso:**
 
 ```typescript
-const {
-  pais, region, comuna,
-  currency, locale,
-  setPais, setRegion
-} = useConfiguration()
+const { pais, region, comuna, currency, locale, setPais, setRegion } = useConfiguration()
 ```
 
 ---
@@ -214,13 +211,13 @@ export function SettingsPage() {
 
 ## 🔍 Componentes Disponibles
 
-| Componente       | Archivo                            | Configuración usada |
-| ---------------- | ---------------------------------- | ------------------- |
-| CurrencyInput    | `components/ui/currency-input.tsx` | `currency`          |
-| PhoneInput       | `components/ui/phone-input.tsx`    | `pais`              |
-| RutInput         | `components/ui/rut-input.tsx`      | `pais` (solo CL)    |
-| AddressFields    | `components/forms/address-fields.tsx` | `pais`, `region`, `comuna` |
-| ConfigurationForm| `components/settings/configuration-form.tsx` | Todos |
+| Componente        | Archivo                                      | Configuración usada        |
+| ----------------- | -------------------------------------------- | -------------------------- |
+| CurrencyInput     | `components/ui/currency-input.tsx`           | `currency`                 |
+| PhoneInput        | `components/ui/phone-input.tsx`              | `pais`                     |
+| RutInput          | `components/ui/rut-input.tsx`                | `pais` (solo CL)           |
+| AddressFields     | `components/forms/address-fields.tsx`        | `pais`, `region`, `comuna` |
+| ConfigurationForm | `components/settings/configuration-form.tsx` | Todos                      |
 
 ---
 
@@ -245,14 +242,14 @@ const locale = PAISES_CONFIG[pais].locale
 
 ```typescript
 // 1. NO hardcodear valores regionales
-const CURRENCY = "CLP"  // ❌ Mal
+const CURRENCY = 'CLP' // ❌ Mal
 
 // 2. NO duplicar lógica de derivación
-const locale = pais === "CL" ? "es-CL" : "es-AR"  // ❌ Mal
+const locale = pais === 'CL' ? 'es-CL' : 'es-AR' // ❌ Mal
 
 // 3. NO usar configuración en Server Components sin props
 export default async function ServerComponent() {
-  const { currency } = useConfiguration()  // ❌ Error: client-side only
+  const { currency } = useConfiguration() // ❌ Error: client-side only
 }
 ```
 
@@ -260,11 +257,11 @@ export default async function ServerComponent() {
 
 ## 🌍 Países Soportados
 
-| País      | Code | Currency | Locale  | Regiones |
-| --------- | ---- | -------- | ------- | -------- |
-| Chile     | CL   | CLP      | es-CL   | 15       |
-| Argentina | AR   | ARS      | es-AR   | 24       |
-| México    | MX   | MXN      | es-MX   | 32       |
+| País      | Code | Currency | Locale | Regiones |
+| --------- | ---- | -------- | ------ | -------- |
+| Chile     | CL   | CLP      | es-CL  | 15       |
+| Argentina | AR   | ARS      | es-AR  | 24       |
+| México    | MX   | MXN      | es-MX  | 32       |
 
 ---
 

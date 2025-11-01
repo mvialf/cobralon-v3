@@ -11,6 +11,7 @@ Sistema de 5 flujos end-to-end que cubren las operaciones principales del proyec
 **Flujo:** Cliente → Datos → Cálculos → DB
 
 **Pasos principales:**
+
 - Seleccionar/crear cliente
 - Ingresar datos del proyecto (dirección, montos, cantidades)
 - Calcular total automático (subtotal + IVA)
@@ -18,6 +19,7 @@ Sistema de 5 flujos end-to-end que cubren las operaciones principales del proyec
 - Crear en base de datos
 
 **Componentes:**
+
 - Form: `project-form.tsx`
 - Dialog: `new-project-dialog.tsx`
 - API: `POST /api/projects`
@@ -29,12 +31,14 @@ Sistema de 5 flujos end-to-end que cubren las operaciones principales del proyec
 **Flujo:** Proyecto → Monto → Payment + Allocation
 
 **Características:**
+
 - Un pago asignado a UN SOLO proyecto
 - Cliente y currency derivados del proyecto
 - Balance se actualiza automáticamente
 - Opcional: Cuotas sin interés
 
 **Componentes:**
+
 - Form: `payment-to-project-form.tsx`
 - Dialog: `payment-to-project-dialog.tsx`
 - API: `POST /api/payments` (type: "Project")
@@ -46,12 +50,14 @@ Sistema de 5 flujos end-to-end que cubren las operaciones principales del proyec
 **Flujo:** Cliente → Proyectos → Distribución → Multiple Allocations
 
 **Características:**
+
 - Un pago asignado a MÚLTIPLES proyectos
 - Algoritmo FIFO automático disponible
 - Validación: SUM(allocations) === payment.amount
 - Todos los proyectos deben ser del mismo cliente
 
 **Componentes:**
+
 - Form: `payment-to-customer-form.tsx`
 - Dialog: `payment-to-customer-dialog.tsx`
 - Business Logic: `payment-fifo.ts`
@@ -64,6 +70,7 @@ Sistema de 5 flujos end-to-end que cubren las operaciones principales del proyec
 **Flujo:** Payment con cuotas → Installments automáticos → Cron job marca pagadas
 
 **Características:**
+
 - Creación automática al crear Payment
 - Primera cuota vence el día del pago
 - Siguientes cuotas cada 30 días
@@ -71,6 +78,7 @@ Sistema de 5 flujos end-to-end que cubren las operaciones principales del proyec
 - Cron job diario marca cuotas vencidas como "paid"
 
 **Componentes:**
+
 - Page: `installments/page.tsx`
 - API: `GET /api/installments` (vista global con filtros)
 - Cron: `POST /api/cron/mark-installments-paid`
@@ -83,6 +91,7 @@ Sistema de 5 flujos end-to-end que cubren las operaciones principales del proyec
 **Flujo:** Admin → CRUD Estados → Drag & Drop → Actualización en tiempo real
 
 **Características:**
+
 - CRUD completo desde UI
 - Drag & drop para reordenar
 - 7 colores predefinidos
@@ -90,6 +99,7 @@ Sistema de 5 flujos end-to-end que cubren las operaciones principales del proyec
 - Validación: RESTRICT si hay proyectos usándolo
 
 **Componentes:**
+
 - Page: `settings/project-status/page.tsx`
 - Form: `project-status-form.tsx`
 - Dialog: `project-status-dialog.tsx`
@@ -101,6 +111,7 @@ Sistema de 5 flujos end-to-end que cubren las operaciones principales del proyec
 ## Diagramas de Flujo
 
 Cada flujo incluye:
+
 - ✅ Diagrama ASCII paso a paso
 - ✅ Validaciones en cada etapa
 - ✅ Componentes involucrados

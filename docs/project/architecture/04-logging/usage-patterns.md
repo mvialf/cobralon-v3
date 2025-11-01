@@ -28,10 +28,7 @@ export const POST = withLogging(async (request, logger) => {
   // Validación
   if (!customerId) {
     paymentLogger.warn('Missing customerId')
-    return NextResponse.json(
-      { error: 'customerId is required' },
-      { status: 400 }
-    )
+    return NextResponse.json({ error: 'customerId is required' }, { status: 400 })
   }
 
   try {
@@ -43,15 +40,13 @@ export const POST = withLogging(async (request, logger) => {
     return NextResponse.json(payment, { status: 201 })
   } catch (error) {
     paymentLogger.error({ err: error }, 'Payment creation failed')
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 })
 ```
 
 **Beneficios:**
+
 - ✅ Context inheritance (requestId + customerId + amount)
 - ✅ Búsqueda fácil: `grep customerId=abc-123`
 - ✅ No manual context passing
@@ -81,8 +76,8 @@ export async function POST(request: Request) {
     const installments = await prisma.installment.findMany({
       where: {
         status: 'pending',
-        dueDate: { lte: new Date() }
-      }
+        dueDate: { lte: new Date() },
+      },
     })
 
     cronLogger.debug({ count: installments.length }, 'Installments found')
@@ -90,18 +85,15 @@ export async function POST(request: Request) {
     // Update batch
     const result = await prisma.installment.updateMany({
       where: {
-        id: { in: installments.map(i => i.id) }
+        id: { in: installments.map((i) => i.id) },
       },
       data: {
         status: 'paid',
-        paidDate: new Date()
-      }
+        paidDate: new Date(),
+      },
     })
 
-    cronLogger.info(
-      { updated: result.count },
-      'Cron job completed'
-    )
+    cronLogger.info({ updated: result.count }, 'Cron job completed')
 
     return NextResponse.json({ updated: result.count })
   } catch (error) {
@@ -118,6 +110,7 @@ function generateRunId(): string {
 ```
 
 **Beneficios:**
+
 - ✅ Cada run tiene ID único
 - ✅ Tracking de performance (cuántos updates)
 - ✅ Debugging de cron jobs fácil
@@ -152,8 +145,8 @@ async function fetchProjectWithBalance(
   const project = await prisma.project.findUnique({
     where: { id: projectId },
     include: {
-      paymentAllocations: true
-    }
+      paymentAllocations: true,
+    },
   })
 
   if (!project) {
@@ -172,6 +165,7 @@ async function fetchProjectWithBalance(
 ```
 
 **Beneficios:**
+
 - ✅ Logger propagado a helpers
 - ✅ Contexto compartido (projectId en todos los logs)
 - ✅ Testeable (mock logger fácilmente)
@@ -191,10 +185,7 @@ export const POST = withLogging(async (request, logger) => {
     const validation = schema.safeParse(body)
 
     if (!validation.success) {
-      logger.warn(
-        { errors: validation.error.format() },
-        'Validation failed'
-      )
+      logger.warn({ errors: validation.error.format() }, 'Validation failed')
       return NextResponse.json(
         { error: 'Validation failed', details: validation.error },
         { status: 400 }
@@ -206,27 +197,24 @@ export const POST = withLogging(async (request, logger) => {
 
     logger.info({ resultId: result.id }, 'Operation completed')
     return NextResponse.json(result)
-
   } catch (error) {
     // Error con contexto completo
     logger.error(
       {
         err: error,
         requestBody: body,
-        userId: body.userId
+        userId: body.userId,
       },
       'Operation failed unexpectedly'
     )
 
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 })
 ```
 
 **Beneficios:**
+
 - ✅ Errores con contexto completo
 - ✅ Stack trace automático (err serializer)
 - ✅ Debugging simplificado
@@ -248,16 +236,14 @@ export const POST = withLogging(async (request, logger) => {
 
   const duration = Math.round(performance.now() - startTime)
 
-  logger.info(
-    { duration, recordsProcessed: result.count },
-    'Expensive operation completed'
-  )
+  logger.info({ duration, recordsProcessed: result.count }, 'Expensive operation completed')
 
   return NextResponse.json(result)
 })
 ```
 
 **Beneficios:**
+
 - ✅ Identificar operaciones lentas
 - ✅ Métricas de performance
 - ✅ Optimización data-driven

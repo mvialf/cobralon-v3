@@ -29,11 +29,11 @@ npm test:ui
 
 ## Coverage Targets
 
-| Tipo | Target | Priority |
-|------|--------|----------|
-| Transformers | 90%+ | ✅ Alta |
-| API Routes | 70%+ | ⚠️ Media |
-| Components | 50%+ | 🟡 Baja |
+| Tipo         | Target | Priority |
+| ------------ | ------ | -------- |
+| Transformers | 90%+   | ✅ Alta  |
+| API Routes   | 70%+   | ⚠️ Media |
+| Components   | 50%+   | 🟡 Baja  |
 
 ## Related
 

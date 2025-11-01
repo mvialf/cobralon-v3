@@ -7,16 +7,19 @@ Los 4 patrones más comunes en SaaS que cubren el 80% de los casos de uso.
 ### 1. [Read-Only Data Display](1-read-only-data-display.md)
 
 **Cuándo usar:**
+
 - Mostrando lista de items desde database
 - No edición inline
 - Opcional: sorting, filtering, pagination
 
 **Ejemplos:**
+
 - Lista de productos
 - Tabla de órdenes
 - Dashboard con métricas
 
 **Stack:**
+
 - Server Component (fetching)
 - Client Component (rendering)
 - Opcional: Transformer (si >10 líneas)
@@ -26,17 +29,20 @@ Los 4 patrones más comunes en SaaS que cubren el 80% de los casos de uso.
 ### 2. [CRUD Operations](2-crud-operations.md)
 
 **Cuándo usar:**
+
 - Creating new records
 - Editing existing records
 - Form con validación
 - Submission a database
 
 **Ejemplos:**
+
 - Create product
 - Edit user profile
 - Add team member
 
 **Stack:**
+
 - Validation Schema (Zod)
 - Form Component (React Hook Form)
 - API Route (Next.js)
@@ -47,17 +53,20 @@ Los 4 patrones más comunes en SaaS que cubren el 80% de los casos de uso.
 ### 3. [Modal/Dialog Interactions](3-modal-dialog-interactions.md)
 
 **Cuándo usar:**
+
 - Confirmaciones (delete, cancel)
 - Forms pequeños (quick create)
 - Detalles adicionales (view more)
 - Actions destructivas
 
 **Ejemplos:**
+
 - Confirm delete
 - Quick add note
 - View order details
 
 **Stack:**
+
 - Dialog Component (shadcn/ui)
 - Trigger Component (Button, MenuItem)
 - Content (Form o Display)
@@ -67,17 +76,20 @@ Los 4 patrones más comunes en SaaS que cubren el 80% de los casos de uso.
 ### 4. [Complex Relations (N:M)](4-complex-relations-nm.md)
 
 **Cuándo usar:**
+
 - Many-to-many relationships
 - Allocation/assignment scenarios
 - Join tables con data adicional
 - Aggregations complejas
 
 **Ejemplos:**
+
 - Order con OrderItems (Order ← OrderItem → Product)
 - Project con Payments vía Allocations
 - User con Roles vía UserRole
 
 **Stack:**
+
 - Server Component (fetch with includes)
 - Transformer (calculate aggregates)
 - Client Component (display)

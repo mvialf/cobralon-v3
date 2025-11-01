@@ -10,8 +10,7 @@
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
-
-<Card>
+;<Card>
   <CardHeader>Título</CardHeader>
   <CardContent>
     <Input placeholder="Email" />
@@ -37,11 +36,7 @@ function MyButton({ children, onClick }) {
 
 // NO crear componentes que ya existen
 function MyCard({ children }) {
-  return (
-    <div className="rounded-lg border bg-white p-4 shadow-sm">
-      {children}
-    </div>
-  )
+  return <div className="rounded-lg border bg-white p-4 shadow-sm">{children}</div>
 }
 ```
 
@@ -147,8 +142,7 @@ import {
   CardTitle,
 } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-
-<Card>
+;<Card>
   <CardHeader>
     <CardTitle>Proyecto ABC</CardTitle>
     <CardDescription>Cliente: Acme Corp</CardDescription>
@@ -176,17 +170,14 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
-
-<Dialog>
+;<Dialog>
   <DialogTrigger asChild>
     <Button>Abrir</Button>
   </DialogTrigger>
   <DialogContent>
     <DialogHeader>
       <DialogTitle>¿Confirmar acción?</DialogTitle>
-      <DialogDescription>
-        Esta acción no se puede deshacer.
-      </DialogDescription>
+      <DialogDescription>Esta acción no se puede deshacer.</DialogDescription>
     </DialogHeader>
     <DialogFooter>
       <Button variant="outline">Cancelar</Button>
@@ -209,8 +200,7 @@ import {
 } from '@/components/ui/form'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
-
-<Form {...form}>
+;<Form {...form}>
   <form onSubmit={form.handleSubmit(onSubmit)}>
     <FormField
       control={form.control}

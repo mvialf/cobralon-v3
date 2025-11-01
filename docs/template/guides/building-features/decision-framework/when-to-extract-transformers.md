@@ -26,4 +26,3 @@ export function enrichProducts(products: ProductFromDB[]) {
 // ✅ INLINE: Simple transformation (<5 lines)
 const formatted = products.map((p) => ({ ...p, name: p.name.toUpperCase() }))
 ```
-

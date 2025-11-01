@@ -16,12 +16,15 @@ Sin manejo correcto del overflow:
 
 ```tsx
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-
-<Card className="overflow-hidden">  {/* ← Contiene el overflow */}
+;<Card className="overflow-hidden">
+  {' '}
+  {/* ← Contiene el overflow */}
   <CardHeader>
     <CardTitle>Título del Contenido</CardTitle>
   </CardHeader>
-  <CardContent className="overflow-x-auto">  {/* ← Permite scroll interno */}
+  <CardContent className="overflow-x-auto">
+    {' '}
+    {/* ← Permite scroll interno */}
     {/* Tu contenido wide aquí: DataTable, imagen, code block, etc. */}
   </CardContent>
 </Card>

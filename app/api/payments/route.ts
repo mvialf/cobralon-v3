@@ -321,7 +321,10 @@ export const POST = withLogging(async (request, logger) => {
     // Verificar que todos los proyectos tienen la misma moneda
     const allSameCurrency = projects.every((p) => p.currency === currency)
     if (!allSameCurrency) {
-      paymentLogger.warn({ expected: currency, found: projects.map((p) => p.currency) }, 'Currency mismatch')
+      paymentLogger.warn(
+        { expected: currency, found: projects.map((p) => p.currency) },
+        'Currency mismatch'
+      )
       return NextResponse.json(
         { error: 'Todos los proyectos deben tener la misma moneda que el pago' },
         { status: 400 }

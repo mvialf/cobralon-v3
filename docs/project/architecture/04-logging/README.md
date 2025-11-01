@@ -7,12 +7,14 @@ Sistema de logging basado en **Pino 9.7.0** para debugging eficiente, auditoría
 ## ⚡ Quick Overview
 
 **¿Por qué Pino?**
+
 - ✅ **10x más rápido** que Winston/Bunyan (~30ns per log)
 - ✅ **Bundle size mínimo** (~10KB)
 - ✅ **Zero blocking I/O** (ideal para serverless/Vercel)
 - ✅ **Structured JSON** (parseable, queryable)
 
 **Features principales:**
+
 - Request correlation (requestId UUID v4)
 - Child loggers con contexto de negocio
 - Automatic sensitive data redaction
@@ -38,6 +40,7 @@ API Routes (Next.js)
 ### 2. [Logger Singleton](logger-singleton.md)
 
 Configuración centralizada de Pino:
+
 - Level por ambiente
 - Pretty-print vs JSON
 - Redaction de campos sensibles
@@ -45,6 +48,7 @@ Configuración centralizada de Pino:
 ### 3. [Middleware Pattern](middleware-pattern.md)
 
 `withLogging()` wrapper para APIs:
+
 - Request correlation automática
 - Duration tracking
 - Error handling
@@ -61,6 +65,7 @@ Configuración centralizada de Pino:
 ### 5. [Patrones de Uso](usage-patterns.md)
 
 Ejemplos prácticos:
+
 - API route con child logger
 - Cron job tracking
 - Error handling
@@ -68,18 +73,21 @@ Ejemplos prácticos:
 ### 6. [Output Examples](output-examples.md)
 
 Comparativa de outputs:
+
 - Development: pino-pretty (colored, readable)
 - Production: JSON (Vercel-compatible)
 
 ### 7. [Data Redaction](data-redaction.md)
 
 Protección automática de campos sensibles:
+
 - `password`, `token`, `apiKey`
 - `creditCard`, `ssn`, etc.
 
 ### 8. [Performance](performance.md)
 
 Benchmarks vs alternativas:
+
 - Pino: **303ms** para 10,000 logs
 - Winston: 2,994ms (10x más lento)
 - Bunyan: 2,497ms (8x más lento)
@@ -103,7 +111,7 @@ logger.error({ err }, 'Operation failed')
 ```typescript
 const paymentLogger = logger.child({
   customerId: 'abc',
-  amount: 1500000
+  amount: 1500000,
 })
 
 paymentLogger.info('Payment creation requested')

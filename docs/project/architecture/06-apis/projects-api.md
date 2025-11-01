@@ -22,14 +22,14 @@ Listar proyectos con paginación, filtros y datos relacionados.
 
 ### Query Parameters
 
-| Parámetro         | Tipo   | Default | Descripción                       |
-| ----------------- | ------ | ------- | --------------------------------- |
-| `page`            | number | 1       | Número de página                  |
-| `limit`           | number | 20      | Items por página (max: 100)       |
-| `customerId`      | UUID   | -       | Filtrar por cliente               |
-| `projectStatusId` | UUID   | -       | Filtrar por estado                |
-| `startDate`       | string | -       | Fecha inicio (ISO 8601)           |
-| `endDate`         | string | -       | Fecha fin (ISO 8601)              |
+| Parámetro         | Tipo   | Default | Descripción                 |
+| ----------------- | ------ | ------- | --------------------------- |
+| `page`            | number | 1       | Número de página            |
+| `limit`           | number | 20      | Items por página (max: 100) |
+| `customerId`      | UUID   | -       | Filtrar por cliente         |
+| `projectStatusId` | UUID   | -       | Filtrar por estado          |
+| `startDate`       | string | -       | Fecha inicio (ISO 8601)     |
+| `endDate`         | string | -       | Fecha fin (ISO 8601)        |
 
 ### Request Example
 
@@ -63,12 +63,12 @@ GET /api/projects?page=1&limit=20&customerId=uuid-123&startDate=2025-01-01
         }
       },
       "date": "2025-01-15T00:00:00Z",
-      "subtotal": 1500000.00,
-      "taxRate": 19.00,
-      "total": 1785000.00,
+      "subtotal": 1500000.0,
+      "taxRate": 19.0,
+      "total": 1785000.0,
       "currency": "CLP",
       "windowsCount": 4,
-      "squareMeters": 12.50,
+      "squareMeters": 12.5,
       "street": "Av. Providencia 1234",
       "apartment": "Depto 401",
       "comuna": "Providencia",
@@ -76,10 +76,10 @@ GET /api/projects?page=1&limit=20&customerId=uuid-123&startDate=2025-01-01
       "phone": "+56912345678",
       "paymentAllocations": [
         {
-          "allocatedAmount": 500000.00
+          "allocatedAmount": 500000.0
         }
       ],
-      "balance": 1285000.00,  // Calculado: total - SUM(allocations)
+      "balance": 1285000.0, // Calculado: total - SUM(allocations)
       "createdAt": "2025-01-15T10:30:00Z",
       "updatedAt": "2025-01-15T10:30:00Z"
     }
@@ -107,10 +107,7 @@ export const GET = withLogging(async (request, logger) => {
   const startDate = searchParams.get('startDate')
   const endDate = searchParams.get('endDate')
 
-  logger.info(
-    { page, limit, customerId, projectStatusId, startDate, endDate },
-    'Listing projects'
-  )
+  logger.info({ page, limit, customerId, projectStatusId, startDate, endDate }, 'Listing projects')
 
   // Build filters
   const where: any = {}
@@ -126,10 +123,10 @@ export const GET = withLogging(async (request, logger) => {
   const [projects, total] = await Promise.all([
     prisma.project.findMany({
       where,
-      relationLoadStrategy: 'join',  // ← Fix N+1
+      relationLoadStrategy: 'join', // ← Fix N+1
       include: {
         customer: {
-          select: { id: true, name: true, phone: true }
+          select: { id: true, name: true, phone: true },
         },
         projectStatus: {
           select: {
@@ -137,23 +134,23 @@ export const GET = withLogging(async (request, logger) => {
             name: true,
             order: true,
             color: {
-              select: { bgClass: true, textClass: true }
-            }
-          }
+              select: { bgClass: true, textClass: true },
+            },
+          },
         },
         paymentAllocations: {
-          select: { allocatedAmount: true }
-        }
+          select: { allocatedAmount: true },
+        },
       },
       orderBy: { date: 'desc' },
       skip: (page - 1) * limit,
-      take: limit
+      take: limit,
     }),
-    prisma.project.count({ where })
+    prisma.project.count({ where }),
   ])
 
   // Calcular balance para cada proyecto
-  const projectsWithBalance = projects.map(project => {
+  const projectsWithBalance = projects.map((project) => {
     const totalPaid = project.paymentAllocations.reduce(
       (sum, allocation) => sum + Number(allocation.allocatedAmount),
       0
@@ -162,7 +159,7 @@ export const GET = withLogging(async (request, logger) => {
 
     return {
       ...project,
-      balance
+      balance,
     }
   })
 
@@ -174,8 +171,8 @@ export const GET = withLogging(async (request, logger) => {
       page,
       limit,
       total,
-      totalPages: Math.ceil(total / limit)
-    }
+      totalPages: Math.ceil(total / limit),
+    },
   })
 })
 ```
@@ -194,11 +191,11 @@ Crear nuevo proyecto.
   "customerId": "uuid-123",
   "projectStatusId": "uuid-status-1",
   "date": "2025-01-15T00:00:00Z",
-  "subtotal": 1500000.00,
-  "taxRate": 19.00,
+  "subtotal": 1500000.0,
+  "taxRate": 19.0,
   "currency": "CLP",
   "windowsCount": 4,
-  "squareMeters": 12.50,
+  "squareMeters": 12.5,
   "street": "Av. Providencia 1234",
   "apartment": "Depto 401",
   "comuna": "Providencia",
@@ -214,20 +211,20 @@ Crear nuevo proyecto.
 // lib/validations/project-validations.ts
 export const projectFormSchema = z.object({
   projectName: z.string().optional(),
-  customerId: z.string().min(1, "Cliente es requerido"),
-  projectStatusId: z.string().min(1, "Estado es requerido"),
+  customerId: z.string().min(1, 'Cliente es requerido'),
+  projectStatusId: z.string().min(1, 'Estado es requerido'),
   date: z.coerce.date(),
-  subtotal: z.number().positive("Subtotal debe ser mayor a 0"),
+  subtotal: z.number().positive('Subtotal debe ser mayor a 0'),
   taxRate: z.number().min(0).max(100).default(19),
-  currency: z.string().default("CLP"),
+  currency: z.string().default('CLP'),
   windowsCount: z.number().int().min(0),
   squareMeters: z.number().positive(),
-  street: z.string().min(1, "Calle es requerida"),
+  street: z.string().min(1, 'Calle es requerida'),
   apartment: z.string().optional(),
-  comuna: z.string().min(1, "Comuna es requerida"),
-  region: z.string().min(1, "Región es requerida"),
-  phone: z.string().min(1, "Teléfono es requerido"),
-  description: z.string().optional()
+  comuna: z.string().min(1, 'Comuna es requerida'),
+  region: z.string().min(1, 'Región es requerida'),
+  phone: z.string().min(1, 'Teléfono es requerido'),
+  description: z.string().optional(),
 })
 ```
 
@@ -236,7 +233,7 @@ export const projectFormSchema = z.object({
 ```json
 {
   "id": "uuid-proj-1",
-  "projectNumber": "P 0001-2025",  // Auto-generado
+  "projectNumber": "P 0001-2025", // Auto-generado
   "projectName": "Instalación Ventanas Depto 401",
   "customerId": "uuid-123",
   "customer": {
@@ -254,10 +251,10 @@ export const projectFormSchema = z.object({
     }
   },
   "date": "2025-01-15T00:00:00Z",
-  "subtotal": 1500000.00,
-  "taxRate": 19.00,
-  "total": 1785000.00,  // Auto-calculado: subtotal * (1 + taxRate/100)
-  "totalAmount": 1785000.00,
+  "subtotal": 1500000.0,
+  "taxRate": 19.0,
+  "total": 1785000.0, // Auto-calculado: subtotal * (1 + taxRate/100)
+  "totalAmount": 1785000.0,
   "currency": "CLP",
   // ... resto de campos
   "createdAt": "2025-01-15T10:30:00Z",
@@ -286,17 +283,17 @@ export const POST = withLogging(async (request, logger) => {
       data: {
         projectNumber,
         total,
-        totalAmount: total,  // Redundante por razones legacy
-        ...validatedData
+        totalAmount: total, // Redundante por razones legacy
+        ...validatedData,
       },
       include: {
         customer: {
-          select: { id: true, name: true, phone: true }
+          select: { id: true, name: true, phone: true },
         },
         projectStatus: {
-          include: { color: true }
-        }
-      }
+          include: { color: true },
+        },
+      },
     })
 
     logger.info({ projectId: project.id, projectNumber }, 'Project created')
@@ -328,14 +325,14 @@ export async function generateProjectNumber(): Promise<string> {
   const count = await prisma.project.count({
     where: {
       projectNumber: {
-        contains: `-${currentYear}`
-      }
-    }
+        contains: `-${currentYear}`,
+      },
+    },
   })
 
   const sequence = (count + 1).toString().padStart(4, '0')
 
-  return `P ${sequence}-${currentYear}`  // "P 0001-2025"
+  return `P ${sequence}-${currentYear}` // "P 0001-2025"
 }
 ```
 
@@ -366,24 +363,24 @@ Obtener detalle de proyecto con todas las allocations.
     }
   },
   "date": "2025-01-15T00:00:00Z",
-  "subtotal": 1500000.00,
-  "taxRate": 19.00,
-  "total": 1785000.00,
+  "subtotal": 1500000.0,
+  "taxRate": 19.0,
+  "total": 1785000.0,
   "currency": "CLP",
   "paymentAllocations": [
     {
       "id": "uuid-alloc-1",
       "paymentId": "uuid-pay-1",
-      "allocatedAmount": 500000.00,
+      "allocatedAmount": 500000.0,
       "payment": {
         "id": "uuid-pay-1",
-        "amount": 500000.00,
+        "amount": 500000.0,
         "date": "2025-01-16T00:00:00Z",
         "reference": "TRF-001"
       }
     }
   ],
-  "balance": 1285000.00
+  "balance": 1285000.0
 }
 ```
 
@@ -401,7 +398,7 @@ export const GET = withLogging(async (request, logger, context) => {
     relationLoadStrategy: 'join',
     include: {
       customer: {
-        select: { id: true, name: true, phone: true }
+        select: { id: true, name: true, phone: true },
       },
       projectStatus: {
         select: {
@@ -409,9 +406,9 @@ export const GET = withLogging(async (request, logger, context) => {
           name: true,
           order: true,
           color: {
-            select: { bgClass: true, textClass: true }
-          }
-        }
+            select: { bgClass: true, textClass: true },
+          },
+        },
       },
       paymentAllocations: {
         select: {
@@ -423,21 +420,18 @@ export const GET = withLogging(async (request, logger, context) => {
               id: true,
               amount: true,
               date: true,
-              reference: true
-            }
-          }
+              reference: true,
+            },
+          },
         },
-        orderBy: { payment: { date: 'desc' } }
-      }
-    }
+        orderBy: { payment: { date: 'desc' } },
+      },
+    },
   })
 
   if (!project) {
     logger.warn({ projectId: id }, 'Project not found')
-    return NextResponse.json(
-      { error: 'Project not found' },
-      { status: 404 }
-    )
+    return NextResponse.json({ error: 'Project not found' }, { status: 404 })
   }
 
   // Calcular balance
@@ -451,7 +445,7 @@ export const GET = withLogging(async (request, logger, context) => {
 
   return NextResponse.json({
     ...project,
-    balance
+    balance,
   })
 })
 ```
@@ -490,12 +484,12 @@ export const PUT = withLogging(async (request, logger, context) => {
       data: {
         total,
         totalAmount: total,
-        ...validatedData
+        ...validatedData,
       },
       include: {
         customer: true,
-        projectStatus: { include: { color: true } }
-      }
+        projectStatus: { include: { color: true } },
+      },
     })
 
     logger.info({ projectId: id }, 'Project updated')
@@ -512,10 +506,7 @@ export const PUT = withLogging(async (request, logger, context) => {
 
     if (error.code === 'P2025') {
       logger.warn({ projectId: id }, 'Project not found')
-      return NextResponse.json(
-        { error: 'Project not found' },
-        { status: 404 }
-      )
+      return NextResponse.json({ error: 'Project not found' }, { status: 404 })
     }
 
     logger.error({ err: error }, 'Failed to update project')
@@ -549,22 +540,19 @@ export const DELETE = withLogging(async (request, logger, context) => {
 
   try {
     await prisma.project.delete({
-      where: { id }
+      where: { id },
     })
 
     logger.info({ projectId: id }, 'Project deleted')
 
     return NextResponse.json({
       success: true,
-      message: 'Project deleted successfully'
+      message: 'Project deleted successfully',
     })
   } catch (error) {
     if (error.code === 'P2025') {
       logger.warn({ projectId: id }, 'Project not found')
-      return NextResponse.json(
-        { error: 'Project not found' },
-        { status: 404 }
-      )
+      return NextResponse.json({ error: 'Project not found' }, { status: 404 })
     }
 
     logger.error({ err: error }, 'Failed to delete project')
@@ -586,8 +574,8 @@ Previene N+1 query problem:
 const projects = await prisma.project.findMany({
   include: {
     customer: true,
-    projectStatus: { include: { color: true } }
-  }
+    projectStatus: { include: { color: true } },
+  },
 })
 // Query 1: SELECT * FROM projects
 // Query 2: SELECT * FROM customers WHERE id IN (...)
@@ -595,11 +583,11 @@ const projects = await prisma.project.findMany({
 
 // ✅ CON optimization (1 query)
 const projects = await prisma.project.findMany({
-  relationLoadStrategy: 'join',  // ← Single JOIN query
+  relationLoadStrategy: 'join', // ← Single JOIN query
   include: {
     customer: true,
-    projectStatus: { include: { color: true } }
-  }
+    projectStatus: { include: { color: true } },
+  },
 })
 ```
 

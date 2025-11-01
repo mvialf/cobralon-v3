@@ -17,9 +17,10 @@ No extraigas código "por si acaso". Extrae cuando:
 ### ✅ SÍ extraer cuando:
 
 - **Lógica es >10 líneas**
+
   ```typescript
   // Si esto crece a 10+ líneas → extrae
-  const enriched = products.map(p => ({
+  const enriched = products.map((p) => ({
     ...p,
     displayName: `${p.name} (${p.category.name})`,
     priceFormatted: formatCurrency(p.price),
@@ -32,12 +33,14 @@ No extraigas código "por si acaso". Extrae cuando:
   ```
 
 - **Se usa en 2+ lugares**
+
   ```typescript
   // ❌ Duplicado en ProductsPage Y ProductDetailsPage
-  const formatted = products.map(p => ({ ...p, price: `$${p.price}` }))
+  const formatted = products.map((p) => ({ ...p, price: `$${p.price}` }))
   ```
 
 - **Es transformación pura** (input → output, sin side effects)
+
   ```typescript
   // ✅ Pure function - perfecto para extraer
   function enrichProducts(products) {
@@ -56,13 +59,15 @@ No extraigas código "por si acaso". Extrae cuando:
 ### ❌ NO extraigas cuando:
 
 - **Simple map/filter (<5 líneas)**
+
   ```typescript
   // ✅ Keep inline - demasiado simple para extraer
-  const active = users.filter(u => u.active)
-  const names = users.map(u => u.name.toUpperCase())
+  const active = users.filter((u) => u.active)
+  const names = users.map((u) => u.name.toUpperCase())
   ```
 
 - **Se usa solo 1 vez**
+
   ```typescript
   // ✅ Keep inline - no hay reuso
   const displayName = `${user.firstName} ${user.lastName}`
@@ -170,6 +175,7 @@ export function ProductCard({ product }) {
 **Estado:** ✅ **Mucho mejor!**
 
 **Beneficios:**
+
 - Componente limpio (1 línea)
 - Lógica testeable (pure function)
 - Reutilizable (otros componentes pueden usarlo)
@@ -206,6 +212,7 @@ test('should calculate profit', () => {
 ```
 
 **Beneficios:**
+
 - ✅ Sin mocks
 - ✅ Sin renderizar componentes
 - ✅ Tests rápidos (<1ms)
@@ -250,7 +257,7 @@ export function enrichProduct(product) {
 
   return {
     ...product,
-    formatted: formatPrice(product.price)
+    formatted: formatPrice(product.price),
   }
 }
 ```
@@ -262,7 +269,7 @@ export function enrichProduct(product) {
 export function enrichProduct(product) {
   return {
     ...product,
-    formatted: formatPrice(product.price)
+    formatted: formatPrice(product.price),
   }
 }
 ```

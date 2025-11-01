@@ -45,12 +45,9 @@ Necesitábamos una solución de styling con buen DX, theming light/dark robusto,
 
 ```tsx
 import { cn } from '@/lib/utils'
-
-<div className={cn(
-  'rounded-lg p-4',
-  isActive && 'bg-primary text-primary-foreground',
-  className
-)} />
+;<div
+  className={cn('rounded-lg p-4', isActive && 'bg-primary text-primary-foreground', className)}
+/>
 ```
 
 **Theming (light/dark mode):**

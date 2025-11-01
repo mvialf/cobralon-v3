@@ -28,6 +28,7 @@ Sistema actualiza Combobox en ProjectForm en tiempo real
 **API:** `POST /api/project-status`
 
 **Body:**
+
 ```typescript
 {
   name: "En Instalación",
@@ -39,6 +40,7 @@ Sistema actualiza Combobox en ProjectForm en tiempo real
 ```
 
 **Validaciones:**
+
 - name: único
 - colorId: debe existir
 - Solo un estado puede ser isInitial
@@ -50,16 +52,17 @@ Sistema actualiza Combobox en ProjectForm en tiempo real
 **API:** `GET /api/project-status`
 
 **Response:**
+
 ```typescript
-[
+;[
   {
-    id: "uuid",
-    name: "Presupuesto",
+    id: 'uuid',
+    name: 'Presupuesto',
     order: 1,
-    color: { name: "Azul", bgClass: "bg-blue-500", textClass: "text-white" },
+    color: { name: 'Azul', bgClass: 'bg-blue-500', textClass: 'text-white' },
     isInitial: true,
     isFinal: false,
-    isActive: true
+    isActive: true,
   },
   // ... más estados ordenados por "order"
 ]
@@ -80,9 +83,10 @@ Sistema actualiza Combobox en ProjectForm en tiempo real
 **API:** `DELETE /api/project-status/[id]`
 
 **Validación:**
+
 ```typescript
 const projectsUsingStatus = await prisma.project.count({
-  where: { projectStatusId: id }
+  where: { projectStatusId: id },
 })
 
 if (projectsUsingStatus > 0) {
@@ -102,23 +106,25 @@ if (projectsUsingStatus > 0) {
 **API:** `POST /api/project-status/reorder`
 
 **Body:**
+
 ```typescript
 {
   updates: [
-    { id: "uuid-1", order: 1 },
-    { id: "uuid-2", order: 2 },
-    { id: "uuid-3", order: 3 }
+    { id: 'uuid-1', order: 1 },
+    { id: 'uuid-2', order: 2 },
+    { id: 'uuid-3', order: 3 },
   ]
 }
 ```
 
 **Implementación:**
+
 ```typescript
 await prisma.$transaction(
   updates.map(({ id, order }) =>
     prisma.projectStatus.update({
       where: { id },
-      data: { order }
+      data: { order },
     })
   )
 )

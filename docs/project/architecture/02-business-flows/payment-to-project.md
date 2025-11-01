@@ -240,10 +240,7 @@ if (type === 'Project' && allocations.length !== 1) {
 
 ```typescript
 // ✅ La suma de allocations debe igualar el monto del pago
-const totalAllocated = allocations.reduce(
-  (sum, a) => sum + a.allocatedAmount,
-  0
-)
+const totalAllocated = allocations.reduce((sum, a) => sum + a.allocatedAmount, 0)
 
 const tolerance = 0.01 // Tolerancia para errores de redondeo
 
@@ -267,24 +264,15 @@ const project = await prisma.project.findUnique({
 })
 
 if (!project) {
-  return NextResponse.json(
-    { error: 'Proyecto no encontrado' },
-    { status: 404 }
-  )
+  return NextResponse.json({ error: 'Proyecto no encontrado' }, { status: 404 })
 }
 
 if (project.customerId !== customerId) {
-  return NextResponse.json(
-    { error: 'El proyecto no pertenece a este cliente' },
-    { status: 400 }
-  )
+  return NextResponse.json({ error: 'El proyecto no pertenece a este cliente' }, { status: 400 })
 }
 
 if (project.currency !== currency) {
-  return NextResponse.json(
-    { error: 'La moneda no coincide con la del proyecto' },
-    { status: 400 }
-  )
+  return NextResponse.json({ error: 'La moneda no coincide con la del proyecto' }, { status: 400 })
 }
 ```
 
@@ -417,6 +405,7 @@ export function calculateProjectBalance(project: ProjectWithAllocations): number
 ```
 
 **Ejemplo:**
+
 ```
 Total: $1,190,000
 Allocations previas: $500,000
@@ -467,9 +456,7 @@ Balance actualizado: $190,000 ✅
 // Si amount === balance
 const payment = {
   amount: 690000,
-  allocations: [
-    { projectId: 'project-uuid', allocatedAmount: 690000 }
-  ]
+  allocations: [{ projectId: 'project-uuid', allocatedAmount: 690000 }],
 }
 
 // Resultado:
@@ -483,9 +470,7 @@ const payment = {
 // Si amount < balance
 const payment = {
   amount: 200000,
-  allocations: [
-    { projectId: 'project-uuid', allocatedAmount: 200000 }
-  ]
+  allocations: [{ projectId: 'project-uuid', allocatedAmount: 200000 }],
 }
 
 // Resultado:
@@ -500,9 +485,7 @@ const payment = {
 const payment = {
   amount: 600000,
   selectedInstallments: 3,
-  allocations: [
-    { projectId: 'project-uuid', allocatedAmount: 600000 }
-  ]
+  allocations: [{ projectId: 'project-uuid', allocatedAmount: 600000 }],
 }
 
 // Sistema crea automáticamente:

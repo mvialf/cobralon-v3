@@ -31,30 +31,38 @@ Ver [template-slim.md](template-slim.md) para el template completo.
 # ADR-XXX: Título
 
 ## Estado
+
 **Aceptado** | **Fecha:** YYYY-MM-DD
 
 ## Decisión
+
 ¿Qué decidimos? (1-2 líneas)
 
 ## Contexto
+
 ¿Por qué? Contexto breve (2-3 líneas)
 
 ## Alternativa Principal (opcional)
+
 **[Nombre]:** Breve descripción + por qué NO (2-3 líneas MAX)
 
 ## Consecuencias
 
 ### Positivas ✅
+
 - Beneficio 1 (cuantificado si es posible)
 - Beneficio 2
 
 ### Negativas ⚠️
+
 **Trade-off:** Descripción + mitigación (2-3 líneas)
 
 ## Quick Start
+
 Código/ejemplos prácticos de cómo usar esto
 
 ## Referencias
+
 - [Docs oficiales](url)
 ```
 
@@ -64,18 +72,18 @@ Código/ejemplos prácticos de cómo usar esto
 
 ## ADRs de Este Template
 
-| ADR                                         | Título                                | Líneas | Tipo      | Estado   |
-| ------------------------------------------- | ------------------------------------- | ------ | --------- | -------- |
-| [001](001-nextjs-15-app-router.md)          | Next.js 15 + App Router               | 80     | Slim ⚡   | Aceptado |
-| [002](002-tailwind-css-v4.md)               | Tailwind CSS v4                       | 87     | Slim ⚡   | Aceptado |
-| [003](003-shadcn-ui-new-york.md)            | shadcn/ui New York Style              | 95     | Slim ⚡   | Aceptado |
-| [004](004-layout-system-dos-capas.md)       | Sistema de Layout 2 Capas             | 97     | Slim ⚡   | Aceptado |
-| [005](005-vitest-testing-library.md)        | Vitest + Testing Library              | 117    | Slim ⚡   | Aceptado |
-| [007](007-eslint-prettier.md)               | ESLint 9 + Prettier                   | 110    | Slim ⚡   | Aceptado |
-| [008](008-prisma-neon.md)                   | Prisma + Neon PostgreSQL              | 98     | Slim ⚡   | Aceptado |
-| [009](009-authentication-options.md)        | No Incluir Auth por Defecto (+ Guía)  | 515    | Extenso 📚| Aceptado |
-| [010](010-playwright-mcp.md)                | Playwright MCP + @playwright/test     | 117    | Slim ⚡   | Aceptado |
-| [011](011-capture-dialog-pattern.md)        | Capture Dialog Pattern (Experimental) | 154    | Slim ⚡   | Aceptado |
+| ADR                                   | Título                                | Líneas | Tipo       | Estado   |
+| ------------------------------------- | ------------------------------------- | ------ | ---------- | -------- |
+| [001](001-nextjs-15-app-router.md)    | Next.js 15 + App Router               | 80     | Slim ⚡    | Aceptado |
+| [002](002-tailwind-css-v4.md)         | Tailwind CSS v4                       | 87     | Slim ⚡    | Aceptado |
+| [003](003-shadcn-ui-new-york.md)      | shadcn/ui New York Style              | 95     | Slim ⚡    | Aceptado |
+| [004](004-layout-system-dos-capas.md) | Sistema de Layout 2 Capas             | 97     | Slim ⚡    | Aceptado |
+| [005](005-vitest-testing-library.md)  | Vitest + Testing Library              | 117    | Slim ⚡    | Aceptado |
+| [007](007-eslint-prettier.md)         | ESLint 9 + Prettier                   | 110    | Slim ⚡    | Aceptado |
+| [008](008-prisma-neon.md)             | Prisma + Neon PostgreSQL              | 98     | Slim ⚡    | Aceptado |
+| [009](009-authentication-options.md)  | No Incluir Auth por Defecto (+ Guía)  | 515    | Extenso 📚 | Aceptado |
+| [010](010-playwright-mcp.md)          | Playwright MCP + @playwright/test     | 117    | Slim ⚡    | Aceptado |
+| [011](011-capture-dialog-pattern.md)  | Capture Dialog Pattern (Experimental) | 154    | Slim ⚡    | Aceptado |
 
 **Promedio ADRs Slim:** 106 líneas | **Rango objetivo:** 50-120 líneas
 

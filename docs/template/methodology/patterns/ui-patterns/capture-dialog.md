@@ -20,8 +20,7 @@ Perfecto para diálogos que muestran información que usuarios necesitan compart
 
 ```tsx
 import { CaptureDialog } from '@/components/custom/capture-dialog'
-
-<CaptureDialog open={open} onOpenChange={setOpen} title="Estado de Cuenta">
+;<CaptureDialog open={open} onOpenChange={setOpen} title="Estado de Cuenta">
   <div className="bg-capture-bg text-capture-foreground p-6">
     <h2 className="text-xl font-bold">Proyecto: P 0001-2025</h2>
     <p>Cliente: Acme Corp</p>
@@ -183,7 +182,8 @@ export function ProjectSummaryDialog({
       open={open}
       onOpenChange={onOpenChange}
       title="Resumen de Proyecto"
-      getFallbackText={() => `
+      getFallbackText={() =>
+        `
 RESUMEN DE PROYECTO
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 Proyecto: ${project.projectNumber}
@@ -197,7 +197,8 @@ Saldo Pendiente: ${formatCurrency(project.balance)}
 
 Estado: ${project.status}
 Fecha: ${new Date(project.date).toLocaleDateString('es-CL')}
-      `.trim()}
+      `.trim()
+      }
     >
       <div className="bg-capture-bg text-capture-foreground p-6 space-y-4">
         <div className="border-b border-capture-border pb-4">

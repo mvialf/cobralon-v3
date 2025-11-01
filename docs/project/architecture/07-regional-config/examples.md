@@ -182,6 +182,7 @@ export default function RegionalSettingsPage() {
 ```
 
 **Resultado:**
+
 - Usuario cambia país → `currency` y `locale` se actualizan automáticamente
 - Regiones/ciudades/comunas se filtran según país seleccionado
 - Cambios persisten en localStorage
@@ -307,11 +308,11 @@ export function CustomerForm() {
 
 **Comportamiento por País:**
 
-| País | Documento      | Prefijo Teléfono | Moneda |
-| ---- | -------------- | ---------------- | ------ |
-| CL   | RutInput       | +56              | $ CLP  |
-| AR   | Input (CUIT)   | +54              | $ ARS  |
-| MX   | Input (RFC)    | +52              | $ MXN  |
+| País | Documento    | Prefijo Teléfono | Moneda |
+| ---- | ------------ | ---------------- | ------ |
+| CL   | RutInput     | +56              | $ CLP  |
+| AR   | Input (CUIT) | +54              | $ ARS  |
+| MX   | Input (RFC)  | +52              | $ MXN  |
 
 ---
 
@@ -383,12 +384,12 @@ export default function DashboardPage() {
 
 **Resultado:**
 
-| País | Ingresos del Mes      |
-| ---- | --------------------- |
-| CL   | `$ 12.500.000`        |
-| AR   | `$ 12.500.000,00`     |
-| MX   | `$ 12,500,000.00`     |
-| US   | `$ 12,500,000.00`     |
+| País | Ingresos del Mes  |
+| ---- | ----------------- |
+| CL   | `$ 12.500.000`    |
+| AR   | `$ 12.500.000,00` |
+| MX   | `$ 12,500,000.00` |
+| US   | `$ 12,500,000.00` |
 
 ---
 
@@ -554,6 +555,7 @@ export function CustomerForm() {
 ```
 
 **Resultado:**
+
 - Si `pais = "CL"` → Valida RUT con algoritmo Módulo 11
 - Si `pais = "AR"` → Valida formato CUIT/CUIL
 - Si `pais = "MX"` → Valida formato RFC
@@ -625,6 +627,7 @@ const effectiveConfig = {
 **Implementación:**
 
 1. Agregar modelo `Organization` en Prisma:
+
    ```prisma
    model Organization {
      id       String @id @default(uuid())
@@ -637,6 +640,7 @@ const effectiveConfig = {
    ```
 
 2. Fetch config de org al cargar app:
+
    ```typescript
    useEffect(() => {
      fetch(`/api/organizations/${orgId}/config`)

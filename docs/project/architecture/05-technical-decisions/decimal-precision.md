@@ -7,6 +7,7 @@ Tipo `Decimal` de Prisma con precisión 12,2 para todos los montos financieros.
 ## Contexto
 
 Necesitábamos un tipo de dato para montos que:
+
 - Sea exacto (sin errores de redondeo)
 - Soporte múltiples monedas (CLP, USD, EUR)
 - Sea suficiente para proyectos de construcción
@@ -41,16 +42,19 @@ amount Float
 ```
 
 **Pros:**
+
 - ✅ Nativo en todos los lenguajes
 - ✅ Rápido en operaciones
 
 **Contras:**
+
 - ❌ **Errores de redondeo** (0.1 + 0.2 ≠ 0.3)
 - ❌ Problemas en operaciones financieras
 
 **Por qué NO:** Inaceptable en finanzas.
 
 **Ejemplo del problema:**
+
 ```javascript
 0.1 + 0.2 // 0.30000000000000004 ❌
 ```
@@ -64,10 +68,12 @@ amountCents Int // Monto en centavos
 ```
 
 **Pros:**
+
 - ✅ Exacto (sin decimales)
 - ✅ Rápido en operaciones
 
 **Contras:**
+
 - ❌ **Complicado formateo** (dividir/100 siempre)
 - ❌ Validaciones más complejas
 - ❌ Menos legible en DB
@@ -84,15 +90,16 @@ Sin errores de punto flotante:
 
 ```typescript
 // Decimal (exacto)
-1000.10 + 500.20 === 1500.30 // ✅ Siempre correcto
+1000.1 + 500.2 === 1500.3 // ✅ Siempre correcto
 
 // Float (inexacto)
-1000.10 + 500.20 === 1500.2999999999999 // ❌ Error
+1000.1 + 500.2 === 1500.2999999999999 // ❌ Error
 ```
 
 ### 2. ✅ Standard Financiero
 
 2 decimales suficiente para:
+
 - **CLP** (pesos chilenos) - Normalmente sin decimales
 - **USD** (dólares) - 2 decimales
 - **EUR** (euros) - 2 decimales
@@ -102,6 +109,7 @@ Sin errores de punto flotante:
 12 dígitos = hasta **$999,999,999,999.99**
 
 Para proyectos de construcción en Chile:
+
 - Proyecto pequeño: $1,000,000 CLP
 - Proyecto grande: $500,000,000 CLP
 - Mega proyecto: $10,000,000,000 CLP ✅ Dentro del rango
@@ -139,7 +147,8 @@ export const FINANCIAL = {
 ```typescript
 import { FINANCIAL } from '@/lib/constants'
 
-const amountSchema = z.number()
+const amountSchema = z
+  .number()
   .min(FINANCIAL.MIN_AMOUNT)
   .max(FINANCIAL.MAX_AMOUNT)
   .refine(

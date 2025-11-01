@@ -7,6 +7,7 @@ Usar **Vitest 3.2.4** como test runner + **React Testing Library 16.3.0** para t
 ## Contexto
 
 Necesitábamos un framework de testing para unit e integration tests que fuera:
+
 - **Rápido:** Fast feedback loop en desarrollo
 - **Compatible:** Con Next.js 15 + App Router y TypeScript
 - **Moderno:** Bien mantenido y con features actuales
@@ -29,6 +30,7 @@ Necesitábamos un framework de testing para unit e integration tests que fuera:
 3. **API compatible con Jest:** Migración trivial. `jest.fn()` → `vi.fn()`, `jest.useFakeTimers()` → `vi.useFakeTimers()`.
 
 4. **DX superior:**
+
    ```bash
    npm test         # Run tests
    npm test:ui      # UI mode interactiva

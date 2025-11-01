@@ -23,7 +23,7 @@ if (selectedInstallments && selectedInstallments > 1) {
 
     // Última cuota absorbe centavos residuales
     const cuotaAmount = isLast
-      ? amount - (installmentAmount * (selectedInstallments - 1))
+      ? amount - installmentAmount * (selectedInstallments - 1)
       : installmentAmount
 
     installments.push({
@@ -37,8 +37,8 @@ if (selectedInstallments && selectedInstallments > 1) {
   await prisma.payment.create({
     data: {
       ...paymentData,
-      installments: { create: installments }
-    }
+      installments: { create: installments },
+    },
   })
 }
 ```
@@ -46,6 +46,7 @@ if (selectedInstallments && selectedInstallments > 1) {
 ### Ejemplo
 
 **Payment:**
+
 ```
 amount: $900,000
 selectedInstallments: 3
@@ -53,6 +54,7 @@ date: 2025-10-30
 ```
 
 **Installments creados:**
+
 ```
 Cuota 1: $300,000, vence: 2025-10-30, status: pending
 Cuota 2: $300,000, vence: 2025-11-29, status: pending
@@ -70,10 +72,12 @@ SUM = $900,000 ✅
 ```json
 // vercel.json
 {
-  "crons": [{
-    "path": "/api/cron/mark-installments-paid",
-    "schedule": "0 0 * * *"  // Diario a medianoche UTC
-  }]
+  "crons": [
+    {
+      "path": "/api/cron/mark-installments-paid",
+      "schedule": "0 0 * * *" // Diario a medianoche UTC
+    }
+  ]
 }
 ```
 
@@ -96,12 +100,12 @@ export async function POST(request: Request) {
   const result = await prisma.installment.updateMany({
     where: {
       status: 'pending',
-      dueDate: { lte: today }
+      dueDate: { lte: today },
     },
     data: {
       status: 'paid',
-      paidDate: today
-    }
+      paidDate: today,
+    },
   })
 
   logger.info({ updated: result.count }, 'Cron job completed')
@@ -113,11 +117,13 @@ export async function POST(request: Request) {
 ### Business Logic
 
 1. **Buscar cuotas pendientes vencidas:**
+
    ```sql
    WHERE status = 'pending' AND dueDate <= CURRENT_DATE
    ```
 
 2. **Batch update:**
+
    ```sql
    UPDATE installments
    SET status = 'paid', paidDate = NOW()

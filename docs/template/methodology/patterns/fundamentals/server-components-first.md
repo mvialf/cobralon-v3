@@ -52,7 +52,7 @@ export default async function ProductsPage() {
 
   return (
     <div>
-      {products.map(product => (
+      {products.map((product) => (
         <ProductCard key={product.id} product={product} />
       ))}
     </div>
@@ -72,9 +72,7 @@ export function ProductCard({ product }) {
   return (
     <div>
       <h3>{product.name}</h3>
-      <button onClick={() => setIsLiked(!isLiked)}>
-        {isLiked ? '❤️' : '🤍'}
-      </button>
+      <button onClick={() => setIsLiked(!isLiked)}>{isLiked ? '❤️' : '🤍'}</button>
     </div>
   )
 }
@@ -96,20 +94,17 @@ export default async function ProductsPage() {
 }
 
 // Client Component (hijo)
-'use client'
+;('use client')
 function ProductsList({ products }) {
   const [search, setSearch] = useState('')
-  const filtered = products.filter(p =>
-    p.name.toLowerCase().includes(search.toLowerCase())
-  )
+  const filtered = products.filter((p) => p.name.toLowerCase().includes(search.toLowerCase()))
 
   return (
     <>
-      <input
-        value={search}
-        onChange={e => setSearch(e.target.value)}
-      />
-      {filtered.map(product => <ProductCard key={product.id} product={product} />)}
+      <input value={search} onChange={(e) => setSearch(e.target.value)} />
+      {filtered.map((product) => (
+        <ProductCard key={product.id} product={product} />
+      ))}
     </>
   )
 }

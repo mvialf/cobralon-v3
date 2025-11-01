@@ -68,11 +68,13 @@ ejemplo.metodo()
 ## Guía de Uso de Este Template
 
 ### Longitud Objetivo
+
 - **Mínimo:** 40 líneas
 - **Óptimo:** 50-100 líneas
 - **Máximo:** 120 líneas (solo si absolutamente necesario)
 
 ### Secciones Obligatorias
+
 - ✅ Decisión
 - ✅ Contexto
 - ✅ Consecuencias (Beneficios + Trade-offs)
@@ -80,10 +82,12 @@ ejemplo.metodo()
 - ✅ Referencias
 
 ### Secciones Opcionales
+
 - 🟡 Alternativa Principal (solo si aporta contexto crítico)
 - 🟡 Implementación (si hay detalles técnicos específicos del template)
 
 ### Qué MANTENER
+
 - Información accionable
 - Código funcional copy-paste
 - Comandos específicos del template
@@ -91,6 +95,7 @@ ejemplo.metodo()
 - Referencias a docs actualizadas
 
 ### Qué ELIMINAR
+
 - Alternativas obvias o irrelevantes
 - Justificaciones extensas de "por qué NO"
 - Información duplicada de docs oficiales
@@ -98,6 +103,7 @@ ejemplo.metodo()
 - Más de 1-2 alternativas descartadas
 
 ### Estilo de Escritura
+
 - **Conciso y directo**
 - **Enfocado en el usuario del template**
 - **Responde: "¿Cómo me afecta esto?"**
@@ -106,12 +112,14 @@ ejemplo.metodo()
 ### Ejemplo de Buen Contenido
 
 ✅ **BUENO:**
+
 ```
 Trade-off: Bundle size mayor (~1-2MB)
 Mitigación: Para Edge Runtime usar `engineType = "client"`
 ```
 
 ❌ **MALO:**
+
 ```
 Comparado con Drizzle que es ~50% más ligero y usa SQL-like API
 que es más familiar para desarrolladores SQL, decidimos usar
@@ -134,10 +142,12 @@ Antes de marcar un ADR como completo, verificar:
 ---
 
 **Este template debe usarse para:**
+
 - ✅ ADRs nuevos desde cero
 - ✅ Refactorización de ADRs existentes (Tipo 1: "Ya decidido")
 
 **NO usar este template para:**
+
 - ❌ ADRs donde usuario debe elegir (usar template extendido)
 - ❌ Documentación de guías (usar docs/guides/)
 - ❌ Implementation logs (usar docs/project/implementation/)

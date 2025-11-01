@@ -13,11 +13,13 @@ Usar **Neon PostgreSQL** como database provider para Cobralon MVP y producción.
 Cobralon requiere database provider para PostgreSQL con:
 
 **Funcionales:**
+
 - PostgreSQL real con Foreign Keys obligatorias (integridad referencial crítica)
 - 10 tablas relacionales con relaciones N:M, CASCADE, RESTRICT
 - Decimal precision para montos financieros
 
 **No Funcionales:**
+
 - Free tier para MVP ($0/mes ideal)
 - Performance <100ms queries (500-5000 proyectos esperados)
 - Setup rápido (<30 min)
@@ -31,6 +33,7 @@ Cobralon requiere database provider para PostgreSQL con:
 **Supabase:** All-in-one (DB + Auth + Storage), UI bonita, free tier generoso (500MB).
 
 **Por qué NO:**
+
 1. **Vendor lock-in alto** - Empuja fuertemente a usar Supabase Auth (incompatible con ADR-009 del template: no auth por defecto)
 2. **Features innecesarias** - Storage/Realtime no needed para Cobralon MVP
 3. **No database branching** - Sin testing seguro de migrations
@@ -41,6 +44,7 @@ Cobralon requiere database provider para PostgreSQL con:
 ### Positivas ✅
 
 1. **Database Branching = Testing Seguro (killer feature)**
+
    ```bash
    # Workflow usado en Implementación #17 (indices compuestos)
    neon branches create --name test-add-index
@@ -105,6 +109,7 @@ DATABASE_URL=$BRANCH_URL npx prisma db push
 ```
 
 **Casos de uso reales en Cobralon:**
+
 - Implementación #17: Testing índices compuestos (97% performance improvement)
 - Probar `relationLoadStrategy: 'join'` (fix N+1 queries)
 - Feature branches para nuevos modelos Prisma

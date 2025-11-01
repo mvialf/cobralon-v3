@@ -16,9 +16,9 @@ const payment = await prisma.payment.create({
     amount: 50000,
     customerId: 'abc',
     allocations: {
-      create: [{ projectId: 'project-1', allocatedAmount: 50000 }]
-    }
-  }
+      create: [{ projectId: 'project-1', allocatedAmount: 50000 }],
+    },
+  },
 })
 
 // Caso avanzado: 1 pago → 3 proyectos
@@ -31,14 +31,15 @@ const payment = await prisma.payment.create({
       create: [
         { projectId: 'proj-1', allocatedAmount: 40000 },
         { projectId: 'proj-2', allocatedAmount: 35000 },
-        { projectId: 'proj-3', allocatedAmount: 25000 }
-      ]
-    }
-  }
+        { projectId: 'proj-3', allocatedAmount: 25000 },
+      ],
+    },
+  },
 })
 ```
 
 **Archivos clave:**
+
 - `prisma/schema.prisma` - Models: PaymentAllocation, Payment, Project
 - `lib/validations/payment-validations.ts` - Schemas Zod
 - `app/api/payments/route.ts` - Lógica de validación y creación

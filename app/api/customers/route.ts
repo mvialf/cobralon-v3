@@ -30,7 +30,6 @@ export const GET = withLogging(async (request, logger) => {
   const skip = (page - 1) * limit
 
   try {
-
     // Construir filtro de búsqueda
     const where = search
       ? {

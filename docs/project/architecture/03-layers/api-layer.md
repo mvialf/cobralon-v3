@@ -55,6 +55,7 @@ export const GET = withLogging(async (request, logger) => {
 ```
 
 **Beneficios:**
+
 - ✅ Request correlation automática (requestId)
 - ✅ Duration tracking
 - ✅ Logging estructurado con Pino
@@ -101,7 +102,7 @@ const skip = (page - 1) * limit
 
 const [data, total] = await Promise.all([
   prisma.entity.findMany({ skip, take: limit }),
-  prisma.entity.count()
+  prisma.entity.count(),
 ])
 
 return NextResponse.json({
@@ -110,8 +111,8 @@ return NextResponse.json({
     page,
     limit,
     total,
-    totalPages: Math.ceil(total / limit)
-  }
+    totalPages: Math.ceil(total / limit),
+  },
 })
 ```
 
@@ -123,12 +124,13 @@ Query params opcionales para filtrado:
 // ?customerId=abc&startDate=2025-01-01&endDate=2025-12-31
 const where = {
   ...(customerId && { customerId }),
-  ...(startDate && endDate && {
-    date: {
-      gte: new Date(startDate),
-      lte: new Date(endDate)
-    }
-  })
+  ...(startDate &&
+    endDate && {
+      date: {
+        gte: new Date(startDate),
+        lte: new Date(endDate),
+      },
+    }),
 }
 
 const data = await prisma.entity.findMany({ where })
@@ -147,13 +149,13 @@ const project = await prisma.project.findUnique({
       select: {
         id: true,
         name: true,
-        color: { select: { bgClass: true, textClass: true } }
-      }
+        color: { select: { bgClass: true, textClass: true } },
+      },
     },
     paymentAllocations: {
-      select: { allocatedAmount: true }
-    }
-  }
+      select: { allocatedAmount: true },
+    },
+  },
 })
 ```
 
@@ -167,7 +169,7 @@ const project = await prisma.project.findUnique({
 // prisma/client.ts
 export const prisma = new PrismaClient({
   log: ['error', 'warn'],
-  relationLoadStrategy: 'join' // ✅ Resuelve N+1
+  relationLoadStrategy: 'join', // ✅ Resuelve N+1
 })
 ```
 

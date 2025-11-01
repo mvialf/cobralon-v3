@@ -85,6 +85,7 @@ export const POST = withLogging(async (request, logger) => {
 ```
 
 **Beneficios:**
+
 - ✅ Request correlation automática (requestId UUID)
 - ✅ Duration tracking (performance.now())
 - ✅ Structured JSON logs (Vercel-compatible)
@@ -133,7 +134,7 @@ const [data, total] = await Promise.all([
     skip: (page - 1) * limit,
     take: limit,
   }),
-  prisma.entity.count()
+  prisma.entity.count(),
 ])
 
 return NextResponse.json({
@@ -142,8 +143,8 @@ return NextResponse.json({
     page,
     limit,
     total,
-    totalPages: Math.ceil(total / limit)
-  }
+    totalPages: Math.ceil(total / limit),
+  },
 })
 ```
 
@@ -157,12 +158,12 @@ Previene problema N+1:
 
 ```typescript
 const projects = await prisma.project.findMany({
-  relationLoadStrategy: 'join',  // ← Fix N+1
+  relationLoadStrategy: 'join', // ← Fix N+1
   include: {
     customer: true,
     projectStatus: { include: { color: true } },
-    paymentAllocations: true
-  }
+    paymentAllocations: true,
+  },
 })
 ```
 
@@ -224,6 +225,7 @@ GET    /api/payments/customer-projects → Proyectos de cliente
 ```
 
 **Validaciones especiales:**
+
 - ✅ `SUM(allocations) === amount`
 - ✅ `type="Project"` → `allocations.length === 1`
 - ✅ `type="Customer"` → `allocations.length >= 1`

@@ -78,9 +78,9 @@ describe('enrichProducts', () => {
   })
 
   it('should calculate stock status', () => {
-    const highStock = [{ stock: 20, /* ... */ }]
-    const lowStock = [{ stock: 5, /* ... */ }]
-    const outStock = [{ stock: 0, /* ... */ }]
+    const highStock = [{ stock: 20 /* ... */ }]
+    const lowStock = [{ stock: 5 /* ... */ }]
+    const outStock = [{ stock: 0 /* ... */ }]
 
     expect(enrichProducts(highStock)[0].stockStatus).toBe('In Stock')
     expect(enrichProducts(lowStock)[0].stockStatus).toBe('Low Stock')
@@ -88,7 +88,7 @@ describe('enrichProducts', () => {
   })
 
   it('should handle edge cases', () => {
-    const zeroPriceProduct = [{ price: 0, cost: 0, /* ... */ }]
+    const zeroPriceProduct = [{ price: 0, cost: 0 /* ... */ }]
     const result = enrichProducts(zeroPriceProduct)
 
     expect(result[0].profit).toBe(0)
@@ -98,6 +98,7 @@ describe('enrichProducts', () => {
 ```
 
 **Benefits:**
+
 - ✅ Sin mocks - pure input/output
 - ✅ Rápidos - <1ms cada test
 - ✅ Fáciles de escribir - ~5 min total
@@ -153,9 +154,9 @@ import { POST } from '../route'
 vi.mock('@/lib/db', () => ({
   db: {
     product: {
-      create: vi.fn()
-    }
-  }
+      create: vi.fn(),
+    },
+  },
 }))
 
 describe('POST /api/products', () => {
@@ -202,7 +203,9 @@ describe('POST /api/products', () => {
 
     const request = new Request('http://localhost/api/products', {
       method: 'POST',
-      body: JSON.stringify({ /* valid data */ }),
+      body: JSON.stringify({
+        /* valid data */
+      }),
     })
 
     const response = await POST(request)
@@ -213,6 +216,7 @@ describe('POST /api/products', () => {
 ```
 
 **Benefits:**
+
 - ✅ Valida schema de validación
 - ✅ Catch edge cases (negativos, vacíos, etc.)
 - ✅ Prevent regressions
@@ -320,6 +324,7 @@ describe('ProductForm', () => {
 ❌ **Don't test:**
 
 - **Simple components** (solo renderizan props)
+
   ```typescript
   // ❌ NO testear esto
   export function UserCard({ user }) {
@@ -328,12 +333,14 @@ describe('ProductForm', () => {
   ```
 
 - **Third-party libraries** (ya están testeados)
+
   ```typescript
   // ❌ NO testear shadcn/ui components
   import { Button } from '@/components/ui/button'
   ```
 
 - **Trivial transformations** (one-liners)
+
   ```typescript
   // ❌ NO testear esto
   const uppercase = (str) => str.toUpperCase()
@@ -397,12 +404,12 @@ app/api/products/__tests__/route.test.ts
 
 ## Coverage Targets
 
-| Tipo           | Target | Prioridad |
-| -------------- | ------ | --------- |
-| Transformers   | 90%+   | ✅ Alta   |
-| API Routes     | 70%+   | ⚠️ Media  |
-| Components     | 50%+   | 🟡 Baja   |
-| Utils/Helpers  | 90%+   | ✅ Alta   |
+| Tipo          | Target | Prioridad |
+| ------------- | ------ | --------- |
+| Transformers  | 90%+   | ✅ Alta   |
+| API Routes    | 70%+   | ⚠️ Media  |
+| Components    | 50%+   | 🟡 Baja   |
+| Utils/Helpers | 90%+   | ✅ Alta   |
 
 **Nota:** Coverage NO es el único indicador. Preferir **tests significativos** sobre coverage artificial.
 
@@ -436,9 +443,15 @@ npm test:ui
 ```typescript
 // ❌ NO pierdas tiempo testeando esto
 describe('UserCard', () => {
-  it('should render name', () => { /* ... */ })
-  it('should render email', () => { /* ... */ })
-  it('should render avatar', () => { /* ... */ })
+  it('should render name', () => {
+    /* ... */
+  })
+  it('should render email', () => {
+    /* ... */
+  })
+  it('should render avatar', () => {
+    /* ... */
+  })
   // ... 20 tests más para componente trivial
 })
 ```

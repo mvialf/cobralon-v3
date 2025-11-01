@@ -13,6 +13,7 @@
 ```
 
 **En español:**
+
 - **Data baja** (parent → child vía props)
 - **Eventos suben** (child → parent vía callbacks)
 
@@ -84,6 +85,7 @@ export function NewProductDialog() {
 ```
 
 **Beneficios:**
+
 - ✅ `ProductForm` es reutilizable (no sabe sobre Dialog)
 - ✅ Parent controla qué pasa después del submit
 - ✅ Fácil de testear (mock callbacks)
@@ -116,6 +118,7 @@ export function ProductForm() {
 ```
 
 **Problemas:**
+
 - ❌ NO reutilizable (acoplado a store específico)
 - ❌ Difícil de testear (necesitas mockear store, router, toast)
 - ❌ Side effects hardcodeados (toast, navegación)

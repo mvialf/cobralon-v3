@@ -19,10 +19,7 @@ export type APIHandler = (
 ) => Promise<NextResponse>
 
 export function withLogging(handler: APIHandler) {
-  return async (
-    request: NextRequest,
-    context?: { params: Record<string, string> }
-  ) => {
+  return async (request: NextRequest, context?: { params: Record<string, string> }) => {
     const requestId = generateRequestId()
     const { method, url } = request
     const path = new URL(url).pathname
@@ -31,7 +28,7 @@ export function withLogging(handler: APIHandler) {
     const requestLogger = logger.child({
       requestId,
       method,
-      path
+      path,
     })
 
     requestLogger.info('Request received')
@@ -42,19 +39,13 @@ export function withLogging(handler: APIHandler) {
       const response = await handler(request, requestLogger, context)
       const duration = Math.round(performance.now() - startTime)
 
-      requestLogger.info(
-        { status: response.status, duration },
-        'Request completed'
-      )
+      requestLogger.info({ status: response.status, duration }, 'Request completed')
 
       return response
     } catch (error) {
       const duration = Math.round(performance.now() - startTime)
 
-      requestLogger.error(
-        { err: error, duration },
-        'Request failed'
-      )
+      requestLogger.error({ err: error, duration }, 'Request failed')
 
       throw error
     }
@@ -86,7 +77,7 @@ export const POST = withLogging(async (request, logger) => {
   // Child logger con contexto de negocio
   const paymentLogger = logger.child({
     customerId: body.customerId,
-    amount: body.amount
+    amount: body.amount,
   })
 
   paymentLogger.debug('Starting validations')
@@ -118,10 +109,11 @@ Todos los logs del mismo request comparten `requestId`:
 Mide tiempo de ejecución automáticamente:
 
 ```json
-{"requestId":"...","status":201,"duration":342,"msg":"Request completed"}
+{ "requestId": "...", "status": 201, "duration": 342, "msg": "Request completed" }
 ```
 
 **Performance.now() vs Date.now():**
+
 - `performance.now()` - Preciso a microsegundos
 - `Date.now()` - Preciso a milisegundos
 - Usamos `performance.now()` para mejor precisión
@@ -166,6 +158,7 @@ export type APIHandler = (
 ```
 
 **Beneficios:**
+
 - ✅ TypeScript infiere tipos automáticamente
 - ✅ Autocomplete en IDE
 - ✅ Catch errors en compile time
@@ -201,7 +194,7 @@ export const POST = withLogging(async (request, logger) => {
   // ✅ Child logger con contexto
   const entityLogger = logger.child({
     entityId: body.id,
-    userId: body.userId
+    userId: body.userId,
   })
 
   entityLogger.info('Operation started')
@@ -228,10 +221,7 @@ logger.info('Validation completed')
 try {
   // ...
 } catch (error) {
-  logger.error(
-    { err: error, customerId, amount },
-    'Payment creation failed'
-  )
+  logger.error({ err: error, customerId, amount }, 'Payment creation failed')
   return NextResponse.json({ error: '...' }, { status: 500 })
 }
 ```

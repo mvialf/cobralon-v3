@@ -389,6 +389,7 @@ El código legacy (Layer 3 Edit Dialog mostrado arriba) funciona, pero tiene lim
 React Query (TanStack Query) elimina todo el boilerplate de manejo de datos asincrónicos:
 
 **Beneficios automáticos:**
+
 - ✅ Cache inteligente (segunda apertura es instantánea)
 - ✅ Loading/error states automáticos
 - ✅ Invalidación automática de queries
@@ -398,15 +399,15 @@ React Query (TanStack Query) elimina todo el boilerplate de manejo de datos asin
 
 ### Comparación: Antes vs Después
 
-| Aspecto | Fetch Manual (ANTES) | React Query (DESPUÉS) | Mejora |
-|---------|----------------------|----------------------|--------|
-| **Líneas de código** | 133 | 97 | -27% |
-| **Cache** | ❌ Sin cache | ✅ Automático | ✅ |
-| **Loading state** | Manual (useState) | Automático (isPending) | ✅ |
-| **Error handling** | try/catch manual | Automático (onError) | ✅ |
-| **Toasts** | Manual en component | Automático en hooks | ✅ |
-| **Invalidación** | Manual refetch | Automática | ✅ |
-| **UX en re-apertura** | Refetch siempre | Cache instant | ✅ |
+| Aspecto               | Fetch Manual (ANTES) | React Query (DESPUÉS)  | Mejora |
+| --------------------- | -------------------- | ---------------------- | ------ |
+| **Líneas de código**  | 133                  | 97                     | -27%   |
+| **Cache**             | ❌ Sin cache         | ✅ Automático          | ✅     |
+| **Loading state**     | Manual (useState)    | Automático (isPending) | ✅     |
+| **Error handling**    | try/catch manual     | Automático (onError)   | ✅     |
+| **Toasts**            | Manual en component  | Automático en hooks    | ✅     |
+| **Invalidación**      | Manual refetch       | Automática             | ✅     |
+| **UX en re-apertura** | Refetch siempre      | Cache instant          | ✅     |
 
 ### Código Refactorizado (React Query)
 
@@ -511,6 +512,7 @@ export function EditProjectDialog({
 ```
 
 **Reducción de código:**
+
 - **ANTES:** 133 líneas (fetch manual)
 - **DESPUÉS:** 97 líneas (React Query)
 - **AHORRO:** -36 líneas (-27%)
@@ -602,6 +604,7 @@ export function useUpdateProject() {
 **Checklist para migrar otros dialogs (customers, payments, etc.):**
 
 1. **✅ Crear tipos completos**
+
    ```typescript
    // Si tu tipo base es simplificado (ej: para tabla)
    export interface EntityDetail extends Entity {
@@ -646,17 +649,18 @@ export function useUpdateProject() {
 
 **Caso real:** `edit-project-dialog.tsx`
 
-| Métrica | Antes | Después | Mejora |
-|---------|-------|---------|--------|
-| Líneas totales | 133 | 97 | -27% |
-| Lógica de fetch | ~40 líneas | 1 línea hook | -97% |
-| Manejo errores | try/catch manual | Automático | ✅ |
-| Loading states | useState manual | isPending auto | ✅ |
-| Toasts | 2 llamadas manual | 0 (en hooks) | ✅ |
-| Cache UX | Sin cache | Cache instant | ✅ |
-| Invalidación | Manual refetch | Auto | ✅ |
+| Métrica         | Antes             | Después        | Mejora |
+| --------------- | ----------------- | -------------- | ------ |
+| Líneas totales  | 133               | 97             | -27%   |
+| Lógica de fetch | ~40 líneas        | 1 línea hook   | -97%   |
+| Manejo errores  | try/catch manual  | Automático     | ✅     |
+| Loading states  | useState manual   | isPending auto | ✅     |
+| Toasts          | 2 llamadas manual | 0 (en hooks)   | ✅     |
+| Cache UX        | Sin cache         | Cache instant  | ✅     |
+| Invalidación    | Manual refetch    | Auto           | ✅     |
 
 **Tiempo de desarrollo:**
+
 - Crear 1er dialog con fetch: ~45 min
 - Crear 1er dialog con RQ: ~30 min (una vez tienes hooks)
 - Migrar dialog existente: ~15 min
@@ -664,6 +668,7 @@ export function useUpdateProject() {
 ### Cuándo Usar Este Approach
 
 **✅ USA React Query cuando:**
+
 - Tienes múltiples dialogs que hacen fetch similar
 - Quieres cache automático (mejor UX)
 - Quieres centralizar manejo de errores/loading
@@ -671,6 +676,7 @@ export function useUpdateProject() {
 - El proyecto usa React Query en otros lugares
 
 **⚠️ Stick con fetch manual cuando:**
+
 - Dialog muy simple (1-2 campos, sin edición)
 - Proyecto pequeño sin React Query
 - Caso de uso único sin reutilización
@@ -681,6 +687,7 @@ export function useUpdateProject() {
 Después de migrar tus dialogs:
 
 1. **Agregar optimistic updates** (opcional)
+
    ```typescript
    onMutate: async (newData) => {
      // Update cache inmediatamente antes de API response
@@ -690,6 +697,7 @@ Después de migrar tus dialogs:
    ```
 
 2. **Agregar skeleton loader** (mejor UX)
+
    ```typescript
    if (open && isLoading) {
      return <DialogSkeleton /> // En vez de `return null`
@@ -848,13 +856,16 @@ const form = useForm({
 ## Referencias
 
 ### React Hook Form
+
 - **defaultValues:** https://react-hook-form.com/docs/useform#defaultValues
 - **reset:** https://react-hook-form.com/docs/useform/reset
 
 ### Radix UI
+
 - **Dialog:** https://www.radix-ui.com/primitives/docs/components/dialog
 
 ### React Query (TanStack Query)
+
 - **Documentación oficial:** https://tanstack.com/query/latest
 - **useQuery hook:** https://tanstack.com/query/latest/docs/react/reference/useQuery
 - **useMutation hook:** https://tanstack.com/query/latest/docs/react/reference/useMutation

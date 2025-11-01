@@ -11,6 +11,7 @@
 ## Filosofía del Cambio
 
 ### ❌ ANTES: Optimizado para justificar decisiones
+
 ```
 Usuario: "¿Por qué usamos Prisma?"
 ADR: "Consideramos Supabase (50 líneas), Drizzle (40 líneas),
@@ -19,6 +20,7 @@ Usuario: *Se duerme* 😴
 ```
 
 ### ✅ DESPUÉS: Optimizado para usar lo elegido
+
 ```
 Usuario: "¿Cómo uso Prisma en este template?"
 ADR: "Prisma + Neon porque type-safety + serverless.
@@ -32,6 +34,7 @@ Usuario: *Productivo en 2 minutos* 🚀
 ## Categorización de ADRs
 
 ### Tipo 1: "YA DECIDIDO - Usuario solo consume" (9 ADRs)
+
 **Acción:** Reducir a 50-100 líneas
 
 - ✂️ **ADR-008** (Prisma + Neon): 494 → ~80 líneas
@@ -45,6 +48,7 @@ Usuario: *Productivo en 2 minutos* 🚀
 - ✂️ **ADR-004** (Layout System): reducir alternativas
 
 ### Tipo 2: "USUARIO DEBE DECIDIR" (1 ADR)
+
 **Acción:** Mantener extenso pero reestructurar
 
 - 📋 **ADR-009** (Authentication): 516 → ~250-300 líneas
@@ -57,34 +61,41 @@ Usuario: *Productivo en 2 minutos* 🚀
 
 ## Template Nuevo "Slim"
 
-```markdown
+````markdown
 # ADR-XXX: Título de la Decisión
 
 ## Decisión
+
 [2-3 líneas: QUÉ decidimos usar]
 
 ## Contexto
+
 [4-6 líneas: Problema específico que resuelve]
 
 ## Alternativa Principal (opcional - solo 1)
+
 **[Nombre]:** Razón breve de descarte (2-3 líneas máximo)
 
 ## Consecuencias
 
 ### Beneficios ✅
+
 1. Beneficio concreto y cuantificado
 2. Beneficio concreto y cuantificado
 3. Beneficio concreto y cuantificado
 
 ### Trade-offs ⚠️
+
 1. Trade-off + cómo mitigarlo
 2. Trade-off + cómo mitigarlo
 
 ## Quick Start
+
 ```bash
 # Comandos clave (3-5 comandos)
 npm run comando-principal
 ```
+````
 
 ```typescript
 // Código ejemplo esencial (5-10 líneas)
@@ -94,12 +105,15 @@ const example = new Main()
 ```
 
 ## Referencias
+
 - [Documentación Oficial](https://...)
 - [ADR Relacionado](../XXX-related.md)
 
 ---
+
 **Última actualización:** YYYY-MM-DD
-```
+
+````
 
 **Longitud objetivo:** 50-100 líneas (vs 300-500 actual)
 
@@ -161,30 +175,35 @@ const example = new Main()
 [... 25 líneas ...]
 
 [TOTAL: 494 líneas - 60% sobre alternativas NO usadas]
-```
+````
 
 ### DESPUÉS: ADR-008 (~80 líneas)
 
-```markdown
+````markdown
 # ADR-008: Prisma ORM + Neon PostgreSQL
 
 ## Decisión
+
 Usar Prisma 6.7 como ORM + Neon PostgreSQL como database hosting.
 
 ## Contexto
+
 Necesitábamos una solución de base de datos:
+
 - Type-safe: Integración con TypeScript strict mode
 - Serverless-friendly: Compatible con Vercel/Netlify
 - Sin vendor lock-in: Migrable a otras soluciones
 - DX excelente: Productividad alta
 
 ## Alternativa Principal
+
 **Drizzle ORM:** Más ligero (~50% menor bundle) y SQL-like API.
 NO elegido: Prisma tiene mejor DX para principiantes y ecosystem más maduro.
 
 ## Consecuencias
 
 ### Beneficios ✅
+
 1. **Type-safety máxima:** Prisma genera tipos TS automáticamente desde schema
 2. **DX superior:** `npm run db:studio` abre GUI para ver/editar datos
 3. **Database branching:** Neon permite branches como Git (invaluable para testing)
@@ -192,6 +211,7 @@ NO elegido: Prisma tiene mejor DX para principiantes y ecosystem más maduro.
 5. **Bajo vendor lock-in:** Migrations son SQL portables, Neon es PostgreSQL estándar
 
 ### Trade-offs ⚠️
+
 1. **Bundle size mayor:** Prisma Client ~1-2MB (vs 50-100KB de Drizzle)
    - **Mitigación:** Para Edge Runtime usar `engineType = "client"`
 2. **Neon free tier cold starts:** Primera query después de 5 min suspensión: ~500ms-1s
@@ -200,6 +220,7 @@ NO elegido: Prisma tiene mejor DX para principiantes y ecosystem más maduro.
    - **Mitigación:** Documentación excelente + schema comentado en template
 
 ## Quick Start
+
 ```bash
 # Generar Prisma Client
 npm run db:generate
@@ -213,6 +234,7 @@ npm run db:studio
 # Seed data de prueba
 npm run db:seed
 ```
+````
 
 ```typescript
 // Uso básico type-safe
@@ -222,8 +244,8 @@ const user = await prisma.user.findUnique({
   where: { id: '123' },
   select: {
     email: true,
-    posts: { select: { title: true } }
-  }
+    posts: { select: { title: true } },
+  },
 })
 // TypeScript sabe exactamente:
 // user.email ✅ string
@@ -231,15 +253,18 @@ const user = await prisma.user.findUnique({
 ```
 
 ## Referencias
+
 - [Prisma Documentation](https://www.prisma.io/docs)
 - [Neon Documentation](https://neon.tech/docs)
 - [Database Setup Guide](../../guides/database-setup.md)
 - [ADR-010: Neon MCP (opcional)](010-neon-mcp-optional.md)
 
 ---
+
 **Última actualización:** 2025-01-17
 
 [TOTAL: ~80 líneas - 80% contenido accionable]
+
 ```
 
 ---
@@ -290,26 +315,28 @@ const user = await prisma.user.findUnique({
 ## Estructura de Directorios Post-Refactor
 
 ```
+
 docs/template/decisions/
-├── .archive/                          # Versiones originales (backup)
-│   ├── 001-nextjs-15-app-router.md
-│   ├── 002-tailwind-css-v4.md
-│   └── ...
+├── .archive/ # Versiones originales (backup)
+│ ├── 001-nextjs-15-app-router.md
+│ ├── 002-tailwind-css-v4.md
+│ └── ...
 │
-├── 001-nextjs-15-app-router.md       # Versión slim (60 líneas)
-├── 002-tailwind-css-v4.md            # Versión slim
-├── 003-shadcn-ui-new-york.md         # Versión slim
-├── 004-layout-system-dos-capas.md    # Versión slim
-├── 005-vitest-testing-library.md     # Versión slim (80 líneas)
-├── 007-eslint-prettier.md            # Versión slim (70 líneas)
-├── 008-prisma-neon.md                # Versión slim (80 líneas)
-├── 009-authentication-options.md     # Reestructurado (250-300 líneas)
-├── 010-playwright-mcp.md             # Versión slim (100 líneas)
-├── 011-capture-dialog-pattern.md     # Versión slim (100 líneas)
+├── 001-nextjs-15-app-router.md # Versión slim (60 líneas)
+├── 002-tailwind-css-v4.md # Versión slim
+├── 003-shadcn-ui-new-york.md # Versión slim
+├── 004-layout-system-dos-capas.md # Versión slim
+├── 005-vitest-testing-library.md # Versión slim (80 líneas)
+├── 007-eslint-prettier.md # Versión slim (70 líneas)
+├── 008-prisma-neon.md # Versión slim (80 líneas)
+├── 009-authentication-options.md # Reestructurado (250-300 líneas)
+├── 010-playwright-mcp.md # Versión slim (100 líneas)
+├── 011-capture-dialog-pattern.md # Versión slim (100 líneas)
 │
-├── README.md                          # Actualizado con nueva filosofía
-├── REFACTORING-PLAN.md               # Este documento
-└── template-slim.md                   # Template para futuros ADRs
+├── README.md # Actualizado con nueva filosofía
+├── REFACTORING-PLAN.md # Este documento
+└── template-slim.md # Template para futuros ADRs
+
 ```
 
 ---
@@ -368,3 +395,4 @@ Sí, completamente. Versiones originales estarán en `.archive/` y en Git histor
 **Fecha de creación:** 2025-11-01
 **Autor:** Equipo Template
 **Estado:** Plan aprobado - Listo para ejecutar
+```

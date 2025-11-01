@@ -15,12 +15,12 @@ Necesitábamos definir qué sucede cuando se elimina un registro parent que tien
 
 ## Decisión
 
-| Relación                  | Policy   | Razón                                     |
-| ------------------------- | -------- | ----------------------------------------- |
-| Customer → Project        | CASCADE  | Cliente posee proyectos                   |
-| Payment → Allocation      | CASCADE  | Pago posee asignaciones                   |
-| Payment → Installment     | CASCADE  | Pago posee cuotas                         |
-| Project → ProjectStatus   | RESTRICT | Proteger configuración activa             |
+| Relación                | Policy   | Razón                         |
+| ----------------------- | -------- | ----------------------------- |
+| Customer → Project      | CASCADE  | Cliente posee proyectos       |
+| Payment → Allocation    | CASCADE  | Pago posee asignaciones       |
+| Payment → Installment   | CASCADE  | Pago posee cuotas             |
+| Project → ProjectStatus | RESTRICT | Proteger configuración activa |
 
 ---
 
@@ -34,10 +34,12 @@ onDelete: Cascade
 ```
 
 **Pros:**
+
 - ✅ Consistencia simple
 - ✅ Sin registros huérfanos
 
 **Contras:**
+
 - ❌ **Eliminar estado borra todos los proyectos** (peligroso)
 - ❌ Sin protección para configuración
 
@@ -53,9 +55,11 @@ onDelete: Restrict
 ```
 
 **Pros:**
+
 - ✅ Máxima protección
 
 **Contras:**
+
 - ❌ **No se puede eliminar cliente si tiene proyectos** (molesto)
 - ❌ Requiere eliminación manual en orden
 
@@ -71,10 +75,12 @@ projectStatus   ProjectStatus? @relation(onDelete: SetNull)
 ```
 
 **Pros:**
+
 - ✅ No bloquea eliminación
 - ✅ Preserva proyectos
 
 **Contras:**
+
 - ❌ Proyectos sin estado (estado requerido en UI)
 - ❌ Datos inconsistentes
 
@@ -93,6 +99,7 @@ customer Customer @relation(fields: [customerId], references: [id], onDelete: Ca
 **Filosofía:** Customer "posee" sus proyectos.
 
 **Comportamiento:**
+
 ```sql
 DELETE FROM customers WHERE id = 'abc';
 -- Automáticamente elimina proyectos de ese cliente ✅
@@ -111,6 +118,7 @@ payment Payment @relation(fields: [paymentId], references: [id], onDelete: Casca
 **Filosofía:** Payment "posee" sus allocations.
 
 **Comportamiento:**
+
 ```sql
 DELETE FROM payments WHERE id = 'xyz';
 -- Automáticamente elimina allocations de ese pago ✅
@@ -129,6 +137,7 @@ payment Payment @relation(fields: [paymentId], references: [id], onDelete: Casca
 **Filosofía:** Payment "posee" sus installments.
 
 **Comportamiento:**
+
 ```sql
 DELETE FROM payments WHERE id = 'xyz';
 -- Automáticamente elimina installments de ese pago ✅
@@ -147,6 +156,7 @@ projectStatus ProjectStatus @relation(fields: [projectStatusId], references: [id
 **Filosofía:** ProjectStatus es configuración compartida.
 
 **Comportamiento:**
+
 ```sql
 DELETE FROM project_status WHERE id = 'abc';
 -- ERROR: Cannot delete status with active projects ❌
@@ -169,12 +179,11 @@ export const DELETE = withLogging(async (request, logger, context) => {
 
   try {
     await prisma.projectStatus.delete({
-      where: { id }
+      where: { id },
     })
 
     logger.info({ statusId: id }, 'Project status deleted')
     return NextResponse.json({ success: true })
-
   } catch (error) {
     // Prisma lanza error si hay proyectos usando este status
     logger.warn({ statusId: id, err: error }, 'Cannot delete status in use')
@@ -182,7 +191,7 @@ export const DELETE = withLogging(async (request, logger, context) => {
     return NextResponse.json(
       {
         error: 'Cannot delete status',
-        reason: 'This status is being used by active projects'
+        reason: 'This status is being used by active projects',
       },
       { status: 400 }
     )
@@ -206,7 +215,7 @@ async function handleDelete() {
 
   // Intentar eliminar
   const response = await fetch(`/api/project-status/${statusId}`, {
-    method: 'DELETE'
+    method: 'DELETE',
   })
 
   if (!response.ok) {
@@ -226,6 +235,7 @@ async function handleDelete() {
 Si usuario intenta eliminar estado con proyectos activos.
 
 **Mitigación:**
+
 - Frontend validation (check antes de intentar)
 - Clear error messages
 - UI muestra count de proyectos usando el estado

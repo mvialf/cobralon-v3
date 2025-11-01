@@ -103,7 +103,13 @@ components/dialogs/
 ```tsx
 // components/dialogs/customers/new-customer-dialog.tsx
 
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog'
 import { CustomerForm } from '@/components/forms/customer-form'
 import { Button } from '@/components/ui/button'
 import { Plus } from 'lucide-react'
@@ -164,11 +170,7 @@ function ParentComponent() {
   return (
     <>
       <Button onClick={() => setDialogOpen(true)}>Editar</Button>
-      <EditCustomerDialog
-        customerId="123"
-        open={dialogOpen}
-        onOpenChange={setDialogOpen}
-      />
+      <EditCustomerDialog customerId="123" open={dialogOpen} onOpenChange={setDialogOpen} />
     </>
   )
 }

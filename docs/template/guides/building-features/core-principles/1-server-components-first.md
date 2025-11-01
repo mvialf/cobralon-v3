@@ -42,6 +42,7 @@ export default async function ProductsPage() {
 ```
 
 **Por qué esto funciona:**
+
 - Fetch completa ANTES de enviar HTML al cliente
 - No hay flash de loading spinner
 - SEO ve contenido completo
@@ -76,6 +77,7 @@ export default function ProductsPage() {
 ```
 
 **Por qué está MAL:**
+
 - ❌ Doble round-trip: HTML vacío → fetch API → render data
 - ❌ Usuario ve loading spinner innecesario
 - ❌ SEO NO ve contenido (HTML inicial vacío)
@@ -121,6 +123,7 @@ export function ProductsTable({ data }) {
 ```
 
 **Lo mejor de ambos mundos:**
+
 - ✅ Fetch en server (performance)
 - ✅ Interactividad en client (UX)
 - ✅ Data down, events up (clean architecture)
@@ -191,12 +194,12 @@ Si respondiste NO a todo → **NO uses** `"use client"`
 
 ### Ventajas de Server Components
 
-| Aspecto | Server | Client |
-|---------|--------|--------|
-| Performance | ✅ Rápido | ⚠️ Más lento |
-| SEO | ✅ Excelente | ❌ Limitado |
-| Bundle size | ✅ Mínimo | ❌ Mayor |
-| Hydration | ✅ No necesaria | ⚠️ Sí necesaria |
+| Aspecto     | Server          | Client          |
+| ----------- | --------------- | --------------- |
+| Performance | ✅ Rápido       | ⚠️ Más lento    |
+| SEO         | ✅ Excelente    | ❌ Limitado     |
+| Bundle size | ✅ Mínimo       | ❌ Mayor        |
+| Hydration   | ✅ No necesaria | ⚠️ Sí necesaria |
 
 ### Cuándo Client es mejor
 

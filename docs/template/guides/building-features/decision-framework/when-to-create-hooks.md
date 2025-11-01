@@ -1,6 +1,5 @@
 # When To Create Hooks
 
-
 ### When to Create Custom Hooks
 
 **Create hook if:**
@@ -36,4 +35,3 @@ function ProductsTable({ data }) {  // ← Recibe data, no necesita hook
   return <table>...</table>
 }
 ```
-

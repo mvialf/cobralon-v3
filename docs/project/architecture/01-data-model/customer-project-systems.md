@@ -25,14 +25,14 @@ model Customer {
 
 ### Campos
 
-| Campo       | Tipo       | Obligatorio | Descripción                          |
-| ----------- | ---------- | ----------- | ------------------------------------ |
-| `id`        | UUID       | ✅          | Primary key                          |
-| `name`      | String     | ✅          | Nombre del cliente                   |
-| `phone`     | String     | ✅          | Teléfono (validado con E.164)        |
-| `email`     | String     | ❌          | Email (opcional, único si se provee) |
-| `createdAt` | DateTime   | ✅          | Fecha de creación (automática)       |
-| `updatedAt` | DateTime   | ✅          | Última actualización (automática)    |
+| Campo       | Tipo     | Obligatorio | Descripción                          |
+| ----------- | -------- | ----------- | ------------------------------------ |
+| `id`        | UUID     | ✅          | Primary key                          |
+| `name`      | String   | ✅          | Nombre del cliente                   |
+| `phone`     | String   | ✅          | Teléfono (validado con E.164)        |
+| `email`     | String   | ❌          | Email (opcional, único si se provee) |
+| `createdAt` | DateTime | ✅          | Fecha de creación (automática)       |
+| `updatedAt` | DateTime | ✅          | Última actualización (automática)    |
 
 ### Relaciones
 
@@ -109,37 +109,38 @@ model Project {
 
 ### Campos Principales
 
-| Campo           | Tipo          | Obligatorio | Descripción                                      |
-| --------------- | ------------- | ----------- | ------------------------------------------------ |
-| `projectNumber` | String        | ✅          | Formato: "P 0001-2025" (autogenerado, único)     |
-| `projectName`   | String        | ❌          | Nombre descriptivo del proyecto                  |
-| `customerId`    | UUID (FK)     | ✅          | Referencia a Customer                            |
-| `phone`         | String        | ✅          | Teléfono de contacto del proyecto                |
-| `subtotal`      | Decimal(12,2) | ✅          | Monto antes de impuestos                         |
-| `taxRate`       | Decimal(5,2)  | ✅          | Tasa de impuesto (default: 19%)                  |
-| `total`         | Decimal(12,2) | ✅          | subtotal + (subtotal \* taxRate%)                |
-| `totalAmount`   | Decimal(12,2) | ❌          | Redundante con `total` (razones legacy)          |
-| `windowsCount`  | Int           | ✅          | Cantidad de ventanas                             |
-| `squareMeters`  | Decimal(10,2) | ✅          | Metros cuadrados                                 |
-| `currency`      | String        | ✅          | Moneda (default: "CLP")                          |
+| Campo           | Tipo          | Obligatorio | Descripción                                  |
+| --------------- | ------------- | ----------- | -------------------------------------------- |
+| `projectNumber` | String        | ✅          | Formato: "P 0001-2025" (autogenerado, único) |
+| `projectName`   | String        | ❌          | Nombre descriptivo del proyecto              |
+| `customerId`    | UUID (FK)     | ✅          | Referencia a Customer                        |
+| `phone`         | String        | ✅          | Teléfono de contacto del proyecto            |
+| `subtotal`      | Decimal(12,2) | ✅          | Monto antes de impuestos                     |
+| `taxRate`       | Decimal(5,2)  | ✅          | Tasa de impuesto (default: 19%)              |
+| `total`         | Decimal(12,2) | ✅          | subtotal + (subtotal \* taxRate%)            |
+| `totalAmount`   | Decimal(12,2) | ❌          | Redundante con `total` (razones legacy)      |
+| `windowsCount`  | Int           | ✅          | Cantidad de ventanas                         |
+| `squareMeters`  | Decimal(10,2) | ✅          | Metros cuadrados                             |
+| `currency`      | String        | ✅          | Moneda (default: "CLP")                      |
 
 ### Campos de Dirección
 
-| Campo       | Tipo   | Obligatorio | Descripción                     |
-| ----------- | ------ | ----------- | ------------------------------- |
-| `street`    | String | ✅          | Calle y número                  |
-| `apartment` | String | ❌          | Departamento/oficina            |
-| `comuna`    | String | ✅          | Comuna (validado con config)    |
-| `region`    | String | ✅          | Región (validado con config)    |
+| Campo       | Tipo   | Obligatorio | Descripción                  |
+| ----------- | ------ | ----------- | ---------------------------- |
+| `street`    | String | ✅          | Calle y número               |
+| `apartment` | String | ❌          | Departamento/oficina         |
+| `comuna`    | String | ✅          | Comuna (validado con config) |
+| `region`    | String | ✅          | Región (validado con config) |
 
 ### Campos de Estado
 
-| Campo                 | Tipo      | Obligatorio | Descripción                              |
-| --------------------- | --------- | ----------- | ---------------------------------------- |
-| `projectStatusId`     | UUID (FK) | ❌          | FK a ProjectStatus (nuevo sistema)       |
-| `projectStatusLegacy` | String    | ✅          | Campo legacy (default: ""), deprecar     |
+| Campo                 | Tipo      | Obligatorio | Descripción                          |
+| --------------------- | --------- | ----------- | ------------------------------------ |
+| `projectStatusId`     | UUID (FK) | ❌          | FK a ProjectStatus (nuevo sistema)   |
+| `projectStatusLegacy` | String    | ✅          | Campo legacy (default: ""), deprecar |
 
 **Migración gradual:**
+
 - Proyectos nuevos: `projectStatusId` (FK) + `projectStatusLegacy = ""`
 - Proyectos legacy: `projectStatusId = null` + `projectStatusLegacy` (String)
 
@@ -149,7 +150,7 @@ model Project {
 
 ```typescript
 // components/forms/projects/project-form.tsx
-const calculatedTotal = subtotal + (subtotal * (taxRate / 100))
+const calculatedTotal = subtotal + subtotal * (taxRate / 100)
 const projectData = {
   ...formData,
   total: calculatedTotal,
@@ -167,7 +168,9 @@ const lastProject = await prisma.project.findFirst({
   orderBy: { projectNumber: 'desc' },
 })
 
-const nextSequence = lastProject ? parseInt(lastProject.projectNumber.split('-')[0].replace('P ', '')) + 1 : 1
+const nextSequence = lastProject
+  ? parseInt(lastProject.projectNumber.split('-')[0].replace('P ', '')) + 1
+  : 1
 const projectNumber = `P ${nextSequence.toString().padStart(4, '0')}-${currentYear}`
 ```
 
@@ -181,14 +184,14 @@ const projectNumber = `P ${nextSequence.toString().padStart(4, '0')}-${currentYe
 
 ### Índices
 
-| Índice                              | Tipo       | Propósito                                |
-| ----------------------------------- | ---------- | ---------------------------------------- |
-| `[customerId]`                      | Simple     | Queries por cliente                      |
-| `[projectNumber]`                   | Simple     | Búsqueda rápida por número               |
-| `[projectStatusId]`                 | Simple     | Filtrar por estado                       |
-| `[date]`                            | Simple     | Ordenar por fecha                        |
-| `[customerId, projectStatusId]`     | Compuesto  | Filtros combinados                       |
-| `[projectStatusId, date DESC]`      | Compuesto  | Proyectos recientes por estado           |
+| Índice                          | Tipo      | Propósito                      |
+| ------------------------------- | --------- | ------------------------------ |
+| `[customerId]`                  | Simple    | Queries por cliente            |
+| `[projectNumber]`               | Simple    | Búsqueda rápida por número     |
+| `[projectStatusId]`             | Simple    | Filtrar por estado             |
+| `[date]`                        | Simple    | Ordenar por fecha              |
+| `[customerId, projectStatusId]` | Compuesto | Filtros combinados             |
+| `[projectStatusId, date DESC]`  | Compuesto | Proyectos recientes por estado |
 
 ### Balance Calculado
 
@@ -212,6 +215,7 @@ export function calculateProjectBalance(project: ProjectWithAllocations): number
 ```
 
 **Future optimization (Phase 2):**
+
 - Denormalizar: agregar campo `balance` en Project
 - Actualizar vía triggers o application logic
 - Índice: `[balance, customerId]`
@@ -252,14 +256,14 @@ model ProjectStatus {
 
 ### Campos
 
-| Campo       | Tipo      | Obligatorio | Descripción                                       |
-| ----------- | --------- | ----------- | ------------------------------------------------- |
-| `name`      | String    | ✅          | Nombre del estado (ej: "En Proceso"), único       |
-| `order`     | Int       | ✅          | Orden para drag & drop                            |
-| `colorId`   | UUID (FK) | ✅          | Referencia a BadgeColor                           |
-| `isInitial` | Boolean   | ✅          | Estado inicial por defecto (default: false)       |
-| `isFinal`   | Boolean   | ✅          | Estado final (default: false)                     |
-| `isActive`  | Boolean   | ✅          | Estado activo/visible (default: true)             |
+| Campo       | Tipo      | Obligatorio | Descripción                                 |
+| ----------- | --------- | ----------- | ------------------------------------------- |
+| `name`      | String    | ✅          | Nombre del estado (ej: "En Proceso"), único |
+| `order`     | Int       | ✅          | Orden para drag & drop                      |
+| `colorId`   | UUID (FK) | ✅          | Referencia a BadgeColor                     |
+| `isInitial` | Boolean   | ✅          | Estado inicial por defecto (default: false) |
+| `isFinal`   | Boolean   | ✅          | Estado final (default: false)               |
+| `isActive`  | Boolean   | ✅          | Estado activo/visible (default: true)       |
 
 ### Features
 
@@ -314,15 +318,15 @@ model BadgeColor {
 
 ### Colores Predefinidos (7)
 
-| Name     | Key     | bgClass          | textClass   |
-| -------- | ------- | ---------------- | ----------- |
-| Azul     | blue    | bg-blue-500      | text-white  |
-| Verde    | green   | bg-green-500     | text-white  |
-| Amarillo | yellow  | bg-yellow-500    | text-black  |
-| Rojo     | red     | bg-red-500       | text-white  |
-| Morado   | purple  | bg-purple-500    | text-white  |
-| Naranja  | orange  | bg-orange-500    | text-white  |
-| Gris     | gray    | bg-gray-500      | text-white  |
+| Name     | Key    | bgClass       | textClass  |
+| -------- | ------ | ------------- | ---------- |
+| Azul     | blue   | bg-blue-500   | text-white |
+| Verde    | green  | bg-green-500  | text-white |
+| Amarillo | yellow | bg-yellow-500 | text-black |
+| Rojo     | red    | bg-red-500    | text-white |
+| Morado   | purple | bg-purple-500 | text-white |
+| Naranja  | orange | bg-orange-500 | text-white |
+| Gris     | gray   | bg-gray-500   | text-white |
 
 ### Seedeado Inicial
 

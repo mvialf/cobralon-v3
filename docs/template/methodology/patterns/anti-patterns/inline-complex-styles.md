@@ -121,11 +121,13 @@ interface StatusBadgeProps extends VariantProps<typeof badgeVariants> {
 }
 
 export function StatusBadge({ status, priority, urgent, className, children }: StatusBadgeProps) {
-  return <span className={cn(badgeVariants({ status, priority, urgent }), className)}>{children}</span>
+  return (
+    <span className={cn(badgeVariants({ status, priority, urgent }), className)}>{children}</span>
+  )
 }
 
 // Uso
-<StatusBadge status="completed" priority="high" urgent>
+;<StatusBadge status="completed" priority="high" urgent>
   Completado
 </StatusBadge>
 ```

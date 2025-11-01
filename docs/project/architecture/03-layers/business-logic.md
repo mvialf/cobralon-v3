@@ -55,7 +55,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { entitySchema } from '@/lib/validations'
 
 const form = useForm({
-  resolver: zodResolver(entitySchema)
+  resolver: zodResolver(entitySchema),
 })
 ```
 
@@ -92,27 +92,28 @@ export const paymentToProjectSchema = z.object({
 })
 
 // Para pago 1:N (a cliente con múltiples proyectos)
-export const paymentToCustomerSchema = z.object({
-  type: z.literal('Customer'),
-  allocations: z.array(allocationSchema).min(1), // 1 o más
-  // ...
-}).refine(
-  (data) => {
-    const sum = data.allocations.reduce((acc, a) => acc + a.allocatedAmount, 0)
-    return Math.abs(sum - data.amount) <= 0.01 // Tolerancia 1 centavo
-  },
-  { message: 'Sum of allocations must equal payment amount' }
-)
+export const paymentToCustomerSchema = z
+  .object({
+    type: z.literal('Customer'),
+    allocations: z.array(allocationSchema).min(1), // 1 o más
+    // ...
+  })
+  .refine(
+    (data) => {
+      const sum = data.allocations.reduce((acc, a) => acc + a.allocatedAmount, 0)
+      return Math.abs(sum - data.amount) <= 0.01 // Tolerancia 1 centavo
+    },
+    { message: 'Sum of allocations must equal payment amount' }
+  )
 ```
 
 #### RUT Validation (Chile)
 
 ```typescript
 // lib/validations/rut-validations.ts
-export const rutSchema = z.string().refine(
-  (rut) => validateRutChecksum(rut),
-  { message: 'RUT inválido' }
-)
+export const rutSchema = z
+  .string()
+  .refine((rut) => validateRutChecksum(rut), { message: 'RUT inválido' })
 
 function validateRutChecksum(rut: string): boolean {
   // Algoritmo módulo 11
@@ -139,6 +140,7 @@ export function calculateProjectBalance(
 ```
 
 **Características:**
+
 - ✅ Pure function (sin side effects)
 - ✅ Testeable fácilmente
 - ✅ Reutilizable en frontend y backend
@@ -165,7 +167,7 @@ export function allocatePaymentFIFO(
 
     allocations.push({
       projectId: project.id,
-      allocatedAmount: amountToAllocate
+      allocatedAmount: amountToAllocate,
     })
 
     remaining -= amountToAllocate

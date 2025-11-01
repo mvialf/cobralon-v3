@@ -61,10 +61,12 @@ ALTER TABLE projects ADD COLUMN project_status_id UUID NOT NULL;
 ```
 
 **Pros:**
+
 - ✅ Clean schema inmediatamente
 - ✅ Sin deuda técnica
 
 **Contras:**
+
 - ❌ **Breaking change** (downtime)
 - ❌ **Migración compleja** (mapear strings legacy → UUIDs)
 - ❌ **Riesgo alto** (rollback difícil)
@@ -88,10 +90,12 @@ model Project {
 ```
 
 **Pros:**
+
 - ✅ Sin cambio de schema
 - ✅ Backward compatible
 
 **Contras:**
+
 - ❌ **No queryable** (no índices en computed)
 - ❌ **Performance pobre** (calcular en cada read)
 - ❌ **Complejidad en validaciones**
@@ -111,10 +115,12 @@ model Project {
 ```
 
 **Pros:**
+
 - ✅ Schema limpio
 - ✅ No confusión
 
 **Contras:**
+
 - ❌ **Proyectos legacy sin status** (datos legacy se pierden)
 - ❌ **Breaking change** (código legacy falla)
 
@@ -131,14 +137,14 @@ Código funciona en ambos escenarios:
 ```typescript
 // Proyectos legacy (usan string)
 const legacyProject = {
-  projectStatusLegacy: "En Proceso",  // ✅ Sigue funcionando
-  projectStatusId: null               // ← Nullable
+  projectStatusLegacy: 'En Proceso', // ✅ Sigue funcionando
+  projectStatusId: null, // ← Nullable
 }
 
 // Proyectos nuevos (usan FK)
 const newProject = {
-  projectStatusLegacy: "",            // ← Default vacío
-  projectStatusId: "uuid-123"         // ✅ FK a ProjectStatus
+  projectStatusLegacy: '', // ← Default vacío
+  projectStatusId: 'uuid-123', // ✅ FK a ProjectStatus
 }
 ```
 
@@ -182,9 +188,9 @@ Nuevos proyectos usan FK automáticamente:
 // components/forms/projects/project-form.tsx
 const form = useForm({
   defaultValues: {
-    projectStatusId: initialStatusId || "",  // ← FK
-    projectStatusLegacy: "",                 // ← Ignorado
-  }
+    projectStatusId: initialStatusId || '', // ← FK
+    projectStatusLegacy: '', // ← Ignorado
+  },
 })
 
 // Al submit
@@ -192,9 +198,9 @@ await fetch('/api/projects', {
   method: 'POST',
   body: JSON.stringify({
     ...data,
-    projectStatusId: data.projectStatusId,  // ✅ FK
+    projectStatusId: data.projectStatusId, // ✅ FK
     // projectStatusLegacy NO se envía
-  })
+  }),
 })
 ```
 
@@ -209,9 +215,9 @@ Si hay problemas con nueva lógica:
 const project = await prisma.project.findUnique({
   where: { id },
   select: {
-    projectStatusLegacy: true,  // ← Datos legacy preservados
+    projectStatusLegacy: true, // ← Datos legacy preservados
     projectStatusId: true,
-  }
+  },
 })
 
 // Siempre hay fallback
@@ -257,7 +263,7 @@ Filtrar por estado requiere considerar ambos campos:
 ```typescript
 // ❌ INCOMPLETO (solo FK)
 const projects = await prisma.project.findMany({
-  where: { projectStatusId: statusId }
+  where: { projectStatusId: statusId },
 })
 
 // ✅ COMPLETO (FK + legacy)
@@ -265,9 +271,9 @@ const projects = await prisma.project.findMany({
   where: {
     OR: [
       { projectStatusId: statusId },
-      { projectStatusLegacy: statusName }  // ← Fallback
-    ]
-  }
+      { projectStatusLegacy: statusName }, // ← Fallback
+    ],
+  },
 })
 ```
 
@@ -279,10 +285,7 @@ const projects = await prisma.project.findMany({
 // lib/helpers/project-filters.ts
 export function buildStatusFilter(statusId: string, statusName: string) {
   return {
-    OR: [
-      { projectStatusId: statusId },
-      { projectStatusLegacy: statusName }
-    ]
+    OR: [{ projectStatusId: statusId }, { projectStatusLegacy: statusName }],
   }
 }
 ```
@@ -337,10 +340,10 @@ export const projectFormSchema = z.object({
   projectName: z.string().optional(),
 
   // Legacy (opcional, deprecated)
-  projectStatusLegacy: z.string().optional().default(""),
+  projectStatusLegacy: z.string().optional().default(''),
 
   // Nuevo (requerido para proyectos nuevos)
-  projectStatusId: z.string().min(1, "Estado es requerido"),
+  projectStatusId: z.string().min(1, 'Estado es requerido'),
 
   // ... otros campos
 })
@@ -424,7 +427,7 @@ export const POST = withLogging(async (request, logger) => {
       projectStatusId: validatedData.projectStatusId,
 
       // Legacy: default vacío
-      projectStatusLegacy: validatedData.projectStatusLegacy || "",
+      projectStatusLegacy: validatedData.projectStatusLegacy || '',
 
       customerId: validatedData.customerId,
       // ... otros campos
@@ -432,13 +435,15 @@ export const POST = withLogging(async (request, logger) => {
     include: {
       customer: true,
       projectStatus: {
-        include: { color: true }
-      }
-    }
+        include: { color: true },
+      },
+    },
   })
 
-  logger.info({ projectId: project.id, statusId: project.projectStatusId },
-    'Project created with new status system')
+  logger.info(
+    { projectId: project.id, statusId: project.projectStatusId },
+    'Project created with new status system'
+  )
 
   return NextResponse.json(project, { status: 201 })
 })
@@ -457,8 +462,8 @@ async function migrateLegacyStatuses() {
   const legacyProjects = await prisma.project.findMany({
     where: {
       projectStatusId: null,
-      projectStatusLegacy: { not: "" }
-    }
+      projectStatusLegacy: { not: '' },
+    },
   })
 
   console.log(`Found ${legacyProjects.length} legacy projects`)
@@ -480,8 +485,8 @@ async function migrateLegacyStatuses() {
         where: { id: project.id },
         data: {
           projectStatusId: statusId,
-          projectStatusLegacy: ""  // ← Limpiar
-        }
+          projectStatusLegacy: '', // ← Limpiar
+        },
       })
       console.log(`Migrated project ${project.projectNumber}`)
     } else {

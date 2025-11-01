@@ -22,6 +22,7 @@ Este proyecto usa **dos tipos de ADRs** optimizados para diferentes propósitos:
 **Template:** [template-slim.md](template-slim.md)
 
 **Ejemplos:**
+
 - ✅ ADR-012 (Pino Logging): 367 → 97 líneas (-73.6%)
 - ✅ ADR-004 (Neon PostgreSQL): 642 → 121 líneas (-81.2%)
 
@@ -32,6 +33,7 @@ Este proyecto usa **dos tipos de ADRs** optimizados para diferentes propósitos:
 **Template:** [template-extended.md](template-extended.md)
 
 **Ejemplos:**
+
 - 📋 ADR-001 (Payment Allocation) - Modelado N:M crítico
 - 📋 ADR-002 (Dual Payment Flows) - Decisión de UX/producto
 - 📋 ADR-003 (Installments) - Lógica de negocio financiera
@@ -252,11 +254,13 @@ Documentados en este directorio ([docs/project/decisions/](./)):
 ### ¿Cuál Template Usar?
 
 **Decisión técnica (stack/herramienta):** → [template-slim.md](template-slim.md)
+
 - Pino, ESLint, Neon, librerías, frameworks
 - Target: 80-120 líneas
 - Enfoque: Quick Start + Trade-offs
 
 **Decisión de negocio/arquitectura:** → [template-extended.md](template-extended.md)
+
 - Modelado de datos, flujos de UX, lógica de negocio, estrategia de producto
 - Target: 200-400 líneas
 - Enfoque: Quick Start + Contexto completo + Alternativas bien justificadas
@@ -339,16 +343,17 @@ Ver [template-slim.md](template-slim.md) o [template-extended.md](template-exten
 
 ## Métricas del Proyecto
 
-| Métrica                  | Valor Actual | Post-Refactor | Reducción |
-| ------------------------ | ------------ | ------------- | --------- |
-| **ADRs Totales**         | 6            | 6             | -         |
-| **Aceptados**            | 6            | 6             | -         |
-| **ADRs Tipo A (Slim)**   | 0            | 2             | +2        |
-| **ADRs Tipo B (Extended)** | 0          | 4             | +4        |
-| **Total Líneas de Docs** | ~3,566       | ~2,450        | **-31.3%** |
-| **Tiempo Lectura (avg)** | ~12 min      | ~8 min        | **-33%**  |
+| Métrica                    | Valor Actual | Post-Refactor | Reducción  |
+| -------------------------- | ------------ | ------------- | ---------- |
+| **ADRs Totales**           | 6            | 6             | -          |
+| **Aceptados**              | 6            | 6             | -          |
+| **ADRs Tipo A (Slim)**     | 0            | 2             | +2         |
+| **ADRs Tipo B (Extended)** | 0            | 4             | +4         |
+| **Total Líneas de Docs**   | ~3,566       | ~2,450        | **-31.3%** |
+| **Tiempo Lectura (avg)**   | ~12 min      | ~8 min        | **-33%**   |
 
 **Refactor Details:**
+
 - **ADR-012 (Pino):** 367 → 97 líneas (-73.6%)
 - **ADR-004 (Neon):** 642 → 121 líneas (-81.2%)
 - **ADR-001, 002, 003, 005:** Mejorados con Quick Start (mantienen longitud)

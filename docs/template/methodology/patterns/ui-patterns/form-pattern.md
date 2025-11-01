@@ -144,11 +144,7 @@ export function UserProfileForm({ initialData, onSuccess }: UserProfileFormProps
     onSuccess?.()
   }
 
-  return (
-    <Form {...form}>
-      {/* ... */}
-    </Form>
-  )
+  return <Form {...form}>{/* ... */}</Form>
 }
 ```
 

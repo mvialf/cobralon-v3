@@ -9,6 +9,7 @@
 > **💡 TL;DR:** MVP NO tiene auth. Estrategia en 3 fases: MVP sin auth (validación) → Production con auth (escalar) → Enterprise (si crece).
 
 **Estado actual:**
+
 - ✅ Aplicación funcional completa (CRUD, pagos, cuotas)
 - ✅ Deploy: Red interna O localhost
 - ✅ Usuarios: 1-2 personas (dueño + asistente)
@@ -21,6 +22,7 @@
    - Recomendado: NextAuth.js (10-15 hrs) O Stack Auth (5-10 hrs)
 
 2. **Restricciones de seguridad:**
+
    ```typescript
    // middleware.ts
    export default withAuth(function middleware(req) {
@@ -28,13 +30,14 @@
    })
 
    export const config = {
-     matcher: ['/((?!api|_next/static|_next/image|favicon.ico).*)']
+     matcher: ['/((?!api|_next/static|_next/image|favicon.ico).*)'],
    }
    ```
 
 3. **Migrar datos:** Sin impacto (schema DB no cambia)
 
 **Archivos a modificar (futuro):**
+
 - `app/middleware.ts` - Crear nuevo (protección de rutas)
 - `app/api/[...resource]/route.ts` - Agregar auth checks
 - `components/layout/app-sidebar.tsx` - Agregar user menu
