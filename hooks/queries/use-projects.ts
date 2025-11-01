@@ -15,6 +15,21 @@ import type { Project } from '@/app/projects/columns'
 // TYPES
 // ============================================================================
 
+/** Proyecto completo con todos los campos (GET /api/projects/:id) */
+export interface ProjectDetail extends Project {
+  phone: string
+  street: string
+  apartment: string | null
+  comuna: string
+  region: string
+  subtotal: number
+  taxRate: number
+  currency: string
+  windowsCount: number
+  squareMeters: number
+  description: string | null
+}
+
 /** Params para GET /api/projects */
 export interface ProjectsQueryParams {
   page?: number
@@ -164,7 +179,7 @@ export function useProjects(params: ProjectsQueryParams = {}) {
 export function useProject(id: string | undefined) {
   return useQuery({
     queryKey: ['projects', id],
-    queryFn: async (): Promise<Project> => {
+    queryFn: async (): Promise<ProjectDetail> => {
       if (!id) throw new Error('ID de proyecto requerido')
 
       const response = await fetch(`/api/projects/${id}`)

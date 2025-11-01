@@ -2,15 +2,16 @@
 
 import * as React from 'react'
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog'
+  ScrollableDialog,
+  ScrollableDialogBody,
+  ScrollableDialogClose,
+  ScrollableDialogContent,
+  ScrollableDialogDescription,
+  ScrollableDialogFooter,
+  ScrollableDialogHeader,
+  ScrollableDialogTitle,
+} from '@/components/ui/scrollable-dialog'
 import { Button } from '@/components/ui/button'
-import { ScrollArea } from '@/components/ui/scroll-area'
 
 import { ProjectForm, ProjectFormHandle } from '@/components/forms/projects/project-form'
 import { type ProjectFormData } from '@/lib/validations/project-validations'
@@ -58,10 +59,6 @@ export function ProjectDialog({
     }
   }
 
-  const handleCancel = () => {
-    onOpenChange?.(false)
-  }
-
   const title = mode === 'create' ? 'Crear Proyecto' : 'Editar Proyecto'
   const description =
     mode === 'create'
@@ -69,30 +66,33 @@ export function ProjectDialog({
       : 'Actualiza la información del proyecto'
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[90vh] max-w-4xl p-0">
-        <DialogHeader className="px-6 pt-6">
-          <DialogTitle>{title}</DialogTitle>
-          <DialogDescription>{description}</DialogDescription>
-        </DialogHeader>
+    <ScrollableDialog open={open} onOpenChange={onOpenChange}>
+      <ScrollableDialogContent className="sm:max-w-[700px]">
+        <ScrollableDialogHeader>
+          <ScrollableDialogTitle>{title}</ScrollableDialogTitle>
+        </ScrollableDialogHeader>
 
-        {/* ScrollArea para contenido largo */}
-        <ScrollArea className="max-h-[calc(90vh-180px)] px-6">
-          <div className="py-4">
-            <ProjectForm
-              ref={formRef}
-              showSubmitButton={false}
-              onSubmit={handleSubmit}
-              defaultValues={defaultValues}
-              isSubmitting={isSubmitting}
-            />
-          </div>
-        </ScrollArea>
+        <ScrollableDialogBody>
+          <ScrollableDialogDescription asChild>
+            <div className="space-y-6">
+              <p className="text-sm text-muted-foreground">{description}</p>
+              <ProjectForm
+                ref={formRef}
+                showSubmitButton={false}
+                onSubmit={handleSubmit}
+                defaultValues={defaultValues}
+                isSubmitting={isSubmitting}
+              />
+            </div>
+          </ScrollableDialogDescription>
+        </ScrollableDialogBody>
 
-        <DialogFooter className="px-6 pb-6">
-          <Button variant="outline" onClick={handleCancel} disabled={isSubmitting}>
-            Cancelar
-          </Button>
+        <ScrollableDialogFooter>
+          <ScrollableDialogClose asChild>
+            <Button variant="outline" disabled={isSubmitting}>
+              Cancelar
+            </Button>
+          </ScrollableDialogClose>
           <Button onClick={() => formRef.current?.submit()} disabled={isSubmitting}>
             {isSubmitting
               ? 'Guardando...'
@@ -100,8 +100,8 @@ export function ProjectDialog({
                 ? 'Crear Proyecto'
                 : 'Guardar Cambios'}
           </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+        </ScrollableDialogFooter>
+      </ScrollableDialogContent>
+    </ScrollableDialog>
   )
 }

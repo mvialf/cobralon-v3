@@ -3,7 +3,7 @@
 import * as React from 'react'
 import { ProjectDialog } from '@/components/dialogs/projects/project-dialog'
 import { type ProjectFormData } from '@/lib/validations/project-validations'
-import { toast } from 'sonner'
+import { useProject, useUpdateProject } from '@/hooks/queries/use-projects'
 
 interface EditProjectDialogProps {
   projectId: string
@@ -35,95 +35,60 @@ export function EditProjectDialog({
   onOpenChange,
   onProjectUpdated,
 }: EditProjectDialogProps) {
-  const [defaultValues, setDefaultValues] = React.useState<Partial<ProjectFormData>>()
+  // ✅ React Query hooks reemplazan fetch manual
+  const { data: project, isLoading } = useProject(open ? projectId : undefined)
+  const updateMutation = useUpdateProject()
 
-  // Cargar datos del proyecto cuando se abre el dialog
-  const loadProjectData = React.useCallback(async () => {
-    try {
-      const response = await fetch(`/api/projects/${projectId}`)
-      if (!response.ok) {
-        throw new Error('Error al cargar proyecto')
-      }
+  // Transformar datos del API al formato del formulario
+  const defaultValues = React.useMemo(() => {
+    if (!project) return undefined
 
-      const project = await response.json()
-
-      // Transformar datos del API al formato del formulario
-      setDefaultValues({
-        customerId: project.customer.id,
-        projectNumber: project.projectNumber,
-        projectName: project.projectName || '',
-        phone: project.phone,
-        street: project.street,
-        apartment: project.apartment || '',
-        comuna: project.comuna,
-        region: project.region,
-        projectStatusId: project.projectStatus?.id || '',
-        date: new Date(project.date),
-        subtotal: Number(project.subtotal),
-        taxRate: Number(project.taxRate),
-        currency: project.currency,
-        windowsCount: project.windowsCount,
-        squareMeters: Number(project.squareMeters),
-        description: project.description || '',
-      })
-    } catch (error) {
-      console.error('Error al cargar proyecto:', error)
-      toast.error('Error al cargar los datos del proyecto')
-      onOpenChange(false)
+    return {
+      customerId: project.customer.id,
+      projectNumber: project.projectNumber,
+      projectName: project.projectName || '',
+      phone: project.phone,
+      street: project.street,
+      apartment: project.apartment || '',
+      comuna: project.comuna,
+      region: project.region,
+      projectStatusId: project.projectStatus?.id || '',
+      date: new Date(project.date),
+      subtotal: Number(project.subtotal),
+      taxRate: Number(project.taxRate),
+      currency: project.currency,
+      windowsCount: project.windowsCount,
+      squareMeters: Number(project.squareMeters),
+      description: project.description || '',
     }
-  }, [projectId, onOpenChange])
-
-  React.useEffect(() => {
-    if (open && !defaultValues) {
-      loadProjectData()
-    }
-  }, [open, defaultValues, loadProjectData])
+  }, [project])
 
   const handleSubmit = async (data: ProjectFormData) => {
-    try {
-      // Calcular total antes de enviar al backend
-      const tax = data.subtotal * (data.taxRate / 100)
-      const total = data.subtotal + tax
+    // Calcular total antes de enviar al backend
+    const tax = data.subtotal * (data.taxRate / 100)
+    const total = data.subtotal + tax
 
-      const response = await fetch(`/api/projects/${projectId}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          ...data,
-          total,
-          totalAmount: total,
-        }),
-      })
+    // ✅ Mutation hook maneja loading, errores, invalidación y toast
+    await updateMutation.mutateAsync({
+      id: projectId,
+      ...data,
+      total,
+      totalAmount: total,
+    })
 
-      if (!response.ok) {
-        const error = await response.json()
-        throw new Error(error.error || 'Error al actualizar proyecto')
-      }
-
-      toast.success('Proyecto actualizado exitosamente')
-      onOpenChange(false)
-      setDefaultValues(undefined) // Reset para forzar recarga en próxima apertura
-      onProjectUpdated?.()
-    } catch (error) {
-      console.error('Error al actualizar proyecto:', error)
-      toast.error(error instanceof Error ? error.message : 'Error al actualizar proyecto')
-    }
+    onOpenChange(false)
+    onProjectUpdated?.()
   }
 
-  const handleOpenChange = (newOpen: boolean) => {
-    // Si se cierra, limpiar defaultValues para forzar recarga
-    if (!newOpen) {
-      setDefaultValues(undefined)
-    }
-    onOpenChange(newOpen)
+  // No renderizar dialog hasta que los datos estén cargados
+  if (open && isLoading) {
+    return null
   }
 
   return (
     <ProjectDialog
       open={open}
-      onOpenChange={handleOpenChange}
+      onOpenChange={onOpenChange}
       onSubmit={handleSubmit}
       defaultValues={defaultValues}
       mode="edit"
