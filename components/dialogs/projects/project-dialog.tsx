@@ -67,7 +67,7 @@ export function ProjectDialog({
 
   return (
     <ScrollableDialog open={open} onOpenChange={onOpenChange}>
-      <ScrollableDialogContent className="sm:max-w-[700px]">
+      <ScrollableDialogContent className="sm">
         <ScrollableDialogHeader>
           <ScrollableDialogTitle>{title}</ScrollableDialogTitle>
         </ScrollableDialogHeader>

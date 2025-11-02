@@ -62,6 +62,9 @@ const projectBaseSchema = z.object({
 
   // Descripción
   description: z.string().optional(),
+
+  // Materiales de desinstalación (team tags)
+  uninstallTagIds: z.array(z.string().uuid()).optional().default([]),
 })
 
 /**

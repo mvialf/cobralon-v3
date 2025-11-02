@@ -42,6 +42,11 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
             allocatedAmount: true,
           },
         },
+        uninstallTags: {
+          include: {
+            color: true,
+          },
+        },
       },
     })
 
@@ -144,6 +149,11 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
     if (body.windowsCount !== undefined) updateData.windowsCount = body.windowsCount
     if (body.squareMeters !== undefined) updateData.squareMeters = new Decimal(body.squareMeters)
     if (body.description !== undefined) updateData.description = body.description?.trim() || null
+    if (body.uninstallTagIds !== undefined) {
+      updateData.uninstallTags = {
+        set: body.uninstallTagIds.map((id: string) => ({ id })),
+      }
+    }
 
     // Actualizar proyecto
     const project = await prisma.project.update({
@@ -166,6 +176,11 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
                 bgClass: true,
               },
             },
+          },
+        },
+        uninstallTags: {
+          include: {
+            color: true,
           },
         },
       },

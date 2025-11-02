@@ -15,6 +15,7 @@ import { Combobox } from '@/components/ui/combobox'
 import { AddressFields } from '@/components/forms/fields/address-fields'
 import { ProjectFinancialFields } from '@/components/forms/fields/project-financial-fields'
 import { ProjectDetailsFields } from '@/components/forms/fields/project-details-fields'
+import { UninstallTagsFields } from '@/components/forms/fields/uninstall-tags-fields'
 import { useConfiguration } from '@/hooks/use-configuration'
 import {
   Form,
@@ -82,6 +83,7 @@ export const ProjectForm = React.forwardRef<ProjectFormHandle, ProjectFormProps>
         windowsCount: 0,
         squareMeters: 0,
         description: '',
+        uninstallTagIds: [],
         ...defaultValues,
       },
     })
@@ -135,6 +137,7 @@ export const ProjectForm = React.forwardRef<ProjectFormHandle, ProjectFormProps>
           windowsCount: defaultValues.windowsCount || 0,
           squareMeters: defaultValues.squareMeters || 0,
           description: defaultValues.description || '',
+          uninstallTagIds: defaultValues.uninstallTagIds || [],
         })
       }
     }, [defaultValues, form, configuration])
@@ -340,9 +343,11 @@ export const ProjectForm = React.forwardRef<ProjectFormHandle, ProjectFormProps>
 
           <AddressFields control={form.control} defaultRegion={configuration.region} />
 
-          <ProjectFinancialFields control={form.control} currency={form.watch('currency')} />
-
           <ProjectDetailsFields control={form.control} />
+
+          <UninstallTagsFields control={form.control} />
+
+          <ProjectFinancialFields control={form.control} currency={form.watch('currency')} />
 
           {showSubmitButton && (
             <div className="flex justify-end gap-2">
