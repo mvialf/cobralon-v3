@@ -1,12 +1,12 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
-import { generateAbbreviation } from '@/lib/validations/team-tag-validations'
+import { generateAbbreviation } from '@/lib/validations/uninstall-tag-validations'
 import { z } from 'zod'
 
 /**
- * Schema de validación para actualizar TeamTag (campos opcionales)
+ * Schema de validación para actualizar UninstallTag (campos opcionales)
  */
-const updateTeamTagSchema = z.object({
+const updateUninstallTagSchema = z.object({
   name: z.string().min(1).max(50).optional(),
   abbreviation: z
     .string()
@@ -20,15 +20,15 @@ const updateTeamTagSchema = z.object({
 })
 
 /**
- * GET /api/team-tags/[id]
+ * GET /api/uninstall-tags/[id]
  *
- * Obtiene una team tag específica por ID
+ * Obtiene una uninstall tag específica por ID
  */
 export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params
 
-    const teamTag = await prisma.teamTag.findUnique({
+    const uninstallTag = await prisma.uninstallTag.findUnique({
       where: { id },
       include: {
         color: {
@@ -43,21 +43,21 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
       },
     })
 
-    if (!teamTag) {
-      return NextResponse.json({ error: 'Team tag no encontrada' }, { status: 404 })
+    if (!uninstallTag) {
+      return NextResponse.json({ error: 'Uninstall tag no encontrada' }, { status: 404 })
     }
 
-    return NextResponse.json({ teamTag })
+    return NextResponse.json({ uninstallTag })
   } catch (error) {
-    console.error('Error fetching team tag:', error)
-    return NextResponse.json({ error: 'Error al obtener la team tag' }, { status: 500 })
+    console.error('Error fetching uninstall tag:', error)
+    return NextResponse.json({ error: 'Error al obtener la uninstall tag' }, { status: 500 })
   }
 }
 
 /**
- * PUT /api/team-tags/[id]
+ * PUT /api/uninstall-tags/[id]
  *
- * Actualiza una team tag existente
+ * Actualiza una uninstall tag existente
  *
  * Body: Campos opcionales a actualizar
  * ```json
@@ -85,20 +85,20 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
       abbreviation: body.abbreviation || (body.name ? generateAbbreviation(body.name) : undefined),
     }
 
-    const validatedData = updateTeamTagSchema.parse(dataToValidate)
+    const validatedData = updateUninstallTagSchema.parse(dataToValidate)
 
     // Verificar que la tag existe
-    const existingTag = await prisma.teamTag.findUnique({
+    const existingTag = await prisma.uninstallTag.findUnique({
       where: { id },
     })
 
     if (!existingTag) {
-      return NextResponse.json({ error: 'Team tag no encontrada' }, { status: 404 })
+      return NextResponse.json({ error: 'Uninstall tag no encontrada' }, { status: 404 })
     }
 
     // Validación: nombre único (si se está cambiando)
     if (validatedData.name && validatedData.name !== existingTag.name) {
-      const duplicateName = await prisma.teamTag.findUnique({
+      const duplicateName = await prisma.uninstallTag.findUnique({
         where: { name: validatedData.name },
       })
 
@@ -122,7 +122,7 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
     }
 
     // Actualizar la tag
-    const updatedTag = await prisma.teamTag.update({
+    const updatedTag = await prisma.uninstallTag.update({
       where: { id },
       data: validatedData,
       include: {
@@ -130,21 +130,21 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
       },
     })
 
-    return NextResponse.json({ teamTag: updatedTag })
+    return NextResponse.json({ uninstallTag: updatedTag })
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json({ error: 'Datos inválidos', details: error.errors }, { status: 400 })
     }
 
-    console.error('Error updating team tag:', error)
-    return NextResponse.json({ error: 'Error al actualizar la team tag' }, { status: 500 })
+    console.error('Error updating uninstall tag:', error)
+    return NextResponse.json({ error: 'Error al actualizar la uninstall tag' }, { status: 500 })
   }
 }
 
 /**
- * DELETE /api/team-tags/[id]
+ * DELETE /api/uninstall-tags/[id]
  *
- * Elimina (soft delete) una team tag
+ * Elimina (soft delete) una uninstall tag
  *
  * Query params:
  * - force: "true" para hacer hard delete (usar con precaución)
@@ -156,35 +156,35 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ i
     const force = searchParams.get('force') === 'true'
 
     // Verificar que la tag existe
-    const existingTag = await prisma.teamTag.findUnique({
+    const existingTag = await prisma.uninstallTag.findUnique({
       where: { id },
     })
 
     if (!existingTag) {
-      return NextResponse.json({ error: 'Team tag no encontrada' }, { status: 404 })
+      return NextResponse.json({ error: 'Uninstall tag no encontrada' }, { status: 404 })
     }
 
     if (force) {
       // Hard delete
-      await prisma.teamTag.delete({
+      await prisma.uninstallTag.delete({
         where: { id },
       })
 
-      return NextResponse.json({ message: 'Team tag eliminada permanentemente' })
+      return NextResponse.json({ message: 'Uninstall tag eliminada permanentemente' })
     } else {
       // Soft delete
-      const deletedTag = await prisma.teamTag.update({
+      const deletedTag = await prisma.uninstallTag.update({
         where: { id },
         data: { isActive: false },
       })
 
       return NextResponse.json({
-        message: 'Team tag desactivada',
-        teamTag: deletedTag,
+        message: 'Uninstall tag desactivada',
+        uninstallTag: deletedTag,
       })
     }
   } catch (error) {
-    console.error('Error deleting team tag:', error)
-    return NextResponse.json({ error: 'Error al eliminar la team tag' }, { status: 500 })
+    console.error('Error deleting uninstall tag:', error)
+    return NextResponse.json({ error: 'Error al eliminar la uninstall tag' }, { status: 500 })
   }
 }

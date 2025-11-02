@@ -1,26 +1,26 @@
 /**
- * Hook para manejo de Team Tags con API REST
+ * Hook para manejo de Uninstall Tags con API REST
  * Adaptado de CalReact useUninstallTags (Firebase → API Routes)
  */
 
 import { useState, useCallback, useEffect } from 'react'
-import type { TeamTag, TagColor } from '@/components/custom/tag-system/types'
+import type { UninstallTag, TagColor } from '@/components/custom/tag-system/types'
 
-interface UseTeamTagsOptions {
-  initialSelected?: TeamTag[]
+interface UseUninstallTagsOptions {
+  initialSelected?: UninstallTag[]
   autoFetch?: boolean // Auto-fetch al montar (default: true)
 }
 
-interface UseTeamTagsReturn {
+interface UseUninstallTagsReturn {
   // Estado
-  availableTags: TeamTag[]
+  availableTags: UninstallTag[]
   availableColors: TagColor[]
-  selectedTags: TeamTag[]
+  selectedTags: UninstallTag[]
   loading: boolean
   error: string | null
 
   // Setters
-  setSelectedTags: (tags: TeamTag[]) => void
+  setSelectedTags: (tags: UninstallTag[]) => void
 
   // CRUD Operations
   createTag: (name: string, abbreviation: string, colorId: string) => Promise<void>
@@ -30,37 +30,37 @@ interface UseTeamTagsReturn {
   refreshColors: () => Promise<void>
 
   // Helpers
-  selectTag: (tag: TeamTag) => void
+  selectTag: (tag: UninstallTag) => void
   unselectTag: (tagId: string) => void
-  toggleTag: (tag: TeamTag) => void
+  toggleTag: (tag: UninstallTag) => void
   isTagSelected: (tagId: string) => boolean
   clearSelectedTags: () => void
 }
 
-export function useTeamTags(options: UseTeamTagsOptions = {}): UseTeamTagsReturn {
+export function useUninstallTags(options: UseUninstallTagsOptions = {}): UseUninstallTagsReturn {
   const { initialSelected = [], autoFetch = true } = options
 
-  const [availableTags, setAvailableTags] = useState<TeamTag[]>([])
+  const [availableTags, setAvailableTags] = useState<UninstallTag[]>([])
   const [availableColors, setAvailableColors] = useState<TagColor[]>([])
-  const [selectedTags, setSelectedTags] = useState<TeamTag[]>(initialSelected)
+  const [selectedTags, setSelectedTags] = useState<UninstallTag[]>(initialSelected)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  // Fetch team tags desde API
+  // Fetch uninstall tags desde API
   const refreshTags = useCallback(async () => {
     try {
       setLoading(true)
       setError(null)
 
-      const res = await fetch('/api/team-tags?includeColor=true')
-      if (!res.ok) throw new Error('Error al cargar team tags')
+      const res = await fetch('/api/uninstall-tags?includeColor=true')
+      if (!res.ok) throw new Error('Error al cargar uninstall tags')
 
       const data = await res.json()
-      setAvailableTags(data.teamTags || [])
+      setAvailableTags(data.uninstallTags || [])
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Error desconocido'
       setError(errorMessage)
-      console.error('Error cargando team tags:', err)
+      console.error('Error cargando uninstall tags:', err)
     } finally {
       setLoading(false)
     }
@@ -85,7 +85,7 @@ export function useTeamTags(options: UseTeamTagsOptions = {}): UseTeamTagsReturn
       try {
         setError(null)
 
-        const res = await fetch('/api/team-tags', {
+        const res = await fetch('/api/uninstall-tags', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ name, abbreviation, colorId }),
@@ -112,7 +112,7 @@ export function useTeamTags(options: UseTeamTagsOptions = {}): UseTeamTagsReturn
       try {
         setError(null)
 
-        const res = await fetch(`/api/team-tags/${tagId}`, {
+        const res = await fetch(`/api/uninstall-tags/${tagId}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ name, abbreviation, colorId }),
@@ -139,7 +139,7 @@ export function useTeamTags(options: UseTeamTagsOptions = {}): UseTeamTagsReturn
       try {
         setError(null)
 
-        const res = await fetch(`/api/team-tags/${tagId}`, {
+        const res = await fetch(`/api/uninstall-tags/${tagId}`, {
           method: 'DELETE',
         })
 
@@ -162,7 +162,7 @@ export function useTeamTags(options: UseTeamTagsOptions = {}): UseTeamTagsReturn
   )
 
   // Selection helpers
-  const selectTag = useCallback((tag: TeamTag) => {
+  const selectTag = useCallback((tag: UninstallTag) => {
     setSelectedTags((prev) => {
       if (prev.some((t) => t.id === tag.id)) return prev
       return [...prev, tag]
@@ -173,7 +173,7 @@ export function useTeamTags(options: UseTeamTagsOptions = {}): UseTeamTagsReturn
     setSelectedTags((prev) => prev.filter((t) => t.id !== tagId))
   }, [])
 
-  const toggleTag = useCallback((tag: TeamTag) => {
+  const toggleTag = useCallback((tag: UninstallTag) => {
     setSelectedTags((prev) => {
       const isSelected = prev.some((t) => t.id === tag.id)
       if (isSelected) {

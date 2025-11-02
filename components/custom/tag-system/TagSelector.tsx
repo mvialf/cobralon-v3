@@ -15,7 +15,7 @@ import {
 import { TagBadge } from './TagBadge'
 import { CreateTagModal } from './CreateTagModal'
 import { EditTagModal } from './EditTagModal'
-import type { TagSelectorProps, TeamTag } from './types'
+import type { TagSelectorProps, UninstallTag } from './types'
 
 /**
  * TagSelector - Selector de team tags con popover estilo Trello
@@ -41,9 +41,9 @@ export const TagSelector = React.forwardRef<HTMLDivElement, TagSelectorProps>(
     const [isOpen, setIsOpen] = React.useState(false)
     const [isCreatingTag, setIsCreatingTag] = React.useState(false)
     const [isEditingTag, setIsEditingTag] = React.useState(false)
-    const [tagToEdit, setTagToEdit] = React.useState<TeamTag | null>(null)
+    const [tagToEdit, setTagToEdit] = React.useState<UninstallTag | null>(null)
 
-    const handleTagToggle = (tag: TeamTag) => {
+    const handleTagToggle = (tag: UninstallTag) => {
       const isSelected = selectedTags.some((selected) => selected.id === tag.id)
 
       if (isSelected) {
@@ -75,7 +75,7 @@ export const TagSelector = React.forwardRef<HTMLDivElement, TagSelectorProps>(
       setTagToEdit(null)
     }
 
-    const handleOpenEditModal = (tag: TeamTag) => {
+    const handleOpenEditModal = (tag: UninstallTag) => {
       setTagToEdit(tag)
       setIsEditingTag(true)
     }

@@ -12,7 +12,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { TagBadge } from './TagBadge'
 import { cn } from '@/lib/utils'
-import type { EditTagModalProps, TeamTag } from './types'
+import type { EditTagModalProps, UninstallTag } from './types'
 
 export const EditTagModal: React.FC<EditTagModalProps> = ({
   isOpen,
@@ -86,7 +86,7 @@ export const EditTagModal: React.FC<EditTagModalProps> = ({
 
   const selectedColor = availableColors.find((c) => c.id === tagColorId)
 
-  const previewTag: TeamTag = {
+  const previewTag: UninstallTag = {
     id: 'preview',
     name: tagName.trim() || 'Tag',
     abbreviation: tagAbbreviation.trim() || tagName.trim().substring(0, 2).toUpperCase() || 'XX',

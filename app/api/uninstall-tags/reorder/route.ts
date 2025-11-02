@@ -3,16 +3,16 @@ import { prisma } from '@/lib/db'
 import { z } from 'zod'
 
 /**
- * Schema de validación para reordenar team tags
+ * Schema de validación para reordenar uninstall tags
  */
 const reorderSchema = z.object({
   tagIds: z.array(z.string().uuid('ID inválido')).min(1, 'Debe haber al menos una tag'),
 })
 
 /**
- * POST /api/team-tags/reorder
+ * POST /api/uninstall-tags/reorder
  *
- * Reordena las team tags según el nuevo orden de IDs.
+ * Reordena las uninstall tags según el nuevo orden de IDs.
  * Recalcula automáticamente los valores de `order` con gaps de 10.
  *
  * Body:
@@ -39,7 +39,7 @@ export async function POST(request: Request) {
     const { tagIds } = validatedData
 
     // 1. Verificar que todos los IDs existan
-    const existingTags = await prisma.teamTag.findMany({
+    const existingTags = await prisma.uninstallTag.findMany({
       where: {
         id: { in: tagIds },
       },
@@ -56,7 +56,7 @@ export async function POST(request: Request) {
       const missingIds = tagIds.filter((id) => !foundIds.includes(id))
 
       return NextResponse.json(
-        { error: `Team tags no encontradas: ${missingIds.join(', ')}` },
+        { error: `Uninstall tags no encontradas: ${missingIds.join(', ')}` },
         { status: 404 }
       )
     }
@@ -85,7 +85,7 @@ export async function POST(request: Request) {
     // 4. Actualizar en transacción Prisma
     await prisma.$transaction(
       updates.map((update) =>
-        prisma.teamTag.update({
+        prisma.uninstallTag.update({
           where: { id: update.id },
           data: { order: update.order },
         })
@@ -93,7 +93,7 @@ export async function POST(request: Request) {
     )
 
     // 5. Retornar lista completa ordenada
-    const allTags = await prisma.teamTag.findMany({
+    const allTags = await prisma.uninstallTag.findMany({
       where: { isActive: true },
       orderBy: { order: 'asc' },
       include: {
@@ -110,15 +110,15 @@ export async function POST(request: Request) {
     })
 
     return NextResponse.json({
-      message: 'Team tags reordenadas correctamente',
-      teamTags: allTags,
+      message: 'Uninstall tags reordenadas correctamente',
+      uninstallTags: allTags,
     })
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json({ error: 'Datos inválidos', details: error.errors }, { status: 400 })
     }
 
-    console.error('Error reordering team tags:', error)
-    return NextResponse.json({ error: 'Error al reordenar las team tags' }, { status: 500 })
+    console.error('Error reordering uninstall tags:', error)
+    return NextResponse.json({ error: 'Error al reordenar las uninstall tags' }, { status: 500 })
   }
 }

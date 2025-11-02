@@ -1,12 +1,15 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
-import { teamTagSchema, generateAbbreviation } from '@/lib/validations/team-tag-validations'
+import {
+  uninstallTagSchema,
+  generateAbbreviation,
+} from '@/lib/validations/uninstall-tag-validations'
 import { z } from 'zod'
 
 /**
- * GET /api/team-tags
+ * GET /api/uninstall-tags
  *
- * Obtiene todas las tags de equipo, ordenadas por orden ascendente
+ * Obtiene todas las tags de desinstalación, ordenadas por orden ascendente
  *
  * Query params:
  * - includeInactive: "true" para incluir tags inactivas (default: false)
@@ -15,11 +18,11 @@ import { z } from 'zod'
  * Response:
  * ```json
  * {
- *   "teamTags": [
+ *   "uninstallTags": [
  *     {
  *       "id": "uuid",
- *       "name": "Desarrollador",
- *       "abbreviation": "DV",
+ *       "name": "Material X",
+ *       "abbreviation": "MX",
  *       "order": 1,
  *       "colorId": "uuid",
  *       "color": { "name": "Azul", "bgClass": "bg-blue-500", ... },
@@ -56,25 +59,25 @@ export async function GET(request: Request) {
       }
     }
 
-    const teamTags = await prisma.teamTag.findMany(queryOptions)
+    const uninstallTags = await prisma.uninstallTag.findMany(queryOptions)
 
-    return NextResponse.json({ teamTags })
+    return NextResponse.json({ uninstallTags })
   } catch (error) {
-    console.error('Error fetching team tags:', error)
-    return NextResponse.json({ error: 'Error al obtener las team tags' }, { status: 500 })
+    console.error('Error fetching uninstall tags:', error)
+    return NextResponse.json({ error: 'Error al obtener las uninstall tags' }, { status: 500 })
   }
 }
 
 /**
- * POST /api/team-tags
+ * POST /api/uninstall-tags
  *
- * Crea una nueva team tag
+ * Crea una nueva uninstall tag
  *
  * Body:
  * ```json
  * {
- *   "name": "Desarrollador",
- *   "abbreviation": "DV",  // Opcional: se auto-genera si no se provee
+ *   "name": "Material X",
+ *   "abbreviation": "MX",  // Opcional: se auto-genera si no se provee
  *   "colorId": "uuid-del-color",
  *   "order": 5  // Opcional
  * }
@@ -95,10 +98,10 @@ export async function POST(request: Request) {
       abbreviation: body.abbreviation || generateAbbreviation(body.name),
     }
 
-    const validatedData = teamTagSchema.parse(dataToValidate)
+    const validatedData = uninstallTagSchema.parse(dataToValidate)
 
     // Validación: nombre único
-    const existingByName = await prisma.teamTag.findUnique({
+    const existingByName = await prisma.uninstallTag.findUnique({
       where: { name: validatedData.name },
     })
 
@@ -125,7 +128,7 @@ export async function POST(request: Request) {
       order = body.order
     } else {
       // Buscar el máximo order actual
-      const maxOrder = await prisma.teamTag.findFirst({
+      const maxOrder = await prisma.uninstallTag.findFirst({
         orderBy: { order: 'desc' },
         select: { order: true },
       })
@@ -135,7 +138,7 @@ export async function POST(request: Request) {
     }
 
     // Crear la tag
-    const newTag = await prisma.teamTag.create({
+    const newTag = await prisma.uninstallTag.create({
       data: {
         name: validatedData.name,
         abbreviation: validatedData.abbreviation,
@@ -147,13 +150,13 @@ export async function POST(request: Request) {
       },
     })
 
-    return NextResponse.json({ teamTag: newTag }, { status: 201 })
+    return NextResponse.json({ uninstallTag: newTag }, { status: 201 })
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json({ error: 'Datos inválidos', details: error.errors }, { status: 400 })
     }
 
-    console.error('Error creating team tag:', error)
-    return NextResponse.json({ error: 'Error al crear la team tag' }, { status: 500 })
+    console.error('Error creating uninstall tag:', error)
+    return NextResponse.json({ error: 'Error al crear la uninstall tag' }, { status: 500 })
   }
 }

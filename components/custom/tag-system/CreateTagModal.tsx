@@ -13,7 +13,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { TagBadge } from './TagBadge'
-import type { CreateTagModalProps, TeamTag } from './types'
+import type { CreateTagModalProps, UninstallTag } from './types'
 
 /**
  * Modal para crear team tags
@@ -86,7 +86,7 @@ export const CreateTagModal: React.FC<CreateTagModalProps> = ({
 
   const selectedColor = availableColors.find((c) => c.id === tagColorId)
 
-  const previewTag: TeamTag = {
+  const previewTag: UninstallTag = {
     id: 'preview',
     name: tagName.trim() || 'Nueva tag',
     abbreviation: tagAbbreviation.trim() || tagName.trim().substring(0, 2).toUpperCase() || 'XX',

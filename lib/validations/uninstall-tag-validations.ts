@@ -12,9 +12,9 @@ export type BadgeColor = {
 }
 
 /**
- * Type completo de TeamTag (from API)
+ * Type completo de UninstallTag (from API)
  */
-export type TeamTag = {
+export type UninstallTag = {
   id: string
   name: string
   abbreviation: string
@@ -27,9 +27,9 @@ export type TeamTag = {
 }
 
 /**
- * Schema de validación para crear/editar team tags
+ * Schema de validación para crear/editar uninstall tags
  */
-export const teamTagSchema = z.object({
+export const uninstallTagSchema = z.object({
   name: z
     .string()
     .min(1, 'El nombre es obligatorio')
@@ -46,12 +46,12 @@ export const teamTagSchema = z.object({
 /**
  * Type inferido del schema (para formularios)
  */
-export type TeamTagFormValues = z.infer<typeof teamTagSchema>
+export type UninstallTagFormValues = z.infer<typeof uninstallTagSchema>
 
 /**
  * Type para el payload de creación (API)
  */
-export type CreateTeamTagPayload = {
+export type CreateUninstallTagPayload = {
   name: string
   abbreviation: string
   colorId: string
@@ -60,7 +60,7 @@ export type CreateTeamTagPayload = {
 /**
  * Type para el payload de actualización (API)
  */
-export type UpdateTeamTagPayload = CreateTeamTagPayload
+export type UpdateUninstallTagPayload = CreateUninstallTagPayload
 
 /**
  * Helper para auto-generar abreviatura desde nombre
@@ -74,9 +74,9 @@ export function generateAbbreviation(name: string): string {
 }
 
 /**
- * Helper para convertir TeamTag a form values
+ * Helper para convertir UninstallTag a form values
  */
-export function tagToFormValues(tag: TeamTag): TeamTagFormValues {
+export function tagToFormValues(tag: UninstallTag): UninstallTagFormValues {
   return {
     name: tag.name,
     abbreviation: tag.abbreviation,
@@ -88,7 +88,7 @@ export function tagToFormValues(tag: TeamTag): TeamTagFormValues {
  * Schema para auto-generación de abreviatura (opcional)
  * Usado en modales donde el usuario puede dejar abbreviation vacío
  */
-export const teamTagWithOptionalAbbreviationSchema = z.object({
+export const uninstallTagWithOptionalAbbreviationSchema = z.object({
   name: z
     .string()
     .min(1, 'El nombre es obligatorio')
@@ -105,9 +105,9 @@ export const teamTagWithOptionalAbbreviationSchema = z.object({
 /**
  * Helper para normalizar payload con auto-generación de abreviatura
  */
-export function normalizeTeamTagPayload(
-  values: z.infer<typeof teamTagWithOptionalAbbreviationSchema>
-): CreateTeamTagPayload {
+export function normalizeUninstallTagPayload(
+  values: z.infer<typeof uninstallTagWithOptionalAbbreviationSchema>
+): CreateUninstallTagPayload {
   return {
     name: values.name,
     abbreviation: values.abbreviation || generateAbbreviation(values.name),

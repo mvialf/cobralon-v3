@@ -1,5 +1,5 @@
 /**
- * Team Tags System - Exportaciones
+ * Uninstall Tags System - Exportaciones
  * Adaptado de CalReact uninstall-tags para Cobralon
  */
 
@@ -9,7 +9,7 @@ export { CreateTagModal } from './CreateTagModal'
 export { EditTagModal } from './EditTagModal'
 
 export type {
-  TeamTag,
+  UninstallTag,
   TagColor,
   TagSelectorProps,
   TagBadgeProps,

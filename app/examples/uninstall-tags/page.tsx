@@ -4,11 +4,11 @@ import { AppLayout } from '@/components/layout/app-layout'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { TagSelector, TagBadge } from '@/components/custom/tag-system'
-import { useTeamTags } from '@/hooks/use-team-tags'
+import { useUninstallTags } from '@/hooks/use-uninstall-tags'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Loader2, AlertCircle, CheckCircle2 } from 'lucide-react'
 
-export default function TeamTagsExamplePage() {
+export default function UninstallTagsExamplePage() {
   const {
     // Estado
     availableTags,
@@ -33,7 +33,7 @@ export default function TeamTagsExamplePage() {
     toggleTag,
     isTagSelected,
     clearSelectedTags,
-  } = useTeamTags({
+  } = useUninstallTags({
     initialSelected: [],
     autoFetch: true,
   })
@@ -234,7 +234,7 @@ export default function TeamTagsExamplePage() {
               <div>
                 <h4 className="text-sm font-semibold mb-2">1. Importar Hook y Componente</h4>
                 <pre className="bg-muted p-3 rounded text-xs overflow-x-auto">
-                  {`import { useTeamTags } from '@/hooks/use-team-tags'
+                  {`import { useUninstallTags } from '@/hooks/use-uninstall-tags'
 import { TagSelector } from '@/components/custom/tag-system'`}
                 </pre>
               </div>
@@ -250,7 +250,7 @@ import { TagSelector } from '@/components/custom/tag-system'`}
   editTag,
   deleteTag,
   setSelectedTags,
-} = useTeamTags({
+} = useUninstallTags({
   initialSelected: [],
   autoFetch: true,
 })`}
