@@ -1,5 +1,5 @@
 /**
- * Types para el sistema de Team Tags (adaptado de CalReact uninstall-tags)
+ * Types para el sistema de Uninstall Tags (adaptado de CalReact uninstall-tags)
  */
 
 /**
@@ -14,9 +14,9 @@ export type TagColor = {
 }
 
 /**
- * Team Tag completa (desde API)
+ * Uninstall Tag completa (desde API)
  */
-export interface TeamTag {
+export interface UninstallTag {
   id: string
   name: string
   abbreviation: string
@@ -31,10 +31,10 @@ export interface TeamTag {
  * Props para TagSelector
  */
 export interface TagSelectorProps {
-  selectedTags: TeamTag[]
-  availableTags: TeamTag[]
+  selectedTags: UninstallTag[]
+  availableTags: UninstallTag[]
   availableColors: TagColor[]
-  onTagsChange: (tags: TeamTag[]) => void
+  onTagsChange: (tags: UninstallTag[]) => void
   onCreateTag?: (name: string, abbreviation: string, colorId: string) => void | Promise<void>
   onEditTag?: (
     tagId: string,
@@ -52,7 +52,7 @@ export interface TagSelectorProps {
  * Props para TagBadge
  */
 export interface TagBadgeProps {
-  tag: TeamTag
+  tag: UninstallTag
   removable?: boolean
   onRemove?: (tagId: string) => void
   className?: string
@@ -65,7 +65,7 @@ export interface CreateTagModalProps {
   isOpen: boolean
   onOpenChange: (open: boolean) => void
   onCreateTag: (name: string, abbreviation: string, colorId: string) => void | Promise<void>
-  existingTags: TeamTag[]
+  existingTags: UninstallTag[]
   availableColors: TagColor[]
 }
 
@@ -81,7 +81,7 @@ export interface EditTagModalProps {
     abbreviation: string,
     colorId: string
   ) => void | Promise<void>
-  tag: TeamTag | null
-  existingTags: TeamTag[]
+  tag: UninstallTag | null
+  existingTags: UninstallTag[]
   availableColors: TagColor[]
 }
