@@ -84,21 +84,22 @@ const pinoConfig: pino.LoggerOptions = {
   // Timestamp en formato ISO
   timestamp: pino.stdTimeFunctions.isoTime,
 
-  // Pretty-print solo en development
-  ...(process.env.NODE_ENV === 'production'
-    ? {}
-    : {
-        transport: {
-          target: 'pino-pretty',
-          options: {
-            colorize: true,
-            translateTime: 'HH:MM:ss',
-            ignore: 'pid,hostname',
-            singleLine: false,
-            messageFormat: '{msg}',
-          },
-        },
-      }),
+  // Pretty-print DESHABILITADO temporalmente (Next.js 15 incompatibilidad)
+  // ...(process.env.NODE_ENV === 'production'
+  //   ? {}
+  //   : {
+  //       transport: {
+  //         target: 'pino-pretty',
+  //         options: {
+  //           sync: true, // Deshabilita worker threads (Next.js 15 compatibilidad)
+  //           colorize: true,
+  //           translateTime: 'HH:MM:ss',
+  //           ignore: 'pid,hostname',
+  //           singleLine: false,
+  //           messageFormat: '{msg}',
+  //         },
+  //       },
+  //     }),
 }
 
 /**

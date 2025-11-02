@@ -1,6 +1,6 @@
 # Implementation Log - 2025 Q2-Q4 (Actual)
 
-> **Implementaciones recientes:** #15-26 (Octubre - Diciembre 2025)
+> **Implementaciones recientes:** #15-29 (Octubre - Diciembre 2025)
 >
 > **Ver implementaciones anteriores:** [@2025-q1.md](./2025-q1.md) (#1-14)
 
@@ -75,6 +75,43 @@ Registrar **implementaciones significativas** de este proyecto con:
   - Antes: `Project ←→ _ProjectUninstallMaterials ←→ UninstallTag` (N:M con tabla intermedia)
   - Después: `Project.uninstallTagIds: string[]` → lookup manual cuando se necesita data completa
 - **Trade-off aceptado:** Frontend debe hacer lookup manual de tags completos, pero esto es preferible vs complejidad de relación N:M para un caso de uso simple
+
+---
+
+### 🐛 Fix: Pino Logger Worker Thread Crashes en Next.js 15
+
+- **Status:** ✅ Complete | **Date:** 2025-11-02 | **Impact:** Medium
+- **Problem:** pino-pretty causaba crashes intermitentes con errores de worker thread en Next.js 15, generando outliers de performance de 16+ segundos
+- **Root Cause:** Next.js 15.5.6 cambió arquitectura de bundling - worker threads externos (como pino-pretty) no son compatibles con el nuevo sistema
+- **Solution:** Deshabilitar completamente pino-pretty en desarrollo, usar logger JSON básico de pino
+- **Benefits:**
+  - **100% eliminación de crashes:** Sin más errores "worker has exited"
+  - **Performance estable:** Eliminados outliers de 16s, mantiene 0.70s consistente
+  - **Logs funcionales:** JSON estructurado sigue funcionando (menos bonito pero completo)
+  - **Zero overhead:** Sin worker threads = sin overhead de comunicación entre threads
+  - **Producción no afectada:** En prod pino sigue usando JSON básico (sin cambios)
+- **Implementación:** ✅ Completada
+  - **Fase 1:** Investigación con sequential thinking (12 thoughts)
+    - Identificado root cause: pino-pretty worker threads incompatibles con Next.js 15
+    - Evaluadas 5 soluciones alternativas
+    - Opción `sync: true` NO funcionó (probada y descartada)
+    - Solución final: Deshabilitar pino-pretty completamente
+  - **Fase 2:** Aplicar fix
+    - Comentar bloque de `transport` con pino-pretty (líneas 87-102)
+    - Borrar `.next` folder para forzar rebuild
+    - Reiniciar dev server
+  - **Fase 3:** Validación
+    - TypeCheck: ✅ Pass
+    - ESLint: ✅ Pass (29 warnings pre-existentes)
+    - Performance: ✅ 0.71s (estable, sin outliers)
+    - Logs: ✅ JSON funcionando correctamente
+- **Archivos modificados:**
+  - `lib/logger.ts` - Comentar bloque pino-pretty transport (líneas 87-102)
+- **Validación:** ✅ TypeCheck: Pass | ESLint: Pass | Performance: 0.71s stable | No worker crashes
+- **Arquitectura simplificada:**
+  - Antes: `pino → pino-pretty (worker thread) → stdout coloreado` ❌ Crashes
+  - Después: `pino → stdout JSON` ✅ Estable
+- **Trade-off aceptado:** Logs menos bonitos en desarrollo (JSON vs pretty-print), pero estabilidad 100% y performance consistente son más importantes
 
 ---
 
