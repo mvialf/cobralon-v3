@@ -312,7 +312,7 @@ useEffect(() => {
 
 | Caso de Uso     | Delay Recomendado | Razón                                      |
 | --------------- | ----------------- | ------------------------------------------ |
-| Search          | 300-500ms         | Balance entre responsive y performance    |
+| Search          | 300-500ms         | Balance entre responsive y performance     |
 | Auto-save       | 1000-2000ms       | Dar tiempo al usuario para editar          |
 | Filters/Sort    | 200-400ms         | UX responsive pero no excesivo             |
 | Window resize   | 100-200ms         | Prevenir eventos excesivos pero responsive |

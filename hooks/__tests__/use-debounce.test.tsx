@@ -34,12 +34,9 @@ describe('useDebounce', () => {
   })
 
   it('debe usar delay personalizado', () => {
-    const { result, rerender } = renderHook(
-      ({ value, delay }) => useDebounce(value, delay),
-      {
-        initialProps: { value: 'initial', delay: 500 },
-      }
-    )
+    const { result, rerender } = renderHook(({ value, delay }) => useDebounce(value, delay), {
+      initialProps: { value: 'initial', delay: 500 },
+    })
 
     expect(result.current).toBe('initial')
 

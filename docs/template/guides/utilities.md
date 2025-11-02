@@ -35,13 +35,13 @@ formatCurrency(amount: number, currency: string = 'CLP'): string
 
 ### Monedas Soportadas
 
-| Código | Moneda            | Decimales | Locale  |
-| ------ | ----------------- | --------- | ------- |
-| CLP    | Peso Chileno      | 0         | es-CL   |
-| USD    | Dólar Americano   | 2         | en-US   |
-| EUR    | Euro              | 2         | es-ES   |
-| ARS    | Peso Argentino    | 2         | es-AR   |
-| MXN    | Peso Mexicano     | 2         | es-MX   |
+| Código | Moneda          | Decimales | Locale |
+| ------ | --------------- | --------- | ------ |
+| CLP    | Peso Chileno    | 0         | es-CL  |
+| USD    | Dólar Americano | 2         | en-US  |
+| EUR    | Euro            | 2         | es-ES  |
+| ARS    | Peso Argentino  | 2         | es-AR  |
+| MXN    | Peso Mexicano   | 2         | es-MX  |
 
 ### Ejemplos
 
@@ -151,10 +151,10 @@ formatDate(
 
 ### Variantes
 
-| Variant | es-CL                       | en-US                |
-| ------- | --------------------------- | -------------------- |
-| short   | `15/01/2025`                | `01/15/2025`         |
-| long    | `15 de enero de 2025`       | `January 15, 2025`   |
+| Variant | es-CL                        | en-US                       |
+| ------- | ---------------------------- | --------------------------- |
+| short   | `15/01/2025`                 | `01/15/2025`                |
+| long    | `15 de enero de 2025`        | `January 15, 2025`          |
 | full    | `15 de enero de 2025, 14:30` | `January 15, 2025, 2:30 PM` |
 
 ### Ejemplos

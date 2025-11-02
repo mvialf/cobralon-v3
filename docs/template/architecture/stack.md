@@ -136,7 +136,7 @@ Funciones de formateo basadas en Intl API nativa (zero dependencies):
 - **formatDate()**: Formatea fechas con variantes short/long/full y soporte i18n
 
 **Ubicación**: [lib/format.ts](../../../lib/format.ts)
-**Tests**: [lib/__tests__/format.test.ts](../../../lib/__tests__/format.test.ts) (24 tests)
+**Tests**: [lib/**tests**/format.test.ts](../../../lib/__tests__/format.test.ts) (24 tests)
 **Docs**: [guides/utilities.md](../guides/utilities.md)
 
 ### Custom Hooks (Template Built-in)
@@ -145,7 +145,7 @@ Funciones de formateo basadas en Intl API nativa (zero dependencies):
   - Type-safe con generics `<T>`
   - Default 300ms, configurable
   - **Ubicación**: [hooks/use-debounce.ts](../../../hooks/use-debounce.ts)
-  - **Tests**: [hooks/__tests__/use-debounce.test.tsx](../../../hooks/__tests__/use-debounce.test.tsx) (10 tests)
+  - **Tests**: [hooks/**tests**/use-debounce.test.tsx](../../../hooks/__tests__/use-debounce.test.tsx) (10 tests)
   - **Docs**: [guides/hooks.md](../guides/hooks.md)
 
 - **useIsMobile**: Detecta breakpoint mobile (<768px)
