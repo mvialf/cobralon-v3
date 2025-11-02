@@ -91,8 +91,8 @@ model Project {
   updatedAt           DateTime            @updatedAt
   currency            String              @default("CLP")
   totalAmount         Decimal?            @db.Decimal(12, 2)
+  uninstallTagIds     String[]
   paymentAllocations  PaymentAllocation[]
-  uninstallTags       UninstallTag[]      @relation("ProjectUninstallMaterials")
   customer            Customer            @relation(fields: [customerId], references: [id], onDelete: Cascade)
   projectStatus       ProjectStatus?      @relation(fields: [projectStatusId], references: [id], onDelete: Restrict)
 
@@ -184,7 +184,6 @@ model UninstallTag {
   createdAt    DateTime   @default(now())
   updatedAt    DateTime   @updatedAt
   color        BadgeColor @relation(fields: [colorId], references: [id], onDelete: Restrict)
-  projects     Project[]  @relation("ProjectUninstallMaterials")
 
   @@index([colorId])
   @@index([order])

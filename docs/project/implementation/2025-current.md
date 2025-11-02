@@ -36,6 +36,48 @@ Registrar **implementaciones significativas** de este proyecto con:
 
 ## Implementaciones
 
+### 🔄 Simplificación: UninstallTag Relation a Array de IDs
+
+- **Status:** ✅ Complete | **Date:** 2025-11-02 | **Impact:** Low
+- **Problem:** Relación N:M con tabla intermedia `_ProjectUninstallMaterials` agregaba complejidad innecesaria para una relación simple
+- **Root Cause:** Sobre-ingeniería - tags solo necesitan IDs para referencia, no requieren datos relacionales complejos
+- **Solution:** Migrar de relación Prisma N:M a array simple de IDs (`uninstallTagIds String[]`)
+- **Benefits:**
+  - **-23 líneas totales:** Código eliminado en 3 archivos
+  - **-1 tabla DB:** Eliminada tabla intermedia `_ProjectUninstallMaterials`
+  - **Queries más simples:** Sin `include` nested para uninstallTags
+  - **Performance:** Menos JOINs en fetch de proyectos (especialmente en GET /api/projects)
+  - **Mantenibilidad:** Lógica más directa - array de strings vs relación compleja
+  - **Type safety mantenido:** Array de strings validado en schema Prisma
+- **Implementación:** ✅ Completada
+  - **Fase 1:** Actualizar Prisma schema
+    - `Project.uninstallTags UninstallTag[]` → `Project.uninstallTagIds String[]`
+    - Eliminar relación inversa `UninstallTag.projects Project[]`
+    - Tabla intermedia `_ProjectUninstallMaterials` se elimina automáticamente
+  - **Fase 2:** Actualizar API routes
+    - `app/api/projects/route.ts` (POST): `connect: uninstallTagIds.map(id => ({ id }))` → `uninstallTagIds: uninstallTagIds`
+    - `app/api/projects/[id]/route.ts` (PUT): `set: uninstallTagIds.map(id => ({ id }))` → `uninstallTagIds: body.uninstallTagIds`
+    - Eliminar includes de `uninstallTags` en GET endpoints (no más nested data)
+  - **Fase 3:** Aplicar a database
+    - `npm run db:push` - Schema sincronizado en 9.29s
+    - Tabla `_ProjectUninstallMaterials` eliminada automáticamente
+  - **Fase 4:** Validación
+    - TypeCheck: ✅ Pass
+    - ESLint: ✅ Pass (29 warnings pre-existentes, 0 nuevos)
+- **Archivos modificados:**
+  - `prisma/schema.prisma` - Cambio de relación a array (-2 líneas)
+  - `app/api/projects/route.ts` - Simplificar lógica de creación (-7 líneas)
+  - `app/api/projects/[id]/route.ts` - Simplificar lógica de actualización (-14 líneas)
+- **Tablas DB eliminadas:**
+  - `_ProjectUninstallMaterials` - Tabla intermedia autogenerada (ya no necesaria)
+- **Validación:** ✅ TypeCheck: Pass | ESLint: Pass (0 nuevos warnings) | DB: Synced
+- **Arquitectura simplificada:**
+  - Antes: `Project ←→ _ProjectUninstallMaterials ←→ UninstallTag` (N:M con tabla intermedia)
+  - Después: `Project.uninstallTagIds: string[]` → lookup manual cuando se necesita data completa
+- **Trade-off aceptado:** Frontend debe hacer lookup manual de tags completos, pero esto es preferible vs complejidad de relación N:M para un caso de uso simple
+
+---
+
 ### 🔄 Refactor: Migración de Project Dialogs a React Query + ScrollableDialog
 
 - **Status:** ✅ Complete | **Date:** 2025-11-01 | **Impact:** Medium
@@ -848,19 +890,20 @@ Registrar **implementaciones significativas** de este proyecto con:
 | 25  | Documentación Arquitectural Completa (5 ADRs)                    | ✅ Complete | 2025-10-25 | High   |
 | 26  | Migración: Cálculo de percentPaid al Backend                     | ✅ Complete | 2025-10-26 | Medium |
 | 27  | Refactorización Completa de ADRs del Template                    | ✅ Complete | 2025-11-01 | Medium |
+| 28  | Simplificación: UninstallTag Relation a Array de IDs             | ✅ Complete | 2025-11-02 | Low    |
 
 ---
 
 ## Statistics
 
-- **Total Implementaciones:** 27
-- **Completadas:** 27
+- **Total Implementaciones:** 28
+- **Completadas:** 28
 - **En Progreso:** 0
 - **Pendientes:** 0
 
 ---
 
-**Última actualización:** 2025-11-01
+**Última actualización:** 2025-11-02
 
 **Nota:** Entrada #13 corregida el 2025-10-22 tras investigación con git-searcher - información previa sobre "refactor 490→242 líneas" era incorrecta.
 

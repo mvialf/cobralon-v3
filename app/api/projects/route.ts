@@ -313,9 +313,7 @@ export const POST = withLogging(async (request, logger) => {
         windowsCount: windowsCount || 0,
         squareMeters: new Decimal(squareMeters || 0),
         description: description?.trim() || null,
-        uninstallTags: {
-          connect: uninstallTagIds?.map((id: string) => ({ id })) || [],
-        },
+        uninstallTagIds: uninstallTagIds || [],
       },
       include: {
         customer: {
@@ -334,11 +332,6 @@ export const POST = withLogging(async (request, logger) => {
                 bgClass: true,
               },
             },
-          },
-        },
-        uninstallTags: {
-          include: {
-            color: true,
           },
         },
       },
