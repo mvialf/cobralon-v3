@@ -76,7 +76,7 @@ export interface ProjectBalanceResult {
  * // => { totalPaid: 0, balance: 1000, percentPaid: 0, isFullyPaid: false }
  * ```
  *
- * @see {@link docs/ANALISIS-CALCULOS-FRONTEND.md#1} - Análisis exhaustivo
+ * @see {@link docs/project/analysis/frontend-calculations.md#1} - Análisis exhaustivo
  */
 export function calculateProjectBalance(project: ProjectWithAllocations): ProjectBalanceResult {
   const totalAmount = project.totalAmount || 0
@@ -153,7 +153,7 @@ export interface ProjectWithFullAllocations {
  * // P3: 1,200,000 (pendiente) ✅
  * ```
  *
- * @see {@link docs/ANALISIS-CALCULOS-FRONTEND.md#5} - Análisis exhaustivo
+ * @see {@link docs/project/analysis/frontend-calculations.md#5} - Análisis exhaustivo
  */
 export function getTotalPendingBalance(projects: ProjectWithFullAllocations[]): number {
   return projects.reduce((sum, project) => {

@@ -45,7 +45,7 @@ import { FINANCIAL } from '../constants/financial-constants'
  * // Total = 2,000,000 + 420,000 = 2,420,000
  * ```
  *
- * @see {@link docs/ANALISIS-CALCULOS-FRONTEND.md#4} - Análisis exhaustivo
+ * @see {@link docs/project/analysis/frontend-calculations.md#4} - Análisis exhaustivo
  */
 export function calculateProjectTotal(
   subtotal: number,

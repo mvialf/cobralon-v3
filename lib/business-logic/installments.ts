@@ -82,7 +82,7 @@ export interface CalculatedInstallment {
  * // SUMA: $100.00 ✅ Exacto
  * ```
  *
- * @see {@link docs/ANALISIS-CALCULOS-FRONTEND.md#3} - Análisis exhaustivo
+ * @see {@link docs/project/analysis/frontend-calculations.md#3} - Análisis exhaustivo
  */
 export function calculateInstallments(
   amount: number,

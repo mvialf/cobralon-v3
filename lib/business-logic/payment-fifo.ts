@@ -101,7 +101,7 @@ export interface FIFOAllocation {
  * // => Array vacío []
  * ```
  *
- * @see {@link docs/ANALISIS-CALCULOS-FRONTEND.md#2} - Análisis exhaustivo
+ * @see {@link docs/project/analysis/frontend-calculations.md#2} - Análisis exhaustivo
  */
 export function calculateFIFO(
   totalAmount: number,
@@ -178,7 +178,7 @@ export function calculateFIFO(
  * // => false (suma = 950, diferencia = 50)
  * ```
  *
- * @see {@link docs/ANALISIS-CALCULOS-FRONTEND.md#6} - Análisis exhaustivo
+ * @see {@link docs/project/analysis/frontend-calculations.md#6} - Análisis exhaustivo
  */
 export function validateAllocationsSum(
   totalAmount: number,
