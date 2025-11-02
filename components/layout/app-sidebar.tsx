@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import { usePathname } from 'next/navigation'
 import {
   Home,
   Settings,
@@ -141,7 +142,21 @@ const settingsItems: NavigationItem[] = [
 ]
 
 export function AppSidebar() {
+  const pathname = usePathname()
   const allItems = [...navigationItems, ...settingsItems]
+
+  // Helper para determinar si un item está activo
+  const isItemActive = (item: NavigationItem): boolean => {
+    // Comparar ruta exacta
+    if (pathname === item.url) return true
+
+    // Si tiene subitems, verificar si alguno está activo
+    if (item.items) {
+      return item.items.some((subItem) => pathname === subItem.url)
+    }
+
+    return false
+  }
 
   return (
     <Sidebar variant="inset">
@@ -174,7 +189,7 @@ export function AppSidebar() {
                     <Collapsible key={item.title} asChild className="group/collapsible">
                       <SidebarMenuItem>
                         <CollapsibleTrigger asChild>
-                          <SidebarMenuButton>
+                          <SidebarMenuButton isActive={isItemActive(item)}>
                             <item.icon />
                             <span>{item.title}</span>
                             <ChevronDown className="ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-180" />
@@ -184,7 +199,7 @@ export function AppSidebar() {
                           <SidebarMenuSub>
                             {item.items.map((subItem) => (
                               <SidebarMenuSubItem key={subItem.title}>
-                                <SidebarMenuSubButton asChild>
+                                <SidebarMenuSubButton asChild isActive={pathname === subItem.url}>
                                   <Link href={subItem.url}>
                                     <subItem.icon />
                                     <span>{subItem.title}</span>
@@ -202,7 +217,7 @@ export function AppSidebar() {
                 // Item simple sin subitems
                 return (
                   <SidebarMenuItem key={item.title}>
-                    <SidebarMenuButton asChild>
+                    <SidebarMenuButton asChild isActive={pathname === item.url}>
                       <Link href={item.url}>
                         <item.icon />
                         <span>{item.title}</span>
