@@ -1,115 +1,58 @@
-# Análisis Técnicos del Proyecto
+# Project Analysis
 
-Documentos de análisis exhaustivos de aspectos técnicos específicos del proyecto Cobralon.
+Esta carpeta contiene análisis técnicos profundos del proyecto.
 
-## 📊 Análisis Disponibles
+## Contenido
 
-### 1. [Frontend Calculations](frontend-calculations.md)
+### [Layout Improvements Analysis](layout-improvements.md)
 
-**Análisis exhaustivo de cálculos matemáticos en el frontend**
+Análisis exhaustivo de las mejoras arquitecturales implementadas en el sistema de layout del proyecto Cobralon.
 
-- **Alcance:** 34 ubicaciones con cálculos identificados
-- **Contenido:**
-  - 8 cálculos críticos de negocio (balance, FIFO, cuotas, IVA)
-  - 6 validaciones numéricas
-  - 5 funciones de formateo (moneda, números, porcentajes)
-  - Análisis de riesgos (floating point, race conditions)
-  - Recomendaciones y mejores prácticas
-- **Estado:** ✅ Actualizado (2025-10-25, post-refactorización)
-- **Tests:** 59 tests (100% coverage en business logic)
+**Contenido:**
 
-### 2. [Database Analysis](database-analysis.md)
+- Evaluación de 4 mejoras críticas (PageHeader action, Nav collapsible, Arquitectura 2 capas, Active route)
+- Comparación con apps profesionales (GitHub, Linear, Notion)
+- Impacto cuantificado (ROI: 1.5 hrs/proyecto, 70-100 líneas ahorradas)
+- Plan de acción para extracción al template base
+- Rating técnico: ⭐⭐⭐⭐⭐ (5/5)
 
-**Análisis de la estructura de base de datos y relaciones**
+**Fecha:** 2025-10-20 a 2025-11-02
+**Líneas:** 614
+**Estado:** Completado - Listo para template base
 
-- **Alcance:** Esquema completo de Prisma + Neon PostgreSQL
-- **Contenido:**
-  - Modelos y relaciones
-  - Índices y constraints
-  - Patrones de acceso a datos
+## Propósito
 
-### 3. [Database Optimization](database-optimization.md)
+Los análisis técnicos:
 
-**Guía de optimización y mejores prácticas de base de datos**
+1. **Evalúan decisiones arquitecturales** con profundidad
+2. **Cuantifican beneficios** (tiempo, código, bugs prevenidos)
+3. **Comparan con industry standards** (benchmarking)
+4. **Documentan lecciones aprendidas**
+5. **Guían futuras extracciones** al template base
 
-- **Alcance:** Queries, índices, performance
-- **Contenido:**
-  - Optimizaciones implementadas
-  - Queries lentas identificadas
-  - Mejores prácticas de Prisma
+## Diferencia con ADRs
 
----
+| Aspecto      | ADRs                                             | Analysis                         |
+| ------------ | ------------------------------------------------ | -------------------------------- |
+| **Timing**   | Antes/durante decisión                           | Después de implementación        |
+| **Scope**    | Una decisión puntual                             | Conjunto de mejoras relacionadas |
+| **Formato**  | Estructurado (Contexto, Decisión, Consecuencias) | Narrativo + datos cuantitativos  |
+| **Objetivo** | Justificar decisión                              | Evaluar impacto real             |
 
-## 📘 Diferencia con Otras Carpetas de Docs
+## Cuándo Crear un Analysis
 
-### vs `architecture/`
-- **architecture/**: Documentación de DISEÑO high-level (cómo DEBERÍA ser)
-- **analysis/**: Análisis de IMPLEMENTACIÓN detallada (cómo ES actualmente)
+✅ Crea un análisis cuando:
 
-**Ejemplo:**
-- `architecture/02-business-flows/` → Diagrama de flujo de pagos
-- `analysis/frontend-calculations.md` → Código exacto de cada cálculo
+- Implementas múltiples mejoras relacionadas
+- Necesitas evaluar impacto post-implementación
+- Requieres benchmarking con competitors
+- Quieres retroalimentar al template base
 
-### vs `decisions/`
-- **decisions/**: ADRs - Decisiones puntuales e inmutables
-- **analysis/**: Análisis exhaustivos con contexto agregado
+❌ NO creas análisis para:
 
-**Ejemplo:**
-- `decisions/008-prisma-neon.md` → "Decidimos usar Prisma + Neon porque..."
-- `analysis/database-analysis.md` → "Así funciona el schema actual en detalle..."
-
-### vs `implementation/`
-- **implementation/**: Timeline cronológico de cambios
-- **analysis/**: Snapshot estático de estado actual
-
-**Ejemplo:**
-- `implementation/2025-current.md` → "2025-10-25: Refactorización de business logic"
-- `analysis/frontend-calculations.md` → "Estado actual: 59 tests, 100% coverage"
-
----
-
-## 🎯 Cuándo Crear un Análisis
-
-Crea un documento de análisis cuando:
-
-✅ Necesitas documentar **implementación detallada** de un área técnica
-✅ El análisis tiene **valor permanente** (no es efímero)
-✅ Requiere **ejemplos de código** y casos de uso
-✅ Incluye **métricas cuantificadas** (tests, coverage, performance)
-✅ Sirve como **referencia técnica** para el equipo
-
-**Ejemplos futuros:**
-- `api-endpoints.md` - Análisis de todos los endpoints
-- `security.md` - Análisis de seguridad del proyecto
-- `performance.md` - Análisis de performance crítica
-
----
-
-## 📝 Template de Análisis
-
-```markdown
-# Título del Análisis
-
-**Fecha:** YYYY-MM-DD
-**Autor:** Nombre
-**Última actualización:** YYYY-MM-DD
-
-## Resumen Ejecutivo
-
-(Hallazgos principales en 3-5 bullet points)
-
-## Análisis Detallado
-
-(Secciones con ejemplos de código, métricas, etc.)
-
-## Recomendaciones
-
-(Mejoras sugeridas basadas en hallazgos)
-
-## Referencias
-
-(Links a código, ADRs, implementation log)
-```
+- Decisiones aisladas simples (usar ADR)
+- Features sin valor arquitectural
+- Cambios triviales
 
 ---
 
