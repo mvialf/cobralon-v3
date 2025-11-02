@@ -698,7 +698,7 @@ export default function MyPage() {
           <section className="space-y-4">
             <div>
               <h3 className="text-lg font-semibold flex items-center gap-2">
-                <Image className="h-5 w-5" />
+                <Image className="h-5 w-5" alt="" />
                 1. Uso Básico (Zero Config)
               </h3>
               <p className="text-muted-foreground text-sm">

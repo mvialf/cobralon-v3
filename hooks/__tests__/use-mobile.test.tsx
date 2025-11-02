@@ -4,7 +4,7 @@ import { useIsMobile } from '../use-mobile'
 
 describe('useIsMobile', () => {
   // Helper para simular cambio de ancho de ventana
-  const setWindowWidth = (width: number) => {
+  const _setWindowWidth = (width: number) => {
     global.innerWidth = width
     // Disparar evento resize
     act(() => {

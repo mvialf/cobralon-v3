@@ -21,8 +21,14 @@ interface UninstallTagsFieldsProps {
  * @param control - React Hook Form control
  */
 export function UninstallTagsFields({ control }: UninstallTagsFieldsProps) {
-  const { availableTags, availableColors, createTag, editTag, deleteTag, loading } =
-    useUninstallTags()
+  const {
+    availableTags,
+    availableColors,
+    createTag,
+    editTag,
+    deleteTag,
+    loading: _loading,
+  } = useUninstallTags()
 
   return (
     <FormField

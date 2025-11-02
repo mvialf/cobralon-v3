@@ -18,7 +18,7 @@ import {
 
 // Extender ColumnMeta para incluir clases CSS personalizadas
 declare module '@tanstack/react-table' {
-  interface ColumnMeta<TData, TValue> {
+  interface ColumnMeta<_TData, _TValue> {
     headerClassName?: string
     cellClassName?: string
   }

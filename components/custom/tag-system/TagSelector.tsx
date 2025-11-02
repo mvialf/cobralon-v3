@@ -31,7 +31,7 @@ export const TagSelector = React.forwardRef<HTMLDivElement, TagSelectorProps>(
       onCreateTag,
       onEditTag,
       onDeleteTag,
-      placeholder = 'Seleccionar tags...',
+      placeholder: _placeholder = 'Seleccionar tags...',
       label,
       className,
       ...props

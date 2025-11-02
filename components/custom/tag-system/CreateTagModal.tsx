@@ -77,7 +77,7 @@ export const CreateTagModal: React.FC<CreateTagModalProps> = ({
     try {
       await onCreateTag(trimmed, finalAbbreviation, tagColorId)
       onOpenChange(false)
-    } catch (error) {
+    } catch (_error) {
       setError('Error al crear la tag')
     } finally {
       setIsCreating(false)

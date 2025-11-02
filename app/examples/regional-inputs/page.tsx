@@ -60,8 +60,8 @@ export default function RegionalInputsPage() {
   // RUT INPUT STATES
   // ========================================
   const [standaloneRut, setStandaloneRut] = useState('')
-  const [rutWithIcon, setRutWithIcon] = useState('')
-  const [rutNoFormat, setRutNoFormat] = useState('')
+  const [_rutWithIcon, setRutWithIcon] = useState('')
+  const [_rutNoFormat, setRutNoFormat] = useState('')
   const [submittedRutData, setSubmittedRutData] = useState<RutFormValues | null>(null)
 
   const rutForm = useForm<RutFormValues>({

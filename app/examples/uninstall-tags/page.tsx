@@ -28,7 +28,7 @@ export default function UninstallTagsExamplePage() {
     refreshColors,
 
     // Helpers
-    selectTag,
+    selectTag: _selectTag,
     unselectTag,
     toggleTag,
     isTagSelected,

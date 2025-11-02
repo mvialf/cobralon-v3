@@ -77,7 +77,7 @@ export const EditTagModal: React.FC<EditTagModalProps> = ({
     try {
       await onEditTag(tag.id, tagName.trim(), finalAbbreviation, tagColorId)
       onOpenChange(false)
-    } catch (error) {
+    } catch (_error) {
       setError('Error al actualizar la tag')
     } finally {
       setIsEditing(false)
