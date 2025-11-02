@@ -17,6 +17,7 @@ import {
   MessageSquare,
   Table,
   Tags,
+  Headphones,
 } from 'lucide-react'
 
 import {
@@ -64,6 +65,11 @@ const navigationItems: NavigationItem[] = [
     title: 'Proyectos',
     url: '/projects',
     icon: FolderKanban,
+  },
+  {
+    title: 'Postventas',
+    url: '/aftersales',
+    icon: Headphones,
   },
   {
     title: 'Pagos',
@@ -131,6 +137,11 @@ const settingsItems: NavigationItem[] = [
         title: 'Estados de Proyecto',
         url: '/settings/project-status',
         icon: BadgeCheck,
+      },
+      {
+        title: 'Estados de Postventa',
+        url: '/settings/aftersale-status',
+        icon: Headphones,
       },
       {
         title: 'Métodos de Pago',

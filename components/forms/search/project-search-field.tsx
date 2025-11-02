@@ -18,6 +18,11 @@ interface ProjectSearchFieldProps {
   control: Control<any>
   preselectedProjectId?: string
   onProjectSelect?: (project: ProjectWithBalance | null) => void
+  /**
+   * Si es true, solo muestra proyectos con projectState.isFinal = true
+   * Útil para casos de postventa
+   */
+  filterByFinalState?: boolean
 }
 
 /**
@@ -39,6 +44,7 @@ export function ProjectSearchField({
   control,
   preselectedProjectId,
   onProjectSelect,
+  filterByFinalState = false,
 }: ProjectSearchFieldProps) {
   // State para búsqueda de proyectos
   const [searchTerm, setSearchTerm] = React.useState('')
@@ -60,9 +66,14 @@ export function ProjectSearchField({
 
   // Fetch proyectos (server-side search) - solo si NO hay proyecto pre-seleccionado
   const { data: projects = [], isLoading: loadingProjects } = useQuery({
-    queryKey: ['projects-search', debouncedSearch],
+    queryKey: ['projects-search', debouncedSearch, filterByFinalState],
     queryFn: async () => {
-      const res = await fetch(`/api/payments/search-projects?q=${debouncedSearch}&limit=20`)
+      // Usar endpoint específico según filtro
+      const endpoint = filterByFinalState
+        ? `/api/projects/search-finished?q=${debouncedSearch}&limit=20`
+        : `/api/payments/search-projects?q=${debouncedSearch}&limit=20`
+
+      const res = await fetch(endpoint)
       if (!res.ok) throw new Error('Error al buscar proyectos')
       return res.json() as Promise<ProjectWithBalance[]>
     },
@@ -148,7 +159,9 @@ export function ProjectSearchField({
                   emptyMessage={
                     debouncedSearch.length < 2
                       ? 'Escribe al menos 2 caracteres para buscar'
-                      : 'No se encontraron proyectos con balance pendiente'
+                      : filterByFinalState
+                        ? 'No se encontraron proyectos finalizados'
+                        : 'No se encontraron proyectos con balance pendiente'
                   }
                   loading={loadingProjects}
                   loadingText="Buscando proyectos..."
@@ -163,8 +176,8 @@ export function ProjectSearchField({
         />
       )}
 
-      {/* 2. Cards: Balance Pendiente */}
-      {selectedProject && (
+      {/* 2. Cards: Balance Pendiente - Solo mostrar si NO filtramos por estado final */}
+      {selectedProject && !filterByFinalState && (
         <div className="flex justify-center gap-4">
           <Card className="p-2">
             <CardContent className="flex flex-col ">

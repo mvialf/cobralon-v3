@@ -79,6 +79,8 @@ http://localhost:3000
 
 - [**Database Setup**](guides/database-setup.md) - Prisma + Neon PostgreSQL
 - [**Authentication Setup**](guides/authentication-setup.md) - Stack Auth / NextAuth / Clerk
+- [**Utilities**](guides/utilities.md) - ⭐ Funciones de formateo (currency, numbers, dates)
+- [**Hooks**](guides/hooks.md) - ⭐ Custom hooks (useDebounce, useIsMobile, useToast)
 
 ### Guías de Desarrollo
 

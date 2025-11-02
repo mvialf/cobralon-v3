@@ -192,6 +192,42 @@ async function main() {
   }
 
   // ========================================
+  // SEED AFTERSALE STATUSES
+  // ========================================
+
+  console.log('\n🔧 Seeding aftersale statuses...')
+
+  const statusIngresado = await prisma.aftersaleStatus.upsert({
+    where: { name: 'Ingresado' },
+    update: { order: 0 }, // Actualizar order si ya existe
+    create: {
+      name: 'Ingresado',
+      colorId: blueColor.id,
+      order: 0, // Inicial siempre primero
+      isInitial: true,
+      isActive: true,
+    },
+  })
+
+  const statusCompletadoAftersale = await prisma.aftersaleStatus.upsert({
+    where: { name: 'Completado' },
+    update: { order: 999 }, // Actualizar order si ya existe
+    create: {
+      name: 'Completado',
+      colorId: greenColor.id,
+      order: 999, // Final siempre último
+      isFinal: true,
+      isActive: true,
+    },
+  })
+
+  console.log('✅ Aftersale statuses seed completed')
+  console.log('📊 Created/Updated aftersale statuses (ordered):', {
+    statusIngresado, // order: 0 (inicial)
+    statusCompletadoAftersale, // order: 999 (final)
+  })
+
+  // ========================================
   // SEED PROJECTS WITH PAYMENT DATA
   // ========================================
 
@@ -250,7 +286,7 @@ async function main() {
     },
   })
 
-  const project3 = await prisma.project.upsert({
+  const _project3 = await prisma.project.upsert({
     where: { id: '9304ab76-5508-4c1f-a612-59bbf030b5cb' },
     update: {},
     create: {
@@ -303,7 +339,7 @@ async function main() {
   })
 
   // Cliente 3 (Pedro Sanchez) - 2 proyectos sin pagos
-  const project5 = await prisma.project.upsert({
+  const _project5 = await prisma.project.upsert({
     where: { id: '2f2d9ccf-9fb4-468c-893d-7933c1f9d914' },
     update: {},
     create: {
@@ -328,7 +364,7 @@ async function main() {
     },
   })
 
-  const project6 = await prisma.project.upsert({
+  const _project6 = await prisma.project.upsert({
     where: { id: '4931d40a-8e54-4671-a9c8-456ca9334340' },
     update: {},
     create: {
@@ -363,7 +399,7 @@ async function main() {
   console.log('\n💰 Seeding payments with allocations...')
 
   // Pago 1 (Cliente 1): $200,000 → Abono parcial a Proyecto #2024-001
-  const payment1 = await prisma.payment.upsert({
+  const _payment1 = await prisma.payment.upsert({
     where: { id: '7b8a6d79-2e10-4ae3-b45a-fa06d5fa38b8' },
     update: {},
     create: {
@@ -387,7 +423,7 @@ async function main() {
   })
 
   // Pago 2 (Cliente 1): $500,000 → FIFO: Cierra #2024-001 ($300k) + Abono a #2024-002 ($200k)
-  const payment2 = await prisma.payment.upsert({
+  const _payment2 = await prisma.payment.upsert({
     where: { id: 'e2a0d0dc-d5ad-4cbb-af6f-025b13121a6c' },
     update: {},
     create: {
@@ -415,7 +451,7 @@ async function main() {
   })
 
   // Pago 3 (Cliente 2): $800,000 → Cierra completamente #2024-004
-  const payment3 = await prisma.payment.upsert({
+  const _payment3 = await prisma.payment.upsert({
     where: { id: '2b2d5846-de72-42d2-bc61-3041302498cc' },
     update: {},
     create: {
@@ -439,7 +475,7 @@ async function main() {
   })
 
   // Pago 4 (Cliente 1): $100,000 → Abono adicional a #2024-002 (ya tiene $200k, total $300k)
-  const payment4 = await prisma.payment.upsert({
+  const _payment4 = await prisma.payment.upsert({
     where: { id: 'b168368d-40d1-4503-8f2a-7133beab3eed' },
     update: {},
     create: {

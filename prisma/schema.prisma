@@ -34,17 +34,18 @@ model Customer {
 }
 
 model BadgeColor {
-  id              String          @id @default(uuid())
-  name            String          @unique
-  key             String          @unique
-  bgClass         String
-  textClass       String          @default("text-white")
-  order           Int             @default(0)
-  isActive        Boolean         @default(true)
-  createdAt       DateTime        @default(now())
-  updatedAt       DateTime        @updatedAt
-  projectStatuses ProjectStatus[]
-  uninstallTags   UninstallTag[]
+  id               String           @id @default(uuid())
+  name             String           @unique
+  key              String           @unique
+  bgClass          String
+  textClass        String           @default("text-white")
+  order            Int              @default(0)
+  isActive         Boolean          @default(true)
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+  projectStatuses  ProjectStatus[]
+  uninstallTags    UninstallTag[]
+  aftersaleStatuses AftersaleStatus[]
 
   @@index([order])
   @@index([isActive])
@@ -93,6 +94,7 @@ model Project {
   totalAmount         Decimal?            @db.Decimal(12, 2)
   uninstallTagIds     String[]
   paymentAllocations  PaymentAllocation[]
+  aftersales          Aftersale[]
   customer            Customer            @relation(fields: [customerId], references: [id], onDelete: Cascade)
   projectStatus       ProjectStatus?      @relation(fields: [projectStatusId], references: [id], onDelete: Restrict)
 
@@ -188,4 +190,38 @@ model UninstallTag {
   @@index([colorId])
   @@index([order])
   @@index([isActive])
+}
+
+model AftersaleStatus {
+  id         String      @id @default(uuid())
+  name       String      @unique
+  order      Int         @default(0)
+  colorId    String
+  isInitial  Boolean     @default(false)
+  isFinal    Boolean     @default(false)
+  isActive   Boolean     @default(true)
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime    @updatedAt
+  aftersales Aftersale[]
+  color      BadgeColor  @relation(fields: [colorId], references: [id], onDelete: Restrict)
+
+  @@index([colorId])
+  @@index([order])
+  @@index([isActive])
+}
+
+model Aftersale {
+  id                String          @id @default(uuid())
+  projectId         String
+  aftersaleStatusId String
+  description       String
+  reportedAt        DateTime
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+  project           Project         @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  aftersaleStatus   AftersaleStatus @relation(fields: [aftersaleStatusId], references: [id], onDelete: Restrict)
+
+  @@index([projectId])
+  @@index([aftersaleStatusId])
+  @@index([reportedAt])
 }

@@ -123,9 +123,33 @@ Todos los componentes base de shadcn/ui están construidos sobre Radix UI:
 
 ### Layout Components
 
-- **AppLayout**: Sistema de 3 capas (Header + Sidebar + Main)
-- **AppSidebar**: Sidebar colapsible con [react-resizable-panels](../../../package.json#L58)
-- **HeaderNav**: Header sticky con blur backdrop
+- **AppLayout**: Sistema de 2 capas (Sidebar + Content) con PageHeader integrado
+- **AppSidebar**: Sidebar colapsible con navegación jerárquica y active route highlighting
+- Features: Action slot en PageHeader, navegación de 2 niveles, breadcrumbs
+
+### Formatting Utilities (Template Built-in)
+
+Funciones de formateo basadas en Intl API nativa (zero dependencies):
+
+- **formatCurrency()**: Formatea moneda con soporte multi-locale (CLP, USD, EUR, ARS, MXN)
+- **formatNumber()**: Formatea números con separadores de miles y decimales configurables
+- **formatDate()**: Formatea fechas con variantes short/long/full y soporte i18n
+
+**Ubicación**: [lib/format.ts](../../../lib/format.ts)
+**Tests**: [lib/__tests__/format.test.ts](../../../lib/__tests__/format.test.ts) (24 tests)
+**Docs**: [guides/utilities.md](../guides/utilities.md)
+
+### Custom Hooks (Template Built-in)
+
+- **useDebounce**: Hook para debouncing de valores (search, auto-save, filters)
+  - Type-safe con generics `<T>`
+  - Default 300ms, configurable
+  - **Ubicación**: [hooks/use-debounce.ts](../../../hooks/use-debounce.ts)
+  - **Tests**: [hooks/__tests__/use-debounce.test.tsx](../../../hooks/__tests__/use-debounce.test.tsx) (10 tests)
+  - **Docs**: [guides/hooks.md](../guides/hooks.md)
+
+- **useIsMobile**: Detecta breakpoint mobile (<768px)
+- **useToast**: Sistema de notificaciones toast (Sonner)
 
 ### UI Utilities
 
