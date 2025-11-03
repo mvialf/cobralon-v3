@@ -5,7 +5,7 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 
 import { aftersaleSchema, type AftersaleFormValues } from '@/lib/validations/aftersale-validations'
-
+import { FormGrid } from '@/components/ui/form-grid'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Combobox } from '@/components/ui/combobox'
@@ -102,75 +102,71 @@ export const AftersaleForm = React.forwardRef<AftersaleFormHandle, AftersaleForm
               }
             }}
           />
+          <FormGrid columns={3}>
+            {/* Estado de Postventa */}
+            <FormField
+              control={form.control}
+              name="aftersaleStatusId"
+              render={({ field }) => (
+                <FormItem className="flex flex-col">
+                  <FormLabel>Estado *</FormLabel>
+                  <FormControl>
+                    <Combobox
+                      value={field.value}
+                      onValueChange={field.onChange}
+                      options={aftersaleStatuses}
+                      getOptionValue={(s) => s.id}
+                      getOptionLabel={(s) => s.name}
+                      renderOption={(status) => (
+                        <div className="flex items-center gap-2">
+                          <div className={`h-3 w-3 rounded ${status.color.bgClass}`} />
+                          <span>{status.name}</span>
+                        </div>
+                      )}
+                      placeholder="Seleccionar estado..."
+                      searchPlaceholder="Buscar estado..."
+                      emptyMessage="No se encontraron estados"
+                      loading={loadingStatuses}
+                      loadingText="Cargando estados..."
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
-          {/* Estado de Postventa */}
-          <FormField
-            control={form.control}
-            name="aftersaleStatusId"
-            render={({ field }) => (
-              <FormItem className="flex flex-col">
-                <FormLabel>Estado *</FormLabel>
-                <FormControl>
-                  <Combobox
-                    value={field.value}
-                    onValueChange={field.onChange}
-                    options={aftersaleStatuses}
-                    getOptionValue={(s) => s.id}
-                    getOptionLabel={(s) => s.name}
-                    renderOption={(status) => (
-                      <div className="flex items-center gap-2">
-                        <div className={`h-3 w-3 rounded ${status.color.bgClass}`} />
-                        <span>{status.name}</span>
-                      </div>
-                    )}
-                    placeholder="Seleccionar estado..."
-                    searchPlaceholder="Buscar estado..."
-                    emptyMessage="No se encontraron estados"
-                    loading={loadingStatuses}
-                    loadingText="Cargando estados..."
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
-          {/* Fecha de Reporte */}
-          <FormField
-            control={form.control}
-            name="reportedAt"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Fecha de Reporte *</FormLabel>
-                <FormControl>
-                  <Input
-                    type="date"
-                    value={
-                      field.value instanceof Date
-                        ? field.value.toISOString().split('T')[0]
-                        : field.value
-                    }
-                    onChange={(e) => field.onChange(new Date(e.target.value))}
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
+            {/* Fecha de Reporte */}
+            <FormField
+              control={form.control}
+              name="reportedAt"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Fecha de Reporte *</FormLabel>
+                  <FormControl>
+                    <Input
+                      type="date"
+                      value={
+                        field.value instanceof Date
+                          ? field.value.toISOString().split('T')[0]
+                          : field.value
+                      }
+                      onChange={(e) => field.onChange(new Date(e.target.value))}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </FormGrid>
           {/* Descripción */}
           <FormField
             control={form.control}
             name="description"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Descripción del Problema *</FormLabel>
+                <FormLabel>Descripción del Problema</FormLabel>
                 <FormControl>
-                  <Textarea
-                    placeholder="Describe el problema reportado..."
-                    className="min-h-[100px] resize-none"
-                    {...field}
-                  />
+                  <Textarea {...field} />
                 </FormControl>
                 <FormMessage />
               </FormItem>

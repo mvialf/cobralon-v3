@@ -8,9 +8,10 @@ export const aftersaleSchema = z.object({
   aftersaleStatusId: z.string().uuid('Debe seleccionar un estado válido'),
   description: z
     .string()
-    .min(1, 'La descripción es obligatoria')
     .max(1000, 'La descripción no puede exceder 1000 caracteres')
-    .trim(),
+    .trim()
+    .optional()
+    .default(''),
   reportedAt: z.date({
     required_error: 'La fecha de reporte es obligatoria',
     invalid_type_error: 'Fecha inválida',
@@ -57,7 +58,7 @@ export type Aftersale = {
 export type CreateAftersalePayload = {
   projectId: string
   aftersaleStatusId: string
-  description: string
+  description?: string
   reportedAt: string // ISO string for API
 }
 
