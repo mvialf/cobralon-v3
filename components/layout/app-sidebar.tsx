@@ -1,5 +1,6 @@
 'use client'
 
+import { useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import {
@@ -18,6 +19,8 @@ import {
   Table,
   Tags,
   Headphones,
+  PanelRightOpen,
+  PanelRightClose,
 } from 'lucide-react'
 
 import {
@@ -33,6 +36,7 @@ import {
   SidebarMenuSub,
   SidebarMenuSubItem,
   SidebarMenuSubButton,
+  useSidebar,
 } from '@/components/ui/sidebar'
 import {
   DropdownMenu,
@@ -41,6 +45,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
+import { Button } from '@/components/ui/button'
 import { ThemeToggle } from './theme-toggle'
 
 type NavigationItem = {
@@ -154,7 +159,9 @@ const settingsItems: NavigationItem[] = [
 
 export function AppSidebar() {
   const pathname = usePathname()
+  const { state, toggleSidebar, setOpen } = useSidebar()
   const allItems = [...navigationItems, ...settingsItems]
+  const [isHovering, setIsHovering] = useState(false)
 
   // Helper para determinar si un item está activo
   const isItemActive = (item: NavigationItem): boolean => {
@@ -169,8 +176,28 @@ export function AppSidebar() {
     return false
   }
 
+  // Handlers para hover-expand
+  const handleMouseEnter = () => {
+    if (state === 'collapsed') {
+      setIsHovering(true)
+      setOpen(true)
+    }
+  }
+
+  const handleMouseLeave = () => {
+    if (isHovering) {
+      setIsHovering(false)
+      setOpen(false)
+    }
+  }
+
   return (
-    <Sidebar variant="inset">
+    <Sidebar
+      variant="inset"
+      collapsible="icon"
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
+    >
       <SidebarHeader className="pt-14">
         <SidebarMenu>
           <SidebarMenuItem>
@@ -265,7 +292,20 @@ export function AppSidebar() {
               </DropdownMenuContent>
             </DropdownMenu>
           </SidebarMenuItem>
-          <SidebarMenuItem className="flex justify-end">
+          <SidebarMenuItem className="flex justify-end gap-2">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={toggleSidebar}
+              className="hidden md:flex"
+              aria-label="Colapsar sidebar"
+            >
+              {state === 'expanded' ? (
+                <PanelRightClose className="h-4 w-4" />
+              ) : (
+                <PanelRightOpen className="h-4 w-4" />
+              )}
+            </Button>
             <ThemeToggle />
           </SidebarMenuItem>
         </SidebarMenu>
