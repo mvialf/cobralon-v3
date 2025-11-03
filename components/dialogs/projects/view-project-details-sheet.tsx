@@ -1,11 +1,13 @@
 'use client'
 
 import { useCallback, useEffect, useState } from 'react'
+import { Phone, AlertCircle, Calendar } from 'lucide-react'
 import { Sheet, SheetContent } from '@/components/ui/sheet'
-import { Separator } from '@/components/ui/separator'
 import { Badge } from '@/components/ui/badge'
 import { StatusBadge } from '@/components/ui/status-badge'
 import { Skeleton } from '@/components/ui/skeleton'
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
+import { Card, CardContent } from '@/components/ui/card'
 import { ProjectNameSummary } from '@/components/summarys/project-name-summary'
 import { AddressProjectSummary } from '@/components/summarys/address-project-summary'
 import { cn } from '@/lib/utils'
@@ -59,21 +61,34 @@ export function ViewProjectDetailsSheet({
 }: ViewProjectDetailsSheetProps) {
   const [project, setProject] = useState<ProjectDetails | null>(null)
   const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
   const { configuration } = useConfiguration()
 
   const fetchProject = useCallback(async () => {
+    // Validar projectId
+    if (!projectId || projectId.trim() === '') {
+      console.error('ProjectId inválido:', projectId)
+      setError('ID de proyecto inválido')
+      return
+    }
+
     try {
       setIsLoading(true)
+      setError(null)
       const response = await fetch(`/api/projects/${projectId}`)
 
       if (!response.ok) {
-        throw new Error('Error al cargar proyecto')
+        const errorData = await response.json().catch(() => ({}))
+        throw new Error(errorData.error || `Error ${response.status}: ${response.statusText}`)
       }
 
       const data = await response.json()
       setProject(data)
     } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : 'Error desconocido al cargar proyecto'
       console.error('Error fetching project:', error)
+      setError(errorMessage)
     } finally {
       setIsLoading(false)
     }
@@ -82,12 +97,24 @@ export function ViewProjectDetailsSheet({
   useEffect(() => {
     if (open && projectId) {
       fetchProject()
+    } else if (open && !projectId) {
+      setError('No se proporcionó ID de proyecto')
     }
   }, [open, projectId, fetchProject])
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="right" className="w-full px-6 sm:max-w-2xl overflow-y-auto">
+      <SheetContent side="right" className="w-full px-6 md overflow-y-auto">
+        {/* Mensaje de error */}
+        {error && (
+          <Alert variant="destructive" className="my-4">
+            <AlertCircle className="h-4 w-4" />
+            <AlertTitle>Error al cargar proyecto</AlertTitle>
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        )}
+
+        {/* Header del proyecto */}
         {isLoading ? (
           <div className="text-sm text-muted-foreground py-4">Cargando...</div>
         ) : (
@@ -102,27 +129,39 @@ export function ViewProjectDetailsSheet({
           )
         )}
 
+        {/* Contenido del proyecto */}
         {isLoading ? (
-          <div className="space-y-6 py-6">
+          <div className="space-y-4 ">
             <Skeleton className="h-10 w-full" />
             <Skeleton className="h-10 w-full" />
             <Skeleton className="h-10 w-full" />
             <Skeleton className="h-10 w-full" />
           </div>
         ) : project ? (
-          <div className="space-y-6 py-6">
+          <div className="space-y-4 ">
             {/* Información General */}
             <div>
-              <h3 className="text-sm font-semibold text-muted-foreground mb-3">
-                Información General
-              </h3>
-              <div className="grid gap-4 sm:grid-cols-2">
-                <DataField label="Teléfono" value={project.customer.phone} />
+              <div className="grid gap-4 place-items-center sm:grid-cols-3 mb-3">
+                <DataField
+                  className="place-items-center"
+                  inline
+                  label={<Phone className="h-4 w-4" />}
+                  value={project.customer.phone}
+                  valueClassName="text-xs"
+                />
+
+                <DataField
+                  className="place-items-center"
+                  inline
+                  label={<Calendar className="h-4 w-4" />}
+                  value={formatDate(project.date, 'short', configuration.locale)}
+                  valueClassName="text-xs"
+                />
 
                 <div>
-                  <p className="text-sm font-medium text-muted-foreground">Estado</p>
                   {project.projectStatus ? (
                     <StatusBadge
+                      className="items-center"
                       bgClass={project.projectStatus.color.bgClass}
                       label={project.projectStatus.name}
                     />
@@ -130,54 +169,44 @@ export function ViewProjectDetailsSheet({
                     <Badge variant="outline">Sin estado</Badge>
                   )}
                 </div>
-
-                <DataField
-                  label="Fecha"
-                  value={formatDate(project.date, 'long', configuration.locale)}
-                />
               </div>
+              {/* Dirección */}
+              <AddressProjectSummary
+                street={project.street}
+                apartment={project.apartment}
+                comuna={project.comuna}
+                region={project.region}
+              />
             </div>
-
-            <Separator />
-
-            {/* Dirección */}
-            <AddressProjectSummary
-              street={project.street}
-              apartment={project.apartment}
-              comuna={project.comuna}
-              region={project.region}
-            />
-
-            <Separator />
 
             {/* Financiero */}
-            <div>
-              <h3 className="text-sm font-semibold text-muted-foreground mb-3">
-                Detalles Financieros
-              </h3>
-              <div className="grid gap-4 sm:grid-cols-3">
-                <DataField
-                  label="Subtotal"
-                  value={formatCurrency(project.subtotal, project.currency)}
-                />
-                <DataField
-                  label={`IVA (${project.taxRate}%)`}
-                  value={formatCurrency(
-                    project.subtotal * (project.taxRate / 100),
-                    project.currency
-                  )}
-                />
-                <DataField
-                  label="Total"
-                  value={formatCurrency(project.total, project.currency)}
-                  className="text-lg font-bold"
-                />
-              </div>
-            </div>
+            <Card className="py-2 px-2">
+              <CardContent className="">
+                <div className="grid place-content-between justify-items-center sm:grid-cols-3">
+                  <DataField
+                    label="Subtotal"
+                    value={formatCurrency(project.subtotal, project.currency)}
+                    valueClassName="text-sm"
+                  />
+                  <DataField
+                    label={`IVA (${project.taxRate}%)`}
+                    value={formatCurrency(
+                      project.subtotal * (project.taxRate / 100),
+                      project.currency
+                    )}
+                    valueClassName="text-sm"
+                  />
+                  <DataField
+                    label="Total"
+                    value={formatCurrency(project.total, project.currency)}
+                    valueClassName="text-sm"
+                  />
+                </div>
+              </CardContent>
+            </Card>
 
             {project.description && (
               <>
-                <Separator />
                 <div>
                   <h3 className="text-sm font-semibold text-muted-foreground mb-3">Descripción</h3>
                   <p className="text-base">{project.description}</p>
@@ -185,15 +214,10 @@ export function ViewProjectDetailsSheet({
               </>
             )}
 
-            <Separator />
-
             {/* Detalles Adicionales */}
             <div>
-              <h3 className="text-sm font-semibold text-muted-foreground mb-3">
-                Detalles Adicionales
-              </h3>
               <div className="grid gap-4 sm:grid-cols-2">
-                <DataField label="Cantidad de Ventanas" value={project.windowsCount} />
+                <DataField label="Elementos" value={project.windowsCount} />
                 <DataField label="Metros Cuadrados" value={`${project.squareMeters} m²`} />
               </div>
             </div>
@@ -211,15 +235,19 @@ function DataField({
   label,
   value,
   className = '',
+  inline = false,
+  valueClassName = '',
 }: {
-  label: string
+  label: React.ReactNode
   value: React.ReactNode
   className?: string
+  inline?: boolean
+  valueClassName?: string
 }) {
   return (
-    <div>
-      <p className="text-sm font-medium text-muted-foreground">{label}</p>
-      <p className={cn('text-base', className)}>{value}</p>
+    <div className={cn(inline && 'flex flex-row items-center gap-3', className)}>
+      <p className="text-xs font-medium text-muted-foreground">{label}</p>
+      <p className={cn('text-base', valueClassName)}>{value}</p>
     </div>
   )
 }
