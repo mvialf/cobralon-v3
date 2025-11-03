@@ -1,6 +1,7 @@
 import { cn } from '@/lib/utils'
 
 interface ProjectNameSummaryProps {
+  projectId: string
   projectNumber: string
   customerName: string
   projectName?: string | null
@@ -13,6 +14,7 @@ interface ProjectNameSummaryProps {
  * Si projectName es null o undefined, solo muestra cliente.
  */
 export function ProjectNameSummary({
+  projectId,
   projectNumber,
   customerName,
   projectName,

@@ -91,6 +91,7 @@ export const createColumns = ({ onViewDetails }: ColumnsProps = {}): ColumnDef<P
         const project = payment.allocations[0].project
         return (
           <ProjectNameSummary
+            projectId={project.id}
             projectNumber={project.projectNumber}
             customerName={payment.customer?.name || '-'}
             projectName={project.projectName}

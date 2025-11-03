@@ -1,4 +1,5 @@
 import { cn } from '@/lib/utils'
+import { MapPin } from 'lucide-react'
 
 interface AddressProjectSummaryProps {
   street: string
@@ -20,15 +21,17 @@ export function AddressProjectSummary({
   className,
 }: AddressProjectSummaryProps) {
   return (
-    <div className={cn(className)}>
-      <h3 className="text-sm font-semibold text-muted-foreground mb-3">Dirección</h3>
-      <p className="text-base">
-        {street}
-        {apartment && `, ${apartment}`}
-      </p>
-      <p className="text-sm text-muted-foreground">
-        {comuna}, {region}
-      </p>
+    <div className={cn((className = 'flex flex-row items-start gap-3'))}>
+      <MapPin className="h-5 w-5" />
+      <div>
+        <p className="text-xs">
+          {street}
+          {apartment && `, ${apartment}`}
+        </p>
+        <p className="text-xs text-muted-foreground">
+          {comuna}, {region}
+        </p>
+      </div>
     </div>
   )
 }

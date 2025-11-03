@@ -2,6 +2,7 @@
 
 import * as React from 'react'
 import { Control } from 'react-hook-form'
+import { Building } from 'lucide-react'
 
 import { getRegiones, getComunasByRegion } from '@/lib/regiones-chile'
 
@@ -56,7 +57,9 @@ export function AddressFields({ control, defaultRegion }: AddressFieldsProps) {
           name="apartment"
           render={({ field }) => (
             <FormItem className="col-span-1 w-full">
-              <FormLabel>Casa/Depto</FormLabel>
+              <FormLabel>
+                <Building className="h-4 w-4" />
+              </FormLabel>
               <FormControl>
                 <Input {...field} className="w-full" />
               </FormControl>
