@@ -2,19 +2,25 @@
 
 import { useCallback, useEffect, useState } from 'react'
 import { Phone, AlertCircle, Calendar } from 'lucide-react'
-import { Sheet, SheetContent } from '@/components/ui/sheet'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
+import { Separator } from '@/components/ui/separator'
 import { Badge } from '@/components/ui/badge'
 import { StatusBadge } from '@/components/ui/status-badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Card, CardContent } from '@/components/ui/card'
-import { ProjectNameSummary } from '@/components/summarys/project-name-summary'
 import { AddressProjectSummary } from '@/components/summarys/address-project-summary'
 import { cn } from '@/lib/utils'
 import { formatDate, formatCurrency } from '@/lib/format'
 import { useConfiguration } from '@/hooks/use-configuration'
 
-interface ViewProjectDetailsSheetProps {
+interface ViewProjectDetailsDialogProps {
   projectId: string
   open: boolean
   onOpenChange: (open: boolean) => void
@@ -52,13 +58,13 @@ interface ProjectDetails {
 }
 
 /**
- * Sheet lateral para visualizar detalles completos de un proyecto
+ * Dialog para visualizar detalles completos de un proyecto
  */
-export function ViewProjectDetailsSheet({
+export function ViewProjectDetailsDialog({
   projectId,
   open,
   onOpenChange,
-}: ViewProjectDetailsSheetProps) {
+}: ViewProjectDetailsDialogProps) {
   const [project, setProject] = useState<ProjectDetails | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -103,11 +109,11 @@ export function ViewProjectDetailsSheet({
   }, [open, projectId, fetchProject])
 
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="right" className="w-full px-6 md overflow-y-auto">
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto">
         {/* Mensaje de error */}
         {error && (
-          <Alert variant="destructive" className="my-4">
+          <Alert variant="destructive" className="mb-4">
             <AlertCircle className="h-4 w-4" />
             <AlertTitle>Error al cargar proyecto</AlertTitle>
             <AlertDescription>{error}</AlertDescription>
@@ -115,53 +121,47 @@ export function ViewProjectDetailsSheet({
         )}
 
         {/* Header del proyecto */}
-        {isLoading ? (
-          <div className="text-sm text-muted-foreground py-4">Cargando...</div>
-        ) : (
-          project && (
-            <ProjectNameSummary
-              projectId={project.id}
-              projectNumber={project.projectNumber}
-              customerName={project.customer.name}
-              projectName={project.projectName}
-              className="py-4"
-            />
-          )
-        )}
+        <DialogHeader>
+          <DialogTitle>
+            {isLoading
+              ? 'Cargando...'
+              : project
+                ? `${project.projectNumber} - ${project.customer.name}`
+                : 'Detalles del Proyecto'}
+          </DialogTitle>
+          <DialogDescription>
+            {!isLoading && project?.projectName
+              ? project.projectName
+              : 'Información completa del proyecto'}
+          </DialogDescription>
+        </DialogHeader>
 
         {/* Contenido del proyecto */}
         {isLoading ? (
-          <div className="space-y-4 ">
+          <div className="space-y-4">
             <Skeleton className="h-10 w-full" />
             <Skeleton className="h-10 w-full" />
             <Skeleton className="h-10 w-full" />
             <Skeleton className="h-10 w-full" />
           </div>
         ) : project ? (
-          <div className="space-y-4 ">
+          <div className="space-y-4">
             {/* Información General */}
             <div>
-              <div className="grid gap-4 place-items-center sm:grid-cols-3 mb-3">
+              <h3 className="text-sm font-semibold text-muted-foreground mb-3">
+                Información General
+              </h3>
+              <div className="grid gap-4 sm:grid-cols-3 mb-3">
                 <DataField
-                  className="place-items-center"
                   inline
                   label={<Phone className="h-4 w-4" />}
                   value={project.customer.phone}
                   valueClassName="text-xs"
                 />
 
-                <DataField
-                  className="place-items-center"
-                  inline
-                  label={<Calendar className="h-4 w-4" />}
-                  value={formatDate(project.date, 'short', configuration.locale)}
-                  valueClassName="text-xs"
-                />
-
                 <div>
                   {project.projectStatus ? (
                     <StatusBadge
-                      className="items-center"
                       bgClass={project.projectStatus.color.bgClass}
                       label={project.projectStatus.name}
                     />
@@ -169,6 +169,13 @@ export function ViewProjectDetailsSheet({
                     <Badge variant="outline">Sin estado</Badge>
                   )}
                 </div>
+
+                <DataField
+                  inline
+                  label={<Calendar className="h-4 w-4" />}
+                  value={formatDate(project.date, 'short', configuration.locale)}
+                  valueClassName="text-xs"
+                />
               </div>
               {/* Dirección */}
               <AddressProjectSummary
@@ -180,7 +187,7 @@ export function ViewProjectDetailsSheet({
             </div>
 
             {/* Financiero */}
-            <Card className="py-2 px-2">
+            <Card>
               <CardContent className="">
                 <div className="grid place-content-between justify-items-center sm:grid-cols-3">
                   <DataField
@@ -207,6 +214,7 @@ export function ViewProjectDetailsSheet({
 
             {project.description && (
               <>
+                <Separator />
                 <div>
                   <h3 className="text-sm font-semibold text-muted-foreground mb-3">Descripción</h3>
                   <p className="text-base">{project.description}</p>
@@ -214,17 +222,22 @@ export function ViewProjectDetailsSheet({
               </>
             )}
 
+            <Separator />
+
             {/* Detalles Adicionales */}
             <div>
+              <h3 className="text-sm font-semibold text-muted-foreground mb-3">
+                Detalles Adicionales
+              </h3>
               <div className="grid gap-4 sm:grid-cols-2">
-                <DataField label="Elementos" value={project.windowsCount} />
+                <DataField label="Cantidad de Ventanas" value={project.windowsCount} />
                 <DataField label="Metros Cuadrados" value={`${project.squareMeters} m²`} />
               </div>
             </div>
           </div>
         ) : null}
-      </SheetContent>
-    </Sheet>
+      </DialogContent>
+    </Dialog>
   )
 }
 

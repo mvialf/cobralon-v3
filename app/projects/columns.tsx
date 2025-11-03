@@ -13,7 +13,7 @@ import {
 import { EditableBadge, type EditableBadgeOption } from '@/components/ui/editable-badge'
 import { ProjectNameSummary } from '@/components/summarys/project-name-summary'
 import { PaymentProgressSummary } from '@/components/summarys/payment-progress-summary'
-import { ViewProjectDetailsSheet } from '@/components/dialogs/projects/view-project-details-sheet'
+import { ViewProjectDetailsDialog } from '@/components/dialogs/projects/view-project-details-dialog'
 import { ViewProjectPaymentsDialog } from '@/components/dialogs/projects/view-project-payments-dialog'
 import { EditProjectDialog } from '@/components/dialogs/projects/edit-project-dialog'
 import { PaymentToProjectDialog } from '@/components/dialogs/payments/payment-to-project-dialog'
@@ -338,8 +338,8 @@ function ProjectActionsCell({
         </DropdownMenuItem>
       </DataTableDropdown>
 
-      {/* Sheets */}
-      <ViewProjectDetailsSheet
+      {/* Dialogs */}
+      <ViewProjectDetailsDialog
         projectId={project.id}
         open={detailsOpen}
         onOpenChange={setDetailsOpen}
