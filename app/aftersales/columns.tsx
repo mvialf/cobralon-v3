@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { type ColumnDef } from '@tanstack/react-table'
-import { Pencil, Eye } from 'lucide-react'
+import { Pencil, Eye, Trash2 } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { DataTableDropdown } from '@/components/data-table'
 import {
@@ -10,6 +10,17 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
+import { useToast } from '@/hooks/use-toast'
 import { ProjectNameSummary } from '@/components/summarys/project-name-summary'
 import { AftersaleDialog } from '@/components/dialogs/aftersales/aftersale-dialog'
 import { formatDate } from '@/lib/format'
@@ -46,7 +57,7 @@ export const createColumns = ({
     header: 'Fecha',
     cell: ({ row }) => {
       const date = new Date(row.original.reportedAt)
-      return <span className="text-sm">{formatDate(date, { variant: 'short' })}</span>
+      return <span className="text-sm">{formatDate(date, 'short')}</span>
     },
     meta: {
       headerClassName: 'text-center',
@@ -94,6 +105,39 @@ export const createColumns = ({
       const aftersale = row.original
       // eslint-disable-next-line react-hooks/rules-of-hooks
       const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
+      // eslint-disable-next-line react-hooks/rules-of-hooks
+      const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
+      // eslint-disable-next-line react-hooks/rules-of-hooks
+      const { toast } = useToast()
+
+      const handleDelete = async () => {
+        try {
+          const response = await fetch(`/api/aftersales/${aftersale.id}`, {
+            method: 'DELETE',
+          })
+
+          const data = await response.json()
+
+          if (!response.ok) {
+            throw new Error(data.error || 'Error al eliminar el caso de postventa')
+          }
+
+          toast({
+            title: 'Caso eliminado',
+            description: data.message || 'El caso de postventa se eliminó correctamente',
+          })
+
+          setIsDeleteDialogOpen(false)
+          onAftersaleUpdated?.()
+        } catch (error) {
+          toast({
+            title: 'Error',
+            description:
+              error instanceof Error ? error.message : 'Error al eliminar el caso de postventa',
+            variant: 'destructive',
+          })
+        }
+      }
 
       return (
         <>
@@ -113,6 +157,13 @@ export const createColumns = ({
               <Eye className="mr-2 h-4 w-4" />
               Ver Detalle
             </DropdownMenuItem>
+            <DropdownMenuItem
+              onClick={() => setIsDeleteDialogOpen(true)}
+              className="text-destructive focus:text-destructive"
+            >
+              <Trash2 className="mr-2 h-4 w-4" />
+              Eliminar
+            </DropdownMenuItem>
           </DataTableDropdown>
 
           {/* Edit Dialog */}
@@ -128,6 +179,28 @@ export const createColumns = ({
               onOpenChange={setIsEditDialogOpen}
             />
           )}
+
+          {/* Delete Confirmation Dialog */}
+          <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>¿Estás seguro?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  Esta acción no se puede deshacer. Esto eliminará permanentemente el caso de
+                  postventa.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={handleDelete}
+                  className="bg-destructive hover:bg-destructive/90"
+                >
+                  Eliminar
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
         </>
       )
     },

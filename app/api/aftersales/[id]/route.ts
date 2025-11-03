@@ -178,3 +178,33 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
     return NextResponse.json({ error: 'Error al actualizar el caso de postventa' }, { status: 500 })
   }
 }
+
+/**
+ * DELETE /api/aftersales/[id]
+ *
+ * Elimina permanentemente un caso de postventa
+ */
+export async function DELETE(request: Request, { params }: { params: Promise<{ id: string }> }) {
+  try {
+    const { id } = await params
+
+    // Verificar que el caso de postventa existe
+    const existingAftersale = await prisma.aftersale.findUnique({
+      where: { id },
+    })
+
+    if (!existingAftersale) {
+      return NextResponse.json({ error: 'Caso de postventa no encontrado' }, { status: 404 })
+    }
+
+    // Eliminar el caso de postventa (hard delete)
+    await prisma.aftersale.delete({
+      where: { id },
+    })
+
+    return NextResponse.json({ success: true, message: 'Caso de postventa eliminado' })
+  } catch (error) {
+    console.error('Error deleting aftersale:', error)
+    return NextResponse.json({ error: 'Error al eliminar el caso de postventa' }, { status: 500 })
+  }
+}

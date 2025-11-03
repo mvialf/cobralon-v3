@@ -36,6 +36,59 @@ Registrar **implementaciones significativas** de este proyecto con:
 
 ## Implementaciones
 
+### 🔧 Fix: Agregar Capacidad de Eliminar Aftersales (Corrección Arquitectural)
+
+- **Status:** ✅ Complete | **Date:** 2025-11-03 | **Impact:** Medium
+- **Problem:** Decisión arquitectural incorrecta en implementación original (commit 5aee748)
+  - Sistema NO permite eliminar casos de postventa
+  - Razón documentada: "sistema de auditoría"
+  - **Corrección:** Sistema de postventas NO es un sistema de auditoría - es un sistema de gestión operativa de reparaciones (tipo ticket/trabajo)
+- **Root Cause:** Concepto errado sobre la naturaleza del negocio
+  - Se asumió que era auditoría legal/compliance → NO eliminar nunca
+  - **Realidad:** Sistema de registro de reparaciones post-proyecto
+  - Casos de uso bloqueados: corregir errores de captura, eliminar duplicados, casos de prueba
+- **Solution:** Implementar hard delete con confirmación simple
+  - **DELETE endpoint:** `/api/aftersales/[id]` con verificación de existencia
+  - **UI:** Opción "Eliminar" en dropdown con AlertDialog de confirmación
+  - **Patrón:** Delete + confirmación (sin niveles de permisos - equipo pequeño)
+- **Benefits:**
+  - ✅ **Permite corregir errores humanos** (captura incorrecta, duplicados)
+  - ✅ **Limpieza de datos de prueba** (training, testing)
+  - ✅ **Flexibilidad operativa** sin sobre-restricciones
+  - ✅ **Patrón consistente** con industria (Jira, ServiceNow, Zendesk permiten eliminar)
+- **Implementación:** ✅ Completada
+  - **Fase 1:** Endpoint DELETE
+    - Crear `app/api/aftersales/[id]/route.ts` función DELETE
+    - Verificar existencia antes de eliminar
+    - Retornar `{ success: true, message }` en caso exitoso
+  - **Fase 2:** UI Dropdown + Confirmación
+    - Importar `Trash2`, `AlertDialog`, `useToast`
+    - Agregar state `isDeleteDialogOpen`
+    - Agregar DropdownMenuItem "Eliminar" con estilo destructive
+    - AlertDialog simple con botones Cancelar/Eliminar
+  - **Fase 3:** Función handleDelete
+    - Fetch DELETE a `/api/aftersales/${id}`
+    - Toast de éxito/error
+    - Revalidación de tabla vía `onAftersaleUpdated()`
+  - **Fase 4:** Documentación
+    - Actualizar implementation log explicando corrección
+    - Aclarar que NO es sistema de auditoría
+- **Archivos modificados:**
+  - `app/api/aftersales/[id]/route.ts` - Agregar función DELETE (+30 líneas)
+  - `app/aftersales/columns.tsx` - Agregar botón eliminar + AlertDialog (+60 líneas)
+  - `docs/project/implementation/2025-current.md` - Documentar corrección
+- **Validación:** ✅ TypeCheck: Pass | ESLint: Pass
+- **Decisión arquitectural corregida:**
+  - **Antes:** "Sistema de auditoría" → NO eliminar nunca
+  - **Después:** "Sistema de gestión de reparaciones" → Eliminar permitido con confirmación
+- **Consecuencias:**
+  - ✅ **Positivas:** Flexibilidad operativa, corregir errores, patrón estándar de industria
+  - ⚠️ **Negativas:** Eliminación permanente sin soft delete (mitigado con confirmación)
+- **Trade-off aceptado:** Hard delete en lugar de soft delete por simplicidad - equipo pequeño, confianza en usuarios, no hay necesidad de recuperación histórica
+- **Nota:** Commit original (5aee748) mantiene mensaje histórico con "auditoría" - corrección documentada aquí
+
+---
+
 ### 🎨 Mejoras Arquitecturales del Sistema de Layout
 
 - **Status:** ✅ Complete | **Date:** 2025-11-02 | **Impact:** High
