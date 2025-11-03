@@ -40,7 +40,6 @@ export default function SettingsLayout({ children }: { children: React.ReactNode
   return (
     <AppLayout
       pageTitle="Configuración"
-      pageDescription="Personaliza las opciones de tu aplicación"
       breadcrumbs={[{ label: 'Panel Principal', href: '/' }, { label: 'Configuración' }]}
     >
       <div className="grid gap-6 lg:grid-cols-[240px_1fr]">

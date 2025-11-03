@@ -121,7 +121,6 @@ export default function RegionalInputsPage() {
   return (
     <AppLayout
       pageTitle="Regional Inputs"
-      pageDescription="Componentes especializados para datos regionales: teléfono, RUT y moneda"
       breadcrumbs={[
         { label: 'Inicio', href: '/' },
         { label: 'Ejemplos', href: '/examples' },

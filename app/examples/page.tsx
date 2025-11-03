@@ -76,7 +76,6 @@ export default function EjemplosPage() {
   return (
     <AppLayout
       pageTitle="Ejemplos de Componentes"
-      pageDescription="Galería de componentes y patterns reutilizables"
       breadcrumbs={[{ label: 'Inicio', href: '/' }, { label: 'Ejemplos' }]}
     >
       <div className="grid gap-6 md:grid-cols-2">

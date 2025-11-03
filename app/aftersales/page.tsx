@@ -74,7 +74,6 @@ export default function AftersalesPage() {
   return (
     <AppLayout
       pageTitle="Postventas"
-      pageDescription="Gestiona los casos de postventa de proyectos finalizados"
       breadcrumbs={[{ label: 'Inicio', href: '/' }, { label: 'Postventas' }]}
       action={
         <Button onClick={() => setIsCreateDialogOpen(true)}>
@@ -92,8 +91,8 @@ export default function AftersalesPage() {
           <DataTable
             columns={columns}
             data={aftersales}
-            searchKey="search"
             searchPlaceholder="Buscar por proyecto, cliente o descripción..."
+            enableGlobalFilter={true}
             globalFilterFn={globalFilterFn}
             meta={{
               handleStatusChange: undefined,

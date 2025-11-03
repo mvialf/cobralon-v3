@@ -60,7 +60,6 @@ export default function DataTableExamplesPage() {
   return (
     <AppLayout
       pageTitle="DataTable Examples"
-      pageDescription="Showcase completo de capacidades del DataTable"
       breadcrumbs={[{ label: 'Ejemplos', href: '/examples' }, { label: 'DataTable' }]}
     >
       {/* Hero Section */}

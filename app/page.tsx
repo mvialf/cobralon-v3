@@ -5,11 +5,7 @@ import Link from 'next/link'
 
 export default function HomePage() {
   return (
-    <AppLayout
-      pageTitle="Panel Principal"
-      pageDescription="Bienvenido a tu aplicación SaaS"
-      breadcrumbs={[{ label: 'Panel Principal', href: '/' }]}
-    >
+    <AppLayout pageTitle="Panel Principal" breadcrumbs={[{ label: 'Panel Principal', href: '/' }]}>
       <div className="grid gap-6">
         {/* Hero/Welcome Card */}
         <Card className="border-primary/20">

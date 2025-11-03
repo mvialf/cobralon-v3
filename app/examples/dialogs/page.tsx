@@ -125,7 +125,6 @@ export default function DialogsPage() {
   return (
     <AppLayout
       pageTitle="Dialogs - Ejemplos Completos"
-      pageDescription="Todos los tipos de dialogs del sistema: formularios, scrollables y captura de contenido"
       breadcrumbs={[
         { label: 'Inicio', href: '/' },
         { label: 'Ejemplos', href: '/examples' },
@@ -698,7 +697,7 @@ export default function MyPage() {
           <section className="space-y-4">
             <div>
               <h3 className="text-lg font-semibold flex items-center gap-2">
-                <Image className="h-5 w-5" alt="" />
+                <Image className="h-5 w-5" />
                 1. Uso Básico (Zero Config)
               </h3>
               <p className="text-muted-foreground text-sm">

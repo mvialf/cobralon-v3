@@ -89,7 +89,6 @@ export default function InstallmentsPage() {
   return (
     <AppLayout
       pageTitle="Cuotas Comercio"
-      pageDescription="Vista global de todas las cuotas de pagos en cuotas sin interés"
       breadcrumbs={[
         { label: 'Inicio', href: '/' },
         { label: 'Pagos', href: '/payments' },

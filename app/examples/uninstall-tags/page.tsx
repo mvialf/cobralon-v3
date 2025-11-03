@@ -41,7 +41,6 @@ export default function UninstallTagsExamplePage() {
   return (
     <AppLayout
       pageTitle="Team Tags - Sistema de Etiquetas"
-      pageDescription="Demo completo del sistema de team tags reutilizable"
       breadcrumbs={[{ label: 'Ejemplos', href: '/examples' }, { label: 'Team Tags' }]}
     >
       <div className="space-y-6">

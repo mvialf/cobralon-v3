@@ -40,7 +40,6 @@ export default function ComboboxDemoPage() {
   return (
     <AppLayout
       pageTitle="Combobox Demo"
-      pageDescription="Combobox con Command + Popover (shadcn/ui)"
       breadcrumbs={[
         { label: 'Inicio', href: '/' },
         { label: 'Ejemplos', href: '/examples' },

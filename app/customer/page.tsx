@@ -55,7 +55,6 @@ export default function CustomersPage() {
   return (
     <AppLayout
       pageTitle="Clientes"
-      pageDescription="Gestiona la informacion de tus clientes"
       breadcrumbs={[{ label: 'Inicio', href: '/' }, { label: 'Clientes' }]}
       action={<NewCustomerDialog onCustomerCreated={handleCustomerCreated} />}
     >

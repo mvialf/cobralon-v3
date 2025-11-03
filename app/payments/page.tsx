@@ -64,7 +64,6 @@ export default function PaymentsPage() {
   return (
     <AppLayout
       pageTitle="Pagos"
-      pageDescription="Lista completa de todos los pagos registrados"
       breadcrumbs={[{ label: 'Inicio', href: '/' }, { label: 'Pagos' }]}
       action={
         <DropdownMenu>

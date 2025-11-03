@@ -84,7 +84,6 @@ export default function ProjectsPage() {
   return (
     <AppLayout
       pageTitle="Proyectos"
-      pageDescription="Gestiona tus proyectos y su información"
       breadcrumbs={[{ label: 'Inicio', href: '/' }, { label: 'Proyectos' }]}
       action={<NewProjectDialog />}
     >
