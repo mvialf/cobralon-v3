@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge'
 import { StatusBadge } from '@/components/ui/status-badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import { ProjectNameSummary } from '@/components/summarys/project-name-summary'
+import { AddressProjectSummary } from '@/components/summarys/address-project-summary'
 import { cn } from '@/lib/utils'
 import { formatDate, formatCurrency } from '@/lib/format'
 import { useConfiguration } from '@/hooks/use-configuration'
@@ -92,6 +93,7 @@ export function ViewProjectDetailsSheet({
         ) : (
           project && (
             <ProjectNameSummary
+              projectId={project.id}
               projectNumber={project.projectNumber}
               customerName={project.customer.name}
               projectName={project.projectName}
@@ -139,16 +141,12 @@ export function ViewProjectDetailsSheet({
             <Separator />
 
             {/* Dirección */}
-            <div>
-              <h3 className="text-sm font-semibold text-muted-foreground mb-3">Dirección</h3>
-              <p className="text-base">
-                {project.street}
-                {project.apartment && `, ${project.apartment}`}
-              </p>
-              <p className="text-sm text-muted-foreground">
-                {project.comuna}, {project.region}
-              </p>
-            </div>
+            <AddressProjectSummary
+              street={project.street}
+              apartment={project.apartment}
+              comuna={project.comuna}
+              region={project.region}
+            />
 
             <Separator />
 
