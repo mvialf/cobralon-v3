@@ -116,6 +116,7 @@ export function ProjectSearchField({
           ) : selectedProject ? (
             <div className="rounded-lg border bg-muted/50 p-3">
               <ProjectNameSummary
+                projectId={selectedProject.id}
                 projectNumber={selectedProject.projectNumber}
                 customerName={selectedProject.customer.name}
                 projectName={selectedProject.projectName}

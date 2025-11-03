@@ -18,7 +18,7 @@ import {
 } from '@/components/ui/alert-dialog'
 import { useToast } from '@/hooks/use-toast'
 import { AftersaleStatusDialog } from '@/components/dialogs/settings/aftersale-status-dialog'
-import { SortableStatusItem } from '@/components/settings/sortable-status-item'
+import { SortableAftersaleStatusItem } from '@/components/settings/sortable-aftersale-status-item'
 import type { BadgeColor, AftersaleStatus } from '@/lib/validations/aftersale-status-validations'
 
 export default function AftersaleStatusSettingsPage() {
@@ -212,7 +212,7 @@ export default function AftersaleStatusSettingsPage() {
                 <div className="space-y-2">
                   {/* Estado inicial - NO draggable */}
                   {initialStatus && (
-                    <SortableStatusItem
+                    <SortableAftersaleStatusItem
                       status={initialStatus}
                       isDraggable={false}
                       onEdit={openEditDialog}
@@ -222,7 +222,7 @@ export default function AftersaleStatusSettingsPage() {
 
                   {/* Estados normales - SÍ draggable */}
                   {normalStatuses.map((status) => (
-                    <SortableStatusItem
+                    <SortableAftersaleStatusItem
                       key={status.id}
                       status={status}
                       isDraggable={true}
@@ -233,7 +233,7 @@ export default function AftersaleStatusSettingsPage() {
 
                   {/* Estado final - NO draggable */}
                   {finalStatus && (
-                    <SortableStatusItem
+                    <SortableAftersaleStatusItem
                       status={finalStatus}
                       isDraggable={false}
                       onEdit={openEditDialog}

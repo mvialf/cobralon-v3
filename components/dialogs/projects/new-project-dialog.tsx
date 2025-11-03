@@ -58,7 +58,7 @@ export function NewProjectDialog({ onProjectCreated }: NewProjectDialogProps) {
           Nuevo Proyecto
         </Button>
       </ScrollableDialogTrigger>
-      <ScrollableDialogContent className="sm:max-w-[700px]">
+      <ScrollableDialogContent className="sm">
         <ScrollableDialogHeader>
           <ScrollableDialogTitle>Nuevo Proyecto</ScrollableDialogTitle>
         </ScrollableDialogHeader>

@@ -110,6 +110,7 @@ Porcentaje Pagado: ${project.percentPaid}%
         ) : project ? (
           <div className="px-4 py-2 border-b border-t border-capture-border">
             <ProjectNameSummary
+              projectId={projectId}
               className="text-capture-foreground"
               projectNumber={project.projectNumber}
               customerName={project.customerName}
