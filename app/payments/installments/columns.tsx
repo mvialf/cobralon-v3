@@ -158,8 +158,14 @@ export const createColumns = ({
   {
     accessorKey: 'payment.paymentMethod.name',
     id: 'paymentMethodName',
-    header: 'Método de Pago',
+    header: ({ column }) => <DataTableColumnHeader column={column} title="Método de Pago" />,
     cell: ({ row }) => <span className="text-sm">{row.original.payment.paymentMethod.name}</span>,
+    enableSorting: true,
+    sortingFn: (rowA, rowB) => {
+      const methodA = rowA.original.payment.paymentMethod.name
+      const methodB = rowB.original.payment.paymentMethod.name
+      return methodA.localeCompare(methodB)
+    },
   },
   {
     id: 'actions',

@@ -102,12 +102,13 @@ export const createColumns = ({ onViewDetails }: ColumnsProps = {}): ColumnDef<P
       // Project payment 1:N → vacío
       return <span className="text-muted-foreground">-</span>
     },
+    enableSorting: true,
   },
 
   // Tipo (NUEVO)
   {
     accessorKey: 'type',
-    header: 'Tipo',
+    header: ({ column }) => <DataTableColumnHeader column={column} title="Tipo" />,
     cell: ({ row }) => {
       const type = row.getValue('type') as 'Project' | 'Customer'
 
@@ -118,6 +119,7 @@ export const createColumns = ({ onViewDetails }: ColumnsProps = {}): ColumnDef<P
         />
       )
     },
+    enableSorting: true,
     filterFn: (row, _id, filterValue) => {
       const type = row.getValue('type') as string
       return filterValue.includes(type)
@@ -128,8 +130,14 @@ export const createColumns = ({ onViewDetails }: ColumnsProps = {}): ColumnDef<P
   {
     accessorKey: 'paymentMethod.name',
     id: 'paymentMethodName',
-    header: 'Método',
+    header: ({ column }) => <DataTableColumnHeader column={column} title="Método" />,
     cell: ({ row }) => row.original.paymentMethod?.name || '-',
+    enableSorting: true,
+    sortingFn: (rowA, rowB) => {
+      const methodA = rowA.original.paymentMethod?.name || ''
+      const methodB = rowB.original.paymentMethod?.name || ''
+      return methodA.localeCompare(methodB)
+    },
     filterFn: (row, _id, filterValue) => {
       const methodName = row.original.paymentMethod?.name
       return methodName ? filterValue.includes(methodName) : false
@@ -152,6 +160,7 @@ export const createColumns = ({ onViewDetails }: ColumnsProps = {}): ColumnDef<P
       }).format(payment.amount)
       return <div className="text-right font-semibold">{formatted}</div>
     },
+    enableSorting: true,
   },
 
   // Fecha
@@ -161,6 +170,7 @@ export const createColumns = ({ onViewDetails }: ColumnsProps = {}): ColumnDef<P
     cell: ({ row }) => {
       return formatDate(row.getValue('date'), 'short', 'es-CL')
     },
+    enableSorting: true,
   },
 
   // Acciones

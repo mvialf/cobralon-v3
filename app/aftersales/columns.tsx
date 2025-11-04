@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { type ColumnDef } from '@tanstack/react-table'
 import { Pencil, Eye, Trash2 } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
-import { DataTableDropdown } from '@/components/data-table'
+import { DataTableDropdown, DataTableColumnHeader } from '@/components/data-table'
 import {
   DropdownMenuItem,
   DropdownMenuLabel,
@@ -35,7 +35,7 @@ export const createColumns = ({
 }: ColumnsProps = {}): ColumnDef<Aftersale>[] => [
   {
     accessorKey: 'project',
-    header: 'Proyecto',
+    header: ({ column }) => <DataTableColumnHeader column={column} title="Proyecto" />,
     cell: ({ row }) => {
       const aftersale = row.original
       return (
@@ -47,6 +47,12 @@ export const createColumns = ({
         />
       )
     },
+    enableSorting: true,
+    sortingFn: (rowA, rowB) => {
+      const projectA = rowA.original.project.projectNumber
+      const projectB = rowB.original.project.projectNumber
+      return projectA.localeCompare(projectB)
+    },
     meta: {
       headerClassName: 'text-left',
       cellClassName: 'text-left',
@@ -54,11 +60,12 @@ export const createColumns = ({
   },
   {
     accessorKey: 'reportedAt',
-    header: 'Fecha',
+    header: ({ column }) => <DataTableColumnHeader column={column} title="Fecha" />,
     cell: ({ row }) => {
       const date = new Date(row.original.reportedAt)
       return <span className="text-sm">{formatDate(date, 'short')}</span>
     },
+    enableSorting: true,
     meta: {
       headerClassName: 'text-center',
       cellClassName: 'text-center',
@@ -66,12 +73,18 @@ export const createColumns = ({
   },
   {
     accessorKey: 'aftersaleStatus',
-    header: 'Estado',
+    header: ({ column }) => <DataTableColumnHeader column={column} title="Estado" />,
     cell: ({ row }) => {
       const status = row.original.aftersaleStatus
       return (
         <Badge className={`${status.color.bgClass} ${status.color.textClass}`}>{status.name}</Badge>
       )
+    },
+    enableSorting: true,
+    sortingFn: (rowA, rowB) => {
+      const statusA = rowA.original.aftersaleStatus.name
+      const statusB = rowB.original.aftersaleStatus.name
+      return statusA.localeCompare(statusB)
     },
     meta: {
       headerClassName: 'text-center',

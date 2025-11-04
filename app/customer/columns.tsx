@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { type ColumnDef } from '@tanstack/react-table'
 import { Pencil, Trash2, DollarSign } from 'lucide-react'
-import { DataTableDropdown } from '@/components/data-table'
+import { DataTableDropdown, DataTableColumnHeader } from '@/components/data-table'
 import {
   DropdownMenuItem,
   DropdownMenuLabel,
@@ -63,15 +63,23 @@ function CustomerActionsCell({ customer }: { customer: Customer }) {
 export const columns: ColumnDef<Customer>[] = [
   {
     accessorKey: 'name',
-    header: 'Nombre',
+    header: ({ column }) => <DataTableColumnHeader column={column} title="Nombre" />,
+    enableSorting: true,
   },
   {
     accessorKey: 'phone',
-    header: 'Telefono',
+    header: ({ column }) => <DataTableColumnHeader column={column} title="Teléfono" />,
+    enableSorting: true,
   },
   {
     accessorKey: 'email',
-    header: 'Correo',
+    header: ({ column }) => <DataTableColumnHeader column={column} title="Correo" />,
+    enableSorting: true,
+    sortingFn: (rowA, rowB) => {
+      const emailA = rowA.original.email || ''
+      const emailB = rowB.original.email || ''
+      return emailA.localeCompare(emailB)
+    },
   },
   {
     id: 'actions',
