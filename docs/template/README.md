@@ -51,6 +51,34 @@ http://localhost:3000
 - **Patterns** de código recomendados
 - Ver metodología: [Documentation](methodology/documentation.md)
 
+### 🎯 Template Skills (Claude Code)
+
+Skills oficiales para acelerar desarrollo con Claude Code:
+
+**CRUD Feature Generator** - Genera features CRUD completos automáticamente
+
+Genera 7 archivos siguiendo patrones del template:
+- ✅ Prisma model
+- ✅ Zod validation
+- ✅ Form component
+- ✅ Dialog wrapper
+- ✅ API routes (GET + POST)
+- ✅ DataTable columns
+- ✅ Page component
+
+**Instalación:**
+```bash
+cp -r docs/template/skills/crud-feature-generator ~/.claude/skills/
+```
+
+**Uso:**
+```
+"Crea un CRUD para Product"
+"Genera feature completa para Category"
+```
+
+Ver documentación completa: [CRUD Feature Generator](skills/crud-feature-generator/)
+
 ---
 
 ## 📚 Navegación de Documentación
