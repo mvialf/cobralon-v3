@@ -46,6 +46,7 @@ export interface TagSelectorProps {
   placeholder?: string
   label?: string
   className?: string
+  showFullNameInSelected?: boolean // Si true, las tags seleccionadas muestran nombre completo
 }
 
 /**
@@ -56,6 +57,7 @@ export interface TagBadgeProps {
   removable?: boolean
   onRemove?: (tagId: string) => void
   className?: string
+  showFullName?: boolean // Si true, muestra tag.name en lugar de tag.abbreviation
 }
 
 /**

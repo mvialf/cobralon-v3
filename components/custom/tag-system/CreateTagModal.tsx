@@ -115,7 +115,6 @@ export const CreateTagModal: React.FC<CreateTagModalProps> = ({
             <Label htmlFor="tag-name">Nombre</Label>
             <Input
               id="tag-name"
-              placeholder="Ej: Desarrollador"
               value={tagName}
               onChange={(e) => {
                 setTagName(e.target.value)

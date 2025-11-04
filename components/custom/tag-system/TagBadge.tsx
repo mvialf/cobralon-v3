@@ -12,7 +12,7 @@ import type { TagBadgeProps } from './types'
  * - Cobralon: className={cn(bgClass, textClass)} desde BadgeColor table
  */
 export const TagBadge = React.forwardRef<HTMLDivElement, TagBadgeProps>(
-  ({ tag, removable = false, onRemove, className, ...props }, ref) => {
+  ({ tag, removable = false, onRemove, className, showFullName = false, ...props }, ref) => {
     const handleRemove = (e: React.MouseEvent) => {
       e.stopPropagation()
       onRemove?.(tag.id)
@@ -34,7 +34,7 @@ export const TagBadge = React.forwardRef<HTMLDivElement, TagBadgeProps>(
         {...props}
       >
         <span className="truncate max-w-[120px]" title={tag.name}>
-          {tag.abbreviation || tag.name}
+          {showFullName ? tag.name : tag.abbreviation || tag.name}
         </span>
 
         {removable && onRemove && (

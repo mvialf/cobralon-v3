@@ -58,6 +58,7 @@ export function UninstallTagsFields({ control }: UninstallTagsFieldsProps) {
                 onEditTag={editTag}
                 onDeleteTag={deleteTag}
                 label="Desinstalción"
+                showFullNameInSelected
               />
             </FormControl>
             <FormMessage />

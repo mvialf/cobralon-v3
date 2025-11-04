@@ -34,6 +34,7 @@ export const TagSelector = React.forwardRef<HTMLDivElement, TagSelectorProps>(
       placeholder: _placeholder = 'Seleccionar tags...',
       label,
       className,
+      showFullNameInSelected = false,
       ...props
     },
     ref
@@ -125,8 +126,8 @@ export const TagSelector = React.forwardRef<HTMLDivElement, TagSelectorProps>(
                                 className="shrink-0"
                               />
                               <div className="flex-1 flex items-center gap-2 py-2">
+                                <TagBadge tag={tag} showFullName className="text-sm" />
                                 <TagBadge tag={tag} className="text-sm" />
-                                <span className="text-sm font-medium">{tag.name}</span>
                               </div>
 
                               <DropdownMenu>
@@ -195,7 +196,13 @@ export const TagSelector = React.forwardRef<HTMLDivElement, TagSelectorProps>(
         {selectedTags.length > 0 && (
           <div className="flex flex-wrap gap-1">
             {selectedTags.map((tag) => (
-              <TagBadge key={tag.id} tag={tag} removable onRemove={handleRemoveTag} />
+              <TagBadge
+                key={tag.id}
+                tag={tag}
+                removable
+                onRemove={handleRemoveTag}
+                showFullName={showFullNameInSelected}
+              />
             ))}
           </div>
         )}
