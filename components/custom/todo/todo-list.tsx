@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef } from 'react'
+import { useState, useRef, useMemo } from 'react'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Input } from '@/components/ui/input'
@@ -48,6 +48,14 @@ interface TodoListProps {
    * @default []
    */
   initialTodos?: TodoItem[]
+
+  /**
+   * Si las tareas completadas deben moverse automáticamente al final.
+   * Cuando está activado, las tareas pendientes se muestran primero
+   * y las completadas al final de la lista.
+   * @default true
+   */
+  autoSort?: boolean
 }
 
 /**
@@ -72,6 +80,7 @@ interface TodoListProps {
  * - ✅ Focus management (mantiene foco en input)
  * - ✅ Accesible (aria-labels, keyboard navigation)
  * - ✅ Contador de tareas completadas
+ * - ✅ Auto-sort: tareas completadas se mueven al final automáticamente
  */
 export function TodoList({
   title = 'Lista de Tareas',
@@ -79,6 +88,7 @@ export function TodoList({
   todos,
   onTodosChange,
   initialTodos,
+  autoSort = true,
 }: TodoListProps) {
   // Hook de lógica de todos (controlado o no controlado)
   const {
@@ -92,6 +102,18 @@ export function TodoList({
     onTodosChange,
     initialTodos,
   })
+
+  // Ordenar tareas: pendientes primero, completadas al final
+  const displayTodos = useMemo(() => {
+    if (!autoSort) return currentTodos
+
+    return [...currentTodos].sort((a, b) => {
+      // Si ambas tienen el mismo estado de completado, mantener orden
+      if (a.completed === b.completed) return 0
+      // Completadas van al final (return 1), no completadas primero (return -1)
+      return a.completed ? 1 : -1
+    })
+  }, [currentTodos, autoSort])
 
   // Estado local del input
   const [newTodo, setNewTodo] = useState('')
@@ -184,12 +206,12 @@ export function TodoList({
 
           {/* Lista de tareas */}
           <div className="space-y-2">
-            {currentTodos.length === 0 ? (
+            {displayTodos.length === 0 ? (
               <p className="text-center text-muted-foreground">
                 No hay tareas. ¡Agrega una para comenzar!
               </p>
             ) : (
-              currentTodos.map((todo) => (
+              displayTodos.map((todo) => (
                 <div key={todo.id} className="flex items-center gap-3 rounded-lg px-2">
                   <Checkbox
                     checked={todo.completed}

@@ -1,6 +1,6 @@
 'use client'
 
-import { useRef } from 'react'
+import { useRef, useMemo } from 'react'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Input } from '@/components/ui/input'
@@ -60,6 +60,14 @@ interface TodoListFieldProps {
    * Nombre del campo (para accesibilidad).
    */
   name?: string
+
+  /**
+   * Si las tareas completadas deben moverse automáticamente al final.
+   * Cuando está activado, las tareas pendientes se muestran primero
+   * y las completadas al final de la lista.
+   * @default true
+   */
+  autoSort?: boolean
 }
 
 /**
@@ -96,6 +104,7 @@ interface TodoListFieldProps {
  * - ✅ Accesible (aria-labels)
  * - ✅ Confirmación antes de eliminar
  * - ✅ Focus management
+ * - ✅ Auto-sort: tareas completadas se mueven al final automáticamente
  */
 export function TodoListField({
   value,
@@ -106,12 +115,25 @@ export function TodoListField({
   title,
   description,
   name,
+  autoSort = true,
 }: TodoListFieldProps) {
   // Hook de lógica de todos (modo controlado)
   const { addTodo, toggleTodo, deleteTodo, stats } = useTodoList({
     todos: value,
     onTodosChange: onChange,
   })
+
+  // Ordenar tareas: pendientes primero, completadas al final
+  const displayTodos = useMemo(() => {
+    if (!autoSort) return value
+
+    return [...value].sort((a, b) => {
+      // Si ambas tienen el mismo estado de completado, mantener orden
+      if (a.completed === b.completed) return 0
+      // Completadas van al final (return 1), no completadas primero (return -1)
+      return a.completed ? 1 : -1
+    })
+  }, [value, autoSort])
 
   // Estado local del input
   const [newTodo, setNewTodo] = useState('')
@@ -191,7 +213,7 @@ export function TodoListField({
         )}
 
         {/* Estadísticas */}
-        {value.length > 0 && (
+        {displayTodos.length > 0 && (
           <div className="mb-2 flex items-center gap-2">
             <p className="text-xs text-muted-foreground">
               {stats.completed} / {stats.total} completadas
@@ -234,12 +256,12 @@ export function TodoListField({
 
           {/* Lista de tareas */}
           <div className="space-y-2">
-            {value.length === 0 ? (
+            {displayTodos.length === 0 ? (
               <p className="py-4 text-center text-sm text-muted-foreground">
                 No hay tareas. Agrega una para comenzar.
               </p>
             ) : (
-              value.map((todo) => (
+              displayTodos.map((todo) => (
                 <div
                   key={todo.id}
                   className={`flex items-center gap-3 rounded-lg px-2 py-1 ${

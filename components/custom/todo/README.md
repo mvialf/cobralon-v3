@@ -105,13 +105,14 @@ export default function ControlledExample() {
 
 ### Props de `TodoList`
 
-| Prop            | Tipo                          | Default             | Descripción                                        |
-| --------------- | ----------------------------- | ------------------- | -------------------------------------------------- |
-| `title`         | `string`                      | `"Lista de Tareas"` | Título del componente                              |
-| `description`   | `string`                      | -                   | Descripción opcional bajo el título                |
-| `todos`         | `TodoItem[]`                  | -                   | **Modo controlado**: Lista externa de tareas       |
-| `onTodosChange` | `(todos: TodoItem[]) => void` | -                   | **Modo controlado**: Callback cuando cambian todos |
-| `initialTodos`  | `TodoItem[]`                  | `[]`                | **Modo no controlado**: Tareas iniciales           |
+| Prop            | Tipo                          | Default             | Descripción                                                               |
+| --------------- | ----------------------------- | ------------------- | ------------------------------------------------------------------------- |
+| `title`         | `string`                      | `"Lista de Tareas"` | Título del componente                                                     |
+| `description`   | `string`                      | -                   | Descripción opcional bajo el título                                       |
+| `todos`         | `TodoItem[]`                  | -                   | **Modo controlado**: Lista externa de tareas                              |
+| `onTodosChange` | `(todos: TodoItem[]) => void` | -                   | **Modo controlado**: Callback cuando cambian todos                        |
+| `initialTodos`  | `TodoItem[]`                  | `[]`                | **Modo no controlado**: Tareas iniciales                                  |
+| `autoSort`      | `boolean`                     | `true`              | Mueve automáticamente las tareas completadas al final (pendientes arriba) |
 
 ### Interface `TodoItem`
 
@@ -189,6 +190,43 @@ const stats = useMemo(
 
 // Performance: Solo recalcula cuando `todos` cambia
 ```
+
+### 6. Auto-Sort de Tareas Completadas ⭐
+
+Por defecto, las tareas completadas se mueven automáticamente al final de la lista:
+
+```tsx
+// ✅ Comportamiento por defecto (autoSort = true)
+<TodoList title="Mis Tareas" />
+
+// Resultado visual:
+// 1. [ ] Tarea pendiente 1
+// 2. [ ] Tarea pendiente 2
+// 3. [x] Tarea completada 1  ← Va al final automáticamente
+// 4. [x] Tarea completada 2
+```
+
+**Desactivar auto-sort:**
+
+```tsx
+// ❌ Mantener orden cronológico (autoSort = false)
+<TodoList title="Mis Tareas" autoSort={false} />
+
+// Las tareas NO se reordenan al marcarlas como completadas
+```
+
+**Beneficios:**
+
+- ✅ **UX mejorada**: Tareas pendientes (lo importante) siempre visibles arriba
+- ✅ **Patrón estándar**: Usado por Google Tasks, Microsoft To Do, Todoist
+- ✅ **Claridad visual**: Separación clara entre pendientes y completadas
+- ✅ **Zero friction**: Automático, sin UI adicional
+
+**Cuándo desactivar:**
+
+- Cuando el orden cronológico/secuencial importa (ej: pasos de un proceso)
+- Cuando las tareas representan un timeline histórico
+- Cuando el usuario necesita ver el orden exacto de creación
 
 ---
 
@@ -374,6 +412,7 @@ const handleDeleteClick = (id: string) => {
 | **Testeable**               | ⚠️ Difícil              | ✅ Fácil (hook aislado) |
 | **Controlled/Uncontrolled** | ⚠️ Bug con initialTodos | ✅ Patrón correcto      |
 | **Performance**             | ⚠️ Recalcula stats      | ✅ useMemo              |
+| **Auto-sort completadas**   | ❌ No                   | ✅ Sí (configurable)    |
 
 ---
 
@@ -481,16 +520,17 @@ export function CreateProjectForm() {
 
 ### Props de TodoListField
 
-| Prop          | Tipo                          | Requerido | Descripción                                               |
-| ------------- | ----------------------------- | --------- | --------------------------------------------------------- |
-| `value`       | `TodoItem[]`                  | ✅ Sí     | Valor actual (viene de React Hook Form)                   |
-| `onChange`    | `(value: TodoItem[]) => void` | ✅ Sí     | Callback de cambio (viene de React Hook Form)             |
-| `placeholder` | `string`                      | No        | Placeholder del input (default: "Agregar nueva tarea...") |
-| `disabled`    | `boolean`                     | No        | Si está deshabilitado (ej: durante submit)                |
-| `error`       | `string`                      | No        | Mensaje de error de validación                            |
-| `title`       | `string`                      | No        | Título opcional de la lista                               |
-| `description` | `string`                      | No        | Descripción opcional                                      |
-| `name`        | `string`                      | No        | Nombre del campo (para accesibilidad)                     |
+| Prop          | Tipo                          | Requerido | Descripción                                                             |
+| ------------- | ----------------------------- | --------- | ----------------------------------------------------------------------- |
+| `value`       | `TodoItem[]`                  | ✅ Sí     | Valor actual (viene de React Hook Form)                                 |
+| `onChange`    | `(value: TodoItem[]) => void` | ✅ Sí     | Callback de cambio (viene de React Hook Form)                           |
+| `placeholder` | `string`                      | No        | Placeholder del input (default: "Agregar nueva tarea...")               |
+| `disabled`    | `boolean`                     | No        | Si está deshabilitado (ej: durante submit)                              |
+| `error`       | `string`                      | No        | Mensaje de error de validación                                          |
+| `title`       | `string`                      | No        | Título opcional de la lista                                             |
+| `description` | `string`                      | No        | Descripción opcional                                                    |
+| `name`        | `string`                      | No        | Nombre del campo (para accesibilidad)                                   |
+| `autoSort`    | `boolean`                     | No        | Mueve automáticamente las tareas completadas al final (default: `true`) |
 
 ### Validaciones Disponibles
 
@@ -574,14 +614,16 @@ const handleKeyDown = (e: React.KeyboardEvent) => {
 
 Si quieres extender el componente:
 
+- [x] **Auto-sort**: Tareas completadas al final automáticamente ✅ **IMPLEMENTADO**
 - [ ] **Modo de edición**: Doble click en tarea para editar
-- [ ] **Drag & Drop**: Reordenar tareas
+- [ ] **Drag & Drop**: Reordenar tareas manualmente
 - [ ] **Categorías/Tags**: Agrupar tareas
 - [ ] **Fechas de vencimiento**: Deadlines y recordatorios
 - [ ] **Prioridades**: Alta/Media/Baja
 - [ ] **Filtros**: Ver solo completadas/pendientes
 - [ ] **Persistencia local**: LocalStorage automático
 - [ ] **Undo/Redo**: Deshacer eliminaciones
+- [ ] **Animación smooth**: Transiciones al reordenar (con Framer Motion)
 
 ---
 
