@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useQuery } from '@tanstack/react-query'
@@ -9,6 +9,7 @@ import {
   paymentToCustomerSchema,
   type PaymentToCustomerFormValues,
   type ProjectWithBalance,
+  parseProjectsWithBalance,
 } from '@/lib/validations/payment-validations'
 import { calculateFIFO } from '@/lib/business-logic/payment-fifo'
 import { formatCurrency } from '@/lib/format'
@@ -37,6 +38,15 @@ import {
 import { PaymentMethodFields } from '@/components/forms/fields/payment-method-fields'
 import { PaymentAmountDateFields } from '@/components/forms/fields/payment-amount-date-fields'
 import { CustomerSearchField } from '@/components/forms/search/customer-search-field'
+
+// ✅ Constantes fuera del componente para evitar re-renders infinitos
+const EMPTY_PROJECTS: ProjectWithBalance[] = []
+const EMPTY_PAYMENT_METHODS: Array<{
+  id: string
+  name: string
+  hasInstallments: boolean
+  maxInstallments: number | null
+}> = []
 
 interface PaymentToCustomerFormProps {
   onSubmit: (data: PaymentToCustomerFormValues, currency: string) => void | Promise<void>
@@ -99,13 +109,15 @@ export function PaymentToCustomerForm({
       if (!selectedCustomerId) return []
       const res = await fetch(`/api/payments/customer-projects?customerId=${selectedCustomerId}`)
       if (!res.ok) throw new Error('Error al cargar proyectos')
-      return res.json() as Promise<ProjectWithBalance[]>
+      const data = await res.json()
+      // ⚠️ IMPORTANTE: Transformar strings ISO a Date objects
+      return parseProjectsWithBalance(data)
     },
     enabled: !!selectedCustomerId,
   })
 
   // Memoize para evitar re-renders infinitos
-  const projects = useMemo(() => projectsData || [], [projectsData])
+  const projects = useMemo(() => projectsData || EMPTY_PROJECTS, [projectsData])
 
   // Fetch payment methods
   const { data: paymentMethodsData } = useQuery({
@@ -119,7 +131,10 @@ export function PaymentToCustomerForm({
   })
 
   // Memoize para evitar re-renders infinitos
-  const paymentMethods = useMemo(() => paymentMethodsData || [], [paymentMethodsData])
+  const paymentMethods = useMemo(
+    () => paymentMethodsData || EMPTY_PAYMENT_METHODS,
+    [paymentMethodsData]
+  )
 
   // Watch amount para calcular FIFO
   const watchedAmount = form.watch('amount')
@@ -177,6 +192,14 @@ export function PaymentToCustomerForm({
     updated[index].allocatedAmount = amount
     setAllocations(updated)
   }
+
+  // Handler: Reset installments cuando cambia método de pago
+  // ⚠️ IMPORTANTE: Memoizado para evitar loop infinito de re-renders
+  // form.setValue es estable (react-hook-form garantiza que no cambia)
+  const handlePaymentMethodChange = useCallback(() => {
+    form.setValue('selectedInstallments', null)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   // Calcular suma de allocations
   const totalAllocated = allocations.reduce((sum, a) => sum + a.allocatedAmount, 0)
@@ -238,7 +261,7 @@ export function PaymentToCustomerForm({
         <PaymentMethodFields
           control={form.control}
           paymentMethods={paymentMethods}
-          onPaymentMethodChange={() => form.setValue('selectedInstallments', null)}
+          onPaymentMethodChange={handlePaymentMethodChange}
         />
 
         {/* 6. Sección de Allocations (solo si hay cliente seleccionado) */}

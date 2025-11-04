@@ -176,6 +176,42 @@ export type ProjectWithBalance = {
 }
 
 /**
+ * Type para ProjectWithBalance serializado (como viene del API)
+ *
+ * Cuando los datos viajan por JSON, las fechas se convierten a strings ISO.
+ * Este type representa la forma serializada.
+ */
+export type ProjectWithBalanceSerialized = Omit<ProjectWithBalance, 'createdAt'> & {
+  createdAt: string // ISO 8601 string
+}
+
+/**
+ * Transforma ProjectWithBalance serializado (del API) a objetos con Date
+ *
+ * Soluciona el problema de que JSON serializa Date como strings ISO.
+ * Usa después de fetch para convertir strings de vuelta a Date objects.
+ *
+ * @param projects - Array de proyectos serializados (createdAt como string)
+ * @returns Array de proyectos con createdAt como Date object
+ *
+ * @example
+ * ```ts
+ * const res = await fetch('/api/payments/customer-projects?customerId=123')
+ * const data = await res.json() // createdAt es string aquí
+ * const projects = parseProjectsWithBalance(data) // createdAt es Date ahora
+ * calculateFIFO(1000, projects) // ✅ Funciona correctamente
+ * ```
+ */
+export function parseProjectsWithBalance(
+  projects: ProjectWithBalanceSerialized[]
+): ProjectWithBalance[] {
+  return projects.map((p) => ({
+    ...p,
+    createdAt: new Date(p.createdAt), // Convertir string ISO → Date
+  }))
+}
+
+/**
  * Helper para convertir form values de "Pago a Proyecto" a payload de API
  *
  * Transforma el schema simplificado 1:1 al schema completo del API
