@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { type ColumnDef } from '@tanstack/react-table'
 import { Pencil, Trash2, Eye, Receipt, DollarSign } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
-import { DataTableDropdown } from '@/components/data-table'
+import { DataTableDropdown, DataTableColumnHeader } from '@/components/data-table'
 import {
   DropdownMenuItem,
   DropdownMenuLabel,
@@ -77,7 +77,7 @@ export const createColumns = ({
 }: ColumnsProps = {}): ColumnDef<Project>[] => [
   {
     accessorKey: 'projectNumber',
-    header: 'Proyecto',
+    header: ({ column }) => <DataTableColumnHeader column={column} title="Proyecto" />,
     cell: ({ row }) => {
       const project = row.original
       return (
@@ -89,6 +89,7 @@ export const createColumns = ({
         />
       )
     },
+    enableSorting: true,
     meta: {
       headerClassName: 'text-left',
       cellClassName: 'text-left',
@@ -96,7 +97,7 @@ export const createColumns = ({
   },
   {
     accessorKey: 'projectStatus',
-    header: 'Estado',
+    header: ({ column }) => <DataTableColumnHeader column={column} title="Estado" />,
     cell: ({ row, table }) => {
       const project = row.original
       const status = project.projectStatus
@@ -130,6 +131,12 @@ export const createColumns = ({
         />
       )
     },
+    enableSorting: true,
+    sortingFn: (rowA, rowB) => {
+      const statusA = rowA.original.projectStatus?.name || ''
+      const statusB = rowB.original.projectStatus?.name || ''
+      return statusA.localeCompare(statusB)
+    },
     filterFn: (row, _id, filterValue) => {
       const status = row.original.projectStatus
       // Si el filtro es "null", mostrar solo proyectos sin estado
@@ -155,12 +162,13 @@ export const createColumns = ({
       const hasFinalStatus = row.projectStatus?.isFinal ?? false
       return isFullyPaid && hasFinalStatus ? 'Finalizado' : 'Activo'
     },
-    header: 'Estado Proyecto',
+    header: ({ column }) => <DataTableColumnHeader column={column} title="Estado Proyecto" />,
     cell: ({ row }) => {
       const state = row.getValue('projectState') as string
       const variant = state === 'Finalizado' ? 'success' : 'default'
       return <Badge variant={variant}>{state}</Badge>
     },
+    enableSorting: true,
     filterFn: (row, id, value) => {
       return value.includes(row.getValue(id))
     },
@@ -171,7 +179,7 @@ export const createColumns = ({
   },
   {
     accessorKey: 'total',
-    header: 'Total',
+    header: ({ column }) => <DataTableColumnHeader column={column} title="Total" />,
     cell: ({ row }) => {
       const total = row.original.total
       // Formatear como moneda CLP (sin decimales)
@@ -182,6 +190,7 @@ export const createColumns = ({
         maximumFractionDigits: 0,
       }).format(total)
     },
+    enableSorting: true,
     meta: {
       headerClassName: 'text-right',
       cellClassName: 'text-right',
@@ -189,10 +198,11 @@ export const createColumns = ({
   },
   {
     accessorKey: 'date',
-    header: 'Fecha Ingreso',
+    header: ({ column }) => <DataTableColumnHeader column={column} title="Fecha Ingreso" />,
     cell: ({ row }) => {
       return formatDate(row.original.date, 'short', 'es-CL')
     },
+    enableSorting: true,
     meta: {
       headerClassName: 'text-center',
       cellClassName: 'text-center',
@@ -200,7 +210,7 @@ export const createColumns = ({
   },
   {
     accessorKey: 'totalPaid',
-    header: 'Total Pagado',
+    header: ({ column }) => <DataTableColumnHeader column={column} title="Total Pagado" />,
     cell: ({ row }) => {
       return (
         <PaymentProgressSummary
@@ -209,6 +219,7 @@ export const createColumns = ({
         />
       )
     },
+    enableSorting: true,
     meta: {
       headerClassName: 'text-right',
       cellClassName: 'text-right',
@@ -216,7 +227,7 @@ export const createColumns = ({
   },
   {
     accessorKey: 'balance',
-    header: 'Saldo',
+    header: ({ column }) => <DataTableColumnHeader column={column} title="Saldo" />,
     cell: ({ row }) => {
       const balance = row.original.balance
 
@@ -231,6 +242,7 @@ export const createColumns = ({
         </span>
       )
     },
+    enableSorting: true,
     meta: {
       headerClassName: 'text-right',
       cellClassName: 'text-right',
