@@ -45,3 +45,6 @@ firebase-debug.*.log
 # Coverage reports
 coverage/
 
+
+# Archivos de datos de importación
+*.txt
