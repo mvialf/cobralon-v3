@@ -53,8 +53,6 @@ function PhoneInput({
     }
   }, [defaultCountry])
 
-  // Placeholder que acepta cualquier tipo (celular o fijo)
-  const defaultPlaceholder = `+${countryCallingCode} 9 1234 5678`
   const prefix = `+${countryCallingCode}`
 
   // Handler que auto-añade prefijo si falta
@@ -88,7 +86,7 @@ function PhoneInput({
     <div className="relative">
       {/* Prefijo visual fijo */}
       {showCountryPrefix && (
-        <div className="pointer-events-none absolute inset-y-0 left-0 z-10 flex items-center pl-3">
+        <div className="pointer-events-none absolute inset-y-0 left-0 z-10 flex items-center pl-0">
           <span className="text-sm font-medium text-muted-foreground">{prefix}</span>
         </div>
       )}
@@ -103,18 +101,18 @@ function PhoneInput({
         onChange={handleChange} // Usa el nuevo handler con auto-add de prefijo
         disabled={disabled}
         className={cn(
-          showCountryPrefix && 'pl-12', // Espacio para prefijo
+          showCountryPrefix && 'pl-7', // Espacio para prefijo (+56)
           showIcon && 'pr-9', // Espacio para icono
           className
         )}
-        placeholder={placeholder || defaultPlaceholder}
+        placeholder={placeholder}
         aria-invalid={value.length > 0 && !isValid}
         {...props}
       />
 
       {/* Icono de validación */}
       {showIcon && (
-        <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3">
+        <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-1">
           {isValid ? (
             <CheckCircle2 className="h-4 w-4 text-green-500" />
           ) : (

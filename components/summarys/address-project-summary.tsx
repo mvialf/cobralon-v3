@@ -21,7 +21,7 @@ export function AddressProjectSummary({
   className,
 }: AddressProjectSummaryProps) {
   return (
-    <div className={cn((className = 'flex flex-row items-start gap-3'))}>
+    <div className={cn('flex flex-row items-start gap-3', className)}>
       <MapPin className="h-5 w-5" />
       <div>
         <p className="text-xs">
