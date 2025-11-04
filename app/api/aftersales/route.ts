@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { z } from 'zod'
+import { todoListOptionalSchema } from '@/lib/validations/todo-validations'
 
 /**
  * Schema de validación para crear Aftersale
@@ -8,11 +9,16 @@ import { z } from 'zod'
 const createAftersaleSchema = z.object({
   projectId: z.string().uuid('Project ID inválido'),
   aftersaleStatusId: z.string().uuid('Status ID inválido'),
+  contactPhone: z
+    .string()
+    .min(1, 'El teléfono de contacto es obligatorio')
+    .regex(/^\+56[2-9]\d{8}$/, 'Formato inválido. Debe ser un teléfono chileno válido'),
   description: z
     .string()
     .min(1, 'La descripción es obligatoria')
     .max(1000, 'Máximo 1000 caracteres'),
   reportedAt: z.string().datetime('Fecha inválida'),
+  tasks: todoListOptionalSchema, // Lista de tareas para resolver el caso
 })
 
 /**
@@ -151,8 +157,10 @@ export async function POST(request: Request) {
       data: {
         projectId: validatedData.projectId,
         aftersaleStatusId: validatedData.aftersaleStatusId,
+        contactPhone: validatedData.contactPhone,
         description: validatedData.description,
         reportedAt: new Date(validatedData.reportedAt),
+        tasks: validatedData.tasks || [], // Incluir tareas (default vacío)
       },
       include: {
         project: {

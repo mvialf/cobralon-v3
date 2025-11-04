@@ -9,7 +9,10 @@ import { FormGrid } from '@/components/ui/form-grid'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Combobox } from '@/components/ui/combobox'
+import { PhoneInput } from '@/components/ui/phone-input'
 import { ProjectSearchField } from '@/components/forms/search/project-search-field'
+import { AddressProjectSummary } from '@/components/summarys/address-project-summary'
+import { TodoListField } from '@/components/custom/todo'
 import {
   Form,
   FormControl,
@@ -42,14 +45,22 @@ export const AftersaleForm = React.forwardRef<AftersaleFormHandle, AftersaleForm
   ({ onSubmit, defaultValues }, ref) => {
     const [aftersaleStatuses, setAftersaleStatuses] = React.useState<AftersaleStatus[]>([])
     const [loadingStatuses, setLoadingStatuses] = React.useState(true)
+    const [selectedProjectDetails, setSelectedProjectDetails] = React.useState<{
+      street: string
+      apartment: string | null
+      comuna: string
+      region: string
+    } | null>(null)
 
     const form = useForm<AftersaleFormValues>({
       resolver: zodResolver(aftersaleSchema),
       defaultValues: {
         projectId: '',
         aftersaleStatusId: '',
+        contactPhone: '',
         description: '',
         reportedAt: new Date(),
+        tasks: [], // Lista de tareas vacía por defecto
         ...defaultValues,
       },
     })
@@ -89,6 +100,34 @@ export const AftersaleForm = React.forwardRef<AftersaleFormHandle, AftersaleForm
       // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [])
 
+    // Cargar detalles del proyecto seleccionado (dirección y teléfono)
+    const projectId = form.watch('projectId')
+    React.useEffect(() => {
+      if (!projectId) {
+        setSelectedProjectDetails(null)
+        return
+      }
+
+      // Fetch proyecto completo para obtener dirección y teléfono
+      fetch(`/api/projects/${projectId}`)
+        .then((res) => res.json())
+        .then((data) => {
+          setSelectedProjectDetails({
+            street: data.street,
+            apartment: data.apartment,
+            comuna: data.comuna,
+            region: data.region,
+          })
+
+          // Autocompletar teléfono del proyecto
+          if (data.phone) {
+            form.setValue('contactPhone', data.phone)
+          }
+        })
+        .catch((err) => console.error('Error fetching project details:', err))
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [projectId])
+
     return (
       <Form {...form}>
         <div className="grid gap-4">
@@ -102,6 +141,7 @@ export const AftersaleForm = React.forwardRef<AftersaleFormHandle, AftersaleForm
               }
             }}
           />
+
           <FormGrid columns={3}>
             {/* Estado de Postventa */}
             <FormField
@@ -134,7 +174,6 @@ export const AftersaleForm = React.forwardRef<AftersaleFormHandle, AftersaleForm
                 </FormItem>
               )}
             />
-
             {/* Fecha de Reporte */}
             <FormField
               control={form.control}
@@ -157,7 +196,32 @@ export const AftersaleForm = React.forwardRef<AftersaleFormHandle, AftersaleForm
                 </FormItem>
               )}
             />
+            {/* Teléfono de Contacto */}
+            <FormField
+              control={form.control}
+              name="contactPhone"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Teléfono*</FormLabel>
+                  <FormControl>
+                    <PhoneInput value={field.value} onChange={field.onChange} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
           </FormGrid>
+
+          {/* Dirección del Proyecto */}
+          {selectedProjectDetails && (
+            <AddressProjectSummary
+              street={selectedProjectDetails.street}
+              apartment={selectedProjectDetails.apartment}
+              comuna={selectedProjectDetails.comuna}
+              region={selectedProjectDetails.region}
+            />
+          )}
+
           {/* Descripción */}
           <FormField
             control={form.control}
@@ -167,6 +231,27 @@ export const AftersaleForm = React.forwardRef<AftersaleFormHandle, AftersaleForm
                 <FormLabel>Descripción del Problema</FormLabel>
                 <FormControl>
                   <Textarea {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          {/* Lista de Tareas */}
+          <FormField
+            control={form.control}
+            name="tasks"
+            render={({ field, fieldState }) => (
+              <FormItem>
+                <FormLabel>Lista de Tareas</FormLabel>
+
+                <FormControl>
+                  <TodoListField
+                    value={field.value}
+                    onChange={field.onChange}
+                    error={fieldState.error?.message}
+                    name="tasks"
+                  />
                 </FormControl>
                 <FormMessage />
               </FormItem>

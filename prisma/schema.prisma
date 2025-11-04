@@ -214,8 +214,10 @@ model Aftersale {
   id                String          @id @default(uuid())
   projectId         String
   aftersaleStatusId String
+  contactPhone      String          @default("")
   description       String
   reportedAt        DateTime
+  tasks             Json            @default("[]") // Lista de tareas para resolver el caso
   createdAt         DateTime        @default(now())
   updatedAt         DateTime        @updatedAt
   project           Project         @relation(fields: [projectId], references: [id], onDelete: Cascade)

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { z } from 'zod'
+import { todoListOptionalSchema } from '@/lib/validations/todo-validations'
 
 /**
  * Schema de validación para actualizar Aftersale
@@ -8,8 +9,13 @@ import { z } from 'zod'
 const updateAftersaleSchema = z.object({
   projectId: z.string().uuid().optional(),
   aftersaleStatusId: z.string().uuid().optional(),
+  contactPhone: z
+    .string()
+    .regex(/^\+56[2-9]\d{8}$/, 'Formato inválido. Debe ser un teléfono chileno válido')
+    .optional(),
   description: z.string().min(1).max(1000).optional(),
   reportedAt: z.string().datetime().optional(),
+  tasks: todoListOptionalSchema.optional(), // Lista de tareas para resolver el caso
 })
 
 /**
@@ -121,24 +127,19 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
       }
     }
 
-    // Preparar data para actualizar
-    const updateData: {
-      projectId?: string
-      aftersaleStatusId?: string
-      description?: string
-      reportedAt?: Date
-    } = {}
-
-    if (validatedData.projectId) updateData.projectId = validatedData.projectId
-    if (validatedData.aftersaleStatusId)
-      updateData.aftersaleStatusId = validatedData.aftersaleStatusId
-    if (validatedData.description) updateData.description = validatedData.description
-    if (validatedData.reportedAt) updateData.reportedAt = new Date(validatedData.reportedAt)
-
     // Actualizar el caso de postventa
     const updatedAftersale = await prisma.aftersale.update({
       where: { id },
-      data: updateData,
+      data: {
+        ...(validatedData.projectId && { projectId: validatedData.projectId }),
+        ...(validatedData.aftersaleStatusId && {
+          aftersaleStatusId: validatedData.aftersaleStatusId,
+        }),
+        ...(validatedData.contactPhone && { contactPhone: validatedData.contactPhone }),
+        ...(validatedData.description && { description: validatedData.description }),
+        ...(validatedData.reportedAt && { reportedAt: new Date(validatedData.reportedAt) }),
+        ...(validatedData.tasks !== undefined && { tasks: validatedData.tasks }),
+      },
       include: {
         project: {
           select: {
