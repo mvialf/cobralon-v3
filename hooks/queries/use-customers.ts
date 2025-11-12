@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
+import { createApiError, handleMutationError } from '@/lib/errors'
 
 /**
  * Hooks de React Query para Customers
@@ -237,8 +238,7 @@ export function useCreateCustomer() {
       })
 
       if (!response.ok) {
-        const error = await response.json()
-        throw new Error(error.error || 'Error al crear cliente')
+        throw await createApiError(response, 'Error al crear cliente')
       }
 
       return response.json()
@@ -261,8 +261,10 @@ export function useCreateCustomer() {
 
       toast.success('Cliente creado exitosamente')
     },
-    onError: (error: Error) => {
-      toast.error(error.message)
+    onError: (error) => {
+      handleMutationError(error, {
+        409: 'Este email ya está registrado',
+      })
       console.error('Error creating customer:', error)
     },
   })
@@ -309,8 +311,7 @@ export function useUpdateCustomer() {
       })
 
       if (!response.ok) {
-        const error = await response.json()
-        throw new Error(error.error || 'Error al actualizar cliente')
+        throw await createApiError(response, 'Error al actualizar cliente')
       }
 
       return response.json()
@@ -336,8 +337,10 @@ export function useUpdateCustomer() {
 
       toast.success('Cliente actualizado exitosamente')
     },
-    onError: (error: Error) => {
-      toast.error(error.message)
+    onError: (error) => {
+      handleMutationError(error, {
+        409: 'Este email ya está registrado por otro cliente',
+      })
       console.error('Error updating customer:', error)
     },
   })
@@ -385,8 +388,7 @@ export function useDeleteCustomer() {
       })
 
       if (!response.ok) {
-        const error = await response.json()
-        throw new Error(error.error || 'Error al eliminar cliente')
+        throw await createApiError(response, 'Error al eliminar cliente')
       }
     },
     // ✅ Optimistic update: remover del UI inmediatamente
@@ -413,12 +415,12 @@ export function useDeleteCustomer() {
       return { previousData }
     },
     // ✅ Rollback en caso de error
-    onError: (error: Error, id, context) => {
+    onError: (error, id, context) => {
       // Restaurar estado anterior
       if (context?.previousData) {
         queryClient.setQueryData(['customers'], context.previousData)
       }
-      toast.error(error.message)
+      handleMutationError(error)
       console.error('Error deleting customer:', error)
     },
     // ✅ Refetch para asegurar consistencia

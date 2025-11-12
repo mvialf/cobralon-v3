@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
+import { createApiError, handleMutationError } from '@/lib/errors'
 import type { Payment, CreatePaymentPayload } from '@/lib/validations/payment-validations'
 
 /**
@@ -309,8 +310,7 @@ export function useCreatePayment() {
       })
 
       if (!response.ok) {
-        const error = await response.json()
-        throw new Error(error.error || 'Error al crear pago')
+        throw await createApiError(response, 'Error al crear pago')
       }
 
       return response.json()
@@ -341,8 +341,8 @@ export function useCreatePayment() {
 
       toast.success('Pago creado exitosamente')
     },
-    onError: (error: Error) => {
-      toast.error(error.message)
+    onError: (error) => {
+      handleMutationError(error)
       console.error('Error creating payment:', error)
     },
   })
@@ -400,8 +400,7 @@ export function useUpdatePayment() {
       })
 
       if (!response.ok) {
-        const error = await response.json()
-        throw new Error(error.error || 'Error al actualizar pago')
+        throw await createApiError(response, 'Error al actualizar pago')
       }
 
       return response.json()
@@ -435,8 +434,10 @@ export function useUpdatePayment() {
 
       toast.success('Pago actualizado exitosamente')
     },
-    onError: (error: Error) => {
-      toast.error(error.message)
+    onError: (error) => {
+      handleMutationError(error, {
+        400: 'No se puede editar un pago con cuotas configuradas',
+      })
       console.error('Error updating payment:', error)
     },
   })
@@ -489,8 +490,7 @@ export function useDeletePayment() {
       })
 
       if (!response.ok) {
-        const error = await response.json()
-        throw new Error(error.error || 'Error al eliminar pago')
+        throw await createApiError(response, 'Error al eliminar pago')
       }
     },
     // ✅ Optimistic update: remover del UI inmediatamente
@@ -517,12 +517,12 @@ export function useDeletePayment() {
       return { previousData }
     },
     // ✅ Rollback en caso de error
-    onError: (error: Error, id, context) => {
+    onError: (error, id, context) => {
       // Restaurar estado anterior
       if (context?.previousData) {
         queryClient.setQueryData(['payments'], context.previousData)
       }
-      toast.error(error.message)
+      handleMutationError(error)
       console.error('Error deleting payment:', error)
     },
     // ✅ Refetch para asegurar consistencia

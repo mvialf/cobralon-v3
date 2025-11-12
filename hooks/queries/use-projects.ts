@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
+import { createApiError, handleMutationError } from '@/lib/errors'
 import type { Project } from '@/app/projects/columns'
 
 /**
@@ -220,8 +221,7 @@ export function useCreateProject() {
       })
 
       if (!response.ok) {
-        const error = await response.json()
-        throw new Error(error.error || 'Error al crear proyecto')
+        throw await createApiError(response, 'Error al crear proyecto')
       }
 
       return response.json()
@@ -244,8 +244,9 @@ export function useCreateProject() {
 
       toast.success('Proyecto creado exitosamente')
     },
-    onError: (error: Error) => {
-      toast.error(error.message)
+    onError: (error) => {
+      handleMutationError(error)
+      console.error('Error creating project:', error)
     },
   })
 }
@@ -273,8 +274,7 @@ export function useUpdateProject() {
       })
 
       if (!response.ok) {
-        const error = await response.json()
-        throw new Error(error.error || 'Error al actualizar proyecto')
+        throw await createApiError(response, 'Error al actualizar proyecto')
       }
 
       return response.json()
@@ -300,8 +300,9 @@ export function useUpdateProject() {
 
       toast.success('Proyecto actualizado exitosamente')
     },
-    onError: (error: Error) => {
-      toast.error(error.message)
+    onError: (error) => {
+      handleMutationError(error)
+      console.error('Error updating project:', error)
     },
   })
 }
@@ -328,8 +329,7 @@ export function useDeleteProject() {
       })
 
       if (!response.ok) {
-        const error = await response.json()
-        throw new Error(error.error || 'Error al eliminar proyecto')
+        throw await createApiError(response, 'Error al eliminar proyecto')
       }
     },
     // ✅ Optimistic update: remover del UI inmediatamente
@@ -356,12 +356,12 @@ export function useDeleteProject() {
       return { previousData }
     },
     // ✅ Rollback en caso de error
-    onError: (error: Error, id, context) => {
+    onError: (error, id, context) => {
       // Restaurar estado anterior
       if (context?.previousData) {
         queryClient.setQueryData(['projects'], context.previousData)
       }
-      toast.error(error.message)
+      handleMutationError(error)
     },
     // ✅ Refetch para asegurar consistencia
     onSuccess: () => {
@@ -415,8 +415,7 @@ export function useUpdateProjectStatus() {
       })
 
       if (!response.ok) {
-        const error = await response.json()
-        throw new Error(error.error || 'Error al actualizar estado')
+        throw await createApiError(response, 'Error al actualizar estado')
       }
 
       return response.json()
@@ -442,8 +441,9 @@ export function useUpdateProjectStatus() {
 
       toast.success('Estado actualizado exitosamente')
     },
-    onError: (error: Error) => {
-      toast.error(error.message)
+    onError: (error) => {
+      handleMutationError(error)
+      console.error('Error updating project status:', error)
     },
   })
 }

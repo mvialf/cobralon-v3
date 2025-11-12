@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
+import { createApiError, handleMutationError } from '@/lib/errors'
 import type {
   Aftersale,
   CreateAftersalePayload,
@@ -163,8 +164,7 @@ export function useCreateAftersale() {
       })
 
       if (!response.ok) {
-        const error = await response.json()
-        throw new Error(error.error || 'Error al crear caso de postventa')
+        throw await createApiError(response, 'Error al crear caso de postventa')
       }
 
       const result = await response.json()
@@ -185,8 +185,8 @@ export function useCreateAftersale() {
 
       toast.success('Caso de postventa creado exitosamente')
     },
-    onError: (error: Error) => {
-      toast.error(error.message)
+    onError: (error) => {
+      handleMutationError(error)
       console.error('Error creating aftersale:', error)
     },
   })
@@ -235,8 +235,7 @@ export function useUpdateAftersale() {
       })
 
       if (!response.ok) {
-        const error = await response.json()
-        throw new Error(error.error || 'Error al actualizar caso de postventa')
+        throw await createApiError(response, 'Error al actualizar caso de postventa')
       }
 
       const result = await response.json()
@@ -260,8 +259,8 @@ export function useUpdateAftersale() {
 
       toast.success('Caso de postventa actualizado exitosamente')
     },
-    onError: (error: Error) => {
-      toast.error(error.message)
+    onError: (error) => {
+      handleMutationError(error)
       console.error('Error updating aftersale:', error)
     },
   })
@@ -307,8 +306,7 @@ export function useDeleteAftersale() {
       })
 
       if (!response.ok) {
-        const error = await response.json()
-        throw new Error(error.error || 'Error al eliminar caso de postventa')
+        throw await createApiError(response, 'Error al eliminar caso de postventa')
       }
     },
     // ✅ Optimistic update: remover del UI inmediatamente
@@ -331,12 +329,12 @@ export function useDeleteAftersale() {
       return { previousData }
     },
     // ✅ Rollback en caso de error
-    onError: (error: Error, id, context) => {
+    onError: (error, id, context) => {
       // Restaurar estado anterior
       if (context?.previousData) {
         queryClient.setQueryData(['aftersales'], context.previousData)
       }
-      toast.error(error.message)
+      handleMutationError(error)
       console.error('Error deleting aftersale:', error)
     },
     // ✅ Refetch para asegurar consistencia
