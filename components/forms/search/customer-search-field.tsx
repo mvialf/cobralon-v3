@@ -2,20 +2,13 @@
 
 import * as React from 'react'
 import { Control } from 'react-hook-form'
-import { useQuery } from '@tanstack/react-query'
 
 import { useDebounce } from '@/hooks/use-debounce'
+import { useCustomer, useCustomers, type Customer } from '@/hooks/queries/use-customers'
 
 import { FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form'
 import { Combobox } from '@/components/ui/combobox'
 import { CustomerNameSummary } from '@/components/summarys/customer-name-summary'
-
-interface Customer {
-  id: string
-  name: string
-  email?: string
-  phone?: string
-}
 
 interface CustomerSearchFieldProps {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -50,28 +43,18 @@ export function CustomerSearchField({
   // State para cliente seleccionado
   const [selectedCustomer, setSelectedCustomer] = React.useState<Customer | null>(null)
 
-  // Fetch cliente pre-seleccionado (si viene el ID)
-  const { data: preselectedCustomer, isLoading: loadingPreselected } = useQuery({
-    queryKey: ['customer', preselectedCustomerId],
-    queryFn: async () => {
-      const res = await fetch(`/api/customers/${preselectedCustomerId}`)
-      if (!res.ok) throw new Error('Error al cargar el cliente')
-      return res.json() as Promise<Customer>
-    },
-    enabled: !!preselectedCustomerId,
-  })
+  // Fetch cliente pre-seleccionado (si viene el ID) - usando hook centralizado
+  const { data: preselectedCustomer, isLoading: loadingPreselected } =
+    useCustomer(preselectedCustomerId)
 
   // Fetch clientes (server-side search) - solo si NO hay cliente pre-seleccionado
-  const { data: customersData, isLoading: loadingCustomers } = useQuery({
-    queryKey: ['customers-search', debouncedCustomerSearch],
-    queryFn: async () => {
-      const res = await fetch(`/api/customers?search=${debouncedCustomerSearch}&limit=20`)
-      if (!res.ok) throw new Error('Error al buscar clientes')
-      const data = await res.json()
-      return data.customers || []
-    },
-    enabled: !preselectedCustomerId && debouncedCustomerSearch.length >= 2,
+  const { data: customersResponse, isLoading: loadingCustomers } = useCustomers({
+    search: debouncedCustomerSearch,
+    limit: 20,
   })
+
+  // Extraer customers del response (puede ser undefined si query no está enabled)
+  const customersData = customersResponse?.customers
 
   // Cuando cambia el cliente seleccionado o llega el cliente pre-seleccionado
   React.useEffect(() => {

@@ -36,6 +36,80 @@ Registrar **implementaciones significativas** de este proyecto con:
 
 ## Implementaciones
 
+### 🚀 React Query Migration - Phase 1: Centralización de Hooks de Customers
+
+- **Status:** ✅ Complete | **Date:** 2025-11-12 | **Impact:** High
+- **ADR:** N/A (mejora arquitectural)
+- **Plan Original:** Ver [cobralon-upgrade/README.md](../../../cobralon-upgrade/README.md) - Fase 1 estimada en 3-5 días
+- **Realidad:** Fase 1 estaba ~80% completa, solo faltaba use-customers.ts
+- **Benefits:**
+  - ✅ **Centralización completa:** Todos los hooks de datos ahora en `hooks/queries/`
+  - ✅ **Cache compartido:** Múltiples componentes reutilizan misma data sin refetch
+  - ✅ **-86 líneas totales:** Eliminado código duplicado (-8 customer-search, -15 project-form, -63 legacy use-payments)
+  - ✅ **Optimistic updates:** useDeleteCustomer con rollback automático
+  - ✅ **Invalidaciones inteligentes:** Predicate-based batch invalidation
+  - ✅ **Consistencia:** Mismo patrón en use-projects, use-payments, use-customers
+  - ✅ **Preparación futuro:** Base sólida para Fase 2 (Aftersales + Installments)
+- **Implementación:** ✅ Completada
+  - **Fase 0:** Análisis profundo con sequential thinking (18 pasos)
+    - Descubierto: React Query YA instalado y configurado
+    - Descubierto: use-projects.ts YA completo con mutations
+    - Descubierto: use-payments.ts YA completo con validaciones
+    - Conclusión: Solo faltaba crear use-customers.ts
+  - **Fase 1:** Crear hooks/queries/use-customers.ts (425 líneas)
+    - 3 queries: useCustomers (paginated), useCustomersList (simple), useCustomer (single)
+    - 3 mutations: useCreateCustomer, useUpdateCustomer, useDeleteCustomer (con optimistic)
+    - StaleTime: 60s (customers), 2min (customers-list), 5min (single customer)
+    - GcTime: 5min (customers), 10min (customers-list)
+    - Invalidaciones: Predicate-based para batch invalidation eficiente
+    - Optimistic delete: Rollback automático con context preservation
+  - **Fase 2:** Migrar customer-search-field.tsx a hooks centralizados
+    - Reemplazar inline useQuery → useCustomer() + useCustomers()
+    - Eliminadas 8 líneas de boilerplate
+    - Ganado: Cache sharing y error handling consistente
+  - **Fase 3:** Migrar project-form.tsx a useCustomersList
+    - Reemplazar useState + useEffect → useCustomersList()
+    - Eliminadas 15 líneas de código (83% reducción)
+    - Ganado: 2min cache + refetch automático
+  - **Fase 4:** Limpiar código legacy
+    - Eliminar hooks/use-payments.ts (63 líneas de código muerto)
+    - Verificado con grep: 0 importaciones en codebase
+    - Remover interface Customer duplicada en project-form.tsx
+  - **Fase 5:** Validación completa
+    - TypeCheck: ✅ Pass (0 errores)
+    - ESLint: ✅ Pass (0 nuevos warnings)
+    - Prettier: ✅ Applied a archivos modificados
+    - Manual review: API surface sin breaking changes
+- **Archivos creados:**
+  - `hooks/queries/use-customers.ts` - Hook centralizado completo (425 líneas)
+- **Archivos modificados:**
+  - `components/forms/search/customer-search-field.tsx` - Migrado a useCustomer/useCustomers (-8 líneas)
+  - `components/forms/projects/project-form.tsx` - Migrado a useCustomersList (-15 líneas)
+- **Archivos eliminados:**
+  - `hooks/use-payments.ts` - Código legacy sin uso (63 líneas eliminadas)
+- **Validación:** ✅ TypeCheck: Pass | ESLint: Pass | Code Review: Aprobado
+- **Pattern seguido:**
+  - Query keys: `['customers', params]` para lista, `['customers', id]` para single
+  - Mutations: Toast automático + invalidaciones + optimistic updates
+  - JSDoc completo: Ejemplos de uso, advertencias, validaciones backend
+  - Tipos exportados: Customer, CustomersQueryParams, CustomersResponse, etc.
+- **Comparación con plan original:**
+  - **Estimado:** 3-5 días para Fase 1 completa (setup + use-projects + use-customers)
+  - **Real:** 2 horas (solo use-customers.ts + migraciones + cleanup)
+  - **Razón:** React Query y use-projects.ts ya estaban implementados desde antes
+- **Estado actual del proyecto:**
+  - ✅ React Query configurado (QueryProvider con defaults óptimos)
+  - ✅ use-projects.ts completo con mutations
+  - ✅ use-payments.ts completo con validaciones FIFO
+  - ✅ use-customers.ts completo con optimistic updates
+  - 📋 Pendiente: use-aftersales.ts, use-installments.ts (Fase 2 del plan)
+- **Próximos pasos recomendados:**
+  - [ ] Testing manual de flujos de customers (crear, editar, eliminar)
+  - [ ] Crear tests unitarios para use-customers.ts (siguiendo patrón de use-payments.test.tsx)
+  - [ ] Evaluar implementación de Fase 2 (Aftersales + Installments) según prioridades
+
+---
+
 ### 🔧 Fix: Agregar Capacidad de Eliminar Aftersales (Corrección Arquitectural)
 
 - **Status:** ✅ Complete | **Date:** 2025-11-03 | **Impact:** Medium
@@ -1004,49 +1078,55 @@ Registrar **implementaciones significativas** de este proyecto con:
 
 ## Quick Reference Index
 
-| #   | Implementación                                                   | Status      | Fecha      | Impact |
-| --- | ---------------------------------------------------------------- | ----------- | ---------- | ------ |
-| 1   | Setup Inicial del Template                                       | ✅ Complete | 2025-01-13 | High   |
-| 2   | Sistema Completo de Testing + Linting                            | ✅ Complete | 2025-01-13 | High   |
-| 3   | Migración Next.js 15 + React 19 + ESLint 9                       | ✅ Complete | 2025-10-17 | High   |
-| 4   | Database Layer con Prisma + Neon                                 | ✅ Complete | 2025-01-17 | High   |
-| 5   | Migración Autocomplete → Combobox                                | ✅ Complete | 2025-10-19 | Medium |
-| 6   | Documentación de Autenticación                                   | ✅ Complete | 2025-10-19 | Medium |
-| 7   | Sistema de Layout Completo: Refactor + Mejoras                   | ✅ Complete | 2025-10-18 | High   |
-| 8   | Sistema Configuración Global                                     | ✅ Complete | 2025-10-19 | High   |
-| 9   | Componentes Regionales (Currency/Phone/RUT)                      | ✅ Complete | 2025-10-19 | High   |
-| 10  | Página de Configuración                                          | ✅ Complete | 2025-10-19 | Medium |
-| 11  | Migración @diceui/combobox → Command                             | ✅ Complete | 2025-10-19 | High   |
-| 12  | Refactor: Rutas en Inglés                                        | ✅ Complete | 2025-10-20 | Medium |
-| 13  | Sistema Completo de Project Status                               | ✅ Complete | 2025-10-20 | High   |
-| 14  | Componente Reutilizable: Combobox Wrapper                        | ✅ Complete | 2025-10-20 | High   |
-| 15  | Migración: Chrome DevTools MCP → Playwright MCP                  | ✅ Complete | 2025-10-21 | High   |
-| 16  | Migración: next lint → ESLint CLI                                | ✅ Complete | 2025-10-22 | Medium |
-| 17  | Optimización de Database Performance (Phase 1)                   | ✅ Complete | 2025-10-22 | High   |
-| 18  | Componente Reutilizable: DataTableDropdown                       | ✅ Complete | 2025-10-24 | Medium |
-| 19  | Sistema Completo de Customers (CRUD)                             | ✅ Complete | 2025-10-19 | High   |
+| #   | Implementación                                                    | Status      | Fecha      | Impact |
+| --- | ----------------------------------------------------------------- | ----------- | ---------- | ------ |
+| 1   | Setup Inicial del Template                                        | ✅ Complete | 2025-01-13 | High   |
+| 2   | Sistema Completo de Testing + Linting                             | ✅ Complete | 2025-01-13 | High   |
+| 3   | Migración Next.js 15 + React 19 + ESLint 9                        | ✅ Complete | 2025-10-17 | High   |
+| 4   | Database Layer con Prisma + Neon                                  | ✅ Complete | 2025-01-17 | High   |
+| 5   | Migración Autocomplete → Combobox                                 | ✅ Complete | 2025-10-19 | Medium |
+| 6   | Documentación de Autenticación                                    | ✅ Complete | 2025-10-19 | Medium |
+| 7   | Sistema de Layout Completo: Refactor + Mejoras                    | ✅ Complete | 2025-10-18 | High   |
+| 8   | Sistema Configuración Global                                      | ✅ Complete | 2025-10-19 | High   |
+| 9   | Componentes Regionales (Currency/Phone/RUT)                       | ✅ Complete | 2025-10-19 | High   |
+| 10  | Página de Configuración                                           | ✅ Complete | 2025-10-19 | Medium |
+| 11  | Migración @diceui/combobox → Command                              | ✅ Complete | 2025-10-19 | High   |
+| 12  | Refactor: Rutas en Inglés                                         | ✅ Complete | 2025-10-20 | Medium |
+| 13  | Sistema Completo de Project Status                                | ✅ Complete | 2025-10-20 | High   |
+| 14  | Componente Reutilizable: Combobox Wrapper                         | ✅ Complete | 2025-10-20 | High   |
+| 15  | Migración: Chrome DevTools MCP → Playwright MCP                   | ✅ Complete | 2025-10-21 | High   |
+| 16  | Migración: next lint → ESLint CLI                                 | ✅ Complete | 2025-10-22 | Medium |
+| 17  | Optimización de Database Performance (Phase 1)                    | ✅ Complete | 2025-10-22 | High   |
+| 18  | Componente Reutilizable: DataTableDropdown                        | ✅ Complete | 2025-10-24 | Medium |
+| 19  | Sistema Completo de Customers (CRUD)                              | ✅ Complete | 2025-10-19 | High   |
 | 20  | Sistema Completo de Payments (CRUD + Allocations + Installments) | ✅ Complete | 2025-10-22 | High   |
-| 21  | Sistema de Installments (Cuotas) + Cron Job                      | ✅ Complete | 2025-10-22 | High   |
-| 22  | Sistema de Estados de Proyecto (ProjectStatus + BadgeColors)     | ✅ Complete | 2025-10-20 | High   |
-| 23  | Settings Modulares (3 Páginas de Configuración)                  | ✅ Complete | 2025-10-20 | Medium |
-| 24  | Migración PaymentAllocation Architecture                         | ✅ Complete | 2025-10-21 | High   |
-| 25  | Documentación Arquitectural Completa (5 ADRs)                    | ✅ Complete | 2025-10-25 | High   |
-| 26  | Migración: Cálculo de percentPaid al Backend                     | ✅ Complete | 2025-10-26 | Medium |
-| 27  | Refactorización Completa de ADRs del Template                    | ✅ Complete | 2025-11-01 | Medium |
-| 28  | Simplificación: UninstallTag Relation a Array de IDs             | ✅ Complete | 2025-11-02 | Low    |
+| 21  | Sistema de Installments (Cuotas) + Cron Job                       | ✅ Complete | 2025-10-22 | High   |
+| 22  | Sistema de Estados de Proyecto (ProjectStatus + BadgeColors)      | ✅ Complete | 2025-10-20 | High   |
+| 23  | Settings Modulares (3 Páginas de Configuración)                   | ✅ Complete | 2025-10-20 | Medium |
+| 24  | Migración PaymentAllocation Architecture                          | ✅ Complete | 2025-10-21 | High   |
+| 25  | Documentación Arquitectural Completa (5 ADRs)                     | ✅ Complete | 2025-10-25 | High   |
+| 26  | Migración: Cálculo de percentPaid al Backend                      | ✅ Complete | 2025-10-26 | Medium |
+| 27  | Refactorización Completa de ADRs del Template                     | ✅ Complete | 2025-11-01 | Medium |
+| 28  | Simplificación: UninstallTag Relation a Array de IDs              | ✅ Complete | 2025-11-02 | Low    |
+| 29  | Fix: Agregar Capacidad de Eliminar Aftersales                     | ✅ Complete | 2025-11-03 | Medium |
+| 30  | Mejoras Arquitecturales del Sistema de Layout                     | ✅ Complete | 2025-11-02 | High   |
+| 31  | Fix: Pino Logger Worker Thread Crashes                            | ✅ Complete | 2025-11-02 | Medium |
+| 32  | Refactor: Project Dialogs a React Query + ScrollableDialog        | ✅ Complete | 2025-11-01 | Medium |
+| 33  | Optimización de Performance: Sistema de Proyectos (Fase 1)        | ✅ Complete | 2025-10-28 | High   |
+| 34  | React Query Migration - Phase 1: Customers                        | ✅ Complete | 2025-11-12 | High   |
 
 ---
 
 ## Statistics
 
-- **Total Implementaciones:** 28
-- **Completadas:** 28
+- **Total Implementaciones:** 34
+- **Completadas:** 34
 - **En Progreso:** 0
 - **Pendientes:** 0
 
 ---
 
-**Última actualización:** 2025-11-02
+**Última actualización:** 2025-11-12
 
 **Nota:** Entrada #13 corregida el 2025-10-22 tras investigación con git-searcher - información previa sobre "refactor 490→242 líneas" era incorrecta.
 

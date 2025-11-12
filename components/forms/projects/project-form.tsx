@@ -5,6 +5,7 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 
 import { projectFormSchema, type ProjectFormData } from '@/lib/validations/project-validations'
+import { useCustomersList } from '@/hooks/queries/use-customers'
 
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -39,12 +40,6 @@ export interface ProjectFormHandle {
   reset: () => void
 }
 
-interface Customer {
-  id: string
-  name: string
-  phone: string
-}
-
 interface ProjectStatus {
   id: string
   name: string
@@ -58,8 +53,9 @@ export const ProjectForm = React.forwardRef<ProjectFormHandle, ProjectFormProps>
   ({ onSubmit, isSubmitting, defaultValues, showSubmitButton = true }, ref) => {
     const { configuration } = useConfiguration()
 
-    const [customers, setCustomers] = React.useState<Customer[]>([])
-    const [loadingCustomers, setLoadingCustomers] = React.useState(true)
+    // Fetch customers usando hook centralizado
+    const { data: customersData, isLoading: loadingCustomers } = useCustomersList()
+    const customers = customersData?.customers || []
 
     const [projectStatuses, setProjectStatuses] = React.useState<ProjectStatus[]>([])
     const [loadingStatuses, setLoadingStatuses] = React.useState(true)
@@ -141,24 +137,6 @@ export const ProjectForm = React.forwardRef<ProjectFormHandle, ProjectFormProps>
         })
       }
     }, [defaultValues, form, configuration])
-
-    // Cargar lista de customers al montar
-    React.useEffect(() => {
-      async function loadCustomers() {
-        try {
-          const response = await fetch('/api/customers/list')
-          if (!response.ok) throw new Error('Error al cargar clientes')
-          const data = await response.json()
-          setCustomers(data.customers || [])
-        } catch (error) {
-          console.error('Error al cargar clientes:', error)
-        } finally {
-          setLoadingCustomers(false)
-        }
-      }
-
-      loadCustomers()
-    }, [])
 
     // Cargar lista de project statuses al montar
     React.useEffect(() => {
