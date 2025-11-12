@@ -3,13 +3,13 @@
 import { useState } from 'react'
 import { type ColumnDef } from '@tanstack/react-table'
 import { Pencil, Eye, Trash2 } from 'lucide-react'
-import { Badge } from '@/components/ui/badge'
 import { DataTableDropdown, DataTableColumnHeader } from '@/components/data-table'
 import {
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu'
+import { EditableBadge, type EditableBadgeOption } from '@/components/ui/editable-badge'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -28,10 +28,32 @@ import type { Aftersale } from '@/lib/validations/aftersale-validations'
 
 interface ColumnsProps {
   onAftersaleUpdated?: () => void
+  /** Lista de estados disponibles para el EditableBadge */
+  statuses?: EditableBadgeOption[]
+  /** Estado de actualización (aftersaleId actual siendo actualizado) */
+  updatingAftersaleId?: string | null
+}
+
+/**
+ * Type-safe interface for table meta in Aftersales DataTable
+ * Defines callbacks available through table.options.meta
+ */
+interface AftersalesTableMeta {
+  /** Callback to handle aftersale status change */
+  handleStatusChange?: (aftersaleId: string, newStatusId: string) => Promise<void>
+}
+
+/**
+ * Type guard to safely access table meta with proper TypeScript inference
+ */
+function getAftersalesTableMeta(table: any): AftersalesTableMeta {
+  return (table.options.meta || {}) as AftersalesTableMeta
 }
 
 export const createColumns = ({
   onAftersaleUpdated,
+  statuses = [],
+  updatingAftersaleId = null,
 }: ColumnsProps = {}): ColumnDef<Aftersale>[] => [
   {
     accessorKey: 'project',
@@ -74,10 +96,37 @@ export const createColumns = ({
   {
     accessorKey: 'aftersaleStatus',
     header: ({ column }) => <DataTableColumnHeader column={column} title="Estado" />,
-    cell: ({ row }) => {
-      const status = row.original.aftersaleStatus
+    cell: ({ row, table }) => {
+      const aftersale = row.original
+      const status = aftersale.aftersaleStatus
+
+      // Obtener el callback de actualización desde meta (type-safe)
+      const { handleStatusChange } = getAftersalesTableMeta(table)
+
+      // Determinar si este caso específico está siendo actualizado
+      const isPending = updatingAftersaleId === aftersale.id
+
+      // Transformar status a EditableBadgeOption format
+      const value: EditableBadgeOption | null = status
+        ? {
+            id: status.id,
+            label: status.name,
+            color: status.color,
+          }
+        : null
+
       return (
-        <Badge className={`${status.color.bgClass} ${status.color.textClass}`}>{status.name}</Badge>
+        <EditableBadge
+          value={value}
+          options={statuses}
+          onChange={
+            handleStatusChange
+              ? (statusId: string) => handleStatusChange(aftersale.id, statusId)
+              : undefined
+          }
+          isPending={isPending}
+          placeholder="Sin estado"
+        />
       )
     },
     enableSorting: true,

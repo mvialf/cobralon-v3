@@ -9,11 +9,15 @@ import { DataTable } from '@/components/data-table/data-table'
 import { AftersaleDialog } from '@/components/dialogs/aftersales/aftersale-dialog'
 import { createColumns } from './columns'
 import type { Aftersale } from '@/lib/validations/aftersale-validations'
+import type { EditableBadgeOption } from '@/components/ui/editable-badge'
+import { toast } from 'sonner'
 
 export default function AftersalesPage() {
   const [aftersales, setAftersales] = useState<Aftersale[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
+  const [statuses, setStatuses] = useState<EditableBadgeOption[]>([])
+  const [updatingAftersaleId, setUpdatingAftersaleId] = useState<string | null>(null)
 
   const fetchAftersales = async () => {
     try {
@@ -28,16 +32,74 @@ export default function AftersalesPage() {
     }
   }
 
+  const fetchStatuses = async () => {
+    try {
+      const response = await fetch('/api/aftersale-status')
+      const data = await response.json()
+      const statusList = data.aftersaleStatuses || []
+
+      // Transformar a formato EditableBadgeOption
+      const transformedStatuses: EditableBadgeOption[] = statusList.map(
+        (status: {
+          id: string
+          name: string
+          color: { bgClass: string; textClass: string }
+          isActive: boolean
+        }) => ({
+          id: status.id,
+          label: status.name,
+          color: { bgClass: status.color.bgClass },
+        })
+      )
+
+      setStatuses(transformedStatuses)
+    } catch (error) {
+      console.error('Error fetching statuses:', error)
+    }
+  }
+
   useEffect(() => {
     fetchAftersales()
+    fetchStatuses()
   }, [])
 
   const handleAftersaleUpdated = () => {
     fetchAftersales()
   }
 
+  const handleStatusChange = async (aftersaleId: string, newStatusId: string) => {
+    setUpdatingAftersaleId(aftersaleId)
+
+    try {
+      const response = await fetch(`/api/aftersales/${aftersaleId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          aftersaleStatusId: newStatusId,
+        }),
+      })
+
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.error || 'Error al actualizar el estado')
+      }
+
+      toast.success('Estado actualizado correctamente')
+      await fetchAftersales()
+    } catch (error) {
+      console.error('Error updating status:', error)
+      toast.error(error instanceof Error ? error.message : 'Error al actualizar el estado')
+    } finally {
+      setUpdatingAftersaleId(null)
+    }
+  }
+
   const columns = createColumns({
     onAftersaleUpdated: handleAftersaleUpdated,
+    statuses,
+    updatingAftersaleId,
   })
 
   // Función de filtrado global: busca en projectNumber, customer.name y description
@@ -95,7 +157,7 @@ export default function AftersalesPage() {
             enableGlobalFilter={true}
             globalFilterFn={globalFilterFn}
             meta={{
-              handleStatusChange: undefined,
+              handleStatusChange,
             }}
           />
         )}
