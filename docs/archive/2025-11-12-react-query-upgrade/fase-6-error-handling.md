@@ -105,6 +105,7 @@ export function useDeleteProject() {
    - Pre-fetch validations → Regular Error (sin ApiError)
 
 **Archivos Modificados:**
+
 - ✅ `lib/errors.ts` (CREADO - 131 líneas)
 - ✅ `hooks/queries/use-projects.ts` (4 mutations refactorizadas)
 - ✅ `hooks/queries/use-customers.ts` (3 mutations refactorizadas)
@@ -112,6 +113,7 @@ export function useDeleteProject() {
 - ✅ `hooks/queries/use-aftersales.ts` (3 mutations refactorizadas)
 
 **Validación:**
+
 - ✅ 91/91 tests passing
 - ✅ TypeCheck: Errores solo en test files pre-existentes (NO causados por refactor)
 - ✅ ESLint: Sin errores nuevos

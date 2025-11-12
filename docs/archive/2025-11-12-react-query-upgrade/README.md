@@ -1,5 +1,15 @@
 # 🚀 Plan de Mejora: Cobralon Upgrade
 
+> **📁 ARCHIVED:** Este directorio contiene la planificación y documentación del proceso de upgrade de React Query completado el 2025-11-12.
+>
+> **✅ Estado:** Todas las 6 fases completadas exitosamente
+>
+> **📖 Ver implementación final:** [docs/project/implementation/2025-current.md](../../project/implementation/2025-current.md)
+>
+> Este archivo se preserva como referencia histórica del plan original y las estimaciones vs realidad.
+
+---
+
 **Fecha de inicio:** 2025-11-12
 **Última actualización:** 2025-11-12
 **Objetivo:** Backportear mejoras de arquitectura y patrones de Cobrolox → Cobralon

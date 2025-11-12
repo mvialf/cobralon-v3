@@ -40,7 +40,7 @@ Registrar **implementaciones significativas** de este proyecto con:
 
 - **Status:** ✅ Complete | **Date:** 2025-11-12 | **Impact:** High
 - **ADR:** N/A (mejora arquitectural)
-- **Plan Original:** Ver [cobralon-upgrade/README.md](../../../cobralon-upgrade/README.md) - Fase 1 estimada en 3-5 días
+- **Plan Original:** Ver [2025-11-12-react-query-upgrade/README.md](../../archive/2025-11-12-react-query-upgrade/README.md) - Fase 1 estimada en 3-5 días
 - **Realidad:** Fase 1 estaba ~80% completa, solo faltaba use-customers.ts
 - **Benefits:**
   - ✅ **Centralización completa:** Todos los hooks de datos ahora en `hooks/queries/`
@@ -114,7 +114,7 @@ Registrar **implementaciones significativas** de este proyecto con:
 
 - **Status:** ✅ Complete | **Date:** 2025-11-12 | **Impact:** High
 - **ADR:** N/A (mejora arquitectural)
-- **Plan Original:** Ver [cobralon-upgrade/README.md](../../../cobralon-upgrade/README.md) - Fases 2-4 estimadas en 10+ días
+- **Plan Original:** Ver [2025-11-12-react-query-upgrade/README.md](../../archive/2025-11-12-react-query-upgrade/README.md) - Fases 2-4 estimadas en 10+ días
 - **Realidad:** Fases 2-4 completadas en 1 sesión (~2 horas) - Fase 2 ya existía, Fases 3-4 implementadas HOY
 - **Benefits:**
   - ✅ **Fase 2 descubierta completa:** Optimistic updates ya implementados en 3 hooks (no requirió trabajo)
@@ -173,7 +173,7 @@ Registrar **implementaciones significativas** de este proyecto con:
 
 - **Status:** ✅ Complete | **Date:** 2025-11-12 | **Impact:** High
 - **ADR:** N/A (quality improvement)
-- **Plan Original:** Ver [cobralon-upgrade/fase-5-testing-strategy.md](../../../cobralon-upgrade/fase-5-testing-strategy.md) - Fase 5 estimada en 3-4 días
+- **Plan Original:** Ver [2025-11-12-react-query-upgrade/fase-5-testing-strategy.md](../../archive/2025-11-12-react-query-upgrade/fase-5-testing-strategy.md) - Fase 5 estimada en 3-4 días
 - **Realidad:** Fase 5 completada en 1 día usando sequential thinking
 - **Benefits:**
   - ✅ **91 tests pasando:** Cobertura comprehensiva de todos los hooks de React Query
@@ -256,7 +256,7 @@ Registrar **implementaciones significativas** de este proyecto con:
 
 - **Status:** ✅ Complete | **Date:** 2025-11-12 | **Impact:** High
 - **ADR:** N/A (quality improvement)
-- **Plan Original:** Ver [cobralon-upgrade/fase-6-error-handling.md](../../../cobralon-upgrade/fase-6-error-handling.md) - Fase 6 estimada en 2-3 días
+- **Plan Original:** Ver [2025-11-12-react-query-upgrade/fase-6-error-handling.md](../../archive/2025-11-12-react-query-upgrade/fase-6-error-handling.md) - Fase 6 estimada en 2-3 días
 - **Realidad:** Fase 6 completada en 1 día
 - **Benefits:**
   - ✅ **ApiError class:** Error types diferenciados por status code (400, 401, 409, 500+)
@@ -1279,45 +1279,45 @@ Registrar **implementaciones significativas** de este proyecto con:
 
 ## Quick Reference Index
 
-| #   | Implementación                                                    | Status      | Fecha      | Impact |
-| --- | ----------------------------------------------------------------- | ----------- | ---------- | ------ |
-| 1   | Setup Inicial del Template                                        | ✅ Complete | 2025-01-13 | High   |
-| 2   | Sistema Completo de Testing + Linting                             | ✅ Complete | 2025-01-13 | High   |
-| 3   | Migración Next.js 15 + React 19 + ESLint 9                        | ✅ Complete | 2025-10-17 | High   |
-| 4   | Database Layer con Prisma + Neon                                  | ✅ Complete | 2025-01-17 | High   |
-| 5   | Migración Autocomplete → Combobox                                 | ✅ Complete | 2025-10-19 | Medium |
-| 6   | Documentación de Autenticación                                    | ✅ Complete | 2025-10-19 | Medium |
-| 7   | Sistema de Layout Completo: Refactor + Mejoras                    | ✅ Complete | 2025-10-18 | High   |
-| 8   | Sistema Configuración Global                                      | ✅ Complete | 2025-10-19 | High   |
-| 9   | Componentes Regionales (Currency/Phone/RUT)                       | ✅ Complete | 2025-10-19 | High   |
-| 10  | Página de Configuración                                           | ✅ Complete | 2025-10-19 | Medium |
-| 11  | Migración @diceui/combobox → Command                              | ✅ Complete | 2025-10-19 | High   |
-| 12  | Refactor: Rutas en Inglés                                         | ✅ Complete | 2025-10-20 | Medium |
-| 13  | Sistema Completo de Project Status                                | ✅ Complete | 2025-10-20 | High   |
-| 14  | Componente Reutilizable: Combobox Wrapper                         | ✅ Complete | 2025-10-20 | High   |
-| 15  | Migración: Chrome DevTools MCP → Playwright MCP                   | ✅ Complete | 2025-10-21 | High   |
-| 16  | Migración: next lint → ESLint CLI                                 | ✅ Complete | 2025-10-22 | Medium |
-| 17  | Optimización de Database Performance (Phase 1)                    | ✅ Complete | 2025-10-22 | High   |
-| 18  | Componente Reutilizable: DataTableDropdown                        | ✅ Complete | 2025-10-24 | Medium |
-| 19  | Sistema Completo de Customers (CRUD)                              | ✅ Complete | 2025-10-19 | High   |
-| 20  | Sistema Completo de Payments (CRUD + Allocations + Installments) | ✅ Complete | 2025-10-22 | High   |
-| 21  | Sistema de Installments (Cuotas) + Cron Job                       | ✅ Complete | 2025-10-22 | High   |
-| 22  | Sistema de Estados de Proyecto (ProjectStatus + BadgeColors)      | ✅ Complete | 2025-10-20 | High   |
-| 23  | Settings Modulares (3 Páginas de Configuración)                   | ✅ Complete | 2025-10-20 | Medium |
-| 24  | Migración PaymentAllocation Architecture                          | ✅ Complete | 2025-10-21 | High   |
-| 25  | Documentación Arquitectural Completa (5 ADRs)                     | ✅ Complete | 2025-10-25 | High   |
-| 26  | Migración: Cálculo de percentPaid al Backend                      | ✅ Complete | 2025-10-26 | Medium |
-| 27  | Refactorización Completa de ADRs del Template                     | ✅ Complete | 2025-11-01 | Medium |
-| 28  | Simplificación: UninstallTag Relation a Array de IDs              | ✅ Complete | 2025-11-02 | Low    |
-| 29  | Fix: Agregar Capacidad de Eliminar Aftersales                     | ✅ Complete | 2025-11-03 | Medium |
-| 30  | Mejoras Arquitecturales del Sistema de Layout                     | ✅ Complete | 2025-11-02 | High   |
-| 31  | Fix: Pino Logger Worker Thread Crashes                            | ✅ Complete | 2025-11-02 | Medium |
-| 32  | Refactor: Project Dialogs a React Query + ScrollableDialog        | ✅ Complete | 2025-11-01 | Medium |
-| 33  | Optimización de Performance: Sistema de Proyectos (Fase 1)        | ✅ Complete | 2025-10-28 | High   |
-| 34  | React Query Migration - Phase 1: Customers                        | ✅ Complete | 2025-11-12 | High   |
-| 35  | React Query Migration - Phase 5: Testing Strategy                 | ✅ Complete | 2025-11-12 | High   |
+| #   | Implementación                                                          | Status      | Fecha      | Impact |
+| --- | ----------------------------------------------------------------------- | ----------- | ---------- | ------ |
+| 1   | Setup Inicial del Template                                              | ✅ Complete | 2025-01-13 | High   |
+| 2   | Sistema Completo de Testing + Linting                                   | ✅ Complete | 2025-01-13 | High   |
+| 3   | Migración Next.js 15 + React 19 + ESLint 9                              | ✅ Complete | 2025-10-17 | High   |
+| 4   | Database Layer con Prisma + Neon                                        | ✅ Complete | 2025-01-17 | High   |
+| 5   | Migración Autocomplete → Combobox                                       | ✅ Complete | 2025-10-19 | Medium |
+| 6   | Documentación de Autenticación                                          | ✅ Complete | 2025-10-19 | Medium |
+| 7   | Sistema de Layout Completo: Refactor + Mejoras                          | ✅ Complete | 2025-10-18 | High   |
+| 8   | Sistema Configuración Global                                            | ✅ Complete | 2025-10-19 | High   |
+| 9   | Componentes Regionales (Currency/Phone/RUT)                             | ✅ Complete | 2025-10-19 | High   |
+| 10  | Página de Configuración                                                 | ✅ Complete | 2025-10-19 | Medium |
+| 11  | Migración @diceui/combobox → Command                                    | ✅ Complete | 2025-10-19 | High   |
+| 12  | Refactor: Rutas en Inglés                                               | ✅ Complete | 2025-10-20 | Medium |
+| 13  | Sistema Completo de Project Status                                      | ✅ Complete | 2025-10-20 | High   |
+| 14  | Componente Reutilizable: Combobox Wrapper                               | ✅ Complete | 2025-10-20 | High   |
+| 15  | Migración: Chrome DevTools MCP → Playwright MCP                         | ✅ Complete | 2025-10-21 | High   |
+| 16  | Migración: next lint → ESLint CLI                                       | ✅ Complete | 2025-10-22 | Medium |
+| 17  | Optimización de Database Performance (Phase 1)                          | ✅ Complete | 2025-10-22 | High   |
+| 18  | Componente Reutilizable: DataTableDropdown                              | ✅ Complete | 2025-10-24 | Medium |
+| 19  | Sistema Completo de Customers (CRUD)                                    | ✅ Complete | 2025-10-19 | High   |
+| 20  | Sistema Completo de Payments (CRUD + Allocations + Installments)        | ✅ Complete | 2025-10-22 | High   |
+| 21  | Sistema de Installments (Cuotas) + Cron Job                             | ✅ Complete | 2025-10-22 | High   |
+| 22  | Sistema de Estados de Proyecto (ProjectStatus + BadgeColors)            | ✅ Complete | 2025-10-20 | High   |
+| 23  | Settings Modulares (3 Páginas de Configuración)                         | ✅ Complete | 2025-10-20 | Medium |
+| 24  | Migración PaymentAllocation Architecture                                | ✅ Complete | 2025-10-21 | High   |
+| 25  | Documentación Arquitectural Completa (5 ADRs)                           | ✅ Complete | 2025-10-25 | High   |
+| 26  | Migración: Cálculo de percentPaid al Backend                            | ✅ Complete | 2025-10-26 | Medium |
+| 27  | Refactorización Completa de ADRs del Template                           | ✅ Complete | 2025-11-01 | Medium |
+| 28  | Simplificación: UninstallTag Relation a Array de IDs                    | ✅ Complete | 2025-11-02 | Low    |
+| 29  | Fix: Agregar Capacidad de Eliminar Aftersales                           | ✅ Complete | 2025-11-03 | Medium |
+| 30  | Mejoras Arquitecturales del Sistema de Layout                           | ✅ Complete | 2025-11-02 | High   |
+| 31  | Fix: Pino Logger Worker Thread Crashes                                  | ✅ Complete | 2025-11-02 | Medium |
+| 32  | Refactor: Project Dialogs a React Query + ScrollableDialog              | ✅ Complete | 2025-11-01 | Medium |
+| 33  | Optimización de Performance: Sistema de Proyectos (Fase 1)              | ✅ Complete | 2025-10-28 | High   |
+| 34  | React Query Migration - Phase 1: Customers                              | ✅ Complete | 2025-11-12 | High   |
+| 35  | React Query Migration - Phase 5: Testing Strategy                       | ✅ Complete | 2025-11-12 | High   |
 | 36  | React Query Migration - Phases 2-4: Optimistic + Invalidaciones + Hooks | ✅ Complete | 2025-11-12 | High   |
-| 37  | React Query Migration - Phase 6: Error Handling                   | ✅ Complete | 2025-11-12 | High   |
+| 37  | React Query Migration - Phase 6: Error Handling                         | ✅ Complete | 2025-11-12 | High   |
 
 ---
 

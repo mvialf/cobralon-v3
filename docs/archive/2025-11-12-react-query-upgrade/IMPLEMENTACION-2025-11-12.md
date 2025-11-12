@@ -21,27 +21,27 @@ Se completaron **4 fases completas** del plan de upgrade de React Query en una s
 
 ### Estado Inicial (Roadmap)
 
-| Fase | Estado Roadmap | Estado Real | Gap |
-|------|---------------|-------------|-----|
-| Fase 1 | 80% | **100%** ✅ | +20% |
-| Fase 2 | 0% | **100%** ✅ | +100% (sorpresa) |
-| Fase 3 | 0% | 30% (3/10 mutations con predicates) | N/A |
-| Fase 4 | 0% | 60% (3/5 hooks, faltaban 2) | N/A |
-| Fase 5 | 0% | 0% | N/A |
-| Fase 6 | 0% | 0% | N/A |
+| Fase   | Estado Roadmap | Estado Real                         | Gap              |
+| ------ | -------------- | ----------------------------------- | ---------------- |
+| Fase 1 | 80%            | **100%** ✅                         | +20%             |
+| Fase 2 | 0%             | **100%** ✅                         | +100% (sorpresa) |
+| Fase 3 | 0%             | 30% (3/10 mutations con predicates) | N/A              |
+| Fase 4 | 0%             | 60% (3/5 hooks, faltaban 2)         | N/A              |
+| Fase 5 | 0%             | 0%                                  | N/A              |
+| Fase 6 | 0%             | 0%                                  | N/A              |
 
 **Progreso total inicial:** 58% real (roadmap decía 13%)
 
 ### Estado Final (Después de HOY)
 
-| Fase | Estado | Completitud |
-|------|--------|-------------|
-| Fase 1 | ✅ | **100%** |
-| Fase 2 | ✅ | **100%** |
-| Fase 3 | ✅ | **100%** |
-| Fase 4 | ✅ | **100%** |
-| Fase 5 | ⚠️ | **0%** |
-| Fase 6 | ⚠️ | **0%** |
+| Fase   | Estado | Completitud |
+| ------ | ------ | ----------- |
+| Fase 1 | ✅     | **100%**    |
+| Fase 2 | ✅     | **100%**    |
+| Fase 3 | ✅     | **100%**    |
+| Fase 4 | ✅     | **100%**    |
+| Fase 5 | ⚠️     | **0%**      |
+| Fase 6 | ⚠️     | **0%**      |
 
 **Progreso total final:** **66.7%** (+8.7% desde estado real inicial)
 
@@ -60,6 +60,7 @@ Se completaron **4 fases completas** del plan de upgrade de React Query en una s
 #### `hooks/queries/use-projects.ts`
 
 ✅ **useCreateProject** (líneas 230-246)
+
 ```typescript
 queryClient.invalidateQueries({
   predicate: (query) => {
@@ -72,6 +73,7 @@ queryClient.invalidateQueries({
 ```
 
 ✅ **useUpdateProject** (líneas 283-302)
+
 ```typescript
 queryClient.invalidateQueries({
   predicate: (query) => {
@@ -85,11 +87,13 @@ queryClient.invalidateQueries({
 ```
 
 ✅ **useDeleteProject** (líneas 368-384)
+
 ```typescript
 // Mismo patrón que useUpdateProject
 ```
 
 ✅ **useUpdateProjectStatus** (líneas 425-444)
+
 ```typescript
 // Mismo patrón + invalida metadata de statuses
 ```
@@ -97,6 +101,7 @@ queryClient.invalidateQueries({
 #### `hooks/queries/use-customers.ts`
 
 ✅ **useCreateCustomer** (líneas 247-263)
+
 ```typescript
 queryClient.invalidateQueries({
   predicate: (query) => {
@@ -109,6 +114,7 @@ queryClient.invalidateQueries({
 ```
 
 ✅ **useUpdateCustomer** (líneas 319-338)
+
 ```typescript
 // Similar a useCreateCustomer + invalida customer específico
 ```
@@ -116,13 +122,14 @@ queryClient.invalidateQueries({
 #### `hooks/queries/use-payments.ts`
 
 ✅ **useUpdatePayment** (líneas 410-437)
+
 ```typescript
 queryClient.invalidateQueries({
   predicate: (query) => {
     const key = query.queryKey[0]
     if (key === 'payments') return true
     if (key === 'payments' && query.queryKey[1] === updatedPayment.id) return true
-    if (key === 'projects') return true  // Balance puede cambiar
+    if (key === 'projects') return true // Balance puede cambiar
     if (key === 'search-projects') return true
     if (key === 'customer-projects' && query.queryKey[1] === updatedPayment.customerId) return true
     return false
@@ -131,6 +138,7 @@ queryClient.invalidateQueries({
 ```
 
 **Beneficios:**
+
 - ✅ Menos líneas de código (-30% en onSuccess handlers)
 - ✅ Batch invalidation eficiente (1 llamada vs 3-5 separadas)
 - ✅ Más fácil de mantener
@@ -153,12 +161,14 @@ queryClient.invalidateQueries({
 **Funcionalidad:** Hook de solo lectura para sistema de cuotas
 
 **Queries implementadas:**
+
 - `useInstallments(params)` - GET lista con filtros
   - Filtros: page, limit, status, paymentId, customerId, startDate, endDate
   - Ordenamiento: por dueDate ASC, installmentNumber ASC
   - Paginación incluida
 
 **Types exportados:**
+
 ```typescript
 export type InstallmentStatus = 'pending' | 'paid'
 export interface Installment { ... }
@@ -167,6 +177,7 @@ export interface InstallmentsResponse { ... }
 ```
 
 **Notas:**
+
 - Solo queries (sin mutations por ahora)
 - Preparado para futuro: useMarkInstallmentAsPaid() comentado
 - staleTime: 30 segundos (datos cambian frecuentemente)
@@ -179,10 +190,12 @@ export interface InstallmentsResponse { ... }
 **Funcionalidad:** CRUD completo para casos de postventa
 
 **Queries implementadas:**
+
 - `useAftersales()` - GET lista completa (sin paginación)
 - `useAftersale(id)` - GET single por ID (enabled: !!id)
 
 **Mutations implementadas:**
+
 - `useCreateAftersale()` - POST con validaciones
   - Valida proyecto finalizado
   - Valida estado activo
@@ -201,12 +214,14 @@ export interface InstallmentsResponse { ... }
   - Predicates en invalidaciones
 
 **Types exportados:**
+
 ```typescript
 export interface AftersalesResponse { ... }
 export interface UpdateAftersaleData { ... }
 ```
 
 **Características destacadas:**
+
 - ✅ Optimistic updates en DELETE
 - ✅ Todas las mutations usan predicates
 - ✅ JSDoc exhaustivo con ejemplos
@@ -219,20 +234,20 @@ export interface UpdateAftersaleData { ... }
 
 ### Código Modificado
 
-| Archivo | Líneas Modificadas | Mutations Refactorizadas |
-|---------|-------------------|-------------------------|
-| `use-projects.ts` | ~80 líneas | 4 mutations |
-| `use-customers.ts` | ~50 líneas | 2 mutations |
-| `use-payments.ts` | ~30 líneas | 1 mutation |
-| **Subtotal Fase 3** | **~160 líneas** | **7 mutations** |
+| Archivo             | Líneas Modificadas | Mutations Refactorizadas |
+| ------------------- | ------------------ | ------------------------ |
+| `use-projects.ts`   | ~80 líneas         | 4 mutations              |
+| `use-customers.ts`  | ~50 líneas         | 2 mutations              |
+| `use-payments.ts`   | ~30 líneas         | 1 mutation               |
+| **Subtotal Fase 3** | **~160 líneas**    | **7 mutations**          |
 
 ### Código Nuevo
 
-| Archivo | Líneas de Código | Funcionalidad |
-|---------|-----------------|---------------|
-| `use-installments.ts` | 170 líneas | Queries (solo lectura) |
-| `use-aftersales.ts` | 310 líneas | CRUD completo |
-| **Subtotal Fase 4** | **480 líneas** | **2 hooks nuevos** |
+| Archivo               | Líneas de Código | Funcionalidad          |
+| --------------------- | ---------------- | ---------------------- |
+| `use-installments.ts` | 170 líneas       | Queries (solo lectura) |
+| `use-aftersales.ts`   | 310 líneas       | CRUD completo          |
+| **Subtotal Fase 4**   | **480 líneas**   | **2 hooks nuevos**     |
 
 ### Totales
 
@@ -298,6 +313,7 @@ $ npm run lint
 **Estimado:** 3-5 días
 
 **Pendiente:**
+
 - [ ] Crear `hooks/queries/__tests__/use-projects.test.tsx`
 - [ ] Crear `hooks/queries/__tests__/use-customers.test.tsx`
 - [ ] Crear `hooks/queries/__tests__/use-payments.test.tsx`
@@ -312,6 +328,7 @@ $ npm run lint
 **Estimado:** 2-3 días
 
 **Pendiente:**
+
 - [ ] Crear `lib/api-error.ts` con clase ApiError
 - [ ] Refactorizar hooks para usar ApiError en lugar de Error
 - [ ] Error types diferenciados por status code
@@ -375,6 +392,7 @@ $ npm run lint
 **Estimado:** 3-5 días
 
 Crear tests para:
+
 1. use-projects (queries + mutations + optimistic)
 2. use-customers (queries + mutations + optimistic)
 3. use-payments (queries + mutations + optimistic + validaciones complejas)
