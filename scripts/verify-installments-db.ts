@@ -63,7 +63,9 @@ async function verifyInstallments() {
     if (notCreditCard.length === 0) {
       console.log('✅ Todos los pagos con cuotas son tarjeta de crédito')
     } else {
-      console.log(`⚠️  Hay ${notCreditCard.length} pago(s) con cuotas que NO son tarjeta de crédito:`)
+      console.log(
+        `⚠️  Hay ${notCreditCard.length} pago(s) con cuotas que NO son tarjeta de crédito:`
+      )
       for (const payment of notCreditCard) {
         console.log(`  - ${payment.id}: ${payment.paymentMethod.name}`)
       }

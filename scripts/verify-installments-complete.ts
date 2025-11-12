@@ -59,7 +59,9 @@ async function verifyComplete() {
       const actual = payment.installments.length
 
       if (expected !== actual) {
-        console.log(`⚠️  ${payment.customer.name}: esperado ${expected} cuotas, encontrado ${actual}`)
+        console.log(
+          `⚠️  ${payment.customer.name}: esperado ${expected} cuotas, encontrado ${actual}`
+        )
         allCorrect = false
       }
     }
@@ -120,7 +122,9 @@ async function verifyComplete() {
 
     if (examplePayment) {
       console.log(`Cliente: ${examplePayment.customer.name}`)
-      console.log(`Monto total: $${parseFloat(examplePayment.amount.toString()).toLocaleString('es-CL')} ${examplePayment.currency}`)
+      console.log(
+        `Monto total: $${parseFloat(examplePayment.amount.toString()).toLocaleString('es-CL')} ${examplePayment.currency}`
+      )
       console.log(`Método: ${examplePayment.paymentMethod.name}`)
       console.log(`Número de cuotas: ${examplePayment.selectedInstallments}`)
       console.log(`\nDetalle de cuotas:`)

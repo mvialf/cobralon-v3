@@ -58,7 +58,10 @@ async function importPayments() {
     // Leer projectos.txt para mapeo oldProjectId → projectNumber
     const projectsFilePath = path.join(process.cwd(), 'projectos.txt')
     const projectsContent = fs.readFileSync(projectsFilePath, 'utf-8')
-    const projectsLines = projectsContent.split('\n').slice(2).filter((line) => line.trim())
+    const projectsLines = projectsContent
+      .split('\n')
+      .slice(2)
+      .filter((line) => line.trim())
 
     // Crear mapeo oldProjectId → projectNumber
     const oldProjectIdToNumberMap = new Map<string, string>()
@@ -103,7 +106,10 @@ async function importPayments() {
     // Leer payment.txt
     const paymentsFilePath = path.join(process.cwd(), 'payment.txt')
     const paymentsContent = fs.readFileSync(paymentsFilePath, 'utf-8')
-    const paymentsLines = paymentsContent.split('\n').slice(2).filter((line) => line.trim())
+    const paymentsLines = paymentsContent
+      .split('\n')
+      .slice(2)
+      .filter((line) => line.trim())
 
     console.log(`📊 Total de pagos a procesar: ${paymentsLines.length}`)
 
@@ -193,7 +199,10 @@ async function importPayments() {
       }
 
       if (!projectData) {
-        errors.push({ line: i + 1, error: `Proyecto no encontrado para oldProjectId: ${cleanProjectId || 'vacío'}` })
+        errors.push({
+          line: i + 1,
+          error: `Proyecto no encontrado para oldProjectId: ${cleanProjectId || 'vacío'}`,
+        })
         continue
       }
 

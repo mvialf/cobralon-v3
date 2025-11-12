@@ -18,25 +18,27 @@ async function verify() {
       take: 3,
       include: {
         customer: {
-          select: { name: true, phone: true }
+          select: { name: true, phone: true },
         },
         paymentMethod: {
-          select: { name: true }
+          select: { name: true },
         },
         allocations: {
           include: {
             project: {
-              select: { projectNumber: true, projectName: true }
-            }
-          }
-        }
-      }
+              select: { projectNumber: true, projectName: true },
+            },
+          },
+        },
+      },
     })
 
     let index = 1
     for (const payment of payments) {
       console.log(`${index}. Pago ID: ${payment.id}`)
-      console.log(`   Monto: $${Number(payment.amount).toLocaleString('es-CL')} ${payment.currency}`)
+      console.log(
+        `   Monto: $${Number(payment.amount).toLocaleString('es-CL')} ${payment.currency}`
+      )
       console.log(`   Cliente: ${payment.customer.name} (${payment.customer.phone})`)
       console.log(`   Método: ${payment.paymentMethod.name}`)
       console.log(`   Tipo: ${payment.type}`)
@@ -45,7 +47,9 @@ async function verify() {
       if (payment.allocations.length > 0) {
         console.log(`   Asignado a proyectos:`)
         for (const alloc of payment.allocations) {
-          console.log(`     - ${alloc.project.projectNumber}: ${alloc.project.projectName || 'Sin nombre'} ($${Number(alloc.allocatedAmount).toLocaleString('es-CL')})`)
+          console.log(
+            `     - ${alloc.project.projectNumber}: ${alloc.project.projectName || 'Sin nombre'} ($${Number(alloc.allocatedAmount).toLocaleString('es-CL')})`
+          )
         }
       }
       console.log('')
@@ -56,20 +60,22 @@ async function verify() {
     console.log('📈 ESTADÍSTICAS:\n')
 
     const totalAmount = await prisma.payment.aggregate({
-      _sum: { amount: true }
+      _sum: { amount: true },
     })
 
     const paymentsByType = await prisma.payment.groupBy({
       by: ['type'],
-      _count: { type: true }
+      _count: { type: true },
     })
 
     const paymentsByMethod = await prisma.payment.groupBy({
       by: ['paymentMethodId'],
-      _count: { paymentMethodId: true }
+      _count: { paymentMethodId: true },
     })
 
-    console.log(`Monto total: $${totalAmount._sum.amount ? Number(totalAmount._sum.amount).toLocaleString('es-CL') : 0} CLP`)
+    console.log(
+      `Monto total: $${totalAmount._sum.amount ? Number(totalAmount._sum.amount).toLocaleString('es-CL') : 0} CLP`
+    )
     console.log('\nPagos por tipo:')
     for (const item of paymentsByType) {
       console.log(`  ${item.type}: ${item._count.type}`)
@@ -79,11 +85,10 @@ async function verify() {
     for (const item of paymentsByMethod) {
       const method = await prisma.paymentMethod.findUnique({
         where: { id: item.paymentMethodId },
-        select: { name: true }
+        select: { name: true },
       })
       console.log(`  ${method?.name}: ${item._count.paymentMethodId}`)
     }
-
   } catch (error) {
     console.error('❌ Error:', error)
   } finally {

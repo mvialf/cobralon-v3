@@ -20,7 +20,10 @@ async function importCustomers() {
     const content = fs.readFileSync(filePath, 'utf-8')
 
     // Parsear líneas (saltar header en líneas 1-2)
-    const lines = content.split('\n').slice(2).filter(line => line.trim())
+    const lines = content
+      .split('\n')
+      .slice(2)
+      .filter((line) => line.trim())
 
     console.log(`📊 Total de líneas a procesar: ${lines.length}`)
 
@@ -35,10 +38,12 @@ async function importCustomers() {
       const [id, createdAt, email, name, phone, updatedAt] = parts
 
       // Limpiar datos
-      const cleanEmail = email === '""' || email === 'null' || !email ? null : email.replace(/"/g, '')
+      const cleanEmail =
+        email === '""' || email === 'null' || !email ? null : email.replace(/"/g, '')
       const cleanName = name.replace(/"/g, '')
       const rawPhone = phone.replace(/"/g, '').trim()
-      const cleanPhone = rawPhone === 'null' || rawPhone === '' || !rawPhone ? '000000000' : rawPhone
+      const cleanPhone =
+        rawPhone === 'null' || rawPhone === '' || !rawPhone ? '000000000' : rawPhone
 
       customers.push({
         name: cleanName,
@@ -61,7 +66,6 @@ async function importCustomers() {
     })
 
     console.log(`✅ ${result.count} clientes insertados exitosamente`)
-
   } catch (error) {
     console.error('❌ Error:', error)
   } finally {

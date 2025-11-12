@@ -31,7 +31,9 @@ async function checkDuplicates() {
     }
 
     // Filtrar solo los que tienen más de 1 pago
-    const actualDuplicates = Array.from(duplicates.entries()).filter(([, payments]) => payments.length > 1)
+    const actualDuplicates = Array.from(duplicates.entries()).filter(
+      ([, payments]) => payments.length > 1
+    )
 
     if (actualDuplicates.length === 0) {
       console.log('✅ No se encontraron duplicados')
@@ -40,7 +42,9 @@ async function checkDuplicates() {
 
       for (const [key, payments] of actualDuplicates) {
         console.log(`Grupo duplicado (${payments.length} pagos):`)
-        console.log(`  Monto: $${Number(payments[0].amount).toLocaleString('es-CL')} ${payments[0].currency}`)
+        console.log(
+          `  Monto: $${Number(payments[0].amount).toLocaleString('es-CL')} ${payments[0].currency}`
+        )
         console.log(`  Fecha: ${payments[0].date.toLocaleDateString('es-CL')}`)
         console.log(`  Cliente: ${payments[0].customer.name}`)
         console.log(`  Método: ${payments[0].paymentMethod.name}`)
@@ -54,7 +58,9 @@ async function checkDuplicates() {
 
       console.log('💡 POSIBLE CAUSA:\n')
       console.log('Es probable que el script de importación se haya ejecutado más de una vez.')
-      console.log('Deberías eliminar los pagos duplicados para mantener la integridad de los datos.')
+      console.log(
+        'Deberías eliminar los pagos duplicados para mantener la integridad de los datos.'
+      )
     }
   } catch (error) {
     console.error('❌ Error:', error)

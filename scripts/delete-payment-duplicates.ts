@@ -25,7 +25,9 @@ async function deleteDuplicates() {
       if (payment) {
         console.log(`- ID: ${id}`)
         console.log(`  Cliente: ${payment.customer.name}`)
-        console.log(`  Monto: $${Number(payment.amount).toLocaleString('es-CL')} ${payment.currency}`)
+        console.log(
+          `  Monto: $${Number(payment.amount).toLocaleString('es-CL')} ${payment.currency}`
+        )
         console.log(`  Cuotas: ${payment.selectedInstallments}`)
         console.log('')
       }

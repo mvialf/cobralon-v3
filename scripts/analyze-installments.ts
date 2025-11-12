@@ -3,7 +3,10 @@ import * as path from 'path'
 
 const paymentsFilePath = path.join(process.cwd(), 'payment.txt')
 const paymentsContent = fs.readFileSync(paymentsFilePath, 'utf-8')
-const paymentsLines = paymentsContent.split('\n').slice(2).filter((line) => line.trim())
+const paymentsLines = paymentsContent
+  .split('\n')
+  .slice(2)
+  .filter((line) => line.trim())
 
 console.log('📊 ANÁLISIS DE CUOTAS EN PAGOS\n')
 

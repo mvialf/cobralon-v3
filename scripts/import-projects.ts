@@ -16,10 +16,7 @@ function normalizePhone(phone: string): string {
 
 function normalizeName(name: string): string {
   if (!name) return ''
-  return name
-    .toLowerCase()
-    .trim()
-    .replace(/\s+/g, ' ') // Normalizar espacios múltiples
+  return name.toLowerCase().trim().replace(/\s+/g, ' ') // Normalizar espacios múltiples
 }
 
 // ===== PARSERS =====
@@ -94,7 +91,10 @@ async function importProjects() {
     // Leer clientes.txt
     const clientsFilePath = path.join(process.cwd(), 'clientes.txt')
     const clientsContent = fs.readFileSync(clientsFilePath, 'utf-8')
-    const clientsLines = clientsContent.split('\n').slice(2).filter((line) => line.trim())
+    const clientsLines = clientsContent
+      .split('\n')
+      .slice(2)
+      .filter((line) => line.trim())
 
     // Crear mapeo oldId → {name, phone}
     const oldClientsMap = new Map<string, { name: string; phone: string }>()
@@ -158,7 +158,10 @@ async function importProjects() {
     // Leer proyectos.txt
     const projectsFilePath = path.join(process.cwd(), 'projectos.txt')
     const projectsContent = fs.readFileSync(projectsFilePath, 'utf-8')
-    const projectsLines = projectsContent.split('\n').slice(2).filter((line) => line.trim())
+    const projectsLines = projectsContent
+      .split('\n')
+      .slice(2)
+      .filter((line) => line.trim())
 
     console.log(`📊 Total de proyectos a procesar: ${projectsLines.length}`)
 

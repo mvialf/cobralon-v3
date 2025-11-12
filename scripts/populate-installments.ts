@@ -38,7 +38,9 @@ async function populateInstallments() {
 
       console.log(`Procesando pago ${payment.id}:`)
       console.log(`  Cliente: ${payment.customer.name}`)
-      console.log(`  Monto total: $${parseFloat(payment.amount.toString()).toLocaleString('es-CL')}`)
+      console.log(
+        `  Monto total: $${parseFloat(payment.amount.toString()).toLocaleString('es-CL')}`
+      )
       console.log(`  Cuotas: ${numberOfInstallments}`)
       console.log(`  Monto por cuota: $${amountPerInstallment.toLocaleString('es-CL')}`)
 
@@ -59,7 +61,9 @@ async function populateInstallments() {
           paidDate: isPast ? dueDate : null, // Si ya venció, asumimos que se pagó en fecha
         })
 
-        console.log(`    Cuota ${i}/${numberOfInstallments}: vence ${dueDate.toLocaleDateString('es-CL')} - ${isPast ? 'PAGADA' : 'PENDIENTE'}`)
+        console.log(
+          `    Cuota ${i}/${numberOfInstallments}: vence ${dueDate.toLocaleDateString('es-CL')} - ${isPast ? 'PAGADA' : 'PENDIENTE'}`
+        )
       }
       console.log('')
     }
