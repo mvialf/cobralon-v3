@@ -12,6 +12,7 @@ Generate complete CRUD features following the architectural patterns established
 This skill automates the creation of a complete CRUD feature (Create, Read, Update, Delete) by generating 7 necessary files following the exact patterns of the template. Each generated feature is consistent with the template-based architecture documented in `docs/template/`.
 
 **Automatically generates:**
+
 1. Prisma Schema model
 2. Zod validation schema
 3. Form component (React Hook Form + Zod)
@@ -45,6 +46,7 @@ Does the user want to create a new entity/model/feature?
 Ask the user for the following information (use AskUserQuestion tool if appropriate):
 
 **Required information:**
+
 - Entity name (singular, in Spanish) - Example: "Product", "Category", "Invoice"
 - Entity name (plural, in Spanish) - Example: "Products", "Categories", "Invoices"
 - Fields with types:
@@ -54,6 +56,7 @@ Ask the user for the following information (use AskUserQuestion tool if appropri
   - Validation rules (min length, email, etc.)
 
 **Optional information:**
+
 - Relations to other entities (if any)
 - Custom validations (regex, custom rules)
 - Special field types (currency, phone, address, etc.)
@@ -87,6 +90,7 @@ Generate the 7 files in this order (respecting dependencies):
 **Action:** Add new model to the schema file using Edit tool.
 
 **Pattern:**
+
 ```prisma
 model EntityName {
   id        String   @id @default(cuid())
@@ -100,6 +104,7 @@ model EntityName {
 ```
 
 **Important:**
+
 - Use exact capitalization from user (Product, not product)
 - Add `@@index([field])` for searchable fields
 - Optional fields use `?`
@@ -112,6 +117,7 @@ model EntityName {
 **Use Write tool** to create new file.
 
 **Template from references/patterns.md (section 2):**
+
 ```typescript
 import { z } from 'zod'
 
@@ -127,6 +133,7 @@ export type {Entity}FormData = z.infer<typeof {entity}Schema>
 ```
 
 **Validation types:**
+
 - Required text: `z.string().min(1, 'El campo es requerido')`
 - Optional text: `z.string().optional().or(z.literal(''))`
 - Email: `z.string().email('Email inválido').optional().or(z.literal(''))`
@@ -142,6 +149,7 @@ export type {Entity}FormData = z.infer<typeof {entity}Schema>
 **Template:** See `references/patterns.md` section "3. Form Component Pattern"
 
 **Customize:**
+
 - Replace `{entity}` with actual entity name
 - Replace `{Entity}` with capitalized entity name
 - Add FormField for each field from user requirements
@@ -161,6 +169,7 @@ export type {Entity}FormData = z.infer<typeof {entity}Schema>
 **Template:** See `references/patterns.md` section "4. Dialog Component Pattern"
 
 **Customize:**
+
 - Replace `{entity}` with actual entity name
 - Replace `{Entity}` with capitalized entity name
 - Update DialogTitle and DialogDescription with meaningful text
@@ -175,6 +184,7 @@ export type {Entity}FormData = z.infer<typeof {entity}Schema>
 **Template:** See `references/patterns.md` section "5. API Routes Pattern"
 
 **Customize:**
+
 - Replace `{entity}` (singular) in Prisma queries
 - Replace `{entities}` (plural) in response
 - Update search fields in OR conditions
@@ -182,6 +192,7 @@ export type {Entity}FormData = z.infer<typeof {entity}Schema>
 - Update logger messages with entity name
 
 **Important:**
+
 - Use `withLogging` middleware
 - Return `{ entities, pagination }` from GET
 - Return created entity from POST with status 201
@@ -196,6 +207,7 @@ export type {Entity}FormData = z.infer<typeof {entity}Schema>
 **Template:** See `references/patterns.md` section "6. DataTable Columns Pattern"
 
 **Customize:**
+
 - Replace `{Entity}` interface with actual entity name
 - Add column for each displayable field
 - Include `id` in interface but don't show it in table
@@ -210,6 +222,7 @@ export type {Entity}FormData = z.infer<typeof {entity}Schema>
 **Template:** See `references/patterns.md` section "7. Page Component Pattern"
 
 **Customize:**
+
 - Replace `{entities}` (plural) in URL, API calls, state
 - Replace `{Entity}` in types
 - Update pageTitle with user-friendly name (plural, capitalized)
@@ -220,10 +233,11 @@ export type {Entity}FormData = z.infer<typeof {entity}Schema>
 
 After generating all files, provide the user with these next steps:
 
-```markdown
+````markdown
 ✅ Feature CRUD generado exitosamente para {Entity}
 
 **Archivos creados:**
+
 1. ✅ prisma/schema.prisma (model agregado)
 2. ✅ lib/validations/{entity}-validations.ts
 3. ✅ components/forms/{entity}/{entity}-form.tsx
@@ -239,8 +253,10 @@ After generating all files, provide the user with these next steps:
    npm run db:generate
    npm run db:push
    ```
+````
 
 2. Agregar ruta al sidebar (opcional):
+
    ```typescript
    // components/layout/app-sidebar.tsx líneas 19-48
    {
@@ -251,6 +267,7 @@ After generating all files, provide the user with these next steps:
    ```
 
 3. Verificar que compile sin errores:
+
    ```bash
    npm run typecheck
    npm run lint
@@ -264,7 +281,8 @@ After generating all files, provide the user with these next steps:
    - Probar search y sorting
 
 **Listo!** El feature está completo y siguiendo todos los patrones del proyecto.
-```
+
+````
 
 ## Field Type Reference
 
@@ -301,7 +319,7 @@ model Entity {
 
   @@index([categoryId])
 }
-```
+````
 
 **Form:** Use `<Combobox />` or `<Select />` to select related entity
 **API GET:** Include relation in query: `include: { category: true }`
@@ -309,11 +327,13 @@ model Entity {
 ### Handle Optional Fields
 
 **Zod:**
+
 ```typescript
 optionalField: z.string().optional().or(z.literal(''))
 ```
 
 **Form default value:**
+
 ```typescript
 defaultValues: {
   optionalField: defaultValues?.optionalField || '', // Important: empty string
@@ -323,16 +343,14 @@ defaultValues: {
 ### Handle Unique Fields (like email)
 
 **API POST validation:**
+
 ```typescript
 // Verificar si el email ya existe
 const existingEntity = await prisma.entity.findFirst({
   where: { email },
 })
 if (existingEntity) {
-  return NextResponse.json(
-    { error: 'Ya existe un entity con ese email' },
-    { status: 409 }
-  )
+  return NextResponse.json({ error: 'Ya existe un entity con ese email' }, { status: 409 })
 }
 ```
 
@@ -341,12 +359,14 @@ if (existingEntity) {
 ### Reference Documentation
 
 See [references/patterns.md](references/patterns.md) for:
+
 - Complete code patterns for all 7 files
 - Field type reference with code examples
 - Variations for different field types
 - Checklist after generation
 
 **Load this reference when:**
+
 - User asks for specific field types
 - You need to verify exact pattern syntax
 - Handling edge cases (relations, unique fields, etc.)

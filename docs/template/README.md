@@ -58,6 +58,7 @@ Skills oficiales para acelerar desarrollo con Claude Code:
 **CRUD Feature Generator** - Genera features CRUD completos automáticamente
 
 Genera 7 archivos siguiendo patrones del template:
+
 - ✅ Prisma model
 - ✅ Zod validation
 - ✅ Form component
@@ -67,11 +68,13 @@ Genera 7 archivos siguiendo patrones del template:
 - ✅ Page component
 
 **Instalación:**
+
 ```bash
 cp -r docs/template/skills/crud-feature-generator ~/.claude/skills/
 ```
 
 **Uso:**
+
 ```
 "Crea un CRUD para Product"
 "Genera feature completa para Category"

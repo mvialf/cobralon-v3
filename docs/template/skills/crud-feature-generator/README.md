@@ -47,6 +47,7 @@ Once installed, simply ask Claude Code to create a CRUD feature:
 ```
 
 Claude will automatically:
+
 1. Detect the request matches this skill
 2. Ask for entity details (name, fields, types, validations)
 3. Generate all 7 files following template patterns
@@ -57,6 +58,7 @@ Claude will automatically:
 **User:** "Crea un CRUD para Product"
 
 **Claude:**
+
 ```
 Voy a crear un feature CRUD completo para Product. Necesito la siguiente información:
 
@@ -75,6 +77,7 @@ Ejemplo de respuesta:
 ```
 
 **User:**
+
 ```
 - name: texto, obligatorio, mínimo 2 caracteres
 - description: texto largo, opcional
@@ -83,6 +86,7 @@ Ejemplo de respuesta:
 ```
 
 **Claude generates:**
+
 1. ✅ `prisma/schema.prisma` (adds Product model)
 2. ✅ `lib/validations/product-validations.ts`
 3. ✅ `components/forms/product/product-form.tsx`
@@ -92,6 +96,7 @@ Ejemplo de respuesta:
 7. ✅ `app/products/page.tsx`
 
 **Claude provides next steps:**
+
 ```markdown
 ✅ Feature CRUD generado exitosamente para Product
 
@@ -154,15 +159,15 @@ All generated code includes:
 
 The skill supports generating forms with these field types:
 
-| Field Type | Zod Validation | Form Component |
-|-----------|---------------|----------------|
-| Text | `z.string().min(2, '...')` | `<Input />` |
-| Email | `z.string().email('...').optional()` | `<Input type="email" />` |
-| Phone | `z.string().min(1, '...')` | `<PhoneInput />` |
-| Number | `z.number().positive('...')` | `<Input type="number" />` |
-| Currency | `z.number().positive('...')` | `<CurrencyInput />` |
-| Long Text | `z.string().min(10, '...')` | `<Textarea />` |
-| Boolean | `z.boolean().default(false)` | `<Checkbox />` |
+| Field Type | Zod Validation                       | Form Component            |
+| ---------- | ------------------------------------ | ------------------------- |
+| Text       | `z.string().min(2, '...')`           | `<Input />`               |
+| Email      | `z.string().email('...').optional()` | `<Input type="email" />`  |
+| Phone      | `z.string().min(1, '...')`           | `<PhoneInput />`          |
+| Number     | `z.number().positive('...')`         | `<Input type="number" />` |
+| Currency   | `z.number().positive('...')`         | `<CurrencyInput />`       |
+| Long Text  | `z.string().min(10, '...')`          | `<Textarea />`            |
+| Boolean    | `z.boolean().default(false)`         | `<Checkbox />`            |
 
 See [`references/patterns.md`](references/patterns.md) for detailed code examples of each field type.
 
@@ -220,6 +225,7 @@ Generated code follows these conventions:
 **Cause:** Skill not installed or in wrong location
 
 **Fix:**
+
 ```bash
 # Verify skill is installed
 ls ~/.claude/skills/crud-feature-generator/SKILL.md
@@ -233,6 +239,7 @@ cp -r docs/template/skills/crud-feature-generator ~/.claude/skills/
 **Cause:** Missing dependencies or database not updated
 
 **Fix:**
+
 ```bash
 # Update Prisma
 npm run db:generate

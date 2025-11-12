@@ -62,6 +62,7 @@ export type EntityFormData = z.infer<typeof entitySchema>
 ```
 
 **Características:**
+
 - Campos obligatorios: `.min(1, 'mensaje')`
 - Campos opcionales: `.optional().or(z.literal(''))`
 - Validaciones custom: `.email()`, `.url()`, `.regex()`
@@ -154,6 +155,7 @@ export function EntityForm({
 ```
 
 **Componentes de Input Disponibles:**
+
 - `<Input />` - Text input básico
 - `<PhoneInput />` - Teléfono (de `@/components/ui/phone-input`)
 - `<Textarea />` - Texto largo
@@ -224,6 +226,7 @@ export function NewEntityDialog({ onEntityCreated }: NewEntityDialogProps) {
 ```
 
 **Iconos disponibles (lucide-react):**
+
 - `Plus` - Crear
 - `Pencil` - Editar
 - `Trash2` - Eliminar
@@ -377,6 +380,7 @@ export const POST = withLogging(async (request, logger) => {
 ```
 
 **Features:**
+
 - `withLogging` middleware para logging estructurado
 - Paginación estandarizada (page, limit, totalPages)
 - Search con OR conditions
@@ -441,6 +445,7 @@ export const columns: ColumnDef<Entity>[] = [
 ```
 
 **Características:**
+
 - Type interface exportado
 - Sortable headers con `DataTableColumnHeader`
 - Actions dropdown con iconos
@@ -534,6 +539,7 @@ export default function EntitiesPage() {
 ```
 
 **Características:**
+
 - Client Component (`'use client'`)
 - useState para entities + isLoading
 - useEffect para fetch inicial
@@ -548,69 +554,76 @@ export default function EntitiesPage() {
 ## Field Type Reference
 
 ### Text Field (String)
+
 **Zod:** `z.string().min(2, 'Mínimo 2 caracteres')`
 **Form:**
+
 ```tsx
 <Input placeholder="Placeholder" {...field} />
 ```
 
 ### Email Field
+
 **Zod:** `z.string().email('Email inválido').optional().or(z.literal(''))`
 **Form:**
+
 ```tsx
 <Input type="email" placeholder="correo@ejemplo.com" {...field} />
 ```
 
 ### Phone Field
+
 **Zod:** `z.string().min(1, 'El teléfono es requerido')`
 **Form:**
+
 ```tsx
 import { PhoneInput } from '@/components/ui/phone-input'
-<PhoneInput {...field} />
+;<PhoneInput {...field} />
 ```
 
 ### Number Field
+
 **Zod:** `z.number().positive('Debe ser positivo')`
 **Form:**
+
 ```tsx
-<Input
-  type="number"
-  {...field}
-  onChange={e => field.onChange(parseFloat(e.target.value))}
-/>
+<Input type="number" {...field} onChange={(e) => field.onChange(parseFloat(e.target.value))} />
 ```
 
 ### Currency Field
+
 **Zod:** `z.number().positive('Debe ser positivo')`
 **Form:**
+
 ```tsx
 import { CurrencyInput } from '@/components/ui/currency-input'
-<CurrencyInput {...field} />
+;<CurrencyInput {...field} />
 ```
 
 ### Long Text (Textarea)
+
 **Zod:** `z.string().min(10, 'Mínimo 10 caracteres')`
 **Form:**
+
 ```tsx
 import { Textarea } from '@/components/ui/textarea'
-<Textarea placeholder="Descripción..." {...field} />
+;<Textarea placeholder="Descripción..." {...field} />
 ```
 
 ### Boolean (Checkbox)
+
 **Zod:** `z.boolean().default(false)`
 **Form:**
+
 ```tsx
 import { Checkbox } from '@/components/ui/checkbox'
-<FormField
+;<FormField
   control={form.control}
   name="fieldName"
   render={({ field }) => (
     <FormItem className="flex flex-row items-start space-x-3 space-y-0">
       <FormControl>
-        <Checkbox
-          checked={field.value}
-          onCheckedChange={field.onChange}
-        />
+        <Checkbox checked={field.value} onCheckedChange={field.onChange} />
       </FormControl>
       <div className="space-y-1 leading-none">
         <FormLabel>Label</FormLabel>
@@ -627,12 +640,14 @@ import { Checkbox } from '@/components/ui/checkbox'
 Después de generar todos los archivos:
 
 1. ✅ Actualizar Prisma:
+
    ```bash
    npm run db:generate
    npm run db:push
    ```
 
 2. ✅ Agregar ruta al sidebar (opcional):
+
    ```typescript
    // components/layout/app-sidebar.tsx
    {
@@ -643,11 +658,13 @@ Después de generar todos los archivos:
    ```
 
 3. ✅ Verificar TypeScript:
+
    ```bash
    npm run typecheck
    ```
 
 4. ✅ Verificar ESLint:
+
    ```bash
    npm run lint
    ```
