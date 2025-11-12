@@ -407,10 +407,32 @@ export function useUpdatePayment() {
       return response.json()
     },
     onSuccess: (updatedPayment) => {
-      // Invalidar lista de payments
-      queryClient.invalidateQueries({ queryKey: ['payments'] })
-      // Invalidar el payment específico
-      queryClient.invalidateQueries({ queryKey: ['payments', updatedPayment.id] })
+      // Invalidar queries con predicate (batch invalidation eficiente)
+      queryClient.invalidateQueries({
+        predicate: (query) => {
+          const key = query.queryKey[0]
+
+          // Invalidar todas las queries de payments
+          if (key === 'payments') return true
+
+          // Invalidar el payment específico
+          if (key === 'payments' && query.queryKey[1] === updatedPayment.id) return true
+
+          // Invalidar projects (balance puede haber cambiado si se editó amount)
+          if (key === 'projects') return true
+
+          // Invalidar search-projects
+          if (key === 'search-projects') return true
+
+          // Invalidar customer-projects del cliente del pago
+          if (key === 'customer-projects' && query.queryKey[1] === updatedPayment.customerId) {
+            return true
+          }
+
+          return false
+        },
+      })
+
       toast.success('Pago actualizado exitosamente')
     },
     onError: (error: Error) => {

@@ -244,10 +244,21 @@ export function useCreateCustomer() {
       return response.json()
     },
     onSuccess: () => {
-      // Invalidar todas las queries de customers
-      queryClient.invalidateQueries({ queryKey: ['customers'] })
-      // Invalidar lista simple
-      queryClient.invalidateQueries({ queryKey: ['customers-list'] })
+      // Invalidar queries con predicate (batch invalidation eficiente)
+      queryClient.invalidateQueries({
+        predicate: (query) => {
+          const key = query.queryKey[0]
+
+          // Invalidar todas las queries de customers
+          if (key === 'customers') return true
+
+          // Invalidar lista simple para combobox
+          if (key === 'customers-list') return true
+
+          return false
+        },
+      })
+
       toast.success('Cliente creado exitosamente')
     },
     onError: (error: Error) => {
@@ -305,12 +316,24 @@ export function useUpdateCustomer() {
       return response.json()
     },
     onSuccess: (updatedCustomer) => {
-      // Invalidar lista de customers
-      queryClient.invalidateQueries({ queryKey: ['customers'] })
-      // Invalidar el customer específico
-      queryClient.invalidateQueries({ queryKey: ['customers', updatedCustomer.id] })
-      // Invalidar lista simple
-      queryClient.invalidateQueries({ queryKey: ['customers-list'] })
+      // Invalidar queries con predicate (batch invalidation eficiente)
+      queryClient.invalidateQueries({
+        predicate: (query) => {
+          const key = query.queryKey[0]
+
+          // Invalidar todas las queries de customers
+          if (key === 'customers') return true
+
+          // Invalidar el customer específico
+          if (key === 'customers' && query.queryKey[1] === updatedCustomer.id) return true
+
+          // Invalidar lista simple para combobox
+          if (key === 'customers-list') return true
+
+          return false
+        },
+      })
+
       toast.success('Cliente actualizado exitosamente')
     },
     onError: (error: Error) => {

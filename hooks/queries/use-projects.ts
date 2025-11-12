@@ -227,8 +227,21 @@ export function useCreateProject() {
       return response.json()
     },
     onSuccess: () => {
-      // Invalidar todas las queries de projects para refetch
-      queryClient.invalidateQueries({ queryKey: ['projects'] })
+      // Invalidar queries con predicate (batch invalidation eficiente)
+      queryClient.invalidateQueries({
+        predicate: (query) => {
+          const key = query.queryKey[0]
+
+          // Invalidar todas las queries de projects
+          if (key === 'projects') return true
+
+          // Invalidar projects-with-metadata
+          if (key === 'projects-with-metadata') return true
+
+          return false
+        },
+      })
+
       toast.success('Proyecto creado exitosamente')
     },
     onError: (error: Error) => {
@@ -267,10 +280,24 @@ export function useUpdateProject() {
       return response.json()
     },
     onSuccess: (updatedProject) => {
-      // Invalidar lista de projects
-      queryClient.invalidateQueries({ queryKey: ['projects'] })
-      // Invalidar el proyecto específico
-      queryClient.invalidateQueries({ queryKey: ['projects', updatedProject.id] })
+      // Invalidar queries con predicate (batch invalidation eficiente)
+      queryClient.invalidateQueries({
+        predicate: (query) => {
+          const key = query.queryKey[0]
+
+          // Invalidar todas las queries de projects
+          if (key === 'projects') return true
+
+          // Invalidar projects-with-metadata
+          if (key === 'projects-with-metadata') return true
+
+          // Invalidar el proyecto específico
+          if (key === 'projects' && query.queryKey[1] === updatedProject.id) return true
+
+          return false
+        },
+      })
+
       toast.success('Proyecto actualizado exitosamente')
     },
     onError: (error: Error) => {
@@ -338,7 +365,21 @@ export function useDeleteProject() {
     },
     // ✅ Refetch para asegurar consistencia
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['projects'] })
+      // Invalidar queries con predicate (batch invalidation eficiente)
+      queryClient.invalidateQueries({
+        predicate: (query) => {
+          const key = query.queryKey[0]
+
+          // Invalidar todas las queries de projects
+          if (key === 'projects') return true
+
+          // Invalidar projects-with-metadata
+          if (key === 'projects-with-metadata') return true
+
+          return false
+        },
+      })
+
       toast.success('Proyecto eliminado exitosamente')
     },
   })
@@ -381,9 +422,24 @@ export function useUpdateProjectStatus() {
       return response.json()
     },
     onSuccess: (updatedProject) => {
-      // Invalidar queries
-      queryClient.invalidateQueries({ queryKey: ['projects'] })
-      queryClient.invalidateQueries({ queryKey: ['projects', updatedProject.id] })
+      // Invalidar queries con predicate (batch invalidation eficiente)
+      queryClient.invalidateQueries({
+        predicate: (query) => {
+          const key = query.queryKey[0]
+
+          // Invalidar todas las queries de projects
+          if (key === 'projects') return true
+
+          // Invalidar projects-with-metadata (incluye metadata de statuses)
+          if (key === 'projects-with-metadata') return true
+
+          // Invalidar el proyecto específico
+          if (key === 'projects' && query.queryKey[1] === updatedProject.id) return true
+
+          return false
+        },
+      })
+
       toast.success('Estado actualizado exitosamente')
     },
     onError: (error: Error) => {
