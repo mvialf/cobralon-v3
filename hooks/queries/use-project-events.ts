@@ -94,6 +94,84 @@ export function useUpdateProjectEvent() {
 }
 
 // ============================================================================
+// MUTATIONS: UPDATE DATE (Drag & Drop con Optimistic Updates)
+// ============================================================================
+
+interface UpdateProjectEventDateParams {
+  id: string
+  scheduledDate: Date
+}
+
+async function updateProjectEventDate({
+  id,
+  scheduledDate,
+}: UpdateProjectEventDateParams): Promise<ProjectEventWithRelations> {
+  const response = await fetch(`/api/project-events/${id}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ scheduledDate: scheduledDate.toISOString() }),
+  })
+
+  if (!response.ok) {
+    const error = await response.json()
+    throw new Error(error.error || 'Error al actualizar fecha del evento')
+  }
+
+  return response.json()
+}
+
+export function useUpdateProjectEventDate() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: updateProjectEventDate,
+    // Optimistic update: actualiza UI inmediatamente
+    onMutate: async ({ id, scheduledDate }) => {
+      // Cancelar queries en curso para evitar que sobrescriban el optimistic update
+      await queryClient.cancelQueries({ queryKey: ['calendar-events'] })
+
+      // Snapshot del estado anterior (para rollback)
+      const previousEvents = queryClient.getQueryData(['calendar-events'])
+
+      // Actualizar optimísticamente
+      queryClient.setQueryData(['calendar-events'], (old: any) => {
+        if (!old?.events) return old
+
+        return {
+          ...old,
+          events: old.events.map((event: any) => {
+            if (event.type === 'project' && event.data.id === id) {
+              return {
+                ...event,
+                data: {
+                  ...event.data,
+                  scheduledDate,
+                },
+              }
+            }
+            return event
+          }),
+        }
+      })
+
+      // Retornar snapshot para rollback
+      return { previousEvents }
+    },
+    // Si falla, rollback al estado anterior
+    onError: (error, variables, context) => {
+      if (context?.previousEvents) {
+        queryClient.setQueryData(['calendar-events'], context.previousEvents)
+      }
+      handleMutationError(error)
+    },
+    // Refetch para sincronizar con servidor
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ['calendar-events'] })
+    },
+  })
+}
+
+// ============================================================================
 // MUTATIONS: DELETE
 // ============================================================================
 

@@ -21,6 +21,20 @@ export function getWeekDays(date: Date): Date[] {
 }
 
 /**
+ * Obtiene los días del mes con padding (42 días = 6 semanas)
+ * Incluye días del mes anterior y siguiente para completar el grid
+ */
+export function getMonthDays(date: Date): Date[] {
+  const monthStart = startOfMonth(date)
+
+  // Primer día del grid (inicio de la semana del primer día del mes)
+  const gridStart = startOfWeek(monthStart, { locale: es, weekStartsOn: 1 })
+
+  // Generar 42 días (6 semanas)
+  return Array.from({ length: 42 }, (_, i) => addDays(gridStart, i))
+}
+
+/**
  * Obtiene el rango de fechas visible para la vista actual
  */
 export function getVisibleDateRange(

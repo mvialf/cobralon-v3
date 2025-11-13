@@ -28,7 +28,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
     }
 
     return NextResponse.json(event)
-  } catch (error) {
+  } catch (_error) {
     return NextResponse.json({ error: 'Error al obtener evento' }, { status: 500 })
   }
 }
@@ -104,8 +104,78 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
     })
 
     return NextResponse.json(updatedEvent)
-  } catch (error) {
+  } catch (_error) {
     return NextResponse.json({ error: 'Error al actualizar evento' }, { status: 500 })
+  }
+}
+
+/**
+ * PATCH /api/project-events/[id]
+ *
+ * Actualiza solo la fecha de un evento (usado para drag & drop)
+ */
+export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
+  try {
+    const { id } = await params
+    const body = await request.json()
+
+    // Validar que scheduledDate existe
+    if (!body.scheduledDate) {
+      return NextResponse.json({ error: 'scheduledDate es requerido' }, { status: 400 })
+    }
+
+    const scheduledDate = new Date(body.scheduledDate)
+
+    if (isNaN(scheduledDate.getTime())) {
+      return NextResponse.json({ error: 'scheduledDate inválido' }, { status: 400 })
+    }
+
+    // Verificar que el evento existe
+    const existingEvent = await prisma.projectEvent.findUnique({
+      where: { id },
+    })
+
+    if (!existingEvent) {
+      return NextResponse.json({ error: 'Evento no encontrado' }, { status: 404 })
+    }
+
+    // Verificar que no hay duplicado en la nueva fecha
+    const duplicateEvent = await prisma.projectEvent.findFirst({
+      where: {
+        projectId: existingEvent.projectId,
+        scheduledDate: scheduledDate,
+        id: { not: id },
+      },
+    })
+
+    if (duplicateEvent) {
+      return NextResponse.json(
+        { error: 'Ya existe un evento para este proyecto en esta fecha' },
+        { status: 400 }
+      )
+    }
+
+    // Actualizar solo la fecha
+    const updatedEvent = await prisma.projectEvent.update({
+      where: { id },
+      data: { scheduledDate },
+      include: {
+        project: {
+          include: {
+            customer: true,
+            projectStatus: {
+              include: {
+                color: true,
+              },
+            },
+          },
+        },
+      },
+    })
+
+    return NextResponse.json(updatedEvent)
+  } catch (_error) {
+    return NextResponse.json({ error: 'Error al actualizar fecha del evento' }, { status: 500 })
   }
 }
 
@@ -133,7 +203,7 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ i
     })
 
     return NextResponse.json({ success: true })
-  } catch (error) {
+  } catch (_error) {
     return NextResponse.json({ error: 'Error al eliminar evento' }, { status: 500 })
   }
 }

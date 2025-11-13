@@ -4,7 +4,8 @@ import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
 import { Plus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { ProjectEventCard } from '../project-event-card'
+import { DroppableDayCell } from '../dnd/droppable-day-cell'
+import { DraggableEventCard } from '../dnd/draggable-event-card'
 import { getWeekDays, getEventsForDay, DAYS_OF_WEEK_SHORT } from '@/lib/utils/calendar-utils'
 import type { CalendarEvent } from '@/lib/types/calendar'
 
@@ -55,8 +56,9 @@ export function WeekView({
           const dayEvents = getEventsForDay(events, day)
 
           return (
-            <div
+            <DroppableDayCell
               key={day.toISOString()}
+              date={day}
               className="border rounded-lg p-2 bg-muted/20 hover:bg-muted/40 transition-colors min-h-[200px] flex flex-col"
             >
               {/* Botón para crear evento */}
@@ -75,7 +77,7 @@ export function WeekView({
                 {dayEvents.map((event) => {
                   if (event.type === 'project') {
                     return (
-                      <ProjectEventCard
+                      <DraggableEventCard
                         key={event.data.id}
                         event={event.data}
                         onEdit={() => onEditEvent?.(event)}
@@ -86,7 +88,7 @@ export function WeekView({
                   return null
                 })}
               </div>
-            </div>
+            </DroppableDayCell>
           )
         })}
       </div>
