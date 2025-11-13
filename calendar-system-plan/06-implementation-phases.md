@@ -15,22 +15,22 @@
 
 ---
 
-## Fase 1: Base de Datos y Validaciones
+## Fase 1: Base de Datos y Validaciones ✅ COMPLETADA
 
 **Objetivo:** Crear schemas de Prisma, migraciones y validaciones Zod.
 
-**Tiempo estimado:** 2-3 horas
+**Tiempo estimado:** 2-3 horas | **Tiempo real:** ~2 horas
 
 ### Tareas
 
 #### 1.1 Crear schemas Prisma
 
-- [ ] Agregar modelo `ProjectEvent` a `prisma/schema.prisma`
-- [ ] Agregar modelo `AftersaleEvent`
-- [ ] Agregar modelo `VisitEvent`
-- [ ] Actualizar modelo `Project` con relación `calendarEvents`
-- [ ] Actualizar modelo `Aftersale` con relación `calendarEvents`
-- [ ] Actualizar modelo `Visit` con relación `calendarEvents`
+- [x] ✅ Agregar modelo `ProjectEvent` a `prisma/schema.prisma`
+- [ ] ⏳ Agregar modelo `AftersaleEvent` (Fase 5)
+- [ ] ⏳ Agregar modelo `VisitEvent` (Fase 5)
+- [x] ✅ Actualizar modelo `Project` con relación `calendarEvents`
+- [ ] ⏳ Actualizar modelo `Aftersale` con relación `calendarEvents` (Fase 5)
+- [ ] ⏳ Actualizar modelo `Visit` con relación `calendarEvents` (Fase 5)
 
 **Archivos:**
 - `prisma/schema.prisma`

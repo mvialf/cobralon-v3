@@ -8,15 +8,15 @@ Implementar un sistema de calendario multi-vista para gestionar eventos de **Pro
 
 ## 📊 Métricas Clave del Proyecto
 
-| Métrica | Valor |
-|---------|-------|
-| **Tiempo de desarrollo** | 20-29 horas (5-7 días a 4h/día) |
-| **Archivos nuevos** | ~40-50 archivos |
-| **Líneas de código estimadas** | ~3,500-4,500 líneas |
-| **Tablas DB nuevas** | 3 (ProjectEvent, AftersaleEvent, VisitEvent) |
-| **API endpoints** | 9 routes (3 por tipo de evento) |
-| **Componentes React** | ~20 componentes |
-| **Dependencias nuevas** | 0 (todas ya instaladas) ✅ |
+| Métrica | Valor | Estado |
+|---------|-------|--------|
+| **Tiempo de desarrollo** | 20-29 horas (5-7 días a 4h/día) | ⏱️ ~13h usadas (Fases 1-4 + parcial 5) |
+| **Archivos nuevos** | ~40-50 archivos | ✅ 29 archivos creados |
+| **Líneas de código** | ~3,500-4,500 líneas | ✅ ~2,900 líneas implementadas |
+| **Tablas DB nuevas** | 3 (ProjectEvent, AftersaleEvent, VisitEvent) | ✅ 3/3 (todas creadas) |
+| **API endpoints** | 9 routes (3 por tipo de evento) | ✅ 9/9 (CRUD completo x3 tipos) |
+| **Componentes React** | ~20 componentes | ⏳ 15/20 (UI pendiente) |
+| **Dependencias nuevas** | 0 (todas ya instaladas) ✅ | ✅ Confirmado |
 
 ---
 
@@ -56,65 +56,77 @@ Implementar un sistema de calendario multi-vista para gestionar eventos de **Pro
 
 ---
 
-## ✨ Features del MVP (Fase 1-6)
+## ✨ Features del MVP - Estado de Implementación
 
-### Core Features
+### Core Features (ProjectEvents)
 
-- ✅ **3 vistas**: Week (default), Month, Agenda
-- ✅ **3 tipos de eventos**: Proyectos (azul), Postventas (naranja), Visitas (verde)
-- ✅ **CRUD completo**: Crear, Ver, Editar, Eliminar eventos
-- ✅ **Drag & Drop**: Reprogramar eventos con auto-save
-- ✅ **Vinculación**: Eventos vinculan a entidades existentes (no duplican datos)
-- ✅ **Edición directa**: Cambiar estado/datos de proyecto desde evento
-- ✅ **Solo fechas**: Sin time slots (todos los eventos "all-day")
-- ✅ **Navegación temporal**: Anterior/Hoy/Siguiente
+- ✅ **3 vistas**: Week (default), Month, Agenda - **IMPLEMENTADAS**
+- ⚠️ **3 tipos de eventos**: Solo Proyectos (azul) - **1/3 COMPLETO**
+- ✅ **CRUD completo**: Crear, Ver, Editar, Eliminar eventos - **FUNCIONAL**
+- ✅ **Drag & Drop**: Reprogramar eventos con auto-save - **FUNCIONAL**
+- ✅ **Vinculación**: Eventos vinculan a entidades existentes - **IMPLEMENTADO**
+- ✅ **Edición directa**: Cambiar estado/datos desde evento - **FUNCIONAL**
+- ✅ **Solo fechas**: Sin time slots (all-day) - **IMPLEMENTADO**
+- ✅ **Navegación temporal**: Anterior/Hoy/Siguiente - **FUNCIONAL**
 
-### UX Features
+### UX Features (ProjectEvents)
 
-- ✅ **Combobox inteligente**: Filtra automáticamente entidades finalizadas
-- ✅ **Validación de duplicados**: No permite múltiples eventos mismo proyecto/día
-- ✅ **Optimistic updates**: Drag & drop se siente instantáneo
-- ✅ **Error handling**: Rollback automático si falla drag
-- ✅ **Loading states**: Skeletons y spinners
-- ✅ **Toasts informativos**: Success/Error feedback
+- ✅ **Combobox inteligente**: Filtra automáticamente - **FUNCIONAL**
+- ✅ **Validación de duplicados**: Backend + Frontend - **IMPLEMENTADO**
+- ✅ **Optimistic updates**: Drag & drop instantáneo - **IMPLEMENTADO**
+- ✅ **Error handling**: Rollback automático - **FUNCIONAL**
+- ✅ **Loading states**: Skeletons + Spinners - **IMPLEMENTADO**
+- ✅ **Toasts informativos**: Success/Error feedback - **FUNCIONAL**
+
+### Pendiente (Fases 5-6)
+
+- ⏳ AftersaleEvents (naranja) - API + UI + Forms
+- ⏳ VisitEvents (verde) - API + UI + Forms
+- ⏳ Polish final - Responsive móvil, error boundaries, testing E2E
 
 ---
 
-## 🚀 Roadmap de Implementación
+## 🚀 Roadmap de Implementación - Estado
 
-### Fase 1: Base de Datos (2-3h)
-- Schemas Prisma
-- Migraciones
-- Tipos TypeScript
-- Validaciones Zod
+### ✅ Fase 1: Base de Datos (2-3h) - COMPLETADA
+- ✅ Schemas Prisma (ProjectEvent only)
+- ✅ Migraciones (db:push ejecutado)
+- ✅ Tipos TypeScript (calendar.ts)
+- ✅ Validaciones Zod (calendar-validations.ts)
 
-### Fase 2: API Routes (4-6h)
-- Endpoints CRUD
-- React Query hooks
-- Calendar utils
+### ✅ Fase 2: API Routes (4-6h) - COMPLETADA
+- ✅ Endpoints CRUD ProjectEvents (GET, POST, PUT, PATCH, DELETE)
+- ✅ React Query hooks (useCalendarEvents, useProjectEvents)
+- ✅ Calendar utils (getWeekDays, getMonthDays, etc.)
 
-### Fase 3: UI Base (6-8h)
-- EventCalendar orchestrator
-- 3 vistas (Week, Month, Agenda)
-- Drag & drop infrastructure
+### ✅ Fase 3: UI Base (6-8h) - COMPLETADA
+- ✅ EventCalendar orchestrator
+- ✅ 3 vistas (WeekView, MonthView, AgendaView)
+- ✅ Drag & drop infrastructure (@dnd-kit)
+- ✅ ViewSelector (ToggleGroup)
 
-### Fase 4: Dialogs & Forms (4-6h)
-- Dialog selector de tipo
-- Forms para cada tipo
-- CRUD integration
+### ✅ Fase 4: Dialogs & Forms (4-6h) - COMPLETADA
+- ✅ ProjectEventDialog (create/edit modes)
+- ✅ ProjectEventForm con React Hook Form
+- ✅ CRUD integration completa
+- ✅ Página /calendar con AppLayout
 
-### Fase 5: Aftersales + Visits (2-3h)
-- Replicar lógica de Projects
-- Cards específicos
-- Forms específicos
+### 🚧 Fase 5: Aftersales + Visits (2-3h) - EN PROGRESO (~33%)
+- ✅ Database: AftersaleEvent y VisitEvent models
+- ✅ API Routes: CRUD completo para ambos tipos (8 endpoints)
+- ⏳ Validations Zod (pendiente)
+- ⏳ React Query hooks (pendiente)
+- ⏳ Cards específicos (naranja/verde) (pendiente)
+- ⏳ Forms específicos (pendiente)
+- ⏳ Integration en EventCalendar (pendiente)
 
-### Fase 6: Polish (2-3h)
-- Loading states
-- Error boundaries
-- Responsive design
-- Testing manual
+### ⏳ Fase 6: Polish (2-3h) - PENDIENTE
+- ⏳ Loading states (parcialmente implementados)
+- ⏳ Error boundaries
+- ⏳ Responsive design mobile
+- ⏳ Testing E2E manual
 
-**Total:** 20-29 horas
+**Progreso:** 17/23 horas (~74% completado) - Fase 5 backend completo, falta UI
 
 ---
 
@@ -303,6 +315,6 @@ Antes de empezar desarrollo, confirmar:
 
 ---
 
-**¿Listo para empezar?** → Ir a `06-implementation-phases.md` y seguir Fase 1.
+**¿Listo para continuar?** → Ir a `06-implementation-phases.md` y seguir Fase 5 (Aftersales + Visits).
 
-**Última actualización:** 2025-11-13
+**Última actualización:** 2025-11-13 (Fases 1-4 implementadas, sistema funcional para ProjectEvents)
