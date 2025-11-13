@@ -8,6 +8,7 @@ import { createColumns, type Payment } from './columns'
 import { PaymentDetailsDialog } from '@/components/dialogs/payments/payment-details-dialog'
 import { PaymentToProjectDialog } from '@/components/dialogs/payments/payment-to-project-dialog'
 import { PaymentToCustomerDialog } from '@/components/dialogs/payments/payment-to-customer-dialog'
+import { ImportPaymentDialog } from '@/components/dialogs/payments/import-payment-dialog'
 import { Button } from '@/components/ui/button'
 import {
   DropdownMenu,
@@ -66,22 +67,25 @@ export default function PaymentsPage() {
       pageTitle="Pagos"
       breadcrumbs={[{ label: 'Inicio', href: '/' }, { label: 'Pagos' }]}
       action={
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button>
-              <Plus className="mr-2 h-4 w-4" />
-              Nuevo Pago
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem onClick={() => setIsPaymentToProjectDialogOpen(true)}>
-              Pago a Proyecto
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => setIsPaymentToCustomerDialogOpen(true)}>
-              Pago a Cliente
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+        <div className="flex items-center gap-2">
+          <ImportPaymentDialog onImportComplete={refetch} />
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button>
+                <Plus className="mr-2 h-4 w-4" />
+                Nuevo Pago
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => setIsPaymentToProjectDialogOpen(true)}>
+                Pago a Proyecto
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setIsPaymentToCustomerDialogOpen(true)}>
+                Pago a Cliente
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
       }
     >
       <div className="space-y-4">
