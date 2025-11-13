@@ -57,10 +57,7 @@ export function NewVisitDialog({ onVisitCreated }: NewVisitDialogProps) {
         </ScrollableDialogHeader>
         <ScrollableDialogBody>
           <ScrollableDialogDescription asChild>
-            <div className="space-y-6">
-              <p className="text-sm text-muted-foreground">
-                Ingresa los datos de la visita agendada. Haz clic en guardar cuando termines.
-              </p>
+            <div className="space-y-4">
               <VisitForm
                 ref={formRef}
                 onSubmit={handleSubmit}

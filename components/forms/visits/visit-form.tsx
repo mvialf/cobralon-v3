@@ -22,7 +22,6 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
-  FormDescription,
 } from '@/components/ui/form'
 import {
   Select,
@@ -133,10 +132,9 @@ export const VisitForm = React.forwardRef<VisitFormHandle, VisitFormProps>(
 
     return (
       <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
           {/* Datos del Prospecto */}
           <div className="space-y-4">
-            <h3 className="text-lg font-medium">Datos del Prospecto</h3>
             <FormGrid columns={2}>
               <FormField
                 control={form.control}
@@ -145,7 +143,7 @@ export const VisitForm = React.forwardRef<VisitFormHandle, VisitFormProps>(
                   <FormItem>
                     <FormLabel>Nombre *</FormLabel>
                     <FormControl>
-                      <Input placeholder="Nombre del prospecto" {...field} />
+                      <Input {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -159,13 +157,8 @@ export const VisitForm = React.forwardRef<VisitFormHandle, VisitFormProps>(
                   <FormItem>
                     <FormLabel>Teléfono</FormLabel>
                     <FormControl>
-                      <PhoneInput
-                        value={field.value || ''}
-                        onChange={field.onChange}
-                        placeholder="+56912345678"
-                      />
+                      <PhoneInput value={field.value || ''} onChange={field.onChange} />
                     </FormControl>
-                    <FormDescription>Formato: +56912345678</FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -178,7 +171,6 @@ export const VisitForm = React.forwardRef<VisitFormHandle, VisitFormProps>(
 
           {/* Estado y Fecha */}
           <div className="space-y-4">
-            <h3 className="text-lg font-medium">Programación</h3>
             <FormGrid columns={2}>
               <FormField
                 control={form.control}
@@ -250,13 +242,10 @@ export const VisitForm = React.forwardRef<VisitFormHandle, VisitFormProps>(
                 <FormControl>
                   <Textarea
                     placeholder="Notas adicionales sobre la visita..."
-                    className="min-h-[100px]"
+                    className=""
                     {...field}
                   />
                 </FormControl>
-                <FormDescription>
-                  Información adicional o comentarios sobre la visita
-                </FormDescription>
                 <FormMessage />
               </FormItem>
             )}

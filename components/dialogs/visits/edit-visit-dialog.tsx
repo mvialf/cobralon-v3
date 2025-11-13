@@ -98,10 +98,7 @@ export function EditVisitDialog({
         </ScrollableDialogHeader>
         <ScrollableDialogBody>
           <ScrollableDialogDescription asChild>
-            <div className="space-y-6">
-              <p className="text-sm text-muted-foreground">
-                Modifica los datos de la visita. Haz clic en guardar cuando termines.
-              </p>
+            <div className="space-y-4">
               <VisitForm
                 ref={formRef}
                 onSubmit={handleSubmit}

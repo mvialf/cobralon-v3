@@ -164,7 +164,6 @@ export const AftersaleForm = React.forwardRef<AftersaleFormHandle, AftersaleForm
                           <span>{status.name}</span>
                         </div>
                       )}
-                      placeholder="Seleccionar estado..."
                       searchPlaceholder="Buscar estado..."
                       emptyMessage="No se encontraron estados"
                       loading={loadingStatuses}
