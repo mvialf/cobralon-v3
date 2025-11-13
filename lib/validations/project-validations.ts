@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { normalizePhone } from '@/lib/utils/phone'
 
 /**
  * Schema base compartido (campos de entrada del usuario)
@@ -12,7 +13,14 @@ const projectBaseSchema = z.object({
   projectName: z.string().optional(), // Glosa opcional
 
   // Contacto
-  phone: z.string().min(1, 'El teléfono es requerido'), // Obligatorio
+  phone: z
+    .string()
+    .min(1, 'El teléfono es requerido')
+    .transform((val) => normalizePhone(val)) // Normaliza a formato E.164 automáticamente
+    .refine(
+      (val) => /^\+56[2-9]\d{8}$/.test(val),
+      'Formato inválido. Debe ser un teléfono chileno válido (+56...)'
+    ),
 
   // Dirección del proyecto
   street: z.string().min(1, 'La calle es obligatoria'),
@@ -85,15 +93,62 @@ export const projectSchema = projectBaseSchema.extend({
     .positive('El monto total debe ser mayor a 0'),
 })
 
-/**
- * Schema para crear proyecto (usado en API)
- * El total se calcula automáticamente en el backend
- */
-export const createProjectSchema = projectSchema
+export type ProjectData = z.infer<typeof projectSchema>
 
 /**
- * Schema para actualizar proyecto (todos los campos opcionales excepto ID)
+ * Type para el payload de creación (API)
+ * Las fechas se envían como strings ISO en JSON
  */
-export const updateProjectSchema = projectSchema.partial().extend({
-  id: z.string().min(1, 'El ID del proyecto es requerido'),
-})
+export type CreateProjectAPIPayload = {
+  customerId: string
+  projectNumber: string
+  projectName?: string
+  phone: string
+  street: string
+  apartment?: string
+  comuna: string
+  region: string
+  projectStatusId: string
+  date: string // ISO string for API
+  subtotal: number
+  taxRate: number
+  currency: string
+  windowsCount: number
+  squareMeters: number
+  description?: string
+  uninstallTagIds?: string[]
+  totalAmount: number
+}
+
+/**
+ * Type para el payload de actualización (API)
+ */
+export type UpdateProjectAPIPayload = Partial<CreateProjectAPIPayload> & {
+  id: string
+}
+
+/**
+ * Helper para convertir form values a API payload
+ */
+export function projectFormToPayload(values: ProjectData): CreateProjectAPIPayload {
+  return {
+    customerId: values.customerId,
+    projectNumber: values.projectNumber,
+    projectName: values.projectName,
+    phone: values.phone,
+    street: values.street,
+    apartment: values.apartment,
+    comuna: values.comuna,
+    region: values.region,
+    projectStatusId: values.projectStatusId,
+    date: values.date.toISOString(),
+    subtotal: values.subtotal,
+    taxRate: values.taxRate,
+    currency: values.currency,
+    windowsCount: values.windowsCount,
+    squareMeters: values.squareMeters,
+    description: values.description,
+    uninstallTagIds: values.uninstallTagIds,
+    totalAmount: values.totalAmount,
+  }
+}
