@@ -36,6 +36,59 @@ Registrar **implementaciones significativas** de este proyecto con:
 
 ## Implementaciones
 
+### 📅 Sistema de Calendario - Iteración 1: MVP con ProjectEvents
+
+- **Status:** ✅ Complete | **Date:** 2025-11-13 | **Impact:** High
+- **ADR:** N/A (feature nueva)
+- **Context:** Implementación de sistema de calendario unificado para gestionar eventos de Proyectos, Postventas y Visitas. Iteración 1 enfocada en ProjectEvents siguiendo estrategia de Vertical Slice.
+- **Benefits:**
+  - ✅ **Vista semanal funcional:** Navegación Prev/Today/Next, highlighting de día actual
+  - ✅ **CRUD completo:** Crear, editar y eliminar eventos de proyectos con validaciones
+  - ✅ **Unified fetch:** Single endpoint `/api/calendar-events` para todos los tipos (escalable)
+  - ✅ **Type-safe:** Discriminated unions para CalendarEvent (`type: 'project' | 'aftersale' | 'visit'`)
+  - ✅ **UX profesional:** Hover-to-create buttons, dropdown menus, confirm dialogs, toast notifications
+  - ✅ **Validaciones robustas:** Proyecto existe, no finalizado, sin eventos duplicados para mismo día
+  - ✅ **React Query integration:** Cache automático 5min, invalidaciones inteligentes, optimistic updates
+- **Implementación:**
+  - **Backend:**
+    - Schema Prisma: `ProjectEvent` con unique constraint `(projectId, scheduledDate)`
+    - API Routes: GET /calendar-events (unified), POST/GET/PUT/DELETE /project-events
+    - Validaciones Zod: `createProjectEventSchema`, `updateProjectEventSchema`
+    - Tipos TypeScript: `ProjectEventWithRelations`, `CalendarEvent` (discriminated union)
+  - **Frontend:**
+    - Components: `EventCalendar`, `CalendarHeader`, `WeekView`, `ProjectEventCard`
+    - Forms: `ProjectEventForm` con React Hook Form + ProjectSearchField reutilizable
+    - Dialogs: `ProjectEventDialog` (create/edit modes), AlertDialog para delete
+    - Utils: `calendar-utils.ts` con date helpers (getWeekDays, formatDateDisplay, etc.)
+    - Hooks: `useCalendarEvents`, `useCreateProjectEvent`, `useUpdateProjectEvent`, `useDeleteProjectEvent`
+  - **Navigation:** Agregado link "Calendario" al sidebar
+- **Archivos creados:**
+  - `prisma/schema.prisma` - Modelo ProjectEvent
+  - `lib/types/calendar.ts` - Types con relaciones completas (incluye BadgeColor)
+  - `lib/validations/calendar-validations.ts` - Schemas Zod + ProjectEventFormValues
+  - `lib/utils/calendar-utils.ts` - Date helpers con date-fns + locale español
+  - `app/api/calendar-events/route.ts` - Unified fetch endpoint
+  - `app/api/project-events/route.ts` - POST con validaciones
+  - `app/api/project-events/[id]/route.ts` - GET/PUT/DELETE
+  - `hooks/queries/use-calendar-events.ts` - Query con staleTime 5min
+  - `hooks/queries/use-project-events.ts` - Mutations con toast notifications
+  - `components/calendar/event-calendar.tsx` - Orchestrator principal
+  - `components/calendar/calendar-header.tsx` - Navegación + date display
+  - `components/calendar/views/week-view.tsx` - Vista semanal 7 columnas
+  - `components/calendar/project-event-card.tsx` - Card con dropdown menu
+  - `components/forms/calendar/project-event-form.tsx` - Form reutilizable
+  - `components/dialogs/calendar/project-event-dialog.tsx` - Create/Edit dialog
+  - `app/calendar/page.tsx` - Página con AppLayout
+- **Archivos modificados:**
+  - `components/layout/app-sidebar.tsx` - Agregado link "Calendario"
+- **Validación:** ✅ TypeScript: Pass | Lint: 3 warnings menores (unused vars)
+- **Próximos pasos (Iteración 2):**
+  - Implementar drag & drop con @dnd-kit
+  - Agregar MonthView y AgendaView
+  - Replicar para AftersaleEvents y VisitEvents
+
+---
+
 ### 🚀 React Query Migration - Phase 1: Centralización de Hooks de Customers
 
 - **Status:** ✅ Complete | **Date:** 2025-11-12 | **Impact:** High
