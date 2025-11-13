@@ -83,6 +83,11 @@ const navigationItems: NavigationItem[] = [
     icon: Headphones,
   },
   {
+    title: 'Calendario',
+    url: '/calendar',
+    icon: Calendar,
+  },
+  {
     title: 'Pagos',
     url: '/payments',
     icon: Wallet,
