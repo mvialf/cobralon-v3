@@ -96,6 +96,7 @@ model Project {
   uninstallTagIds     String[]
   paymentAllocations  PaymentAllocation[]
   aftersales          Aftersale[]
+  calendarEvents      ProjectEvent[]
   customer            Customer            @relation(fields: [customerId], references: [id], onDelete: Cascade)
   projectStatus       ProjectStatus?      @relation(fields: [projectStatusId], references: [id], onDelete: Restrict)
 
@@ -277,4 +278,21 @@ model Visit {
   @@index([comuna])
   @@index([name])
   @@map("visits")
+}
+
+// Eventos de calendario para proyectos
+model ProjectEvent {
+  id            String   @id @default(uuid())
+  projectId     String
+  scheduledDate DateTime @db.Date
+  notes         String?  @db.Text
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  project       Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, scheduledDate])
+  @@index([projectId])
+  @@index([scheduledDate])
+  @@map("project_events")
 }
