@@ -213,17 +213,18 @@ model AftersaleStatus {
 }
 
 model Aftersale {
-  id                String          @id @default(uuid())
+  id                String            @id @default(uuid())
   projectId         String
   aftersaleStatusId String
-  contactPhone      String          @default("")
+  contactPhone      String            @default("")
   description       String
   reportedAt        DateTime
-  tasks             Json            @default("[]") // Lista de tareas para resolver el caso
-  createdAt         DateTime        @default(now())
-  updatedAt         DateTime        @updatedAt
-  project           Project         @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  aftersaleStatus   AftersaleStatus @relation(fields: [aftersaleStatusId], references: [id], onDelete: Restrict)
+  tasks             Json              @default("[]") // Lista de tareas para resolver el caso
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+  project           Project           @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  aftersaleStatus   AftersaleStatus   @relation(fields: [aftersaleStatusId], references: [id], onDelete: Restrict)
+  calendarEvents    AftersaleEvent[]
 
   @@index([projectId])
   @@index([aftersaleStatusId])
@@ -249,29 +250,32 @@ model VisitStatus {
 }
 
 model Visit {
-  id            String      @id @default(uuid())
-  name          String      // Nombre del prospecto
-  phone         String?     // Teléfono de contacto
+  id            String        @id @default(uuid())
+  name          String        // Nombre del prospecto
+  phone         String?       // Teléfono de contacto
 
   // Dirección (igual que Project)
-  street        String      // Calle
-  apartment     String?     // Depto/Oficina (opcional)
-  comuna        String      // Comuna
-  region        String      // Región
+  street        String        // Calle
+  apartment     String?       // Depto/Oficina (opcional)
+  comuna        String        // Comuna
+  region        String        // Región
 
   // Estado configurable
   visitStatusId String
-  visitStatus   VisitStatus @relation(fields: [visitStatusId], references: [id], onDelete: Restrict)
+  visitStatus   VisitStatus   @relation(fields: [visitStatusId], references: [id], onDelete: Restrict)
 
   // Fecha agendada
   scheduledDate DateTime
 
   // Observaciones
-  observations  String?     @db.Text
+  observations  String?       @db.Text
 
   // Metadata
-  createdAt     DateTime    @default(now())
-  updatedAt     DateTime    @updatedAt
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  // Relaciones
+  calendarEvents VisitEvent[]
 
   @@index([visitStatusId])
   @@index([scheduledDate])
@@ -295,4 +299,38 @@ model ProjectEvent {
   @@index([projectId])
   @@index([scheduledDate])
   @@map("project_events")
+}
+
+// Eventos de calendario para postventas
+model AftersaleEvent {
+  id            String    @id @default(uuid())
+  aftersaleId   String
+  scheduledDate DateTime  @db.Date
+  notes         String?   @db.Text
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  aftersale     Aftersale @relation(fields: [aftersaleId], references: [id], onDelete: Cascade)
+
+  @@unique([aftersaleId, scheduledDate])
+  @@index([aftersaleId])
+  @@index([scheduledDate])
+  @@map("aftersale_events")
+}
+
+// Eventos de calendario para visitas
+model VisitEvent {
+  id            String   @id @default(uuid())
+  visitId       String
+  scheduledDate DateTime @db.Date
+  notes         String?  @db.Text
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  visit         Visit    @relation(fields: [visitId], references: [id], onDelete: Cascade)
+
+  @@unique([visitId, scheduledDate])
+  @@index([visitId])
+  @@index([scheduledDate])
+  @@map("visit_events")
 }
