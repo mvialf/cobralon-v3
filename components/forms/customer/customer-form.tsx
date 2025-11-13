@@ -3,6 +3,7 @@
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { customerSchema, type CustomerFormData } from '@/lib/validations/customer-validations'
+import { normalizePhone } from '@/lib/utils/phone'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { PhoneInput } from '@/components/ui/phone-input'
@@ -31,7 +32,7 @@ export function CustomerForm({
     resolver: zodResolver(customerSchema),
     defaultValues: {
       name: defaultValues?.name || '',
-      phone: defaultValues?.phone || '',
+      phone: normalizePhone(defaultValues?.phone || ''), // Normalizar teléfono para evitar errores con datos legacy
       email: defaultValues?.email || '',
     },
   })

@@ -588,8 +588,8 @@ describe('useDeleteAftersale', () => {
 
     global.fetch = vi.fn().mockImplementation(
       () =>
-        new Promise((resolve) =>
-          setTimeout(() => resolve({ ok: true }), 100) // Delay para simular latencia
+        new Promise(
+          (resolve) => setTimeout(() => resolve({ ok: true }), 100) // Delay para simular latencia
         )
     )
 

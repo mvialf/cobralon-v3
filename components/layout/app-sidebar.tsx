@@ -21,6 +21,7 @@ import {
   Headphones,
   PanelRightOpen,
   PanelRightClose,
+  Calendar,
 } from 'lucide-react'
 
 import {
@@ -65,6 +66,11 @@ const navigationItems: NavigationItem[] = [
     title: 'Clientes',
     url: '/customer',
     icon: Users,
+  },
+  {
+    title: 'Visitas',
+    url: '/visits',
+    icon: Calendar,
   },
   {
     title: 'Proyectos',
@@ -147,6 +153,11 @@ const settingsItems: NavigationItem[] = [
         title: 'Estados de Postventa',
         url: '/settings/aftersale-status',
         icon: Headphones,
+      },
+      {
+        title: 'Estados de Visita',
+        url: '/settings/visit-status',
+        icon: Calendar,
       },
       {
         title: 'Métodos de Pago',

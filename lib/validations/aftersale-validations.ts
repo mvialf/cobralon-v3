@@ -1,5 +1,6 @@
 import { z } from 'zod'
 import { todoListOptionalSchema, type TodoItemFormData } from './todo-validations'
+import { normalizePhone } from '@/lib/utils/phone'
 
 /**
  * Schema de validación para crear/editar casos de postventa
@@ -10,7 +11,11 @@ export const aftersaleSchema = z.object({
   contactPhone: z
     .string()
     .min(1, 'El teléfono de contacto es obligatorio')
-    .regex(/^\+56[2-9]\d{8}$/, 'Formato inválido. Debe ser un teléfono chileno válido (+56...)'),
+    .transform((val) => normalizePhone(val)) // Normaliza a formato E.164 automáticamente
+    .refine(
+      (val) => /^\+56[2-9]\d{8}$/.test(val),
+      'Formato inválido. Debe ser un teléfono chileno válido (+56...)'
+    ),
   description: z
     .string()
     .max(1000, 'La descripción no puede exceder 1000 caracteres')
@@ -98,7 +103,7 @@ export function aftersaleToFormValues(aftersale: Aftersale): AftersaleFormValues
   return {
     projectId: aftersale.projectId,
     aftersaleStatusId: aftersale.aftersaleStatusId,
-    contactPhone: aftersale.contactPhone,
+    contactPhone: normalizePhone(aftersale.contactPhone), // Normalizar para manejar datos legacy
     description: aftersale.description,
     reportedAt: new Date(aftersale.reportedAt),
     tasks: aftersale.tasks || [], // Incluir tareas (default vacío si no existen)

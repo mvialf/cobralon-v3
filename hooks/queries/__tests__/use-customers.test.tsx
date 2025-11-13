@@ -423,9 +423,7 @@ describe('useUpdateCustomer', () => {
 
     const { result } = renderHook(() => useUpdateCustomer(), { wrapper: createWrapper() })
 
-    await expect(
-      result.current.mutateAsync({ id: 'cust-1', name: 'Test' })
-    ).rejects.toThrow()
+    await expect(result.current.mutateAsync({ id: 'cust-1', name: 'Test' })).rejects.toThrow()
   })
 })
 
@@ -483,8 +481,8 @@ describe('useDeleteCustomer', () => {
 
     global.fetch = vi.fn().mockImplementation(
       () =>
-        new Promise((resolve) =>
-          setTimeout(() => resolve({ ok: true }), 100) // Delay para simular latencia
+        new Promise(
+          (resolve) => setTimeout(() => resolve({ ok: true }), 100) // Delay para simular latencia
         )
     )
 

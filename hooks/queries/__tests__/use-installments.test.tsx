@@ -4,11 +4,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import React from 'react'
 
 // Hooks a testear
-import {
-  useInstallments,
-  type InstallmentsResponse,
-  type Installment,
-} from '../use-installments'
+import { useInstallments, type InstallmentsResponse } from '../use-installments'
 
 // ============================================================================
 // HELPERS Y SETUP

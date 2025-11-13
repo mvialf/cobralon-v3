@@ -5,6 +5,7 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 
 import { aftersaleSchema, type AftersaleFormValues } from '@/lib/validations/aftersale-validations'
+import { normalizePhone } from '@/lib/utils/phone'
 import { FormGrid } from '@/components/ui/form-grid'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
@@ -57,7 +58,7 @@ export const AftersaleForm = React.forwardRef<AftersaleFormHandle, AftersaleForm
       defaultValues: {
         projectId: '',
         aftersaleStatusId: '',
-        contactPhone: '',
+        contactPhone: normalizePhone(defaultValues?.contactPhone || ''), // Normalizar teléfono para datos legacy
         description: '',
         reportedAt: new Date(),
         tasks: [], // Lista de tareas vacía por defecto
@@ -119,9 +120,9 @@ export const AftersaleForm = React.forwardRef<AftersaleFormHandle, AftersaleForm
             region: data.region,
           })
 
-          // Autocompletar teléfono del proyecto
+          // Autocompletar teléfono del proyecto (normalizado para manejar datos legacy)
           if (data.phone) {
-            form.setValue('contactPhone', data.phone)
+            form.setValue('contactPhone', normalizePhone(data.phone))
           }
         })
         .catch((err) => console.error('Error fetching project details:', err))

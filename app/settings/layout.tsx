@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Globe, ListTodo, CreditCard, Headphones } from 'lucide-react'
+import { Globe, ListTodo, CreditCard, Headphones, Calendar } from 'lucide-react'
 import { AppLayout } from '@/components/layout/app-layout'
 import { cn } from '@/lib/utils'
 
@@ -27,6 +27,11 @@ const settingsSections: SettingsSection[] = [
     title: 'Aftersale Status',
     href: '/settings/aftersale-status',
     icon: Headphones,
+  },
+  {
+    title: 'Visit Status',
+    href: '/settings/visit-status',
+    icon: Calendar,
   },
   {
     title: 'Métodos de Pago',

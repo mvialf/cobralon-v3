@@ -46,6 +46,7 @@ model BadgeColor {
   projectStatuses  ProjectStatus[]
   uninstallTags    UninstallTag[]
   aftersaleStatuses AftersaleStatus[]
+  visitStatuses    VisitStatus[]
 
   @@index([order])
   @@index([isActive])
@@ -226,4 +227,54 @@ model Aftersale {
   @@index([projectId])
   @@index([aftersaleStatusId])
   @@index([reportedAt])
+}
+
+model VisitStatus {
+  id        String   @id @default(uuid())
+  name      String   @unique
+  order     Int      @default(0)
+  colorId   String
+  isInitial Boolean  @default(false)
+  isFinal   Boolean  @default(false)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  visits    Visit[]
+  color     BadgeColor @relation(fields: [colorId], references: [id], onDelete: Restrict)
+
+  @@index([colorId])
+  @@index([order])
+  @@index([isActive])
+}
+
+model Visit {
+  id            String      @id @default(uuid())
+  name          String      // Nombre del prospecto
+  phone         String?     // Teléfono de contacto
+
+  // Dirección (igual que Project)
+  street        String      // Calle
+  apartment     String?     // Depto/Oficina (opcional)
+  comuna        String      // Comuna
+  region        String      // Región
+
+  // Estado configurable
+  visitStatusId String
+  visitStatus   VisitStatus @relation(fields: [visitStatusId], references: [id], onDelete: Restrict)
+
+  // Fecha agendada
+  scheduledDate DateTime
+
+  // Observaciones
+  observations  String?     @db.Text
+
+  // Metadata
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  @@index([visitStatusId])
+  @@index([scheduledDate])
+  @@index([comuna])
+  @@index([name])
+  @@map("visits")
 }

@@ -68,7 +68,11 @@ describe('useProjects', () => {
           balance: 500000,
           createdAt: new Date('2025-01-15'),
           customer: { id: 'cust-1', name: 'Cliente A' },
-          projectStatus: { id: 'status-1', name: 'Activo', color: { id: 'color-1', bgClass: 'bg-green-500' } },
+          projectStatus: {
+            id: 'status-1',
+            name: 'Activo',
+            color: { id: 'color-1', bgClass: 'bg-green-500' },
+          },
           projectState: 'Activo',
           date: new Date('2025-01-01'),
         },
@@ -164,7 +168,11 @@ describe('useProjectsWithMetadata', () => {
           balance: 600000,
           createdAt: new Date('2025-01-15'),
           customer: { id: 'cust-1', name: 'Cliente A' },
-          projectStatus: { id: 'status-1', name: 'Activo', color: { id: 'color-1', bgClass: 'bg-green-500' } },
+          projectStatus: {
+            id: 'status-1',
+            name: 'Activo',
+            color: { id: 'color-1', bgClass: 'bg-green-500' },
+          },
           projectState: 'Activo',
           date: new Date('2025-01-01'),
         },
@@ -191,7 +199,9 @@ describe('useProjectsWithMetadata', () => {
     expect(result.current.data).toEqual(mockResponse)
     expect(result.current.data?.projects).toHaveLength(1)
     expect(result.current.data?.metadata.projectStatuses).toHaveLength(2)
-    expect(global.fetch).toHaveBeenCalledWith(expect.stringContaining('/api/projects-with-metadata'))
+    expect(global.fetch).toHaveBeenCalledWith(
+      expect.stringContaining('/api/projects-with-metadata')
+    )
   })
 
   it('debe manejar error de API', async () => {
@@ -234,7 +244,11 @@ describe('useProject', () => {
       description: 'Descripción del proyecto',
       createdAt: new Date('2025-01-15'),
       customer: { id: 'cust-1', name: 'Cliente A' },
-      projectStatus: { id: 'status-1', name: 'Activo', color: { id: 'color-1', bgClass: 'bg-green-500' } },
+      projectStatus: {
+        id: 'status-1',
+        name: 'Activo',
+        color: { id: 'color-1', bgClass: 'bg-green-500' },
+      },
       projectState: 'Activo',
       date: new Date('2025-01-01'),
     }
@@ -295,7 +309,11 @@ describe('useCreateProject', () => {
       balance: 2000000,
       createdAt: new Date('2025-01-20'),
       customer: { id: 'cust-1', name: 'Cliente A' },
-      projectStatus: { id: 'status-1', name: 'Activo', color: { id: 'color-1', bgClass: 'bg-green-500' } },
+      projectStatus: {
+        id: 'status-1',
+        name: 'Activo',
+        color: { id: 'color-1', bgClass: 'bg-green-500' },
+      },
       projectState: 'Activo',
       date: new Date('2025-01-20'),
     }
@@ -385,7 +403,11 @@ describe('useUpdateProject', () => {
       balance: 700000,
       createdAt: new Date('2025-01-15'),
       customer: { id: 'cust-1', name: 'Cliente A' },
-      projectStatus: { id: 'status-1', name: 'Activo', color: { id: 'color-1', bgClass: 'bg-green-500' } },
+      projectStatus: {
+        id: 'status-1',
+        name: 'Activo',
+        color: { id: 'color-1', bgClass: 'bg-green-500' },
+      },
       projectState: 'Activo',
       date: new Date('2025-01-01'),
     }
@@ -467,7 +489,11 @@ describe('useDeleteProject', () => {
           balance: 500000,
           createdAt: new Date(),
           customer: { id: 'cust-1', name: 'Cliente A' },
-          projectStatus: { id: 'status-1', name: 'Activo', color: { id: 'color-1', bgClass: 'bg-green-500' } },
+          projectStatus: {
+            id: 'status-1',
+            name: 'Activo',
+            color: { id: 'color-1', bgClass: 'bg-green-500' },
+          },
           projectState: 'Activo',
           date: new Date(),
         },
@@ -480,7 +506,11 @@ describe('useDeleteProject', () => {
           balance: 200000,
           createdAt: new Date(),
           customer: { id: 'cust-1', name: 'Cliente A' },
-          projectStatus: { id: 'status-1', name: 'Activo', color: { id: 'color-1', bgClass: 'bg-green-500' } },
+          projectStatus: {
+            id: 'status-1',
+            name: 'Activo',
+            color: { id: 'color-1', bgClass: 'bg-green-500' },
+          },
           projectState: 'Activo',
           date: new Date(),
         },
@@ -492,8 +522,8 @@ describe('useDeleteProject', () => {
 
     global.fetch = vi.fn().mockImplementation(
       () =>
-        new Promise((resolve) =>
-          setTimeout(() => resolve({ ok: true }), 100) // Delay para simular latencia
+        new Promise(
+          (resolve) => setTimeout(() => resolve({ ok: true }), 100) // Delay para simular latencia
         )
     )
 
@@ -534,7 +564,11 @@ describe('useDeleteProject', () => {
           balance: 500000,
           createdAt: new Date(),
           customer: { id: 'cust-1', name: 'Cliente A' },
-          projectStatus: { id: 'status-1', name: 'Activo', color: { id: 'color-1', bgClass: 'bg-green-500' } },
+          projectStatus: {
+            id: 'status-1',
+            name: 'Activo',
+            color: { id: 'color-1', bgClass: 'bg-green-500' },
+          },
           projectState: 'Activo',
           date: new Date(),
         },
@@ -580,7 +614,11 @@ describe('useUpdateProjectStatus', () => {
       balance: 500000,
       createdAt: new Date(),
       customer: { id: 'cust-1', name: 'Cliente A' },
-      projectStatus: { id: 'status-2', name: 'Finalizado', color: { id: 'color-2', bgClass: 'bg-blue-500' } },
+      projectStatus: {
+        id: 'status-2',
+        name: 'Finalizado',
+        color: { id: 'color-2', bgClass: 'bg-blue-500' },
+      },
       projectState: 'Finalizado',
       date: new Date(),
     }

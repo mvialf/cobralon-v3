@@ -501,6 +501,67 @@ async function main() {
   console.log('✅ Payments seed completed')
   console.log('📊 Created/Updated 4 payments')
 
+  // ========================================
+  // SEED VISIT STATUSES
+  // ========================================
+
+  console.log('\n📅 Seeding visit statuses...')
+
+  const statusContactada = await prisma.visitStatus.upsert({
+    where: { name: 'Contactada' },
+    update: { order: 0 }, // Actualizar order si ya existe
+    create: {
+      name: 'Contactada',
+      colorId: blueColor.id,
+      order: 0, // Inicial siempre primero
+      isInitial: true,
+      isActive: true,
+    },
+  })
+
+  const statusAgendada = await prisma.visitStatus.upsert({
+    where: { name: 'Agendada' },
+    update: { order: 10 }, // Actualizar order si ya existe
+    create: {
+      name: 'Agendada',
+      colorId: yellowColor.id,
+      order: 10, // Estado intermedio
+      isActive: true,
+    },
+  })
+
+  const statusCompletadaVisit = await prisma.visitStatus.upsert({
+    where: { name: 'Completada' },
+    update: { order: 999 }, // Actualizar order si ya existe
+    create: {
+      name: 'Completada',
+      colorId: greenColor.id,
+      order: 999, // Final
+      isFinal: true,
+      isActive: true,
+    },
+  })
+
+  const statusCanceladaVisit = await prisma.visitStatus.upsert({
+    where: { name: 'Cancelada' },
+    update: { order: 998 }, // Actualizar order si ya existe
+    create: {
+      name: 'Cancelada',
+      colorId: redColor.id,
+      order: 998, // Final (pero antes de Completada)
+      isFinal: true,
+      isActive: true,
+    },
+  })
+
+  console.log('✅ Visit statuses seed completed')
+  console.log('📊 Created/Updated visit statuses (ordered):', {
+    statusContactada, // order: 0 (inicial)
+    statusAgendada, // order: 10
+    statusCanceladaVisit, // order: 998 (final)
+    statusCompletadaVisit, // order: 999 (final)
+  })
+
   console.log('\n📈 Balance summary:')
   console.log(`  Cliente 1 (${customer1.name}):`)
   console.log(`    - Proyecto 001: $500k - $500k = $0 (PAGADO)`)

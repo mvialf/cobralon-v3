@@ -5,6 +5,7 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 
 import { projectFormSchema, type ProjectFormData } from '@/lib/validations/project-validations'
+import { normalizePhone } from '@/lib/utils/phone'
 import { useCustomersList } from '@/hooks/queries/use-customers'
 
 import { Button } from '@/components/ui/button'
@@ -66,7 +67,7 @@ export const ProjectForm = React.forwardRef<ProjectFormHandle, ProjectFormProps>
         customerId: '',
         projectNumber: '',
         projectName: '',
-        phone: '',
+        phone: normalizePhone(defaultValues?.phone || ''), // Normalizar teléfono para evitar errores con datos legacy
         street: '',
         apartment: '',
         comuna: '',
@@ -120,7 +121,7 @@ export const ProjectForm = React.forwardRef<ProjectFormHandle, ProjectFormProps>
           customerId: defaultValues.customerId || '',
           projectNumber: defaultValues.projectNumber || '',
           projectName: defaultValues.projectName || '',
-          phone: defaultValues.phone || '',
+          phone: normalizePhone(defaultValues.phone || ''), // Normalizar teléfono para datos legacy
           street: defaultValues.street || '',
           apartment: defaultValues.apartment || '',
           comuna: defaultValues.comuna || '',
@@ -171,8 +172,8 @@ export const ProjectForm = React.forwardRef<ProjectFormHandle, ProjectFormProps>
       const selectedCustomer = customers.find((c) => c.id === customerId)
       if (selectedCustomer) {
         form.setValue('customerId', selectedCustomer.id)
-        // Autocompletar phone (pero usuario puede editarlo después)
-        form.setValue('phone', selectedCustomer.phone)
+        // Autocompletar phone normalizado (maneja datos legacy sin prefijo)
+        form.setValue('phone', normalizePhone(selectedCustomer.phone))
       }
     }
 
