@@ -1,0 +1,138 @@
+'use client'
+
+import * as React from 'react'
+import { format } from 'date-fns'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
+import { Button } from '@/components/ui/button'
+
+import {
+  ProjectEventForm,
+  type ProjectEventFormHandle,
+} from '@/components/forms/calendar/project-event-form'
+import type { ProjectEventFormValues } from '@/lib/validations/calendar-validations'
+import type { ProjectEventWithRelations } from '@/lib/types/calendar'
+import { useCreateProjectEvent, useUpdateProjectEvent } from '@/hooks/queries/use-project-events'
+
+interface ProjectEventDialogProps {
+  mode: 'create' | 'edit'
+  event?: ProjectEventWithRelations
+  defaultDate?: Date
+  open?: boolean
+  onOpenChange?: (open: boolean) => void
+}
+
+export function ProjectEventDialog({
+  mode,
+  event,
+  defaultDate,
+  open,
+  onOpenChange,
+}: ProjectEventDialogProps) {
+  const formRef = React.useRef<ProjectEventFormHandle>(null)
+  const createMutation = useCreateProjectEvent()
+  const updateMutation = useUpdateProjectEvent()
+
+  // Early return si event no está presente en modo edit
+  if (mode === 'edit' && !event) {
+    return null
+  }
+
+  const isSubmitting = createMutation.isPending || updateMutation.isPending
+
+  const handleSubmit = async (data: ProjectEventFormValues) => {
+    try {
+      if (mode === 'create') {
+        // Convertir scheduledDate de string a Date
+        await createMutation.mutateAsync({
+          projectId: data.projectId,
+          scheduledDate: new Date(data.scheduledDate),
+          notes: data.notes,
+        })
+      } else if (event) {
+        await updateMutation.mutateAsync({
+          id: event.id,
+          data: {
+            scheduledDate: new Date(data.scheduledDate),
+            notes: data.notes,
+          },
+        })
+      }
+      onOpenChange?.(false)
+    } catch (error) {
+      // Los errores se manejan en los hooks con toast
+      console.error('Error en submit:', error)
+    }
+  }
+
+  const handleSave = () => {
+    formRef.current?.submit()
+  }
+
+  const handleCancel = () => {
+    onOpenChange?.(false)
+  }
+
+  // Preparar defaultValues según modo
+  const getDefaultValues = (): Partial<ProjectEventFormValues> => {
+    if (mode === 'edit' && event) {
+      return {
+        projectId: event.projectId,
+        scheduledDate: format(new Date(event.scheduledDate), 'yyyy-MM-dd'),
+        notes: event.notes || '',
+      }
+    }
+
+    if (mode === 'create' && defaultDate) {
+      return {
+        scheduledDate: format(defaultDate, 'yyyy-MM-dd'),
+      }
+    }
+
+    return {}
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-2xl">
+        <DialogHeader>
+          <DialogTitle>{mode === 'create' ? 'Crear Evento' : 'Editar Evento'}</DialogTitle>
+          <DialogDescription>
+            {mode === 'create'
+              ? 'Programa un evento de proyecto en el calendario'
+              : 'Modifica la fecha o notas del evento'}
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="py-4">
+          <ProjectEventForm
+            ref={formRef}
+            onSubmit={handleSubmit}
+            defaultValues={getDefaultValues()}
+          />
+        </div>
+
+        <DialogFooter>
+          <Button variant="outline" onClick={handleCancel} disabled={isSubmitting}>
+            Cancelar
+          </Button>
+          <Button onClick={handleSave} disabled={isSubmitting}>
+            {isSubmitting
+              ? mode === 'create'
+                ? 'Creando...'
+                : 'Guardando...'
+              : mode === 'create'
+                ? 'Crear Evento'
+                : 'Guardar Cambios'}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  )
+}
