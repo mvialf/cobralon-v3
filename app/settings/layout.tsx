@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Globe, ListTodo, CreditCard } from 'lucide-react'
+import { Globe, ListTodo, CreditCard, Headphones } from 'lucide-react'
 import { AppLayout } from '@/components/layout/app-layout'
 import { cn } from '@/lib/utils'
 
@@ -10,7 +10,6 @@ type SettingsSection = {
   title: string
   href: string
   icon: React.ComponentType<{ className?: string }>
-  description: string
 }
 
 const settingsSections: SettingsSection[] = [
@@ -18,19 +17,21 @@ const settingsSections: SettingsSection[] = [
     title: 'General',
     href: '/settings/general',
     icon: Globe,
-    description: 'Configuración regional, idioma y zona horaria',
   },
   {
     title: 'Project Status',
     href: '/settings/project-status',
     icon: ListTodo,
-    description: 'Gestionar estados de proyectos',
+  },
+  {
+    title: 'Aftersale Status',
+    href: '/settings/aftersale-status',
+    icon: Headphones,
   },
   {
     title: 'Métodos de Pago',
     href: '/settings/payments',
     icon: CreditCard,
-    description: 'Configurar métodos de pago disponibles',
   },
 ]
 
@@ -66,7 +67,6 @@ export default function SettingsLayout({ children }: { children: React.ReactNode
                   <div className={cn('leading-tight', isActive && 'font-medium')}>
                     {section.title}
                   </div>
-                  <div className="mt-0.5 text-xs text-muted-foreground">{section.description}</div>
                 </div>
               </Link>
             )

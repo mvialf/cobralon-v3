@@ -1,7 +1,7 @@
 'use client'
 
 import { Settings2, RotateCcw } from 'lucide-react'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
@@ -46,9 +46,6 @@ export default function GeneralSettingsPage() {
       <Card>
         <CardHeader>
           <CardTitle>Configuración Regional</CardTitle>
-          <CardDescription>
-            Configura las opciones relacionadas con tu ubicación y preferencias regionales
-          </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="grid gap-6">

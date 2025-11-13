@@ -4,7 +4,7 @@ import { useState, useEffect, useMemo } from 'react'
 import { Plus } from 'lucide-react'
 import { DndContext, closestCenter, DragEndEvent } from '@dnd-kit/core'
 import { SortableContext, verticalListSortingStrategy, arrayMove } from '@dnd-kit/sortable'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import {
   AlertDialog,
@@ -184,12 +184,7 @@ export default function AftersaleStatusSettingsPage() {
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
-            <div>
-              <CardTitle>Estados de Postventa</CardTitle>
-              <CardDescription>
-                Gestiona los estados disponibles para clasificar casos de postventa
-              </CardDescription>
-            </div>
+            <CardTitle>Estados de Postventa</CardTitle>
             <Button onClick={() => setIsCreateDialogOpen(true)}>
               <Plus className="mr-2 h-4 w-4" />
               Nuevo Estado

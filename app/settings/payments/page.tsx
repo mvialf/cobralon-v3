@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { Plus, Pencil, Trash2, CheckCircle, XCircle } from 'lucide-react'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import {
@@ -148,12 +148,7 @@ export default function PaymentMethodsSettingsPage() {
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
-            <div>
-              <CardTitle>Métodos de Pago</CardTitle>
-              <CardDescription>
-                Configura los métodos de pago disponibles para registrar transacciones
-              </CardDescription>
-            </div>
+            <CardTitle>Métodos de Pago</CardTitle>
             <Button onClick={() => setIsCreateDialogOpen(true)}>
               <Plus className="mr-2 h-4 w-4" />
               Nuevo Método
