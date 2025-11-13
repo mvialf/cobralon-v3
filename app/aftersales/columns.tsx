@@ -85,7 +85,7 @@ export const createColumns = ({
     header: ({ column }) => <DataTableColumnHeader column={column} title="Fecha" />,
     cell: ({ row }) => {
       const date = new Date(row.original.reportedAt)
-      return <span className="text-sm">{formatDate(date, 'short')}</span>
+      return <span className="text-sm">{formatDate(date, 'short', 'es-CL')}</span>
     },
     enableSorting: true,
     meta: {
