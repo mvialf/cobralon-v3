@@ -1,7 +1,7 @@
 'use client'
 
 import * as React from 'react'
-import { Control } from 'react-hook-form'
+import { Control, useWatch } from 'react-hook-form'
 import { Building } from 'lucide-react'
 
 import { getRegiones, getComunasByRegion } from '@/lib/regiones-chile'
@@ -23,12 +23,11 @@ interface AddressFieldsProps {
 export function AddressFields({ control, defaultRegion }: AddressFieldsProps) {
   const regiones = getRegiones()
 
-  // Watch región para filtrar comunas
-  const [selectedRegion, setSelectedRegion] = React.useState(defaultRegion || '')
+  // Watch región del formulario para filtrar comunas
+  const regionValue = useWatch({ control, name: 'region', defaultValue: defaultRegion || '' })
 
-  // Extraer código de región del texto seleccionado
-  const regionCodigo =
-    regiones.find((r) => `${r.nombre_corto} (${r.numero_romano})` === selectedRegion)?.codigo || ''
+  // regionValue contiene directamente el código (ej: '13')
+  const regionCodigo = regionValue || ''
 
   const comunasDisponibles = regionCodigo ? getComunasByRegion(regionCodigo) : []
 
@@ -81,15 +80,12 @@ export function AddressFields({ control, defaultRegion }: AddressFieldsProps) {
               <FormControl>
                 <Combobox
                   value={field.value}
-                  onValueChange={(value) => {
-                    field.onChange(value)
-                    setSelectedRegion(value)
-                  }}
+                  onValueChange={field.onChange}
                   options={regiones.map((r) => ({
                     codigo: r.codigo,
                     displayText: `${r.nombre_corto} (${r.numero_romano})`,
                   }))}
-                  getOptionValue={(r) => r.displayText}
+                  getOptionValue={(r) => r.codigo}
                   getOptionLabel={(r) => r.displayText}
                   placeholder="Selecciona una región..."
                   searchPlaceholder="Buscar región..."
