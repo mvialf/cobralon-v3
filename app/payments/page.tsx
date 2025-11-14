@@ -65,8 +65,14 @@ export default function PaymentsPage() {
     return allPayments.filter((p) => {
       // Buscar en nombre de cliente
       if (p.customer?.name.toLowerCase().includes(searchLower)) return true
-      // Buscar en nombre de proyecto (si es tipo Project)
-      if (p.project?.projectName && p.project.projectName.toLowerCase().includes(searchLower))
+      // Buscar en nombre de proyecto (via allocations)
+      if (
+        p.allocations.some(
+          (allocation) =>
+            allocation.project.projectName &&
+            allocation.project.projectName.toLowerCase().includes(searchLower)
+        )
+      )
         return true
       return false
     })

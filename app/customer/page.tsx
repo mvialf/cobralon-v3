@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { type PaginationState } from '@tanstack/react-table'
 import { useQueryClient } from '@tanstack/react-query'
 import { AppLayout } from '@/components/layout/app-layout'
@@ -24,12 +24,15 @@ export default function CustomersPage() {
   const [searchTerm, setSearchTerm] = useState('')
   const debouncedSearch = useDebounce(searchTerm, 500)
 
-  // Query params para useCustomers
-  const queryParams: CustomersQueryParams = {
-    page: pagination.pageIndex + 1, // API usa 1-based
-    limit: pagination.pageSize,
-    search: debouncedSearch || undefined,
-  }
+  // Query params para useCustomers (useMemo para evitar recreación en cada render)
+  const queryParams: CustomersQueryParams = useMemo(
+    () => ({
+      page: pagination.pageIndex + 1, // API usa 1-based
+      limit: pagination.pageSize,
+      search: debouncedSearch || undefined,
+    }),
+    [pagination.pageIndex, pagination.pageSize, debouncedSearch]
+  )
 
   // React Query: Fetch customers con cache automático
   const { data, isLoading, isPlaceholderData } = useCustomers(queryParams)
