@@ -26,8 +26,8 @@ const visitBaseSchema = z.object({
 
   // Estado y fecha
   visitStatusId: z.string().min(1, 'El estado de la visita es requerido'), // FK a VisitStatus (obligatorio)
-  scheduledDate: z.date({
-    required_error: 'La fecha agendada es requerida',
+  date: z.date({
+    required_error: 'La fecha de solicitud es requerida',
   }),
 
   // Observaciones
@@ -62,7 +62,7 @@ export type CreateVisitAPIPayload = {
   comuna: string
   region: string
   visitStatusId: string
-  scheduledDate: string // ISO string for API
+  date: string // ISO string for API
   observations?: string
 }
 
@@ -83,7 +83,7 @@ export type Visit = {
   comuna: string
   region: string
   visitStatusId: string
-  scheduledDate: Date
+  date: Date
   observations: string | null
   createdAt: Date
   updatedAt: Date
@@ -111,7 +111,7 @@ export function formValuesToPayload(values: CreateVisitInput): CreateVisitAPIPay
     comuna: values.comuna,
     region: values.region,
     visitStatusId: values.visitStatusId,
-    scheduledDate: values.scheduledDate.toISOString(),
+    date: values.date.toISOString(),
     observations: values.observations,
   }
 }
@@ -128,7 +128,7 @@ export function visitToFormValues(visit: Visit): CreateVisitInput {
     comuna: visit.comuna,
     region: visit.region,
     visitStatusId: visit.visitStatusId,
-    scheduledDate: new Date(visit.scheduledDate),
+    date: new Date(visit.date),
     observations: visit.observations || undefined,
   }
 }

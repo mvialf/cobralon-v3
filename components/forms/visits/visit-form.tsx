@@ -71,7 +71,7 @@ export const VisitForm = React.forwardRef<VisitFormHandle, VisitFormProps>(
         comuna: '',
         region: configuration.region || '',
         visitStatusId: '',
-        scheduledDate: new Date(),
+        date: new Date(),
         observations: '',
         ...defaultValues,
       },
@@ -98,7 +98,7 @@ export const VisitForm = React.forwardRef<VisitFormHandle, VisitFormProps>(
           comuna: defaultValues.comuna || '',
           region: defaultValues.region || configuration.region || '',
           visitStatusId: defaultValues.visitStatusId || '',
-          scheduledDate: defaultValues.scheduledDate || new Date(),
+          date: defaultValues.date || new Date(),
           observations: defaultValues.observations || '',
         })
       }
@@ -210,10 +210,10 @@ export const VisitForm = React.forwardRef<VisitFormHandle, VisitFormProps>(
 
               <FormField
                 control={form.control}
-                name="scheduledDate"
+                name="date"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Fecha Agendada *</FormLabel>
+                    <FormLabel>Fecha de Solicitud *</FormLabel>
                     <FormControl>
                       <Input
                         type="date"

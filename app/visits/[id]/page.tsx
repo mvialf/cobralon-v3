@@ -68,7 +68,7 @@ export default function VisitDetailPage({ params }: VisitDetailPageProps) {
   return (
     <AppLayout
       pageTitle={`Visita: ${visit.name}`}
-      pageDescription={`Agendada para el ${formatDate(visit.scheduledDate, 'long')}`}
+      pageDescription={`Solicitada el ${formatDate(visit.date, 'long')}`}
       breadcrumbs={[
         { label: 'Inicio', href: '/' },
         { label: 'Visitas', href: '/visits' },
@@ -116,12 +116,12 @@ export default function VisitDetailPage({ params }: VisitDetailPageProps) {
                 </div>
               )}
 
-              {/* Fecha Agendada */}
+              {/* Fecha de Solicitud */}
               <div className="flex items-start gap-3">
                 <Calendar className="h-5 w-5 text-muted-foreground mt-0.5" />
                 <div>
-                  <p className="text-sm font-medium text-muted-foreground">Fecha Agendada</p>
-                  <p className="text-base">{formatDate(visit.scheduledDate, 'long')}</p>
+                  <p className="text-sm font-medium text-muted-foreground">Fecha de Solicitud</p>
+                  <p className="text-base">{formatDate(visit.date, 'long')}</p>
                 </div>
               </div>
 

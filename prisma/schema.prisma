@@ -264,8 +264,8 @@ model Visit {
   visitStatusId String
   visitStatus   VisitStatus   @relation(fields: [visitStatusId], references: [id], onDelete: Restrict)
 
-  // Fecha agendada
-  scheduledDate DateTime
+  // Fecha de solicitud
+  date          DateTime
 
   // Observaciones
   observations  String?       @db.Text
@@ -278,7 +278,7 @@ model Visit {
   calendarEvents VisitEvent[]
 
   @@index([visitStatusId])
-  @@index([scheduledDate])
+  @@index([date])
   @@index([comuna])
   @@index([name])
   @@map("visits")

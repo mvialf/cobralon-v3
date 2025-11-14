@@ -60,7 +60,7 @@ export const GET = withLogging(async (request, logger) => {
         where,
         skip,
         take: limit,
-        orderBy: { scheduledDate: 'desc' },
+        orderBy: { date: 'desc' },
         include: {
           visitStatus: {
             select: {
@@ -117,7 +117,7 @@ export const POST = withLogging(async (request, logger) => {
 
     logger.debug({ body }, 'Creating new visit')
 
-    // Transformar payload: scheduledDate string → Date
+    // Transformar payload: date string → Date
     const visitData = {
       name: body.name,
       phone: body.phone || null,
@@ -126,7 +126,7 @@ export const POST = withLogging(async (request, logger) => {
       comuna: body.comuna,
       region: body.region,
       visitStatusId: body.visitStatusId,
-      scheduledDate: new Date(body.scheduledDate),
+      date: new Date(body.date),
       observations: body.observations || null,
     }
 

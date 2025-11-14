@@ -64,7 +64,7 @@ export function EditVisitDialog({
       comuna: visit.comuna,
       region: visit.region,
       visitStatusId: visit.visitStatus?.id || '',
-      scheduledDate: new Date(visit.scheduledDate),
+      date: new Date(visit.date),
       observations: visit.observations || '',
     }
   }, [visit])

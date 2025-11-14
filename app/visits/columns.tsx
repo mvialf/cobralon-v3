@@ -23,7 +23,7 @@ export interface Visit {
   apartment: string | null
   comuna: string
   region: string
-  scheduledDate: Date | string
+  date: Date | string
   observations: string | null
   visitStatus: {
     id: string
@@ -88,16 +88,16 @@ export const createColumns = ({
     },
   },
   {
-    accessorKey: 'scheduledDate',
-    header: ({ column }) => <DataTableColumnHeader column={column} title="Fecha Agendada" />,
+    accessorKey: 'date',
+    header: ({ column }) => <DataTableColumnHeader column={column} title="Fecha de Solicitud" />,
     cell: ({ row }) => {
-      const date = row.original.scheduledDate
+      const date = row.original.date
       return formatDate(date, 'short', 'es-CL')
     },
     enableSorting: true,
     sortingFn: (rowA, rowB) => {
-      const dateA = new Date(rowA.original.scheduledDate).getTime()
-      const dateB = new Date(rowB.original.scheduledDate).getTime()
+      const dateA = new Date(rowA.original.date).getTime()
+      const dateB = new Date(rowB.original.date).getTime()
       return dateA - dateB
     },
     meta: {

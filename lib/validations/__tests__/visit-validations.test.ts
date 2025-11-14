@@ -17,7 +17,7 @@ describe('createVisitSchema', () => {
     comuna: 'Providencia',
     region: 'Región Metropolitana',
     visitStatusId: '123e4567-e89b-12d3-a456-426614174000',
-    scheduledDate: new Date('2025-12-01T10:00:00Z'),
+    date: new Date('2025-12-01T10:00:00Z'),
     observations: 'Cliente prefiere mañana',
   }
 
@@ -80,12 +80,12 @@ describe('createVisitSchema', () => {
       }
     })
 
-    it('debe rechazar sin scheduledDate', () => {
-      const { scheduledDate, ...input } = validInput
+    it('debe rechazar sin date', () => {
+      const { date, ...input } = validInput
       const result = createVisitSchema.safeParse(input)
       expect(result.success).toBe(false)
       if (!result.success) {
-        expect(result.error.issues[0].path).toContain('scheduledDate')
+        expect(result.error.issues[0].path).toContain('date')
       }
     })
   })
@@ -153,11 +153,11 @@ describe('createVisitSchema', () => {
     })
   })
 
-  describe('validación de scheduledDate', () => {
+  describe('validación de date', () => {
     it('debe aceptar Date object válido', () => {
       const result = createVisitSchema.safeParse({
         ...validInput,
-        scheduledDate: new Date('2025-12-01'),
+        date: new Date('2025-12-01'),
       })
       expect(result.success).toBe(true)
     })
@@ -165,7 +165,7 @@ describe('createVisitSchema', () => {
     it('debe aceptar fecha en el pasado', () => {
       const result = createVisitSchema.safeParse({
         ...validInput,
-        scheduledDate: new Date('2020-01-01'),
+        date: new Date('2020-01-01'),
       })
       expect(result.success).toBe(true)
     })
@@ -173,7 +173,7 @@ describe('createVisitSchema', () => {
     it('debe aceptar fecha en el futuro', () => {
       const result = createVisitSchema.safeParse({
         ...validInput,
-        scheduledDate: new Date('2030-12-31'),
+        date: new Date('2030-12-31'),
       })
       expect(result.success).toBe(true)
     })
@@ -181,7 +181,7 @@ describe('createVisitSchema', () => {
     it('debe rechazar string en lugar de Date', () => {
       const result = createVisitSchema.safeParse({
         ...validInput,
-        scheduledDate: '2025-12-01', // String en lugar de Date
+        date: '2025-12-01', // String en lugar de Date
       })
       expect(result.success).toBe(false)
     })
@@ -189,7 +189,7 @@ describe('createVisitSchema', () => {
     it('debe rechazar Date inválido', () => {
       const result = createVisitSchema.safeParse({
         ...validInput,
-        scheduledDate: new Date('invalid'),
+        date: new Date('invalid'),
       })
       expect(result.success).toBe(false)
     })
@@ -207,9 +207,9 @@ describe('updateVisitSchema', () => {
     expect(result.success).toBe(true)
   })
 
-  it('debe aceptar actualización parcial (solo scheduledDate)', () => {
+  it('debe aceptar actualización parcial (solo date)', () => {
     const result = updateVisitSchema.safeParse({
-      scheduledDate: new Date('2025-12-15'),
+      date: new Date('2025-12-15'),
     })
     expect(result.success).toBe(true)
   })
@@ -233,13 +233,13 @@ describe('formValuesToPayload', () => {
       comuna: 'Providencia',
       region: 'Región Metropolitana',
       visitStatusId: '123e4567-e89b-12d3-a456-426614174000',
-      scheduledDate: new Date('2025-12-01T10:00:00Z'),
+      date: new Date('2025-12-01T10:00:00Z'),
     }
 
     const payload = formValuesToPayload(input)
 
-    expect(payload.scheduledDate).toBe('2025-12-01T10:00:00.000Z')
-    expect(typeof payload.scheduledDate).toBe('string')
+    expect(payload.date).toBe('2025-12-01T10:00:00.000Z')
+    expect(typeof payload.date).toBe('string')
   })
 
   it('debe preservar todos los campos requeridos', () => {
@@ -249,7 +249,7 @@ describe('formValuesToPayload', () => {
       comuna: 'Providencia',
       region: 'Región Metropolitana',
       visitStatusId: '123e4567-e89b-12d3-a456-426614174000',
-      scheduledDate: new Date('2025-12-01T10:00:00Z'),
+      date: new Date('2025-12-01T10:00:00Z'),
     }
 
     const payload = formValuesToPayload(input)
@@ -270,7 +270,7 @@ describe('formValuesToPayload', () => {
       comuna: 'Providencia',
       region: 'Región Metropolitana',
       visitStatusId: '123e4567-e89b-12d3-a456-426614174000',
-      scheduledDate: new Date('2025-12-01T10:00:00Z'),
+      date: new Date('2025-12-01T10:00:00Z'),
       observations: 'Cliente prefiere mañana',
     }
 
@@ -288,7 +288,7 @@ describe('formValuesToPayload', () => {
       comuna: 'Providencia',
       region: 'Región Metropolitana',
       visitStatusId: '123e4567-e89b-12d3-a456-426614174000',
-      scheduledDate: new Date('2025-12-01T10:00:00Z'),
+      date: new Date('2025-12-01T10:00:00Z'),
     }
 
     const payload = formValuesToPayload(input)
@@ -309,7 +309,7 @@ describe('visitToFormValues', () => {
     comuna: 'Providencia',
     region: 'Región Metropolitana',
     visitStatusId: '123e4567-e89b-12d3-a456-426614174001',
-    scheduledDate: new Date('2025-12-01T10:00:00Z'),
+    date: new Date('2025-12-01T10:00:00Z'),
     observations: 'Cliente prefiere mañana',
     createdAt: new Date('2025-11-01T10:00:00Z'),
     updatedAt: new Date('2025-11-01T10:00:00Z'),
@@ -338,11 +338,11 @@ describe('visitToFormValues', () => {
     expect(formValues.observations).toBe(mockVisit.observations)
   })
 
-  it('debe convertir scheduledDate a Date object', () => {
+  it('debe convertir date a Date object', () => {
     const formValues = visitToFormValues(mockVisit)
 
-    expect(formValues.scheduledDate).toBeInstanceOf(Date)
-    expect(formValues.scheduledDate.toISOString()).toBe(mockVisit.scheduledDate.toISOString())
+    expect(formValues.date).toBeInstanceOf(Date)
+    expect(formValues.date.toISOString()).toBe(mockVisit.date.toISOString())
   })
 
   it('debe manejar null en phone', () => {
@@ -387,19 +387,26 @@ describe('integración Form → API → Form', () => {
       comuna: 'Providencia',
       region: 'Región Metropolitana',
       visitStatusId: '123e4567-e89b-12d3-a456-426614174000',
-      scheduledDate: new Date('2025-12-01T10:00:00Z'),
+      date: new Date('2025-12-01T10:00:00Z'),
       observations: 'Cliente prefiere mañana',
     }
 
     // 2. Convertir a API payload
     const payload = formValuesToPayload(originalFormValues)
-    expect(payload.scheduledDate).toBe('2025-12-01T10:00:00.000Z')
+    expect(payload.date).toBe('2025-12-01T10:00:00.000Z')
 
     // 3. Simular respuesta de API (Visit object)
     const visitFromAPI: Visit = {
       id: '123e4567-e89b-12d3-a456-426614174000',
-      ...originalFormValues,
-      scheduledDate: new Date(payload.scheduledDate), // API devuelve Date
+      name: originalFormValues.name,
+      phone: originalFormValues.phone || null,
+      street: originalFormValues.street,
+      apartment: originalFormValues.apartment || null,
+      comuna: originalFormValues.comuna,
+      region: originalFormValues.region,
+      visitStatusId: originalFormValues.visitStatusId,
+      date: new Date(payload.date), // API devuelve Date
+      observations: originalFormValues.observations || null,
       createdAt: new Date(),
       updatedAt: new Date(),
       visitStatus: {
@@ -426,8 +433,6 @@ describe('integración Form → API → Form', () => {
     expect(formValuesFromAPI.region).toBe(originalFormValues.region)
     expect(formValuesFromAPI.visitStatusId).toBe(originalFormValues.visitStatusId)
     expect(formValuesFromAPI.observations).toBe(originalFormValues.observations)
-    expect(formValuesFromAPI.scheduledDate.toISOString()).toBe(
-      originalFormValues.scheduledDate.toISOString()
-    )
+    expect(formValuesFromAPI.date.toISOString()).toBe(originalFormValues.date.toISOString())
   })
 })

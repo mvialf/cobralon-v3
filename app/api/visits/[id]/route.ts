@@ -63,7 +63,7 @@ export const PUT = withLogging(async (request, logger, context) => {
 
     logger.debug({ visitId: id, body }, 'Updating visit')
 
-    // Transformar payload: scheduledDate string → Date (si existe)
+    // Transformar payload: date string → Date (si existe)
     const visitData: Record<string, any> = {}
 
     if (body.name !== undefined) visitData.name = body.name
@@ -73,7 +73,7 @@ export const PUT = withLogging(async (request, logger, context) => {
     if (body.comuna !== undefined) visitData.comuna = body.comuna
     if (body.region !== undefined) visitData.region = body.region
     if (body.visitStatusId !== undefined) visitData.visitStatusId = body.visitStatusId
-    if (body.scheduledDate !== undefined) visitData.scheduledDate = new Date(body.scheduledDate)
+    if (body.date !== undefined) visitData.date = new Date(body.date)
     if (body.observations !== undefined) visitData.observations = body.observations || null
 
     // Actualizar visita
