@@ -192,16 +192,14 @@ Event disappears from calendar
 ```typescript
 // Custom hooks
 useCalendarEvents(startDate, endDate) // GET unified events
-useCreateProjectEvent()                // POST project event
-useUpdateProjectEvent()                // PUT project event
-useDeleteProjectEvent()                // DELETE project event
-// Similar para Aftersale y Visit
+useCreateProjectEvent() // POST project event
+useUpdateProjectEvent() // PUT project event
+useDeleteProjectEvent()[ // DELETE project event
+  // Similar para Aftersale y Visit
 
-// Query Keys
-['calendar-events', startDate, endDate]
-['project-events', eventId]
-['aftersale-events', eventId]
-['visit-events', eventId]
+  // Query Keys
+  ('calendar-events', startDate, endDate)
+][('project-events', eventId)][('aftersale-events', eventId)][('visit-events', eventId)]
 ```
 
 ### Client State (React useState)
@@ -266,9 +264,9 @@ API `/api/calendar-events` retorna array de `UnifiedCalendarEvent[]`.
 
 ```typescript
 const EVENT_TYPE_COLORS = {
-  project: 'hsl(217, 91%, 60%)',   // Azul (--chart-1)
-  aftersale: 'hsl(25, 95%, 53%)',  // Naranja (--chart-2)
-  visit: 'hsl(142, 76%, 36%)'      // Verde (--chart-3)
+  project: 'hsl(217, 91%, 60%)', // Azul (--chart-1)
+  aftersale: 'hsl(25, 95%, 53%)', // Naranja (--chart-2)
+  visit: 'hsl(142, 76%, 36%)', // Verde (--chart-3)
 } as const
 ```
 
@@ -285,13 +283,13 @@ Al crear evento, combobox solo muestra entidades **NO finalizadas**:
 const projects = await prisma.project.findMany({
   where: {
     projectStatus: {
-      isFinal: false // Excluye "Completado"
-    }
+      isFinal: false, // Excluye "Completado"
+    },
   },
   include: {
     customer: true,
-    projectStatus: true
-  }
+    projectStatus: true,
+  },
 })
 ```
 
@@ -308,8 +306,8 @@ Mismo filtro para Aftersales (excluye "Completado") y Visits (excluye "Cancelada
 const existingEvent = await prisma.projectEvent.findFirst({
   where: {
     projectId: data.projectId,
-    scheduledDate: data.scheduledDate
-  }
+    scheduledDate: data.scheduledDate,
+  },
 })
 
 if (existingEvent) {
@@ -325,14 +323,11 @@ if (existingEvent) {
 ```typescript
 const project = await prisma.project.findUnique({
   where: { id: data.projectId },
-  include: { projectStatus: true }
+  include: { projectStatus: true },
 })
 
 if (!project) {
-  return NextResponse.json(
-    { error: 'Proyecto no encontrado' },
-    { status: 404 }
-  )
+  return NextResponse.json({ error: 'Proyecto no encontrado' }, { status: 404 })
 }
 
 if (project.projectStatus.isFinal) {
@@ -392,6 +387,7 @@ function DroppableCalendarDay({ date }) {
 **Fase 1:** Sin autenticación (todos pueden ver/editar todo).
 
 **Fase Futura:**
+
 - Middleware para verificar auth
 - RLS (Row Level Security) en Prisma
 - Permisos por rol (admin, técnico, solo lectura)
@@ -403,18 +399,21 @@ function DroppableCalendarDay({ date }) {
 ### Optimizaciones implementadas
 
 1. **Query limitado por rango**: Solo fetch eventos visibles
+
    ```typescript
    // GET /api/calendar-events?start=2025-11-01&end=2025-11-30
    ```
 
 2. **React Query cache**: 5 minutos de stale time
+
    ```typescript
    queryClient.setQueryDefaults(['calendar-events'], {
-     staleTime: 5 * 60 * 1000 // 5 min
+     staleTime: 5 * 60 * 1000, // 5 min
    })
    ```
 
 3. **Optimistic updates**: Drag & drop usa optimistic updates
+
    ```typescript
    useMutation({
      onMutate: async (newData) => {
@@ -425,7 +424,7 @@ function DroppableCalendarDay({ date }) {
      },
      onError: (err, newData, context) => {
        queryClient.setQueryData(['calendar-events'], context.previous)
-     }
+     },
    })
    ```
 
@@ -477,17 +476,17 @@ EventCalendar
 
 ## Tecnologías y Dependencias
 
-| Tecnología | Uso |
-|------------|-----|
-| Next.js 15 | Framework, API routes |
-| React 19 | UI components |
-| Prisma | ORM, migrations |
-| TanStack Query | Server state management |
-| @dnd-kit | Drag & drop |
-| date-fns | Date manipulation |
-| Zod | Validation schemas |
-| React Hook Form | Form management |
-| shadcn/ui | UI components base |
+| Tecnología      | Uso                     |
+| --------------- | ----------------------- |
+| Next.js 15      | Framework, API routes   |
+| React 19        | UI components           |
+| Prisma          | ORM, migrations         |
+| TanStack Query  | Server state management |
+| @dnd-kit        | Drag & drop             |
+| date-fns        | Date manipulation       |
+| Zod             | Validation schemas      |
+| React Hook Form | Form management         |
+| shadcn/ui       | UI components base      |
 
 Todas ya instaladas ✅
 

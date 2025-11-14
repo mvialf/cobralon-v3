@@ -69,11 +69,13 @@ Crear un sistema de calendario multi-vista que permita:
 ### Orden de Lectura Recomendado
 
 **Para entender el sistema:**
+
 1. Architecture Overview (01)
 2. User Flows (05)
 3. Component Structure (03)
 
 **Para implementar:**
+
 1. Data Model (02) → Migración Prisma
 2. API Routes (04) → Crear endpoints
 3. Components (03) → UI y lógica

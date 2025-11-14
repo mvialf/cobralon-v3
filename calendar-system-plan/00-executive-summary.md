@@ -8,15 +8,15 @@ Implementar un sistema de calendario multi-vista para gestionar eventos de **Pro
 
 ## 📊 Métricas Clave del Proyecto
 
-| Métrica | Valor | Estado |
-|---------|-------|--------|
-| **Tiempo de desarrollo** | 20-29 horas (5-7 días a 4h/día) | ⏱️ ~13h usadas (Fases 1-4 + parcial 5) |
-| **Archivos nuevos** | ~40-50 archivos | ✅ 29 archivos creados |
-| **Líneas de código** | ~3,500-4,500 líneas | ✅ ~2,900 líneas implementadas |
-| **Tablas DB nuevas** | 3 (ProjectEvent, AftersaleEvent, VisitEvent) | ✅ 3/3 (todas creadas) |
-| **API endpoints** | 9 routes (3 por tipo de evento) | ✅ 9/9 (CRUD completo x3 tipos) |
-| **Componentes React** | ~20 componentes | ⏳ 15/20 (UI pendiente) |
-| **Dependencias nuevas** | 0 (todas ya instaladas) ✅ | ✅ Confirmado |
+| Métrica                  | Valor                                        | Estado                                 |
+| ------------------------ | -------------------------------------------- | -------------------------------------- |
+| **Tiempo de desarrollo** | 20-29 horas (5-7 días a 4h/día)              | ⏱️ ~13h usadas (Fases 1-4 + parcial 5) |
+| **Archivos nuevos**      | ~40-50 archivos                              | ✅ 29 archivos creados                 |
+| **Líneas de código**     | ~3,500-4,500 líneas                          | ✅ ~2,900 líneas implementadas         |
+| **Tablas DB nuevas**     | 3 (ProjectEvent, AftersaleEvent, VisitEvent) | ✅ 3/3 (todas creadas)                 |
+| **API endpoints**        | 9 routes (3 por tipo de evento)              | ✅ 9/9 (CRUD completo x3 tipos)        |
+| **Componentes React**    | ~20 componentes                              | ⏳ 15/20 (UI pendiente)                |
+| **Dependencias nuevas**  | 0 (todas ya instaladas) ✅                   | ✅ Confirmado                          |
 
 ---
 
@@ -89,29 +89,34 @@ Implementar un sistema de calendario multi-vista para gestionar eventos de **Pro
 ## 🚀 Roadmap de Implementación - Estado
 
 ### ✅ Fase 1: Base de Datos (2-3h) - COMPLETADA
+
 - ✅ Schemas Prisma (ProjectEvent only)
 - ✅ Migraciones (db:push ejecutado)
 - ✅ Tipos TypeScript (calendar.ts)
 - ✅ Validaciones Zod (calendar-validations.ts)
 
 ### ✅ Fase 2: API Routes (4-6h) - COMPLETADA
+
 - ✅ Endpoints CRUD ProjectEvents (GET, POST, PUT, PATCH, DELETE)
 - ✅ React Query hooks (useCalendarEvents, useProjectEvents)
 - ✅ Calendar utils (getWeekDays, getMonthDays, etc.)
 
 ### ✅ Fase 3: UI Base (6-8h) - COMPLETADA
+
 - ✅ EventCalendar orchestrator
 - ✅ 3 vistas (WeekView, MonthView, AgendaView)
 - ✅ Drag & drop infrastructure (@dnd-kit)
 - ✅ ViewSelector (ToggleGroup)
 
 ### ✅ Fase 4: Dialogs & Forms (4-6h) - COMPLETADA
+
 - ✅ ProjectEventDialog (create/edit modes)
 - ✅ ProjectEventForm con React Hook Form
 - ✅ CRUD integration completa
 - ✅ Página /calendar con AppLayout
 
 ### 🚧 Fase 5: Aftersales + Visits (2-3h) - EN PROGRESO (~33%)
+
 - ✅ Database: AftersaleEvent y VisitEvent models
 - ✅ API Routes: CRUD completo para ambos tipos (8 endpoints)
 - ⏳ Validations Zod (pendiente)
@@ -121,6 +126,7 @@ Implementar un sistema de calendario multi-vista para gestionar eventos de **Pro
 - ⏳ Integration en EventCalendar (pendiente)
 
 ### ⏳ Fase 6: Polish (2-3h) - PENDIENTE
+
 - ⏳ Loading states (parcialmente implementados)
 - ⏳ Error boundaries
 - ⏳ Responsive design mobile
@@ -156,22 +162,27 @@ model ProjectEvent {
 ## 🎨 Decisiones de Diseño Clave
 
 ### 1. Sobrescribir vs Snapshot
+
 **Decisión:** Sobrescribir datos del Project directamente (single source of truth).
 **Por qué:** Simplicidad, consistencia, menos storage.
 
 ### 2. Auto-save vs Confirmation
+
 **Decisión:** Auto-save en drag & drop (sin dialog de confirmación).
 **Por qué:** UX moderna, optimistic updates, rollback automático.
 
 ### 3. Vista por Defecto
+
 **Decisión:** Week view (NO Month).
 **Por qué:** Más espacio vertical, foco en próximos 7 días, mejor para planning diario.
 
 ### 4. Sin Horas
+
 **Decisión:** Solo fechas (no time slots).
 **Por qué:** Simplicidad, caso de uso real (instalaciones son "todo el día").
 
 ### 5. Unified Fetch
+
 **Decisión:** 1 endpoint `/api/calendar-events` retorna los 3 tipos.
 **Por qué:** 1 request vs 3, ordenamiento server-side, menos hooks.
 
@@ -198,6 +209,7 @@ Lo que NO incluye Fase 1:
 ## 📈 ROI y Beneficios
 
 ### Antes (Sin Calendario)
+
 - ⚠️ Eventos en Excel o papel
 - ⚠️ No hay vista centralizada
 - ⚠️ Difícil coordinar técnicos
@@ -205,6 +217,7 @@ Lo que NO incluye Fase 1:
 - ⚠️ Sin tracking de cambios de estado
 
 ### Después (Con Calendario)
+
 - ✅ Centralización de eventos
 - ✅ Vista unificada Proyectos + Postventas + Visitas
 - ✅ Reprogramar con drag & drop (segundos vs minutos)
@@ -229,6 +242,7 @@ Target Coverage: 85%+
 ```
 
 **Tests críticos:**
+
 - Crear evento end-to-end
 - Drag & drop con auto-save
 - Validación de duplicados
@@ -239,18 +253,18 @@ Target Coverage: 85%+
 
 ## 📚 Documentación Completa
 
-| Doc | Descripción | Páginas |
-|-----|-------------|---------|
-| `01-architecture-overview.md` | Visión arquitectural, componentes, flujo de datos | 6 |
-| `02-data-model.md` | Schemas Prisma, tipos, validaciones, queries | 8 |
-| `03-component-structure.md` | Árbol de componentes, props, ejemplos | 10 |
-| `04-api-routes.md` | Endpoints, request/response, implementación | 7 |
-| `05-user-flows.md` | Diagramas de flujos, edge cases | 6 |
-| `06-implementation-phases.md` | Roadmap detallado con tasks | 9 |
-| `07-technical-decisions.md` | ADRs con justificaciones | 6 |
-| `08-testing-strategy.md` | Plan de testing completo | 7 |
-| `09-future-enhancements.md` | Features Fase 2-10 | 8 |
-| **TOTAL** | **~70 páginas** | ✅ |
+| Doc                           | Descripción                                       | Páginas |
+| ----------------------------- | ------------------------------------------------- | ------- |
+| `01-architecture-overview.md` | Visión arquitectural, componentes, flujo de datos | 6       |
+| `02-data-model.md`            | Schemas Prisma, tipos, validaciones, queries      | 8       |
+| `03-component-structure.md`   | Árbol de componentes, props, ejemplos             | 10      |
+| `04-api-routes.md`            | Endpoints, request/response, implementación       | 7       |
+| `05-user-flows.md`            | Diagramas de flujos, edge cases                   | 6       |
+| `06-implementation-phases.md` | Roadmap detallado con tasks                       | 9       |
+| `07-technical-decisions.md`   | ADRs con justificaciones                          | 6       |
+| `08-testing-strategy.md`      | Plan de testing completo                          | 7       |
+| `09-future-enhancements.md`   | Features Fase 2-10                                | 8       |
+| **TOTAL**                     | **~70 páginas**                                   | ✅      |
 
 ---
 
@@ -284,6 +298,7 @@ Target Coverage: 85%+
 **Documentación:** Todos los archivos en `calendar-system-plan/`
 
 **Estructura del plan:**
+
 ```
 calendar-system-plan/
 ├── 00-executive-summary.md         ← Estás aquí

@@ -23,28 +23,30 @@ components/calendar/
 **Descripción:** Componente principal que orquesta todo el sistema de calendario.
 
 **Responsabilidades:**
+
 - Gestionar estado de fecha actual y vista
 - Fetch eventos en rango visible con `useCalendarEvents()`
 - Coordinar dialogs (create/edit/delete)
 - Manejar navegación entre fechas
 
 **Estado:**
+
 ```typescript
-currentDate: Date              // Fecha actualmente visualizada
-currentView: 'week' | 'month' | 'agenda'  // Vista actual (solo 'week' por ahora)
-createDialogOpen: boolean      // Control dialog crear
-editDialogOpen: boolean        // Control dialog editar
-deleteDialogOpen: boolean      // Control dialog eliminar
-selectedDate: Date | null      // Fecha seleccionada para crear
-selectedEvent: CalendarEvent | null  // Evento seleccionado para editar
-eventToDelete: CalendarEvent | null  // Evento a eliminar
+currentDate: Date // Fecha actualmente visualizada
+currentView: 'week' | 'month' | 'agenda' // Vista actual (solo 'week' por ahora)
+createDialogOpen: boolean // Control dialog crear
+editDialogOpen: boolean // Control dialog editar
+deleteDialogOpen: boolean // Control dialog eliminar
+selectedDate: Date | null // Fecha seleccionada para crear
+selectedEvent: CalendarEvent | null // Evento seleccionado para editar
+eventToDelete: CalendarEvent | null // Evento a eliminar
 ```
 
 **Uso:**
+
 ```tsx
 import { EventCalendar } from '@/components/calendar/event-calendar'
-
-<EventCalendar />
+;<EventCalendar />
 ```
 
 ---
@@ -56,6 +58,7 @@ import { EventCalendar } from '@/components/calendar/event-calendar'
 **Descripción:** Header con navegación y display de fecha actual.
 
 **Props:**
+
 ```typescript
 interface CalendarHeaderProps {
   currentDate: Date
@@ -65,18 +68,16 @@ interface CalendarHeaderProps {
 ```
 
 **Features:**
+
 - Botones Prev/Next con íconos ChevronLeft/Right
 - Botón "Hoy" para volver a fecha actual
 - Display de fecha formateada según vista (ej: "10 - 16 Nov 2025")
 - Placeholder para ViewSelector (futuro)
 
 **Uso:**
+
 ```tsx
-<CalendarHeader
-  currentDate={currentDate}
-  view="week"
-  onNavigate={handleNavigate}
-/>
+<CalendarHeader currentDate={currentDate} view="week" onNavigate={handleNavigate} />
 ```
 
 ---
@@ -88,6 +89,7 @@ interface CalendarHeaderProps {
 **Descripción:** Vista semanal con grid de 7 días (Lun-Dom).
 
 **Props:**
+
 ```typescript
 interface WeekViewProps {
   currentDate: Date
@@ -99,6 +101,7 @@ interface WeekViewProps {
 ```
 
 **Features:**
+
 - Header con días de la semana (Lun-Dom)
 - Highlighting del día actual (bg-primary circular)
 - Botón "Crear evento" por día (aparece en hover)
@@ -106,11 +109,13 @@ interface WeekViewProps {
 - Grid responsive con `grid-cols-7`
 
 **Cálculo de días:**
+
 ```typescript
 const weekDays = getWeekDays(currentDate) // Lunes-Domingo
 ```
 
 **Uso:**
+
 ```tsx
 <WeekView
   currentDate={currentDate}
@@ -130,6 +135,7 @@ const weekDays = getWeekDays(currentDate) // Lunes-Domingo
 **Descripción:** Card visual para eventos de proyectos con dropdown menu.
 
 **Props:**
+
 ```typescript
 interface ProjectEventCardProps {
   event: ProjectEventWithRelations
@@ -139,6 +145,7 @@ interface ProjectEventCardProps {
 ```
 
 **Display:**
+
 - Border izquierdo azul (`hsl(var(--chart-1))`)
 - Nombre del cliente (truncado 1 línea)
 - Número de proyecto (`#XXXX`)
@@ -146,12 +153,14 @@ interface ProjectEventCardProps {
 - Notas (truncadas 2 líneas)
 
 **Interactividad:**
+
 - Dropdown menu (MoreVertical icon)
   - Aparece en hover (`opacity-0 group-hover:opacity-100`)
   - Opciones: Editar, Eliminar
 - Hover effect (`hover:shadow-md`)
 
 **Uso:**
+
 ```tsx
 <ProjectEventCard
   event={event.data}
@@ -180,6 +189,7 @@ Ver documentación en cada carpeta.
 **Path:** `hooks/queries/use-calendar-events.ts`
 
 **Uso:**
+
 ```typescript
 const { data, isLoading } = useCalendarEvents({ start, end })
 // data?.events: CalendarEvent[]
@@ -192,6 +202,7 @@ const { data, isLoading } = useCalendarEvents({ start, end })
 **Path:** `hooks/queries/use-project-events.ts`
 
 **Mutations disponibles:**
+
 ```typescript
 const createMutation = useCreateProjectEvent()
 const updateMutation = useUpdateProjectEvent()
@@ -209,6 +220,7 @@ const deleteMutation = useDeleteProjectEvent()
 **Path:** `lib/utils/calendar-utils.ts`
 
 **Funciones clave:**
+
 ```typescript
 getWeekDays(date: Date): Date[]
 getVisibleDateRange(date: Date, view: 'week'): { start, end }
@@ -218,6 +230,7 @@ getEventsForDay(events: CalendarEvent[], day: Date): CalendarEvent[]
 ```
 
 **Constantes:**
+
 ```typescript
 DAYS_OF_WEEK = ['Lunes', 'Martes', ..., 'Domingo']
 DAYS_OF_WEEK_SHORT = ['Lun', 'Mar', ..., 'Dom']
@@ -265,12 +278,14 @@ type ProjectEventWithRelations = ProjectEvent & {
 ## Próximas Mejoras
 
 ### Iteración 2
+
 - [ ] Drag & Drop (mover eventos entre días)
 - [ ] MonthView component
 - [ ] AgendaView component
 - [ ] ViewSelector en CalendarHeader
 
 ### Iteración 3
+
 - [ ] AftersaleEventCard component
 - [ ] VisitEventCard component
 - [ ] Filtros por tipo de evento
@@ -281,6 +296,7 @@ type ProjectEventWithRelations = ProjectEvent & {
 ## Testing
 
 ### Manual Testing
+
 1. Navegar entre semanas (Prev/Next/Today)
 2. Crear evento desde día vacío
 3. Editar evento existente
@@ -289,6 +305,7 @@ type ProjectEventWithRelations = ProjectEvent & {
 6. Verificar hover states
 
 ### Unit Tests (Pendiente)
+
 ```typescript
 // event-calendar.test.tsx
 describe('EventCalendar', () => {

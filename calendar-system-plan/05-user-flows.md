@@ -370,6 +370,7 @@ MonthView renderiza con grid 6x7
 ```
 
 **Vistas disponibles:**
+
 1. **Week** (default) - 7 columnas, altura dinámica
 2. **Month** - Grid 6x7, badges compactos
 3. **Agenda** - Lista vertical, no drag & drop

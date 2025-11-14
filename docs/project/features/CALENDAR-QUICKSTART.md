@@ -5,6 +5,7 @@
 ## ⚡ Quick Reference
 
 ### Crear Evento
+
 ```
 1. Navega a /calendar
 2. Hover sobre cualquier día → Botón "Crear evento"
@@ -13,6 +14,7 @@
 ```
 
 ### Editar Evento
+
 ```
 1. Click MoreVertical (⋮) en card → "Editar"
 2. Modifica fecha o notas
@@ -20,6 +22,7 @@
 ```
 
 ### Eliminar Evento
+
 ```
 1. Click MoreVertical (⋮) en card → "Eliminar"
 2. Confirma en dialog
@@ -30,6 +33,7 @@
 ## 📁 Archivos Clave
 
 ### Backend
+
 ```
 prisma/schema.prisma                      # Modelo ProjectEvent
 app/api/calendar-events/route.ts          # GET unificado
@@ -38,6 +42,7 @@ app/api/project-events/[id]/route.ts      # GET/PUT/DELETE
 ```
 
 ### Frontend
+
 ```
 components/calendar/event-calendar.tsx    # Main orchestrator
 components/calendar/views/week-view.tsx   # Vista semanal
@@ -47,6 +52,7 @@ components/dialogs/calendar/project-event-dialog.tsx
 ```
 
 ### Utils & Hooks
+
 ```
 lib/utils/calendar-utils.ts               # Date helpers
 hooks/queries/use-calendar-events.ts      # Query
@@ -58,6 +64,7 @@ hooks/queries/use-project-events.ts       # Mutations
 ## 🔧 API Endpoints
 
 ### GET Calendar Events
+
 ```bash
 GET /api/calendar-events?start=2025-11-10&end=2025-11-17
 
@@ -73,6 +80,7 @@ Response:
 ```
 
 ### Create Event
+
 ```bash
 POST /api/project-events
 Body: {
@@ -83,6 +91,7 @@ Body: {
 ```
 
 ### Update Event
+
 ```bash
 PUT /api/project-events/[id]
 Body: {
@@ -92,6 +101,7 @@ Body: {
 ```
 
 ### Delete Event
+
 ```bash
 DELETE /api/project-events/[id]
 Response: 204 No Content
@@ -117,6 +127,7 @@ EventCalendar
 ## 📊 Estado Actual
 
 ### ✅ Implementado (Iteración 1)
+
 - Vista semanal funcional
 - CRUD completo con validaciones
 - Navegación Prev/Next/Today
@@ -126,6 +137,7 @@ EventCalendar
 - React Query cache 5min
 
 ### ⏳ Pendiente (Futuras Iteraciones)
+
 - Drag & Drop
 - MonthView / AgendaView
 - AftersaleEvents / VisitEvents
@@ -136,16 +148,19 @@ EventCalendar
 ## 🐛 Troubleshooting
 
 ### Evento no aparece
+
 - ✅ Verificar que fecha esté en rango visible (semana actual)
 - ✅ Check console para errores de API
 - ✅ Invalidar cache: DevTools → React Query → Invalidate ['calendar-events']
 
 ### No puedo crear evento duplicado
+
 - ✅ **Esperado:** Constraint `(projectId, scheduledDate)` previene duplicados
 - ✅ Solo 1 evento por proyecto por día
 - ✅ Si necesitas 2 eventos, usa proyectos diferentes o días diferentes
 
 ### Fecha se guarda incorrecta
+
 - ✅ Verificar timezone del browser
 - ✅ DB usa `@db.Date` (sin hora)
 - ✅ Conversión automática en API

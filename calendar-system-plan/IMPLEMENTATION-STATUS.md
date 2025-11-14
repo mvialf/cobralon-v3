@@ -298,6 +298,7 @@ components/layout/app-sidebar.tsx (modificado)
 ### ✅ Completado
 
 #### Database (100% ✅)
+
 - ✅ **Prisma Schema** - Modelos agregados
   - `AftersaleEvent` model creado (prisma/schema.prisma:301-315)
   - `VisitEvent` model creado (prisma/schema.prisma:317-332)
@@ -338,6 +339,7 @@ components/layout/app-sidebar.tsx (modificado)
 ### 🚧 Pendientes
 
 #### Validations (Zod)
+
 - [ ] `createAftersaleEventSchema` en calendar-validations.ts
 - [ ] `updateAftersaleEventSchema` en calendar-validations.ts
 - [ ] `createVisitEventSchema` en calendar-validations.ts
@@ -345,6 +347,7 @@ components/layout/app-sidebar.tsx (modificado)
 - [ ] Types: `AftersaleEventFormValues`, `VisitEventFormValues`
 
 #### React Query Hooks
+
 - [ ] **AftersaleEvents Hooks**
   - [ ] `useCreateAftersaleEvent()`
   - [ ] `useUpdateAftersaleEvent()`
@@ -360,6 +363,7 @@ components/layout/app-sidebar.tsx (modificado)
   - Archivo: `hooks/queries/use-visit-events.ts`
 
 #### UI Components
+
 - [ ] **AftersaleEventCard** (borde naranja)
   - [ ] Componente base
   - [ ] Badge con aftersaleStatus
@@ -375,6 +379,7 @@ components/layout/app-sidebar.tsx (modificado)
   - Archivo: `components/calendar/visit-event-card.tsx`
 
 #### Forms
+
 - [ ] **AftersaleEventForm**
   - [ ] AftersaleCombobox (filtrar NO finalizados)
   - [ ] DatePicker
@@ -390,6 +395,7 @@ components/layout/app-sidebar.tsx (modificado)
   - Archivo: `components/forms/calendar/visit-event-form.tsx`
 
 #### Dialogs
+
 - [ ] **AftersaleEventDialog**
   - [ ] Modes: create | edit | view
   - [ ] Integrar AftersaleEventForm
@@ -403,6 +409,7 @@ components/layout/app-sidebar.tsx (modificado)
   - Archivo: `components/dialogs/calendar/visit-event-dialog.tsx`
 
 #### Integration
+
 - [ ] **Actualizar EventCalendar**
   - [ ] Soportar 3 tipos de eventos
   - [ ] Renderizar AftersaleEventCard y VisitEventCard
@@ -418,17 +425,17 @@ components/layout/app-sidebar.tsx (modificado)
 
 ### 📊 Progreso Fase 5
 
-| Categoría | Completado | Pendiente | % |
-|-----------|------------|-----------|---|
-| Database | 2/2 | 0 | 100% ✅ |
-| API Routes | 8/8 | 0 | 100% ✅ |
-| Validations | 0/4 | 4 | 0% |
-| Hooks | 0/8 | 8 | 0% |
-| UI Components | 0/2 | 2 | 0% |
-| Forms | 0/2 | 2 | 0% |
-| Dialogs | 0/2 | 2 | 0% |
-| Integration | 0/2 | 2 | 0% |
-| **TOTAL** | **10/30** | **20/30** | **33%** |
+| Categoría     | Completado | Pendiente | %       |
+| ------------- | ---------- | --------- | ------- |
+| Database      | 2/2        | 0         | 100% ✅ |
+| API Routes    | 8/8        | 0         | 100% ✅ |
+| Validations   | 0/4        | 4         | 0%      |
+| Hooks         | 0/8        | 8         | 0%      |
+| UI Components | 0/2        | 2         | 0%      |
+| Forms         | 0/2        | 2         | 0%      |
+| Dialogs       | 0/2        | 2         | 0%      |
+| Integration   | 0/2        | 2         | 0%      |
+| **TOTAL**     | **10/30**  | **20/30** | **33%** |
 
 ### 📁 Archivos Creados (Fase 5 - Parcial)
 
@@ -492,18 +499,18 @@ app/api/visit-events/[id]/route.ts (nuevo)
 
 ## 📊 Estadísticas de Implementación
 
-| Categoría | Archivos | Líneas | Comentarios |
-|-----------|----------|--------|-------------|
-| **Database** | 1 modificado | ~30 | Prisma schema |
-| **Types** | 1 nuevo | ~150 | TypeScript types |
-| **Validations** | 1 nuevo | ~80 | Zod schemas |
-| **API Routes** | 2 nuevos | ~400 | CRUD endpoints |
-| **React Query** | 2 nuevos | ~350 | Hooks con optimistic |
-| **Utils** | 1 nuevo | ~120 | Date helpers |
-| **Components** | 15 nuevos | ~1,100 | UI + DnD |
-| **Dialogs/Forms** | 2 nuevos | ~250 | Forms + validation |
-| **Page** | 1 nuevo | ~40 | /calendar route |
-| **TOTAL** | **26 archivos** | **~2,520 líneas** | ✅ Funcional |
+| Categoría         | Archivos        | Líneas            | Comentarios          |
+| ----------------- | --------------- | ----------------- | -------------------- |
+| **Database**      | 1 modificado    | ~30               | Prisma schema        |
+| **Types**         | 1 nuevo         | ~150              | TypeScript types     |
+| **Validations**   | 1 nuevo         | ~80               | Zod schemas          |
+| **API Routes**    | 2 nuevos        | ~400              | CRUD endpoints       |
+| **React Query**   | 2 nuevos        | ~350              | Hooks con optimistic |
+| **Utils**         | 1 nuevo         | ~120              | Date helpers         |
+| **Components**    | 15 nuevos       | ~1,100            | UI + DnD             |
+| **Dialogs/Forms** | 2 nuevos        | ~250              | Forms + validation   |
+| **Page**          | 1 nuevo         | ~40               | /calendar route      |
+| **TOTAL**         | **26 archivos** | **~2,520 líneas** | ✅ Funcional         |
 
 ---
 
@@ -512,33 +519,39 @@ app/api/visit-events/[id]/route.ts (nuevo)
 ### Manual Testing (Playwright)
 
 ✅ **Navegación:**
+
 - Vista Semana → Vista Mes → Vista Agenda
 - Anterior / Hoy / Siguiente
 - Día actual destacado correctamente
 
 ✅ **Crear Evento:**
+
 - Dialog abre con fecha pre-poblada
 - Combobox filtra proyectos
 - Validación de campos obligatorios
 - Success toast + refetch automático
 
 ✅ **Drag & Drop:**
+
 - Evento arrastrado del día 10 al 14
 - Optimistic update instantáneo
 - Persistencia en DB verificada
 - No permite drop en mismo día (skip)
 
 ✅ **Editar Evento:**
+
 - Dialog abre con datos pre-poblados
 - Actualización exitosa
 - Toast confirmation
 
 ✅ **Eliminar Evento:**
+
 - AlertDialog confirmation
 - Eliminación exitosa
 - Refetch automático
 
 ✅ **Edge Cases:**
+
 - Duplicado mismo proyecto/fecha → Error 400 ✅
 - Evento sin datos → Loading state ✅
 - Vista Agenda vacía → Empty state ✅

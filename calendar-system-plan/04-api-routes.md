@@ -2,15 +2,15 @@
 
 ## Endpoints Overview
 
-| Endpoint | Method | Descripción |
-|----------|--------|-------------|
-| `/api/calendar-events` | GET | Fetch eventos unificados (Project + Aftersale + Visit) |
-| `/api/project-events` | GET, POST | List y crear project events |
-| `/api/project-events/[id]` | GET, PUT, PATCH, DELETE | CRUD individual project event |
-| `/api/aftersale-events` | GET, POST | List y crear aftersale events |
-| `/api/aftersale-events/[id]` | GET, PUT, PATCH, DELETE | CRUD individual aftersale event |
-| `/api/visit-events` | GET, POST | List y crear visit events |
-| `/api/visit-events/[id]` | GET, PUT, PATCH, DELETE | CRUD individual visit event |
+| Endpoint                     | Method                  | Descripción                                            |
+| ---------------------------- | ----------------------- | ------------------------------------------------------ |
+| `/api/calendar-events`       | GET                     | Fetch eventos unificados (Project + Aftersale + Visit) |
+| `/api/project-events`        | GET, POST               | List y crear project events                            |
+| `/api/project-events/[id]`   | GET, PUT, PATCH, DELETE | CRUD individual project event                          |
+| `/api/aftersale-events`      | GET, POST               | List y crear aftersale events                          |
+| `/api/aftersale-events/[id]` | GET, PUT, PATCH, DELETE | CRUD individual aftersale event                        |
+| `/api/visit-events`          | GET, POST               | List y crear visit events                              |
+| `/api/visit-events/[id]`     | GET, PUT, PATCH, DELETE | CRUD individual visit event                            |
 
 ---
 
@@ -23,7 +23,7 @@
 ```typescript
 {
   start: string // ISO date: "2025-11-01"
-  end: string   // ISO date: "2025-11-30"
+  end: string // ISO date: "2025-11-30"
 }
 ```
 
@@ -73,18 +73,18 @@ export async function GET(request: NextRequest) {
         where: {
           scheduledDate: {
             gte: startDate,
-            lte: endDate
-          }
+            lte: endDate,
+          },
         },
         include: {
           project: {
             include: {
               customer: true,
-              projectStatus: true
-            }
-          }
+              projectStatus: true,
+            },
+          },
         },
-        orderBy: { scheduledDate: 'asc' }
+        orderBy: { scheduledDate: 'asc' },
       }),
 
       // AftersaleEvents
@@ -92,22 +92,22 @@ export async function GET(request: NextRequest) {
         where: {
           scheduledDate: {
             gte: startDate,
-            lte: endDate
-          }
+            lte: endDate,
+          },
         },
         include: {
           aftersale: {
             include: {
               project: {
                 include: {
-                  customer: true
-                }
+                  customer: true,
+                },
               },
-              aftersaleStatus: true
-            }
-          }
+              aftersaleStatus: true,
+            },
+          },
         },
-        orderBy: { scheduledDate: 'asc' }
+        orderBy: { scheduledDate: 'asc' },
       }),
 
       // VisitEvents
@@ -115,37 +115,34 @@ export async function GET(request: NextRequest) {
         where: {
           scheduledDate: {
             gte: startDate,
-            lte: endDate
-          }
+            lte: endDate,
+          },
         },
         include: {
           visit: {
             include: {
-              visitStatus: true
-            }
-          }
+              visitStatus: true,
+            },
+          },
         },
-        orderBy: { scheduledDate: 'asc' }
-      })
+        orderBy: { scheduledDate: 'asc' },
+      }),
     ])
 
     // Unificar y ordenar por fecha
     const allEvents = [
       ...projectEvents.map((e) => ({ type: 'project' as const, data: e })),
       ...aftersaleEvents.map((e) => ({ type: 'aftersale' as const, data: e })),
-      ...visitEvents.map((e) => ({ type: 'visit' as const, data: e }))
+      ...visitEvents.map((e) => ({ type: 'visit' as const, data: e })),
     ].sort((a, b) => a.data.scheduledDate.getTime() - b.data.scheduledDate.getTime())
 
     return NextResponse.json({
       success: true,
-      data: allEvents
+      data: allEvents,
     })
   } catch (error) {
     console.error('Error fetching calendar events:', error)
-    return NextResponse.json(
-      { error: 'Error al cargar eventos' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: 'Error al cargar eventos' }, { status: 500 })
   }
 }
 ```
@@ -179,7 +176,7 @@ export async function GET(request: NextRequest) {
 
 ```typescript
 {
-  error: "Ya existe un evento para este proyecto en esta fecha"
+  error: 'Ya existe un evento para este proyecto en esta fecha'
 }
 // Status: 400
 ```
@@ -211,14 +208,11 @@ export async function POST(request: Request) {
     // Validar que el proyecto existe y no está finalizado
     const project = await prisma.project.findUnique({
       where: { id: projectId },
-      include: { projectStatus: true }
+      include: { projectStatus: true },
     })
 
     if (!project) {
-      return NextResponse.json(
-        { error: 'Proyecto no encontrado' },
-        { status: 404 }
-      )
+      return NextResponse.json({ error: 'Proyecto no encontrado' }, { status: 404 })
     }
 
     if (project.projectStatus.isFinal) {
@@ -233,9 +227,9 @@ export async function POST(request: Request) {
       where: {
         projectId_scheduledDate: {
           projectId,
-          scheduledDate
-        }
-      }
+          scheduledDate,
+        },
+      },
     })
 
     if (existingEvent) {
@@ -250,28 +244,25 @@ export async function POST(request: Request) {
       data: {
         projectId,
         scheduledDate,
-        notes
+        notes,
       },
       include: {
         project: {
           include: {
             customer: true,
-            projectStatus: true
-          }
-        }
-      }
+            projectStatus: true,
+          },
+        },
+      },
     })
 
     return NextResponse.json({
       success: true,
-      data: event
+      data: event,
     })
   } catch (error) {
     console.error('Error creating project event:', error)
-    return NextResponse.json(
-      { error: 'Error al crear evento' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: 'Error al crear evento' }, { status: 500 })
   }
 }
 ```
@@ -299,10 +290,7 @@ export async function POST(request: Request) {
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 
-export async function GET(
-  request: Request,
-  { params }: { params: { id: string } }
-) {
+export async function GET(request: Request, { params }: { params: { id: string } }) {
   try {
     const event = await prisma.projectEvent.findUnique({
       where: { id: params.id },
@@ -310,29 +298,23 @@ export async function GET(
         project: {
           include: {
             customer: true,
-            projectStatus: true
-          }
-        }
-      }
+            projectStatus: true,
+          },
+        },
+      },
     })
 
     if (!event) {
-      return NextResponse.json(
-        { error: 'Evento no encontrado' },
-        { status: 404 }
-      )
+      return NextResponse.json({ error: 'Evento no encontrado' }, { status: 404 })
     }
 
     return NextResponse.json({
       success: true,
-      data: event
+      data: event,
     })
   } catch (error) {
     console.error('Error fetching project event:', error)
-    return NextResponse.json(
-      { error: 'Error al cargar evento' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: 'Error al cargar evento' }, { status: 500 })
   }
 }
 ```
@@ -380,10 +362,7 @@ import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { updateProjectEventSchema } from '@/lib/validations/calendar-validations'
 
-export async function PUT(
-  request: Request,
-  { params }: { params: { id: string } }
-) {
+export async function PUT(request: Request, { params }: { params: { id: string } }) {
   try {
     const body = await request.json()
 
@@ -400,14 +379,11 @@ export async function PUT(
 
     // Obtener evento actual
     const currentEvent = await prisma.projectEvent.findUnique({
-      where: { id: params.id }
+      where: { id: params.id },
     })
 
     if (!currentEvent) {
-      return NextResponse.json(
-        { error: 'Evento no encontrado' },
-        { status: 404 }
-      )
+      return NextResponse.json({ error: 'Evento no encontrado' }, { status: 404 })
     }
 
     // Usar transacción para actualizar evento + proyecto
@@ -417,15 +393,15 @@ export async function PUT(
         where: { id: params.id },
         data: {
           ...(scheduledDate && { scheduledDate }),
-          ...(notes !== undefined && { notes })
-        }
+          ...(notes !== undefined && { notes }),
+        },
       })
 
       // Actualizar proyecto si se proveen datos
       if (updateProject) {
         await tx.project.update({
           where: { id: currentEvent.projectId },
-          data: updateProject
+          data: updateProject,
         })
       }
 
@@ -436,23 +412,20 @@ export async function PUT(
           project: {
             include: {
               customer: true,
-              projectStatus: true
-            }
-          }
-        }
+              projectStatus: true,
+            },
+          },
+        },
       })
     })
 
     return NextResponse.json({
       success: true,
-      data: result
+      data: result,
     })
   } catch (error) {
     console.error('Error updating project event:', error)
-    return NextResponse.json(
-      { error: 'Error al actualizar evento' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: 'Error al actualizar evento' }, { status: 500 })
   }
 }
 ```
@@ -467,7 +440,7 @@ export async function PUT(
 
 ```typescript
 {
-  scheduledDate: string  // ISO date: "2025-11-17"
+  scheduledDate: string // ISO date: "2025-11-17"
 }
 ```
 
@@ -483,28 +456,19 @@ export async function PUT(
 ### Implementación
 
 ```typescript
-export async function PATCH(
-  request: Request,
-  { params }: { params: { id: string } }
-) {
+export async function PATCH(request: Request, { params }: { params: { id: string } }) {
   try {
     const body = await request.json()
     const { scheduledDate } = body
 
     if (!scheduledDate) {
-      return NextResponse.json(
-        { error: 'scheduledDate es requerido' },
-        { status: 400 }
-      )
+      return NextResponse.json({ error: 'scheduledDate es requerido' }, { status: 400 })
     }
 
     // Validar formato fecha
     const date = new Date(scheduledDate)
     if (isNaN(date.getTime())) {
-      return NextResponse.json(
-        { error: 'Fecha inválida' },
-        { status: 400 }
-      )
+      return NextResponse.json({ error: 'Fecha inválida' }, { status: 400 })
     }
 
     // Actualizar solo fecha
@@ -515,15 +479,15 @@ export async function PATCH(
         project: {
           include: {
             customer: true,
-            projectStatus: true
-          }
-        }
-      }
+            projectStatus: true,
+          },
+        },
+      },
     })
 
     return NextResponse.json({
       success: true,
-      data: event
+      data: event,
     })
   } catch (error) {
     // Manejar error de unique constraint (ya existe evento en esa fecha)
@@ -535,10 +499,7 @@ export async function PATCH(
     }
 
     console.error('Error updating event date:', error)
-    return NextResponse.json(
-      { error: 'Error al actualizar fecha' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: 'Error al actualizar fecha' }, { status: 500 })
   }
 }
 ```
@@ -561,32 +522,23 @@ export async function PATCH(
 ### Implementación
 
 ```typescript
-export async function DELETE(
-  request: Request,
-  { params }: { params: { id: string } }
-) {
+export async function DELETE(request: Request, { params }: { params: { id: string } }) {
   try {
     await prisma.projectEvent.delete({
-      where: { id: params.id }
+      where: { id: params.id },
     })
 
     return NextResponse.json({
       success: true,
-      message: 'Evento eliminado correctamente'
+      message: 'Evento eliminado correctamente',
     })
   } catch (error) {
     if (error.code === 'P2025') {
-      return NextResponse.json(
-        { error: 'Evento no encontrado' },
-        { status: 404 }
-      )
+      return NextResponse.json({ error: 'Evento no encontrado' }, { status: 404 })
     }
 
     console.error('Error deleting project event:', error)
-    return NextResponse.json(
-      { error: 'Error al eliminar evento' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: 'Error al eliminar evento' }, { status: 500 })
   }
 }
 ```
@@ -634,13 +586,13 @@ Todos los endpoints siguen el mismo patrón de error:
 
 ### Status Codes
 
-| Code | Uso |
-|------|-----|
-| 200 | Success (GET, PUT, PATCH) |
-| 201 | Created (POST) - opcional, usar 200 |
-| 400 | Bad Request (validación falló, duplicado) |
-| 404 | Not Found (recurso no existe) |
-| 500 | Internal Server Error |
+| Code | Uso                                       |
+| ---- | ----------------------------------------- |
+| 200  | Success (GET, PUT, PATCH)                 |
+| 201  | Created (POST) - opcional, usar 200       |
+| 400  | Bad Request (validación falló, duplicado) |
+| 404  | Not Found (recurso no existe)             |
+| 500  | Internal Server Error                     |
 
 ---
 
@@ -655,7 +607,7 @@ import { Redis } from '@upstash/redis'
 
 const ratelimit = new Ratelimit({
   redis: Redis.fromEnv(),
-  limiter: Ratelimit.slidingWindow(10, '10 s')
+  limiter: Ratelimit.slidingWindow(10, '10 s'),
 })
 
 export async function middleware(request: Request) {
@@ -689,8 +641,8 @@ describe('POST /api/project-events', () => {
       body: JSON.stringify({
         projectId: 'test-project-id',
         scheduledDate: '2025-11-15',
-        notes: 'Test notes'
-      })
+        notes: 'Test notes',
+      }),
     })
 
     const response = await POST(request)

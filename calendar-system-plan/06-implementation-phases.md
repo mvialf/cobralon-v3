@@ -33,9 +33,11 @@
 - [ ] ⏳ Actualizar modelo `Visit` con relación `calendarEvents` (Fase 5)
 
 **Archivos:**
+
 - `prisma/schema.prisma`
 
 **Verificación:**
+
 ```bash
 npm run db:generate  # Debe compilar sin errores
 ```
@@ -47,6 +49,7 @@ npm run db:generate  # Debe compilar sin errores
 - [ ] Verificar migraci ón aplicada en Neon console
 
 **Verificación:**
+
 ```bash
 npm run db:migrate -- --name add_calendar_events
 # Verificar tablas creadas: project_events, aftersale_events, visit_events
@@ -61,6 +64,7 @@ npm run db:migrate -- --name add_calendar_events
 - [ ] Definir tipos de Input (`CreateProjectEventInput`, etc.)
 
 **Archivos:**
+
 - `lib/types/calendar.ts`
 
 #### 1.4 Crear validaciones Zod
@@ -75,6 +79,7 @@ npm run db:migrate -- --name add_calendar_events
 - [ ] Schema `calendarQuerySchema` (query params)
 
 **Archivos:**
+
 - `lib/validations/calendar-validations.ts`
 
 #### 1.5 Testing de schemas
@@ -83,6 +88,7 @@ npm run db:migrate -- --name add_calendar_events
 - [ ] Crear 3-5 eventos de prueba para cada tipo
 
 **Verificación:**
+
 ```bash
 npm run db:seed
 # Verificar eventos creados en Prisma Studio
@@ -90,6 +96,7 @@ npm run db:studio
 ```
 
 **✅ Criterio de completitud Fase 1:**
+
 - Migraciones aplicadas sin errores
 - Tipos TypeScript generados correctamente
 - Validaciones Zod pasan tests básicos
@@ -115,9 +122,11 @@ npm run db:studio
 - [ ] Retornar array tipado
 
 **Archivos:**
+
 - `app/api/calendar-events/route.ts`
 
 **Testing manual:**
+
 ```bash
 curl "http://localhost:3000/api/calendar-events?start=2025-11-01&end=2025-11-30"
 ```
@@ -134,10 +143,12 @@ curl "http://localhost:3000/api/calendar-events?start=2025-11-01&end=2025-11-30"
   - [ ] `DELETE` - Delete event
 
 **Archivos:**
+
 - `app/api/project-events/route.ts`
 - `app/api/project-events/[id]/route.ts`
 
 **Validaciones implementadas:**
+
 - ✅ Proyecto existe
 - ✅ Proyecto NO finalizado (isFinal: false)
 - ✅ NO duplicar evento en misma fecha
@@ -152,6 +163,7 @@ curl "http://localhost:3000/api/calendar-events?start=2025-11-01&end=2025-11-30"
 - [ ] Manejo de loading y error states
 
 **Archivos:**
+
 - `hooks/queries/use-calendar-events.ts`
 
 #### 2.4 React Query hooks: ProjectEvents CRUD
@@ -164,9 +176,11 @@ curl "http://localhost:3000/api/calendar-events?start=2025-11-01&end=2025-11-30"
 - [ ] Configurar invalidations correctas
 
 **Archivos:**
+
 - `hooks/queries/use-project-events.ts`
 
 **Optimistic updates:**
+
 - ✅ `useUpdateProjectEventDate` usa optimistic update
 - ✅ Rollback en caso de error
 
@@ -179,9 +193,11 @@ curl "http://localhost:3000/api/calendar-events?start=2025-11-01&end=2025-11-30"
 - [ ] Función `getVisibleDateRange(date, view): { start, end }`
 
 **Archivos:**
+
 - `lib/utils/calendar-utils.ts`
 
 **✅ Criterio de completitud Fase 2:**
+
 - Todos los endpoints ProjectEvents funcionan
 - Hooks de React Query retornan data correcta
 - Postman/curl tests pasan
@@ -206,6 +222,7 @@ curl "http://localhost:3000/api/calendar-events?start=2025-11-01&end=2025-11-30"
 - [ ] Manejo de dialogs (create, edit, delete)
 
 **Archivos:**
+
 - `components/calendar/event-calendar.tsx`
 
 #### 3.2 CalendarHeader
@@ -216,6 +233,7 @@ curl "http://localhost:3000/api/calendar-events?start=2025-11-01&end=2025-11-30"
 - [ ] ViewSelector component
 
 **Archivos:**
+
 - `components/calendar/calendar-header.tsx`
 
 #### 3.3 ViewSelector
@@ -225,6 +243,7 @@ curl "http://localhost:3000/api/calendar-events?start=2025-11-01&end=2025-11-30"
 - [ ] Callback onViewChange
 
 **Archivos:**
+
 - `components/calendar/view-selector.tsx`
 
 #### 3.4 WeekView
@@ -235,6 +254,7 @@ curl "http://localhost:3000/api/calendar-events?start=2025-11-01&end=2025-11-30"
 - [ ] Usar DroppableDayCell
 
 **Archivos:**
+
 - `components/calendar/views/week-view.tsx`
 
 #### 3.5 MonthView
@@ -245,6 +265,7 @@ curl "http://localhost:3000/api/calendar-events?start=2025-11-01&end=2025-11-30"
 - [ ] Días fuera del mes en gris
 
 **Archivos:**
+
 - `components/calendar/views/month-view.tsx`
 
 #### 3.6 AgendaView
@@ -254,6 +275,7 @@ curl "http://localhost:3000/api/calendar-events?start=2025-11-01&end=2025-11-30"
 - [ ] Formato: "Lunes 15 de Noviembre"
 
 **Archivos:**
+
 - `components/calendar/views/agenda-view.tsx`
 
 #### 3.7 DroppableDayCell
@@ -264,6 +286,7 @@ curl "http://localhost:3000/api/calendar-events?start=2025-11-01&end=2025-11-30"
 - [ ] Click en vacío → Crear evento
 
 **Archivos:**
+
 - `components/calendar/dnd/droppable-day-cell.tsx`
 
 #### 3.8 DraggableEventCard
@@ -274,6 +297,7 @@ curl "http://localhost:3000/api/calendar-events?start=2025-11-01&end=2025-11-30"
 - [ ] Wrapper que renderiza card específico
 
 **Archivos:**
+
 - `components/calendar/dnd/draggable-event-card.tsx`
 
 #### 3.9 ProjectEventCardInfo
@@ -285,6 +309,7 @@ curl "http://localhost:3000/api/calendar-events?start=2025-11-01&end=2025-11-30"
 - [ ] EventActionsDropdown en esquina
 
 **Archivos:**
+
 - `components/summarys/calendar/project-event-card-info.tsx`
 
 #### 3.10 EventActionsDropdown
@@ -295,9 +320,11 @@ curl "http://localhost:3000/api/calendar-events?start=2025-11-01&end=2025-11-30"
 - [ ] Condicional según tipo de evento
 
 **Archivos:**
+
 - `components/dialogs/calendar/event-actions-dropdown.tsx`
 
 **✅ Criterio de completitud Fase 3:**
+
 - WeekView renderiza correctamente
 - MonthView muestra grid completo
 - AgendaView lista eventos
@@ -321,6 +348,7 @@ curl "http://localhost:3000/api/calendar-events?start=2025-11-01&end=2025-11-30"
 - [ ] Pre-mostrar fecha seleccionada
 
 **Archivos:**
+
 - `components/dialogs/calendar/create-event-type-dialog.tsx`
 
 #### 4.2 ProjectEventForm
@@ -336,6 +364,7 @@ curl "http://localhost:3000/api/calendar-events?start=2025-11-01&end=2025-11-30"
 - [ ] Auto-llenar al seleccionar proyecto
 
 **Archivos:**
+
 - `components/forms/calendar/project-event-form.tsx`
 
 #### 4.3 ProjectEventDialog
@@ -349,6 +378,7 @@ curl "http://localhost:3000/api/calendar-events?start=2025-11-01&end=2025-11-30"
   - Edit → useUpdateProjectEvent
 
 **Archivos:**
+
 - `components/dialogs/calendar/project-event-dialog.tsx`
 
 #### 4.4 ConfirmDeleteDialog integration
@@ -358,6 +388,7 @@ curl "http://localhost:3000/api/calendar-events?start=2025-11-01&end=2025-11-30"
 - [ ] Integrar con useDeleteProjectEvent
 
 **Archivos:**
+
 - (Ya existe, solo integrar)
 
 #### 4.5 Página /calendar
@@ -367,9 +398,11 @@ curl "http://localhost:3000/api/calendar-events?start=2025-11-01&end=2025-11-30"
 - [ ] Renderizar EventCalendar
 
 **Archivos:**
+
 - `app/calendar/page.tsx`
 
 **Ejemplo:**
+
 ```typescript
 import AppLayout from '@/components/layout/app-layout'
 import { EventCalendar } from '@/components/calendar/event-calendar'
@@ -389,9 +422,11 @@ export default function CalendarPage() {
 - [ ] Agregar item "Calendario" con icon Calendar
 
 **Archivos:**
+
 - `components/layout/app-sidebar.tsx`
 
 **✅ Criterio de completitud Fase 4:**
+
 - Crear evento funciona end-to-end
 - Editar evento funciona
 - Eliminar evento funciona
@@ -416,6 +451,7 @@ export default function CalendarPage() {
 - [ ] Adaptar validaciones (aftersaleStatus.isFinal)
 
 **Archivos:**
+
 - `app/api/aftersale-events/route.ts`
 - `app/api/aftersale-events/[id]/route.ts`
 
@@ -427,6 +463,7 @@ export default function CalendarPage() {
 - [ ] Adaptar validaciones (visitStatus.isFinal)
 
 **Archivos:**
+
 - `app/api/visit-events/route.ts`
 - `app/api/visit-events/[id]/route.ts`
 
@@ -437,6 +474,7 @@ export default function CalendarPage() {
 - [ ] Adaptar query keys y endpoints
 
 **Archivos:**
+
 - `hooks/queries/use-aftersale-events.ts`
 
 #### 5.4 Hooks: VisitEvents
@@ -445,6 +483,7 @@ export default function CalendarPage() {
 - [ ] Copiar estructura de use-project-events
 
 **Archivos:**
+
 - `hooks/queries/use-visit-events.ts`
 
 #### 5.5 UI: AftersaleEventCardInfo
@@ -454,6 +493,7 @@ export default function CalendarPage() {
 - [ ] Badge con aftersaleStatus
 
 **Archivos:**
+
 - `components/summarys/calendar/aftersale-event-card-info.tsx`
 
 #### 5.6 UI: VisitEventCardInfo
@@ -464,6 +504,7 @@ export default function CalendarPage() {
 - [ ] Badge con visitStatus
 
 **Archivos:**
+
 - `components/summarys/calendar/visit-event-card-info.tsx`
 
 #### 5.7 Forms: AftersaleEventForm
@@ -473,6 +514,7 @@ export default function CalendarPage() {
 - [ ] Campos editables específicos
 
 **Archivos:**
+
 - `components/forms/calendar/aftersale-event-form.tsx`
 
 #### 5.8 Forms: VisitEventForm
@@ -482,6 +524,7 @@ export default function CalendarPage() {
 - [ ] Campos específicos de Visit
 
 **Archivos:**
+
 - `components/forms/calendar/visit-event-form.tsx`
 
 #### 5.9 Dialogs: AftersaleEventDialog + VisitEventDialog
@@ -491,6 +534,7 @@ export default function CalendarPage() {
 - [ ] Integrar forms
 
 **Archivos:**
+
 - `components/dialogs/calendar/aftersale-event-dialog.tsx`
 - `components/dialogs/calendar/visit-event-dialog.tsx`
 
@@ -500,6 +544,7 @@ export default function CalendarPage() {
 - [ ] Manejar 3 estados (project/aftersale/visit)
 
 **✅ Criterio de completitud Fase 5:**
+
 - Los 3 tipos de eventos funcionan
 - Crear/Editar/Eliminar para cada tipo
 - Colores diferenciados (azul/naranja/verde)
@@ -553,6 +598,7 @@ export default function CalendarPage() {
 - [ ] Agregar a docs/project/implementation/2025-current.md
 
 **✅ Criterio de completitud Fase 6:**
+
 - UX pulida y consistente
 - No hay bugs críticos
 - Responsive en mobile
@@ -577,6 +623,7 @@ export default function CalendarPage() {
 ```
 
 **Justificación:**
+
 - Fases 1-2 son bloqueantes (sin DB/API no hay UI)
 - Fases 3-4 pueden ir en paralelo (UI + Forms)
 - Fase 5 es replicación rápida (copy-paste adaptado)
@@ -586,17 +633,18 @@ export default function CalendarPage() {
 
 ## Estimación Total
 
-| Fase | Horas | Días (4h/día) |
-|------|-------|---------------|
-| 1. Base de Datos | 2-3 | 0.5-0.75 |
-| 2. API + Hooks | 4-6 | 1-1.5 |
-| 3. UI Base | 6-8 | 1.5-2 |
-| 4. Dialogs | 4-6 | 1-1.5 |
-| 5. Aftersales + Visits | 2-3 | 0.5-0.75 |
-| 6. Polish | 2-3 | 0.5-0.75 |
-| **TOTAL** | **20-29 horas** | **5-7 días** |
+| Fase                   | Horas           | Días (4h/día) |
+| ---------------------- | --------------- | ------------- |
+| 1. Base de Datos       | 2-3             | 0.5-0.75      |
+| 2. API + Hooks         | 4-6             | 1-1.5         |
+| 3. UI Base             | 6-8             | 1.5-2         |
+| 4. Dialogs             | 4-6             | 1-1.5         |
+| 5. Aftersales + Visits | 2-3             | 0.5-0.75      |
+| 6. Polish              | 2-3             | 0.5-0.75      |
+| **TOTAL**              | **20-29 horas** | **5-7 días**  |
 
 **Asumiendo:**
+
 - Desarrollador familiar con stack (Next.js, Prisma, React Query)
 - Sin interrupciones mayores
 - Testing manual incluido

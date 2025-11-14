@@ -32,7 +32,7 @@ import { describe, it, expect } from 'vitest'
 import {
   createProjectEventSchema,
   updateProjectEventSchema,
-  calendarQuerySchema
+  calendarQuerySchema,
 } from '../calendar-validations'
 
 describe('createProjectEventSchema', () => {
@@ -40,7 +40,7 @@ describe('createProjectEventSchema', () => {
     const valid = {
       projectId: 'cm3abc123',
       scheduledDate: new Date('2025-11-15'),
-      notes: 'Test notes'
+      notes: 'Test notes',
     }
 
     const result = createProjectEventSchema.safeParse(valid)
@@ -50,7 +50,7 @@ describe('createProjectEventSchema', () => {
   it('debe rechazar projectId inválido', () => {
     const invalid = {
       projectId: 'invalid-id',
-      scheduledDate: new Date()
+      scheduledDate: new Date(),
     }
 
     const result = createProjectEventSchema.safeParse(invalid)
@@ -62,7 +62,7 @@ describe('createProjectEventSchema', () => {
     const invalid = {
       projectId: 'cm3abc123',
       scheduledDate: new Date(),
-      notes: 'x'.repeat(1001) // >1000 chars
+      notes: 'x'.repeat(1001), // >1000 chars
     }
 
     const result = createProjectEventSchema.safeParse(invalid)
@@ -72,7 +72,7 @@ describe('createProjectEventSchema', () => {
   it('debe aceptar notas opcionales', () => {
     const valid = {
       projectId: 'cm3abc123',
-      scheduledDate: new Date()
+      scheduledDate: new Date(),
       // notes omitido
     }
 
@@ -85,7 +85,7 @@ describe('calendarQuerySchema', () => {
   it('debe validar rango de fechas', () => {
     const valid = {
       start: '2025-11-01',
-      end: '2025-11-30'
+      end: '2025-11-30',
     }
 
     const result = calendarQuerySchema.safeParse(valid)
@@ -96,7 +96,7 @@ describe('calendarQuerySchema', () => {
   it('debe rechazar fechas inválidas', () => {
     const invalid = {
       start: 'invalid-date',
-      end: '2025-11-30'
+      end: '2025-11-30',
     }
 
     const result = calendarQuerySchema.safeParse(invalid)
@@ -115,12 +115,7 @@ describe('calendarQuerySchema', () => {
 
 ```typescript
 import { describe, it, expect } from 'vitest'
-import {
-  getWeekDays,
-  getMonthGrid,
-  getEventsForDay,
-  getVisibleDateRange
-} from '../calendar-utils'
+import { getWeekDays, getMonthGrid, getEventsForDay, getVisibleDateRange } from '../calendar-utils'
 
 describe('getWeekDays', () => {
   it('debe retornar 7 días empezando en lunes', () => {
@@ -164,7 +159,7 @@ describe('getEventsForDay', () => {
     const events = [
       { data: { scheduledDate: new Date('2025-11-15') } },
       { data: { scheduledDate: new Date('2025-11-16') } },
-      { data: { scheduledDate: new Date('2025-11-15') } }
+      { data: { scheduledDate: new Date('2025-11-15') } },
     ]
 
     const filtered = getEventsForDay(events, new Date('2025-11-15'))
@@ -207,6 +202,7 @@ describe('getVisibleDateRange', () => {
 ### 2.1 API Routes Tests
 
 **Setup:**
+
 ```typescript
 // vitest.setup.ts
 import { beforeAll, afterAll, afterEach } from 'vitest'
@@ -241,8 +237,8 @@ describe('GET /api/calendar-events', () => {
       data: {
         projectId: 'test-project-1',
         scheduledDate: new Date('2025-11-15'),
-        notes: 'Test event'
-      }
+        notes: 'Test event',
+      },
     })
   })
 
@@ -270,8 +266,8 @@ describe('GET /api/calendar-events', () => {
     await prisma.projectEvent.create({
       data: {
         projectId: 'test-project-2',
-        scheduledDate: new Date('2025-11-10')
-      }
+        scheduledDate: new Date('2025-11-10'),
+      },
     })
 
     const request = new Request(
@@ -281,7 +277,7 @@ describe('GET /api/calendar-events', () => {
     const response = await GET(request)
     const data = await response.json()
 
-    const dates = data.data.map(e => e.data.scheduledDate)
+    const dates = data.data.map((e) => e.data.scheduledDate)
     expect(dates[0]).toBeLessThan(dates[1])
   })
 })
@@ -297,12 +293,12 @@ describe('POST /api/project-events', () => {
     const body = {
       projectId: 'existing-project-id',
       scheduledDate: '2025-11-15',
-      notes: 'Test notes'
+      notes: 'Test notes',
     }
 
     const request = new Request('http://localhost:3000/api/project-events', {
       method: 'POST',
-      body: JSON.stringify(body)
+      body: JSON.stringify(body),
     })
 
     const response = await POST(request)
@@ -316,20 +312,24 @@ describe('POST /api/project-events', () => {
   it('debe rechazar evento duplicado', async () => {
     const body = {
       projectId: 'existing-project-id',
-      scheduledDate: '2025-11-15'
+      scheduledDate: '2025-11-15',
     }
 
     // Crear primer evento
-    await POST(new Request('http://localhost:3000/api/project-events', {
-      method: 'POST',
-      body: JSON.stringify(body)
-    }))
+    await POST(
+      new Request('http://localhost:3000/api/project-events', {
+        method: 'POST',
+        body: JSON.stringify(body),
+      })
+    )
 
     // Intentar duplicar
-    const response = await POST(new Request('http://localhost:3000/api/project-events', {
-      method: 'POST',
-      body: JSON.stringify(body)
-    }))
+    const response = await POST(
+      new Request('http://localhost:3000/api/project-events', {
+        method: 'POST',
+        body: JSON.stringify(body),
+      })
+    )
 
     expect(response.status).toBe(400)
     const data = await response.json()
@@ -339,13 +339,15 @@ describe('POST /api/project-events', () => {
   it('debe rechazar proyecto finalizado', async () => {
     const body = {
       projectId: 'completed-project-id', // Proyecto con isFinal: true
-      scheduledDate: '2025-11-15'
+      scheduledDate: '2025-11-15',
     }
 
-    const response = await POST(new Request('http://localhost:3000/api/project-events', {
-      method: 'POST',
-      body: JSON.stringify(body)
-    }))
+    const response = await POST(
+      new Request('http://localhost:3000/api/project-events', {
+        method: 'POST',
+        body: JSON.stringify(body),
+      })
+    )
 
     expect(response.status).toBe(400)
     const data = await response.json()
@@ -355,12 +357,12 @@ describe('POST /api/project-events', () => {
   it('debe validar datos con Zod', async () => {
     const invalid = {
       projectId: 'invalid',
-      scheduledDate: 'not-a-date'
+      scheduledDate: 'not-a-date',
     }
 
     const request = new Request('http://localhost:3000/api/project-events', {
       method: 'POST',
-      body: JSON.stringify(invalid)
+      body: JSON.stringify(invalid),
     })
 
     const response = await POST(request)
@@ -653,12 +655,12 @@ test('mostrar error al crear evento duplicado', async ({ page }) => {
 
 ## 6. Coverage Goals
 
-| Tipo | Target | Comando |
-|------|--------|---------|
-| Unit Tests | 95%+ | `npm test:coverage` |
-| Integration Tests | 80%+ | `npm test:coverage -- __tests__/api` |
-| Component Tests | 70%+ | `npm test:coverage -- components` |
-| E2E Tests | Critical paths | `npm run test:e2e` |
+| Tipo              | Target         | Comando                              |
+| ----------------- | -------------- | ------------------------------------ |
+| Unit Tests        | 95%+           | `npm test:coverage`                  |
+| Integration Tests | 80%+           | `npm test:coverage -- __tests__/api` |
+| Component Tests   | 70%+           | `npm test:coverage -- components`    |
+| E2E Tests         | Critical paths | `npm run test:e2e`                   |
 
 ---
 

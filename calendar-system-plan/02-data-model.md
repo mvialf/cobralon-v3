@@ -36,6 +36,7 @@ model ProjectEvent {
 ```
 
 **Campos clave:**
+
 - `scheduledDate`: Tipo `@db.Date` (solo fecha, sin hora)
 - `notes`: Campo opcional para observaciones del evento específico
 - **Unique constraint**: Previene múltiples eventos del mismo proyecto en un día
@@ -329,28 +330,28 @@ import { z } from 'zod'
 const baseEventSchema = z.object({
   scheduledDate: z.coerce.date({
     required_error: 'La fecha es requerida',
-    invalid_type_error: 'Fecha inválida'
+    invalid_type_error: 'Fecha inválida',
   }),
-  notes: z.string().max(1000, 'Las notas no pueden exceder 1000 caracteres').optional().nullable()
+  notes: z.string().max(1000, 'Las notas no pueden exceder 1000 caracteres').optional().nullable(),
 })
 
 // ProjectEvent schemas
 export const createProjectEventSchema = baseEventSchema.extend({
-  projectId: z.string().cuid('ID de proyecto inválido')
+  projectId: z.string().cuid('ID de proyecto inválido'),
 })
 
 export const updateProjectEventSchema = baseEventSchema.partial()
 
 // AftersaleEvent schemas
 export const createAftersaleEventSchema = baseEventSchema.extend({
-  aftersaleId: z.string().cuid('ID de postventa inválido')
+  aftersaleId: z.string().cuid('ID de postventa inválido'),
 })
 
 export const updateAftersaleEventSchema = baseEventSchema.partial()
 
 // VisitEvent schemas
 export const createVisitEventSchema = baseEventSchema.extend({
-  visitId: z.string().cuid('ID de visita inválido')
+  visitId: z.string().cuid('ID de visita inválido'),
 })
 
 export const updateVisitEventSchema = baseEventSchema.partial()
@@ -358,11 +359,11 @@ export const updateVisitEventSchema = baseEventSchema.partial()
 // Schema para query params (fecha de rango)
 export const calendarQuerySchema = z.object({
   start: z.coerce.date({
-    required_error: 'Fecha de inicio es requerida'
+    required_error: 'Fecha de inicio es requerida',
   }),
   end: z.coerce.date({
-    required_error: 'Fecha de fin es requerida'
-  })
+    required_error: 'Fecha de fin es requerida',
+  }),
 })
 
 // Types inferidos
@@ -388,70 +389,70 @@ const projectEvents = await prisma.projectEvent.findMany({
   where: {
     scheduledDate: {
       gte: startDate,
-      lte: endDate
-    }
+      lte: endDate,
+    },
   },
   include: {
     project: {
       include: {
         customer: true,
-        projectStatus: true
-      }
-    }
+        projectStatus: true,
+      },
+    },
   },
   orderBy: {
-    scheduledDate: 'asc'
-  }
+    scheduledDate: 'asc',
+  },
 })
 
 const aftersaleEvents = await prisma.aftersaleEvent.findMany({
   where: {
     scheduledDate: {
       gte: startDate,
-      lte: endDate
-    }
+      lte: endDate,
+    },
   },
   include: {
     aftersale: {
       include: {
         project: {
           include: {
-            customer: true
-          }
+            customer: true,
+          },
         },
-        aftersaleStatus: true
-      }
-    }
+        aftersaleStatus: true,
+      },
+    },
   },
   orderBy: {
-    scheduledDate: 'asc'
-  }
+    scheduledDate: 'asc',
+  },
 })
 
 const visitEvents = await prisma.visitEvent.findMany({
   where: {
     scheduledDate: {
       gte: startDate,
-      lte: endDate
-    }
+      lte: endDate,
+    },
   },
   include: {
     visit: {
       include: {
-        visitStatus: true
-      }
-    }
+        visitStatus: true,
+      },
+    },
   },
   orderBy: {
-    scheduledDate: 'asc'
-  }
+    scheduledDate: 'asc',
+  },
 })
 
 // Unificar en un solo array
 const allEvents = [
-  ...projectEvents.map(e => ({ type: 'project', data: e })),
-  ...aftersaleEvents.map(e => ({ type: 'aftersale', data: e })),
-  ...visitEvents.map(e => ({ type: 'visit', data: e }))
+  ...projectEvents.map((e) => ({ type: 'project', data: e })),
+  ...aftersaleEvents.map((e) => ({ type: 'aftersale', data: e })),
+  ...visitEvents.map((e) => ({ type: 'visit', data: e })),
 ].sort((a, b) => a.data.scheduledDate.getTime() - b.data.scheduledDate.getTime())
 ```
 
@@ -464,9 +465,9 @@ const existingEvent = await prisma.projectEvent.findUnique({
   where: {
     projectId_scheduledDate: {
       projectId: data.projectId,
-      scheduledDate: data.scheduledDate
-    }
-  }
+      scheduledDate: data.scheduledDate,
+    },
+  },
 })
 
 if (existingEvent) {
@@ -477,16 +478,16 @@ const event = await prisma.projectEvent.create({
   data: {
     projectId: data.projectId,
     scheduledDate: data.scheduledDate,
-    notes: data.notes
+    notes: data.notes,
   },
   include: {
     project: {
       include: {
         customer: true,
-        projectStatus: true
-      }
-    }
-  }
+        projectStatus: true,
+      },
+    },
+  },
 })
 ```
 
@@ -502,8 +503,8 @@ const result = await prisma.$transaction(async (tx) => {
     where: { id: eventId },
     data: {
       scheduledDate: data.scheduledDate,
-      notes: data.notes
-    }
+      notes: data.notes,
+    },
   })
 
   // Actualizar campos del proyecto si se proveen
@@ -515,7 +516,7 @@ const result = await prisma.$transaction(async (tx) => {
         phone: data.updateProject.phone,
         projectStatusId: data.updateProject.statusId,
         // ... otros campos editables
-      }
+      },
     })
   }
 
@@ -526,10 +527,10 @@ const result = await prisma.$transaction(async (tx) => {
       project: {
         include: {
           customer: true,
-          projectStatus: true
-        }
-      }
-    }
+          projectStatus: true,
+        },
+      },
+    },
   })
 })
 ```
@@ -545,6 +546,7 @@ const result = await prisma.$transaction(async (tx) => {
 3. **Composite unique** (projectId + scheduledDate) → Previene duplicados
 
 **Query plan estimado:**
+
 - `WHERE scheduledDate BETWEEN '2025-11-01' AND '2025-11-30'` → Index Scan en scheduledDate (O(log n))
 - `JOIN projects` → Index Scan en projectId (O(log n))
 
@@ -559,6 +561,7 @@ project Project @relation(fields: [projectId], references: [id], onDelete: Casca
 ```
 
 **onDelete: Cascade** significa:
+
 - Si se elimina un Project → Automáticamente se eliminan sus ProjectEvents
 - Previene eventos huérfanos
 - **Trade-off:** Si se elimina Project por error, se pierden eventos (recuperable con backup)
@@ -583,14 +586,14 @@ if (project1) {
       {
         projectId: project1.id,
         scheduledDate: new Date('2025-11-15'),
-        notes: 'Primera visita de instalación'
+        notes: 'Primera visita de instalación',
       },
       {
         projectId: project1.id,
         scheduledDate: new Date('2025-11-18'),
-        notes: 'Continuación instalación'
-      }
-    ]
+        notes: 'Continuación instalación',
+      },
+    ],
   })
 }
 ```

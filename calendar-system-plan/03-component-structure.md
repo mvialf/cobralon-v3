@@ -134,6 +134,7 @@ export function EventCalendar({ initialDate, initialView }: EventCalendarProps) 
 ```
 
 **Responsabilidades:**
+
 - Gestión de estado global del calendario
 - Coordinación entre vistas
 - Manejo de drag & drop context
@@ -243,6 +244,7 @@ export function WeekView({ events, onDayClick }: WeekViewProps) {
 ```
 
 **Características:**
+
 - Grid de 7 columnas (Lun-Dom)
 - Altura dinámica según contenido
 - Droppable cells para drag & drop
@@ -292,6 +294,7 @@ export function MonthView({ events, onDayClick }: MonthViewProps) {
 ```
 
 **Características:**
+
 - Grid 6 semanas x 7 días
 - Mostrar días del mes anterior/siguiente (gris)
 - Eventos como badges pequeños (altura fija)
@@ -335,6 +338,7 @@ export function AgendaView({ events }: AgendaViewProps) {
 ```
 
 **Características:**
+
 - Lista vertical agrupada por fecha
 - Vista compacta de próximos eventos
 - No soporta drag & drop (solo lectura)
@@ -388,6 +392,7 @@ export function DroppableDayCell({
 ```
 
 **Características:**
+
 - Droppable zone para drag & drop
 - Resalta al hover con evento
 - Click en área vacía → Crear evento
@@ -459,6 +464,7 @@ export function ProjectEventCardInfo({ event }: ProjectEventCardInfoProps) {
 ```
 
 **Características:**
+
 - Borde izquierdo azul (identificador visual)
 - Reutiliza `ProjectNameSummary` existente
 - Muestra estado del proyecto
@@ -495,6 +501,7 @@ export function AftersaleEventCardInfo({ event }: AftersaleEventCardInfoProps) {
 ```
 
 **Características:**
+
 - Borde izquierdo naranja
 - Similar estructura a ProjectEventCardInfo
 
@@ -529,6 +536,7 @@ export function VisitEventCardInfo({ event }: VisitEventCardInfoProps) {
 ```
 
 **Características:**
+
 - Borde izquierdo verde
 - Muestra `visit.name` en lugar de ProjectNameSummary
 

@@ -15,6 +15,7 @@ Usar **3 tablas separadas**: `ProjectEvent`, `AftersaleEvent`, `VisitEvent`.
 ### Alternativa
 
 Tabla polimórfica única:
+
 ```prisma
 model CalendarEvent {
   id         String @id
@@ -95,6 +96,7 @@ Al editar `address`, `phone`, `status` desde un evento, ¿qué hacer?
 ### Alternativa
 
 Mostrar dialog de confirmación:
+
 ```
 "¿Mover evento a 15 de Noviembre?"
 [Cancelar] [Confirmar]
@@ -177,6 +179,7 @@ Shadcn example original tenía time slots de 15 min.
 ### Extensibilidad Futura
 
 Si se necesita hora:
+
 1. Agregar campo `startTime` y `endTime` opcionales
 2. Mantener retrocompatibilidad (NULL = all-day)
 3. UI puede mostrar time slots condicional
@@ -200,6 +203,7 @@ Si se necesita hora:
 ### Alternativa
 
 3 queries separadas en cliente:
+
 ```typescript
 const { data: projects } = useProjectEvents(start, end)
 const { data: aftersales } = useAftersaleEvents(start, end)
@@ -334,6 +338,7 @@ Solo server-side (confiar en API).
 3. **DX**: Zod schemas reutilizables (mismo schema en ambos lados)
 
 **Ejemplo:**
+
 ```typescript
 // lib/validations/calendar-validations.ts
 export const createProjectEventSchema = z.object({...})
@@ -406,6 +411,7 @@ Combobox **NO muestra entidades finalizadas** (`isFinal: true`).
 ### Edge Case
 
 Si usuario NECESITA crear evento para proyecto finalizado:
+
 - Debe ir a `/projects/[id]` y cambiar estado primero
 - Luego crear evento en calendario
 
@@ -418,15 +424,15 @@ Si usuario NECESITA crear evento para proyecto finalizado:
 
 ## Resumen de Trade-offs Principales
 
-| Decisión | Pro | Contra | Mitigación |
-|----------|-----|--------|------------|
-| 3 tablas separadas | Type safety, FKs | Más código | Copy-paste adaptado |
-| Sobrescribir datos | Simplicidad | Sin historial | Audit log futuro |
-| Auto-save drag | UX fluida | Arrastrar accidental | Rollback robusto |
-| Week default | Más espacio | Vista reducida | Month disponible |
-| Sin horas | Más simple | Menos flexible | Extensible futuro |
-| Unified fetch | 1 request | Cache grande | Invalidation granular |
-| No auth Fase 1 | MVP rápido | Sin permisos | Agregar después |
+| Decisión           | Pro              | Contra               | Mitigación            |
+| ------------------ | ---------------- | -------------------- | --------------------- |
+| 3 tablas separadas | Type safety, FKs | Más código           | Copy-paste adaptado   |
+| Sobrescribir datos | Simplicidad      | Sin historial        | Audit log futuro      |
+| Auto-save drag     | UX fluida        | Arrastrar accidental | Rollback robusto      |
+| Week default       | Más espacio      | Vista reducida       | Month disponible      |
+| Sin horas          | Más simple       | Menos flexible       | Extensible futuro     |
+| Unified fetch      | 1 request        | Cache grande         | Invalidation granular |
+| No auth Fase 1     | MVP rápido       | Sin permisos         | Agregar después       |
 
 ---
 

@@ -26,6 +26,7 @@ enum TimeOfDay {
 ```
 
 **UI:**
+
 - Dropdown en form: [Mañana ▼]
 - Badge en card: "☀️ Mañana"
 - Filtro opcional en vista
@@ -56,6 +57,7 @@ model ProjectEvent {
 ```
 
 **UI:**
+
 - Combobox "Técnico asignado" en form
 - Avatar en card
 - Filtro por técnico en calendario
@@ -80,6 +82,7 @@ model ProjectEvent {
 ```
 
 **UI:**
+
 - Progress bar: "5/10 elementos (50%)"
 - Checkbox "Trabajo completado"
 - Textarea "Problemas encontrados"
@@ -101,17 +104,19 @@ model ProjectEvent {
 const [filters, setFilters] = useState({
   types: ['project', 'aftersale', 'visit'], // Todos por defecto
   statuses: [], // Filtro por estados
-  technicians: [] // Filtro por técnicos
+  technicians: [], // Filtro por técnicos
 })
 
 // Aplicar filtros
-const filteredEvents = events.filter(e =>
-  filters.types.includes(e.type) &&
-  (filters.statuses.length === 0 || filters.statuses.includes(e.data.statusId))
+const filteredEvents = events.filter(
+  (e) =>
+    filters.types.includes(e.type) &&
+    (filters.statuses.length === 0 || filters.statuses.includes(e.data.statusId))
 )
 ```
 
 **UI:**
+
 - Multi-select: [☑ Proyectos] [☑ Postventas] [☑ Visitas]
 - Badge con count: "Proyectos (23)"
 
@@ -128,17 +133,17 @@ const filteredEvents = events.filter(e =>
 ```typescript
 const [searchQuery, setSearchQuery] = useState('')
 
-const searchedEvents = filteredEvents.filter(e => {
-  const searchableText = [
-    e.type === 'project' && e.data.project.customer.name,
-    e.data.notes
-  ].join(' ').toLowerCase()
+const searchedEvents = filteredEvents.filter((e) => {
+  const searchableText = [e.type === 'project' && e.data.project.customer.name, e.data.notes]
+    .join(' ')
+    .toLowerCase()
 
   return searchableText.includes(searchQuery.toLowerCase())
 })
 ```
 
 **UI:**
+
 - Input con icon Search
 - Highlight de resultados
 
@@ -162,30 +167,31 @@ export async function sendReminders() {
   const events = await prisma.projectEvent.findMany({
     where: {
       scheduledDate: startOfDay(tomorrow),
-      reminderSent: false
+      reminderSent: false,
     },
     include: {
       project: { include: { customer: true } },
-      technician: true
-    }
+      technician: true,
+    },
   })
 
   for (const event of events) {
     await sendEmail({
       to: event.technician.email,
       subject: 'Recordatorio: Instalación mañana',
-      body: `...`
+      body: `...`,
     })
 
     await prisma.projectEvent.update({
       where: { id: event.id },
-      data: { reminderSent: true }
+      data: { reminderSent: true },
     })
   }
 }
 ```
 
 **Requisitos:**
+
 - Servicio de email (Resend, SendGrid)
 - Cron job scheduler
 
@@ -212,6 +218,7 @@ model Notification {
 ```
 
 **UI:**
+
 - Bell icon en header con badge (count no leídas)
 - Dropdown con lista de notificaciones
 - Click → Navega al evento
@@ -243,6 +250,7 @@ model EventComment {
 ```
 
 **UI:**
+
 - Tab "Comentarios" en event dialog
 - Lista de comentarios con avatars
 - Input para nuevo comentario
@@ -275,6 +283,7 @@ enum Role {
 ```
 
 **Middleware:**
+
 ```typescript
 export async function middleware(request: Request) {
   const user = await auth()
@@ -320,8 +329,8 @@ export async function GET() {
     prisma.projectEvent.groupBy({
       by: ['scheduledDate'],
       _count: true,
-      orderBy: { scheduledDate: 'asc' }
-    })
+      orderBy: { scheduledDate: 'asc' },
+    }),
   ])
 
   return NextResponse.json({ totalEvents, eventsByType, eventsByMonth })
@@ -329,6 +338,7 @@ export async function GET() {
 ```
 
 **UI:**
+
 - Nueva página `/calendar/analytics`
 - Charts con Recharts:
   - Bar chart: Eventos por mes
@@ -363,6 +373,7 @@ async function exportToPDF(events: CalendarEvent[]) {
 ```
 
 **UI:**
+
 - Botón "Exportar" en header
 - Dialog: Seleccionar rango + formato (PDF/Excel)
 
@@ -391,13 +402,14 @@ async function syncToGoogleCalendar(event: ProjectEvent) {
       summary: `Instalación - ${event.project.customer.name}`,
       start: { date: format(event.scheduledDate, 'yyyy-MM-dd') },
       end: { date: format(event.scheduledDate, 'yyyy-MM-dd') },
-      description: event.notes
-    }
+      description: event.notes,
+    },
   })
 }
 ```
 
 **Requisitos:**
+
 - OAuth2 con Google
 - Webhook para sync bidireccional
 
@@ -420,7 +432,7 @@ async function sendWhatsAppReminder(event: ProjectEvent) {
   await client.messages.create({
     from: 'whatsapp:+14155238886',
     to: `whatsapp:${event.project.phone}`,
-    body: `Recordatorio: Instalación programada para mañana ${format(event.scheduledDate, 'dd/MM')}`
+    body: `Recordatorio: Instalación programada para mañana ${format(event.scheduledDate, 'dd/MM')}`,
   })
 }
 ```
@@ -454,6 +466,7 @@ model ProjectEvent {
 ```
 
 **UI:**
+
 - Checkbox "Evento recurrente"
 - Form: Frecuencia, intervalo, hasta cuándo
 - Al editar: "Editar este evento o todos los de la serie?"
@@ -472,13 +485,14 @@ model ProjectEvent {
 const [selectedEvents, setSelectedEvents] = useState<string[]>([])
 
 function handleMultiDrag(newDate: Date) {
-  selectedEvents.forEach(eventId => {
+  selectedEvents.forEach((eventId) => {
     updateEventDate(eventId, newDate)
   })
 }
 ```
 
 **UI:**
+
 - Ctrl+Click para seleccionar múltiples
 - Visual feedback (border azul)
 - Drag del grupo
@@ -496,13 +510,14 @@ function handleMultiDrag(newDate: Date) {
 ```typescript
 // Columnas: Pendiente | En Progreso | Completado
 const columns = [
-  { status: 'pending', events: events.filter(e => e.status === 'pending') },
-  { status: 'inprogress', events: events.filter(e => e.status === 'inprogress') },
-  { status: 'completed', events: events.filter(e => e.status === 'completed') }
+  { status: 'pending', events: events.filter((e) => e.status === 'pending') },
+  { status: 'inprogress', events: events.filter((e) => e.status === 'inprogress') },
+  { status: 'completed', events: events.filter((e) => e.status === 'completed') },
 ]
 ```
 
 **UI:**
+
 - 3-4 columnas verticales
 - Drag & drop entre columnas (cambia estado)
 - Similar a Trello
@@ -559,7 +574,7 @@ const { data, fetchNextPage, hasNextPage } = useInfiniteQuery({
     const end = addMonths(start, 1)
     return fetchEvents(start, end)
   },
-  getNextPageParam: (lastPage, pages) => pages.length
+  getNextPageParam: (lastPage, pages) => pages.length,
 })
 
 // Trigger en scroll
@@ -595,6 +610,7 @@ useEffect(() => {
 **Objetivo:** App nativa iOS/Android.
 
 **Stack:**
+
 - React Native
 - Expo
 - Replicar UI de web
@@ -630,17 +646,17 @@ useEffect(() => {
 
 ## Estimación Total de Features Futuras
 
-| Categoría | Horas | Complejidad |
-|-----------|-------|-------------|
-| Gestión Avanzada (1-3) | 10-15 | Baja |
-| Filtros (4-5) | 5-7 | Baja |
-| Notificaciones (6-7) | 15-20 | Media |
-| Colaborativo (8-9) | 16-23 | Media-Alta |
-| Análisis (10-11) | 14-20 | Media |
-| Integraciones (12-13) | 20-26 | Alta |
-| UX Avanzada (14-16) | 30-37 | Alta |
-| Performance (17-18) | 10-14 | Media |
-| **TOTAL** | **120-162 horas** | **~4-6 meses part-time** |
+| Categoría              | Horas             | Complejidad              |
+| ---------------------- | ----------------- | ------------------------ |
+| Gestión Avanzada (1-3) | 10-15             | Baja                     |
+| Filtros (4-5)          | 5-7               | Baja                     |
+| Notificaciones (6-7)   | 15-20             | Media                    |
+| Colaborativo (8-9)     | 16-23             | Media-Alta               |
+| Análisis (10-11)       | 14-20             | Media                    |
+| Integraciones (12-13)  | 20-26             | Alta                     |
+| UX Avanzada (14-16)    | 30-37             | Alta                     |
+| Performance (17-18)    | 10-14             | Media                    |
+| **TOTAL**              | **120-162 horas** | **~4-6 meses part-time** |
 
 ---
 

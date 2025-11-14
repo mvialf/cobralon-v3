@@ -5,6 +5,7 @@
 ## Visión General
 
 Sistema unificado de calendario para gestionar eventos de tres entidades principales:
+
 - **ProjectEvents** - Eventos relacionados con proyectos (✅ Implementado)
 - **AftersaleEvents** - Eventos de postventa (⏳ Pendiente)
 - **VisitEvents** - Eventos de visitas (⏳ Pendiente)
@@ -42,9 +43,9 @@ GET /api/calendar-events?start=2025-11-10&end=2025-11-17
 
 ```typescript
 type CalendarEvent =
-  | { type: 'project', data: ProjectEventWithRelations }
-  | { type: 'aftersale', data: AftersaleEventWithRelations }
-  | { type: 'visit', data: VisitEventWithRelations }
+  | { type: 'project'; data: ProjectEventWithRelations }
+  | { type: 'aftersale'; data: AftersaleEventWithRelations }
+  | { type: 'visit'; data: VisitEventWithRelations }
 ```
 
 **Beneficio:** Type-safe rendering, TypeScript infiere tipos automáticamente según discriminador.
@@ -74,6 +75,7 @@ model ProjectEvent {
 ```
 
 **Constraints clave:**
+
 - `@@unique([projectId, scheduledDate])` - Previene duplicados (1 evento por proyecto por día)
 - `onDelete: Cascade` - Limpieza automática al eliminar proyecto
 - `@db.Date` - Fecha sin hora (eventos son "todo el día")
@@ -85,10 +87,12 @@ model ProjectEvent {
 **Endpoint:** `GET /api/calendar-events`
 
 **Query params:**
+
 - `start` (required) - Fecha inicio (ISO 8601)
 - `end` (required) - Fecha fin (ISO 8601)
 
 **Response:**
+
 ```json
 {
   "events": [
@@ -114,6 +118,7 @@ model ProjectEvent {
 ```
 
 **Includes actuales:**
+
 ```typescript
 project: {
   include: {
@@ -130,6 +135,7 @@ project: {
 **Endpoint:** `POST /api/project-events`
 
 **Body:**
+
 ```json
 {
   "projectId": "uuid",
@@ -139,11 +145,13 @@ project: {
 ```
 
 **Validaciones:**
+
 1. Proyecto existe
 2. Proyecto NO está finalizado (`isFinal: false`)
 3. No existe evento para ese proyecto en esa fecha
 
 **Respuesta de error:**
+
 ```json
 {
   "error": "Ya existe un evento para este proyecto en la fecha seleccionada"
@@ -155,6 +163,7 @@ project: {
 **Endpoint:** `PUT /api/project-events/[id]`
 
 **Body:** (todos opcionales)
+
 ```json
 {
   "scheduledDate": "2025-11-14",
@@ -197,18 +206,21 @@ app/calendar/page.tsx
 #### EventCalendar (Orchestrator)
 
 **Responsabilidades:**
+
 - Gestionar estado de fecha actual y vista
 - Fetch eventos en rango visible
 - Coordinar dialogs (create/edit/delete)
 - Manejar navegación (prev/next/today)
 
 **Hooks utilizados:**
+
 - `useCalendarEvents({ start, end })` - Query con cache 5min
 - `useDeleteProjectEvent()` - Mutation con invalidación automática
 
 #### WeekView
 
 **Features:**
+
 - Grid 7 columnas (Lun-Dom)
 - Highlighting día actual (bg-primary circular)
 - "Crear evento" button (opacity-0 hover:opacity-100)
@@ -219,6 +231,7 @@ app/calendar/page.tsx
 #### ProjectEventCard
 
 **Display:**
+
 - Nombre cliente (truncado)
 - Número proyecto (#XXXX)
 - Badge status con color
@@ -227,6 +240,7 @@ app/calendar/page.tsx
 **Border:** Borde izquierdo con `hsl(var(--chart-1))` (azul)
 
 **Interactividad:**
+
 - Dropdown menu (opacity-0 group-hover:opacity-100)
 - Edit → Abre ProjectEventDialog en modo edit
 - Delete → Abre AlertDialog de confirmación
@@ -234,6 +248,7 @@ app/calendar/page.tsx
 #### ProjectEventForm
 
 **Campos:**
+
 1. **Proyecto** - `ProjectSearchField` (reutilizable)
    - Búsqueda server-side con debounce 300ms
    - Combobox con proyectos con balance pendiente
@@ -252,15 +267,18 @@ app/calendar/page.tsx
 #### ProjectEventDialog
 
 **Modos:**
+
 - `create` - Default date desde click en día
 - `edit` - Pre-llena form con evento existente
 
 **Props clave:**
+
 - `mode: 'create' | 'edit'`
 - `event?: ProjectEventWithRelations` (solo en edit)
 - `defaultDate?: Date` (solo en create)
 
 **Conversión dates:**
+
 ```typescript
 // Form usa string para <input type="date">
 // API usa Date
@@ -289,7 +307,7 @@ useCalendarEvents({ start, end })
 ```typescript
 // Después de create/update/delete:
 queryClient.invalidateQueries({
-  queryKey: ['calendar-events']
+  queryKey: ['calendar-events'],
 })
 ```
 
@@ -298,6 +316,7 @@ queryClient.invalidateQueries({
 #### Toast Notifications
 
 Automáticas en todos los mutations:
+
 - ✅ Create: "Evento creado correctamente"
 - ✅ Update: "Evento actualizado correctamente"
 - ✅ Delete: "Evento eliminado correctamente"
@@ -346,6 +365,7 @@ getEventsForDay(
 ```
 
 **Constantes:**
+
 ```typescript
 DAYS_OF_WEEK = ['Lunes', 'Martes', ..., 'Domingo']
 DAYS_OF_WEEK_SHORT = ['Lun', 'Mar', ..., 'Dom']
@@ -374,6 +394,7 @@ DAYS_OF_WEEK_SHORT = ['Lun', 'Mar', ..., 'Dom']
 ### ⏳ Pendiente (Iteraciones Futuras)
 
 #### Iteración 2: Mejoras UX
+
 - [ ] Drag & Drop con @dnd-kit
   - Arrastrar evento entre días
   - Actualizar `scheduledDate` automáticamente
@@ -388,6 +409,7 @@ DAYS_OF_WEEK_SHORT = ['Lun', 'Mar', ..., 'Dom']
   - Scroll infinito
 
 #### Iteración 3: Otros Tipos de Eventos
+
 - [ ] AftersaleEvents
   - Schema Prisma
   - API routes
@@ -402,6 +424,7 @@ DAYS_OF_WEEK_SHORT = ['Lun', 'Mar', ..., 'Dom']
 - [ ] Legend de colores por tipo
 
 #### Features Opcionales
+
 - [ ] Eventos recurrentes
 - [ ] Notificaciones/Recordatorios
 - [ ] Export a iCal/Google Calendar
@@ -418,6 +441,7 @@ DAYS_OF_WEEK_SHORT = ['Lun', 'Mar', ..., 'Dom']
 **Razón:** Los eventos son "todo el día", no tienen hora específica.
 
 **Beneficio:**
+
 - Evita problemas de timezone
 - Simplifica comparaciones de fechas
 - Queries más eficientes (index en fecha sin hora)
@@ -429,6 +453,7 @@ DAYS_OF_WEEK_SHORT = ['Lun', 'Mar', ..., 'Dom']
 **Razón:** Riesgo alto - descubres problemas tarde, no entregas valor hasta el final.
 
 **Beneficio:**
+
 - Feedback temprano
 - Iteraciones funcionales
 - Menor riesgo
@@ -441,6 +466,7 @@ DAYS_OF_WEEK_SHORT = ['Lun', 'Mar', ..., 'Dom']
 **Razón:** 3 requests en lugar de 1, lógica de merge en cliente, race conditions.
 
 **Beneficio:**
+
 - 1 request HTTP
 - Backend hace join eficiente
 - Cliente recibe data unificada
@@ -451,6 +477,7 @@ DAYS_OF_WEEK_SHORT = ['Lun', 'Mar', ..., 'Dom']
 **Razón:** Evitar conflictos con unique constraint `(projectId, scheduledDate)`.
 
 **Escenario problemático:**
+
 1. Evento A: Project X en 2025-11-13
 2. Usuario edita a Project Y en 2025-11-13
 3. Ya existe Evento B: Project Y en 2025-11-13 → ERROR
