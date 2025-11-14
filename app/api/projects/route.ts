@@ -61,15 +61,14 @@ export const GET = withLogging(async (request, logger) => {
     }
 
     // Pre-filtro server-side por projectStatus.isFinal
-    // Esto optimiza la query reduciendo la carga inicial
-    if (projectState === 'Activo') {
-      // Activos: Solo traer proyectos que NO están en estado final
-      where.projectStatus = { isFinal: false }
-    } else if (projectState === 'Finalizado') {
-      // Finalizados: Solo traer proyectos en estado final
+    // NOTA: Para "Activo" NO aplicamos pre-filtro porque necesitamos verificar
+    // el balance (proyectos con isFinal=true pero balance>0 son "Activos")
+    if (projectState === 'Finalizado') {
+      // Finalizados: Solo traer proyectos en estado final (optimización)
+      // El filtro fino verificará que también tengan balance === 0
       where.projectStatus = { isFinal: true }
     }
-    // 'all' no agrega filtro de status
+    // 'Activo' y 'all' no agregan pre-filtro de status
 
     // Obtener proyectos (COUNT eliminado - se calcula con filteredProjects.length)
     const projects = await prisma.project.findMany({
@@ -145,11 +144,13 @@ export const GET = withLogging(async (request, logger) => {
 
     logger.info(
       {
-        found: filteredProjects.length,
-        total: filteredProjects.length,
+        beforeFilter: projectsWithCalculations.length,
+        afterFilter: filteredProjects.length,
+        filtered: projectsWithCalculations.length - filteredProjects.length,
+        projectState,
         page,
       },
-      'Projects fetched successfully'
+      'Projects fetched and filtered successfully'
     )
 
     return NextResponse.json({
