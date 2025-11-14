@@ -23,6 +23,11 @@ interface ProjectSearchFieldProps {
    * Útil para casos de postventa
    */
   filterByFinalState?: boolean
+  /**
+   * Si es true, muestra cards de balance pendiente y total del proyecto
+   * Default: true (para mantener compatibilidad con formularios existentes)
+   */
+  showFinancialCards?: boolean
 }
 
 /**
@@ -45,6 +50,7 @@ export function ProjectSearchField({
   preselectedProjectId,
   onProjectSelect,
   filterByFinalState = false,
+  showFinancialCards = true,
 }: ProjectSearchFieldProps) {
   // State para búsqueda de proyectos
   const [searchTerm, setSearchTerm] = React.useState('')
@@ -177,8 +183,8 @@ export function ProjectSearchField({
         />
       )}
 
-      {/* 2. Cards: Balance Pendiente - Solo mostrar si NO filtramos por estado final */}
-      {selectedProject && !filterByFinalState && (
+      {/* 2. Cards: Balance Pendiente - Solo mostrar si showFinancialCards es true */}
+      {selectedProject && showFinancialCards && (
         <div className="flex justify-center gap-4">
           <Card className="p-2">
             <CardContent className="flex flex-col ">

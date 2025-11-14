@@ -13,6 +13,7 @@ import {
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { ProjectSearchField } from '@/components/forms/search/project-search-field'
+import { ProjectDetailsSummary } from '@/components/summarys/project-details-summary'
 import {
   Form,
   FormControl,
@@ -35,6 +36,31 @@ export interface ProjectEventFormHandle {
 
 export const ProjectEventForm = React.forwardRef<ProjectEventFormHandle, ProjectEventFormProps>(
   ({ onSubmit, defaultValues }, ref) => {
+    // State para detalles del proyecto seleccionado
+    const [projectDetails, setProjectDetails] = React.useState<{
+      projectNumber: string
+      projectName: string | null
+      projectStatus: {
+        name: string
+        color: {
+          bgClass: string
+          textClass?: string
+        }
+      } | null
+      customer: {
+        name: string
+        phone: string
+      }
+      street: string
+      apartment: string | null
+      comuna: string
+      region: string
+      phone: string
+      windowsCount: number
+      squareMeters: number
+      description: string | null
+    } | null>(null)
+
     const form = useForm<ProjectEventFormValues>({
       resolver: zodResolver(createProjectEventSchema),
       defaultValues: {
@@ -51,6 +77,50 @@ export const ProjectEventForm = React.forwardRef<ProjectEventFormHandle, Project
       reset: () => form.reset(),
     }))
 
+    // Cargar detalles completos del proyecto cuando se selecciona
+    const projectId = form.watch('projectId')
+    React.useEffect(() => {
+      if (!projectId) {
+        setProjectDetails(null)
+        return
+      }
+
+      // Fetch proyecto completo para obtener todos los detalles
+      fetch(`/api/projects/${projectId}`)
+        .then((res) => res.json())
+        .then((data) => {
+          setProjectDetails({
+            projectNumber: data.projectNumber,
+            projectName: data.projectName,
+            projectStatus: data.projectStatus
+              ? {
+                  name: data.projectStatus.name,
+                  color: {
+                    bgClass: data.projectStatus.color.bgClass,
+                    textClass: data.projectStatus.color.textClass,
+                  },
+                }
+              : null,
+            customer: {
+              name: data.customer.name,
+              phone: data.customer.phone,
+            },
+            street: data.street,
+            apartment: data.apartment,
+            comuna: data.comuna,
+            region: data.region,
+            phone: data.phone,
+            windowsCount: data.windowsCount,
+            squareMeters: Number(data.squareMeters),
+            description: data.description,
+          })
+        })
+        .catch((err) => {
+          console.error('Error fetching project details:', err)
+          setProjectDetails(null)
+        })
+    }, [projectId])
+
     // Formatear fecha para el input type="date"
     const formatDateForInput = (date: Date | string): string => {
       if (!date) return ''
@@ -65,13 +135,34 @@ export const ProjectEventForm = React.forwardRef<ProjectEventFormHandle, Project
           <ProjectSearchField
             control={form.control}
             filterByFinalState={false}
+            showFinancialCards={false}
             onProjectSelect={(project) => {
-              // No necesitamos guardar el proyecto completo, solo validar
               if (project) {
+                form.setValue('projectId', project.id)
                 form.clearErrors('projectId')
               }
             }}
           />
+
+          {/* Detalles del proyecto seleccionado */}
+          {projectDetails && (
+            <ProjectDetailsSummary
+              projectNumber={projectDetails.projectNumber}
+              projectName={projectDetails.projectName}
+              projectStatus={projectDetails.projectStatus}
+              customerName={projectDetails.customer.name}
+              phone={projectDetails.phone}
+              address={{
+                street: projectDetails.street,
+                apartment: projectDetails.apartment,
+                comuna: projectDetails.comuna,
+                region: projectDetails.region,
+              }}
+              windowsCount={projectDetails.windowsCount}
+              squareMeters={projectDetails.squareMeters}
+              description={projectDetails.description}
+            />
+          )}
 
           {/* Campo: Fecha programada */}
           <FormField
