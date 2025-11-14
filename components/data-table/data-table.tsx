@@ -6,6 +6,7 @@ import {
   ColumnFiltersState,
   SortingState,
   VisibilityState,
+  PaginationState,
   flexRender,
   getCoreRowModel,
   getFilteredRowModel,
@@ -53,6 +54,12 @@ interface DataTableProps<TData, TValue> {
   onRowSelectionChange?: (selectedRows: TData[]) => void
   enableRowSelection?: boolean
   meta?: TableMeta<TData>
+  // Server-side pagination props
+  manualPagination?: boolean
+  pageCount?: number
+  pagination?: PaginationState
+  onPaginationChange?: (pagination: PaginationState) => void
+  onSearchChange?: (search: string) => void
 }
 
 export function DataTable<TData, TValue>({
@@ -66,6 +73,12 @@ export function DataTable<TData, TValue>({
   onRowSelectionChange,
   enableRowSelection = false,
   meta,
+  // Server-side pagination
+  manualPagination = false,
+  pageCount: controlledPageCount,
+  pagination: controlledPagination,
+  onPaginationChange,
+  onSearchChange,
 }: DataTableProps<TData, TValue>) {
   const [sorting, setSorting] = React.useState<SortingState>([])
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([])
@@ -73,15 +86,35 @@ export function DataTable<TData, TValue>({
   const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({})
   const [rowSelection, setRowSelection] = React.useState({})
 
+  // Estado interno de paginación (solo para client-side)
+  const [internalPagination, setInternalPagination] = React.useState<PaginationState>({
+    pageIndex: 0,
+    pageSize: 20,
+  })
+
   const table = useReactTable({
     data,
     columns,
+    // Configuración de paginación
+    ...(manualPagination
+      ? {
+          // Server-side: usar pageCount controlado
+          manualPagination: true,
+          pageCount: controlledPageCount ?? -1,
+        }
+      : {
+          // Client-side: dejar que TanStack calcule
+        }),
     state: {
       sorting,
       columnFilters,
       globalFilter,
       columnVisibility,
       rowSelection,
+      // Usar paginación controlada o interna
+      pagination: manualPagination
+        ? (controlledPagination ?? internalPagination)
+        : internalPagination,
     },
     enableRowSelection,
     onRowSelectionChange: setRowSelection,
@@ -89,6 +122,18 @@ export function DataTable<TData, TValue>({
     onColumnFiltersChange: setColumnFilters,
     onGlobalFilterChange: setGlobalFilter,
     onColumnVisibilityChange: setColumnVisibility,
+    onPaginationChange: manualPagination
+      ? (updaterOrValue) => {
+          // Manejar tanto funciones como valores directos
+          if (onPaginationChange) {
+            const newPagination =
+              typeof updaterOrValue === 'function'
+                ? updaterOrValue(controlledPagination ?? internalPagination)
+                : updaterOrValue
+            onPaginationChange(newPagination)
+          }
+        }
+      : setInternalPagination,
     globalFilterFn,
     getCoreRowModel: getCoreRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
@@ -113,6 +158,7 @@ export function DataTable<TData, TValue>({
         searchPlaceholder={searchPlaceholder}
         enableGlobalFilter={enableGlobalFilter}
         filterableColumns={filterableColumns}
+        onSearchChange={onSearchChange}
       />
       <div className="rounded-md border">
         <Table>

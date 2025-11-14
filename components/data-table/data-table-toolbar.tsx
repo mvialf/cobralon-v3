@@ -27,6 +27,7 @@ interface DataTableToolbarProps<TData> {
     options: { label: string; value: string }[]
     onFilterChange?: (values: string[]) => void
   }[]
+  onSearchChange?: (search: string) => void
 }
 
 export function DataTableToolbar<TData>({
@@ -35,8 +36,24 @@ export function DataTableToolbar<TData>({
   searchPlaceholder = 'Buscar...',
   enableGlobalFilter = false,
   filterableColumns = [],
+  onSearchChange,
 }: DataTableToolbarProps<TData>) {
   const isFiltered = table.getState().columnFilters.length > 0 || !!table.getState().globalFilter
+
+  // Manejar cambio de búsqueda
+  const handleSearchChange = (value: string) => {
+    if (onSearchChange) {
+      // Server-side search
+      onSearchChange(value)
+    } else {
+      // Client-side search
+      if (enableGlobalFilter) {
+        table.setGlobalFilter(value)
+      } else {
+        table.getColumn(searchKey)?.setFilterValue(value)
+      }
+    }
+  }
 
   return (
     <div className="flex py-4 px-4 items-center bg-popover rounded-lg justify-between border-border">
@@ -47,15 +64,13 @@ export function DataTableToolbar<TData>({
             <Input
               placeholder={searchPlaceholder}
               value={
-                enableGlobalFilter
-                  ? ((table.getState().globalFilter as string) ?? '')
-                  : ((table.getColumn(searchKey)?.getFilterValue() as string) ?? '')
+                onSearchChange
+                  ? '' // Controlled externally
+                  : enableGlobalFilter
+                    ? ((table.getState().globalFilter as string) ?? '')
+                    : ((table.getColumn(searchKey)?.getFilterValue() as string) ?? '')
               }
-              onChange={(event) =>
-                enableGlobalFilter
-                  ? table.setGlobalFilter(event.target.value)
-                  : table.getColumn(searchKey)?.setFilterValue(event.target.value)
-              }
+              onChange={(event) => handleSearchChange(event.target.value)}
               className="pl-8 w-[150px] lg:w-[250px]"
             />
           </div>
