@@ -9,7 +9,7 @@ export interface ParsedProjectRow {
   projectNumber: string
   projectName?: string
   customerName: string
-  phone: string
+  phone?: string // Opcional - fallback a customer.phone si no se proporciona
 
   // Dirección
   street: string
@@ -286,7 +286,7 @@ export async function parseProjectExcel(file: File): Promise<ProjectParseResult>
           // Validar campos requeridos
           if (!projectNumber) errors.push('Número de proyecto es requerido')
           if (!customerName) errors.push('Cliente es requerido')
-          if (!phone) errors.push('Teléfono es requerido')
+          // phone es opcional - si no se proporciona, se usará el del cliente
           if (!street) errors.push('Calle es requerida')
           if (!comuna) errors.push('Comuna es requerida')
           if (!region) errors.push('Región es requerida')
@@ -299,15 +299,17 @@ export async function parseProjectExcel(file: File): Promise<ProjectParseResult>
             errors.push('Fecha inválida (formato esperado: DD/MM/YYYY)')
           }
 
-          // Validar teléfono
+          // Validar teléfono (solo si se proporciona)
           let normalizedPhone = ''
-          try {
-            normalizedPhone = normalizePhone(phone)
-            if (!/^\+56[2-9]\d{8}$/.test(normalizedPhone)) {
-              errors.push('Teléfono inválido (formato chileno esperado)')
+          if (phone) {
+            try {
+              normalizedPhone = normalizePhone(phone)
+              if (!/^\+56[2-9]\d{8}$/.test(normalizedPhone)) {
+                errors.push('Teléfono inválido (formato chileno esperado)')
+              }
+            } catch {
+              errors.push('Teléfono inválido')
             }
-          } catch (err) {
-            errors.push('Teléfono inválido')
           }
 
           // Validar taxRate
@@ -321,7 +323,7 @@ export async function parseProjectExcel(file: File): Promise<ProjectParseResult>
                 projectNumber,
                 projectName,
                 customerName,
-                phone: normalizedPhone,
+                phone: normalizedPhone || undefined, // undefined si está vacío (fallback a customer.phone)
                 street,
                 apartment,
                 comuna,

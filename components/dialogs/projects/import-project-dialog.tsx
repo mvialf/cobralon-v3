@@ -111,9 +111,6 @@ export function ImportProjectDialog({ onImportComplete }: ImportProjectDialogPro
         title: '¡Importación exitosa!',
         description: `Se importaron ${result.imported} proyecto${result.imported === 1 ? '' : 's'} correctamente.`,
       })
-
-      // Notificar al padre para recargar datos
-      onImportComplete?.()
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error al importar')
       setStep('preview')
@@ -128,6 +125,7 @@ export function ImportProjectDialog({ onImportComplete }: ImportProjectDialogPro
 
   // Reset dialog
   const handleClose = () => {
+    const wasSuccessful = step === 'complete'
     setOpen(false)
     setTimeout(() => {
       setStep('upload')
@@ -137,11 +135,25 @@ export function ImportProjectDialog({ onImportComplete }: ImportProjectDialogPro
       setIsProcessing(false)
       setImportProgress(0)
       setImportedCount(0)
+
+      // Notificar al padre para recargar datos solo si la importación fue exitosa
+      if (wasSuccessful) {
+        onImportComplete?.()
+      }
     }, 200)
   }
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog
+      open={open}
+      onOpenChange={(isOpen) => {
+        if (!isOpen) {
+          handleClose()
+        } else {
+          setOpen(true)
+        }
+      }}
+    >
       <DialogTrigger asChild>
         <Button variant="outline" className="gap-2">
           <Upload className="h-4 w-4" />
@@ -224,14 +236,15 @@ export function ImportProjectDialog({ onImportComplete }: ImportProjectDialogPro
               <ul className="text-sm text-muted-foreground space-y-1 list-disc list-inside">
                 <li>Primera fila debe contener los encabezados</li>
                 <li>
-                  <strong>Campos obligatorios:</strong> Número Proyecto, Cliente, Teléfono, Calle,
-                  Comuna, Región, Estado, Fecha, Subtotal
+                  <strong>Campos obligatorios:</strong> Número Proyecto, Cliente, Calle, Comuna,
+                  Región, Estado, Fecha, Subtotal
                 </li>
                 <li>
-                  <strong>Campos opcionales:</strong> Glosa, Depto, IVA (%), Ventanas, M²,
+                  <strong>Campos opcionales:</strong> Glosa, Teléfono, Depto, IVA (%), Ventanas, M²,
                   Descripción
                 </li>
                 <li>El sistema buscará o creará el cliente automáticamente</li>
+                <li>Si no se proporciona teléfono, se usará el teléfono del cliente existente</li>
                 <li>El estado del proyecto debe coincidir con uno existente en el sistema</li>
               </ul>
             </div>

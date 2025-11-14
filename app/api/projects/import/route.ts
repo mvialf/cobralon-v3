@@ -66,6 +66,22 @@ export const POST = withLogging(async (request, logger) => {
             'Customer not found, creating new one'
           )
 
+          // Si no hay phone en projectData, no podemos crear el customer
+          if (!projectData.phone) {
+            const error = `Cliente "${projectData.customerName}" no existe y no se proporcionó teléfono para crearlo`
+            logger.warn(
+              { projectNumber: projectData.projectNumber, error },
+              'Cannot create customer without phone'
+            )
+
+            results.push({
+              success: false,
+              error,
+              projectNumber: projectData.projectNumber,
+            })
+            continue
+          }
+
           customer = await prisma.customer.create({
             data: {
               name: projectData.customerName,
@@ -112,13 +128,25 @@ export const POST = withLogging(async (request, logger) => {
           'Calculated amounts'
         )
 
-        // 4. Crear proyecto
+        // 4. Determinar teléfono del proyecto (fallback a customer.phone si no se proporcionó)
+        const projectPhone = projectData.phone || customer.phone
+
+        logger.debug(
+          {
+            providedPhone: projectData.phone,
+            customerPhone: customer.phone,
+            finalPhone: projectPhone,
+          },
+          'Phone resolution'
+        )
+
+        // 5. Crear proyecto
         const project = await prisma.project.create({
           data: {
             projectNumber: projectData.projectNumber,
             projectName: projectData.projectName || null,
             customerId: customer.id,
-            phone: projectData.phone,
+            phone: projectPhone,
             street: projectData.street,
             apartment: projectData.apartment || null,
             comuna: projectData.comuna,
