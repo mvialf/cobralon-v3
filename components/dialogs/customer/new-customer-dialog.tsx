@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { Plus } from 'lucide-react'
 import { CustomerForm } from '@/components/forms/customer/customer-form'
 import { type CustomerFormData } from '@/lib/validations/customer-validations'
+import { useCreateCustomer } from '@/hooks/queries/use-customers'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -14,21 +15,19 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog'
 
-interface NewCustomerDialogProps {
-  onCustomerCreated?: (customer: CustomerFormData) => void
-}
-
-export function NewCustomerDialog({ onCustomerCreated }: NewCustomerDialogProps) {
+export function NewCustomerDialog() {
   const [open, setOpen] = useState(false)
+  const createCustomer = useCreateCustomer()
 
-  const handleSubmit = (data: CustomerFormData) => {
-    console.log('Nuevo cliente:', data)
-
-    // Aqui iria la llamada a tu API
-    // await fetch('/api/customers', { method: 'POST', body: JSON.stringify(data) })
-
-    onCustomerCreated?.(data)
-    setOpen(false)
+  const handleSubmit = async (data: CustomerFormData) => {
+    try {
+      await createCustomer.mutateAsync(data)
+      setOpen(false) // Cerrar dialog solo si fue exitoso
+    } catch (error) {
+      // Error ya manejado por el hook (toast automático)
+      console.error('Error creating customer:', error)
+      // No cerrar el dialog para que el usuario pueda corregir
+    }
   }
 
   return (
@@ -46,7 +45,11 @@ export function NewCustomerDialog({ onCustomerCreated }: NewCustomerDialogProps)
             Ingresa los datos del nuevo cliente. Haz clic en guardar cuando termines.
           </DialogDescription>
         </DialogHeader>
-        <CustomerForm onSubmit={handleSubmit} submitLabel="Crear Cliente" />
+        <CustomerForm
+          onSubmit={handleSubmit}
+          submitLabel="Crear Cliente"
+          isSubmitting={createCustomer.isPending}
+        />
       </DialogContent>
     </Dialog>
   )

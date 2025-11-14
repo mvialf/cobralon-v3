@@ -1,4 +1,4 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { createApiError, handleMutationError } from '@/lib/errors'
 
@@ -89,12 +89,24 @@ export interface UpdateCustomerData {
  *
  * @returns Query con customers y paginación
  *
+ * **OPTIMIZACIONES:**
+ * - `placeholderData: keepPreviousData` → Smooth transitions entre páginas (mantiene datos anteriores mientras carga)
+ * - Cache de 1 minuto → Balance entre frescura y performance
+ * - Query keys por página → Cada página se cachea individualmente
+ *
  * @example
  * ```tsx
- * const { data, isLoading, error } = useCustomers({
+ * const { data, isLoading, isPlaceholderData } = useCustomers({
  *   page: 1,
  *   limit: 20,
  *   search: 'Juan'
+ * })
+ *
+ * // Prefetch página siguiente para mejor UX
+ * const queryClient = useQueryClient()
+ * queryClient.prefetchQuery({
+ *   queryKey: ['customers', { ...params, page: params.page + 1 }],
+ *   queryFn: () => fetchCustomers({ ...params, page: params.page + 1 })
  * })
  * ```
  */
@@ -117,6 +129,7 @@ export function useCustomers(params: CustomersQueryParams = {}) {
 
       return response.json()
     },
+    placeholderData: keepPreviousData, // ← Mantener datos anteriores durante transición
     staleTime: 60 * 1000, // 1 minuto - datos cambian ocasionalmente
     gcTime: 5 * 60 * 1000, // 5 minutos en cache
   })

@@ -18,15 +18,17 @@ import {
 } from '@/components/ui/form'
 
 interface CustomerFormProps {
-  onSubmit: (data: CustomerFormData) => void
+  onSubmit: (data: CustomerFormData) => void | Promise<void>
   defaultValues?: Partial<CustomerFormData>
   submitLabel?: string
+  isSubmitting?: boolean
 }
 
 export function CustomerForm({
   onSubmit,
   defaultValues,
   submitLabel = 'Guardar',
+  isSubmitting = false,
 }: CustomerFormProps) {
   const form = useForm<CustomerFormData>({
     resolver: zodResolver(customerSchema),
@@ -85,8 +87,12 @@ export function CustomerForm({
           )}
         />
 
-        <Button type="submit" className="w-full">
-          {submitLabel}
+        <Button
+          type="submit"
+          className="w-full"
+          disabled={isSubmitting || form.formState.isSubmitting}
+        >
+          {isSubmitting || form.formState.isSubmitting ? 'Guardando...' : submitLabel}
         </Button>
       </FormRoot>
     </Form>
