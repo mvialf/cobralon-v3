@@ -29,6 +29,8 @@ interface ComboboxProps<T> {
   // Customization
   /** Función custom para renderizar cada opción. Si no se provee, usa getOptionLabel. */
   renderOption?: (option: T, isSelected: boolean) => React.ReactNode
+  /** Función para extraer keywords de búsqueda. Si no se provee, usa getOptionLabel. */
+  getSearchKeywords?: (option: T) => string[]
 
   // Text
   /** Placeholder del trigger cuando no hay valor seleccionado */
@@ -132,6 +134,18 @@ interface ComboboxProps<T> {
  *   )}
  * />
  * ```
+ *
+ * @example Con búsqueda por múltiples campos
+ * ```tsx
+ * <Combobox
+ *   value={customerId}
+ *   onValueChange={setCustomerId}
+ *   options={customers}
+ *   getOptionValue={(c) => c.id}
+ *   getOptionLabel={(c) => c.name}
+ *   getSearchKeywords={(c) => [c.name, c.phone]} // Busca por nombre Y teléfono
+ * />
+ * ```
  */
 export function Combobox<T>({
   value,
@@ -140,6 +154,7 @@ export function Combobox<T>({
   getOptionValue,
   getOptionLabel,
   renderOption,
+  getSearchKeywords,
   placeholder = 'Seleccionar...',
   searchPlaceholder = 'Buscar...',
   emptyMessage = 'No se encontraron resultados',
@@ -224,10 +239,16 @@ export function Combobox<T>({
                 const optionValue = getOptionValue(option)
                 const isSelected = optionValue === value
 
+                // Calcular keywords para búsqueda
+                const keywords = getSearchKeywords
+                  ? getSearchKeywords(option).filter(Boolean)
+                  : [getOptionLabel(option)]
+
                 return (
                   <CommandItem
                     key={optionValue}
                     value={optionValue}
+                    keywords={keywords}
                     onSelect={handleSelect}
                     data-name={name} // Para debugging
                   >

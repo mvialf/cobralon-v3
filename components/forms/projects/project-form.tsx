@@ -198,6 +198,7 @@ export const ProjectForm = React.forwardRef<ProjectFormHandle, ProjectFormProps>
                       options={customers}
                       getOptionValue={(c) => c.id}
                       getOptionLabel={(c) => c.name}
+                      getSearchKeywords={(c) => [c.name, c.phone]}
                       renderOption={(c) => (
                         <div className="flex flex-col">
                           <span>{c.name}</span>
