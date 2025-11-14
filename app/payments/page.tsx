@@ -1,7 +1,9 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
+import { type PaginationState } from '@tanstack/react-table'
 import { Plus } from 'lucide-react'
+import { useQueryClient } from '@tanstack/react-query'
 import { AppLayout } from '@/components/layout/app-layout'
 import { DataTable } from '@/components/data-table'
 import { createColumns, type Payment } from './columns'
@@ -16,27 +18,95 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { usePayments, useDeletePayment } from '@/hooks/queries/use-payments'
+import {
+  usePayments,
+  useDeletePayment,
+  type PaymentsQueryParams,
+} from '@/hooks/queries/use-payments'
 import type { Payment as APIPayment } from '@/lib/validations/payment-validations'
+import { useDebounce } from '@/hooks/use-debounce'
 
 export default function PaymentsPage() {
-  // ✅ React Query hooks reemplazan state management manual
-  const { data, isLoading, refetch } = usePayments({ limit: 1000 })
+  const queryClient = useQueryClient()
+
+  // Estado de paginación server-side
+  const [pagination, setPagination] = useState<PaginationState>({
+    pageIndex: 0, // TanStack usa 0-based
+    pageSize: 20,
+  })
+
+  // Estado de búsqueda con debounce
+  const [searchTerm, setSearchTerm] = useState('')
+  const debouncedSearch = useDebounce(searchTerm, 500)
+
+  // Query params para usePayments (useMemo para evitar recreación en cada render)
+  const queryParams: PaymentsQueryParams = useMemo(
+    () => ({
+      page: pagination.pageIndex + 1, // API usa 1-based
+      limit: pagination.pageSize,
+      // Nota: La API de payments no tiene search directo, usa client-side filtering
+    }),
+    [pagination.pageIndex, pagination.pageSize]
+  )
+
+  // React Query: Fetch payments con cache automático
+  const { data, isLoading, isPlaceholderData } = usePayments(queryParams)
   const deleteMutation = useDeletePayment()
 
   // Extraer data del hook (con fallbacks) y cast a tipo local
-  const payments = useMemo(() => (data?.payments || []) as Payment[], [data?.payments])
+  const allPayments = useMemo(() => (data?.payments || []) as Payment[], [data?.payments])
+  const pageCount = data?.pagination.totalPages || 0
 
-  // Calcular métodos de pago únicos para filtros (movido del hook viejo)
+  // Filtrar payments client-side por búsqueda (hasta que API soporte search)
+  const payments = useMemo(() => {
+    if (!debouncedSearch) return allPayments
+
+    const searchLower = debouncedSearch.toLowerCase()
+    return allPayments.filter((p) => {
+      // Buscar en nombre de cliente
+      if (p.customer?.name.toLowerCase().includes(searchLower)) return true
+      // Buscar en nombre de proyecto (si es tipo Project)
+      if (p.project?.projectName && p.project.projectName.toLowerCase().includes(searchLower))
+        return true
+      return false
+    })
+  }, [allPayments, debouncedSearch])
+
+  // Calcular métodos de pago únicos para filtros
   const uniquePaymentMethods = useMemo(() => {
     const methods = new Set(
-      payments.filter((p) => p.paymentMethod).map((p) => p.paymentMethod!.name)
+      allPayments.filter((p) => p.paymentMethod).map((p) => p.paymentMethod!.name)
     )
     return Array.from(methods).map((method) => ({
       label: method,
       value: method,
     }))
-  }, [payments])
+  }, [allPayments])
+
+  // Prefetch página siguiente para mejor UX
+  useEffect(() => {
+    if (!isPlaceholderData && data?.pagination) {
+      const { page, totalPages } = data.pagination
+      const hasNextPage = page < totalPages
+
+      if (hasNextPage) {
+        // Prefetch siguiente página en background
+        queryClient.prefetchQuery({
+          queryKey: ['payments', { ...queryParams, page: page + 1 }],
+          queryFn: async () => {
+            const params = new URLSearchParams({
+              page: String(page + 1),
+              limit: String(queryParams.limit),
+            })
+
+            const response = await fetch(`/api/payments?${params}`)
+            if (!response.ok) throw new Error('Error al precargar')
+            return response.json()
+          },
+        })
+      }
+    }
+  }, [data, isPlaceholderData, queryClient, queryParams])
 
   // Estado de dialogs
   const [selectedPayment, setSelectedPayment] = useState<Payment | null>(null)
@@ -54,6 +124,24 @@ export default function PaymentsPage() {
     await deleteMutation.mutateAsync(paymentId)
   }
 
+  // Invalidar queries después de importar pagos
+  const handleImportComplete = () => {
+    queryClient.invalidateQueries({ queryKey: ['payments'] })
+    // Resetear a página 1
+    setPagination({ ...pagination, pageIndex: 0 })
+  }
+
+  const handleSearchChange = (search: string) => {
+    setSearchTerm(search)
+    // Nota: Search es client-side, no resetea paginación
+  }
+
+  const handleSuccess = () => {
+    queryClient.invalidateQueries({ queryKey: ['payments'] })
+    // Resetear a página 1 al crear nuevo pago
+    setPagination({ ...pagination, pageIndex: 0 })
+  }
+
   const columns = useMemo(
     () =>
       createColumns({
@@ -68,7 +156,7 @@ export default function PaymentsPage() {
       breadcrumbs={[{ label: 'Inicio', href: '/' }, { label: 'Pagos' }]}
       action={
         <div className="flex items-center gap-2">
-          <ImportPaymentDialog onImportComplete={refetch} />
+          <ImportPaymentDialog onImportComplete={handleImportComplete} />
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button>
@@ -89,7 +177,7 @@ export default function PaymentsPage() {
       }
     >
       <div className="space-y-4">
-        {isLoading ? (
+        {isLoading && !isPlaceholderData ? (
           <div className="flex items-center justify-center h-64">
             <div className="text-muted-foreground">Cargando pagos...</div>
           </div>
@@ -99,6 +187,12 @@ export default function PaymentsPage() {
             data={payments}
             searchKey="associated"
             searchPlaceholder="Buscar por cliente/proyecto..."
+            // Server-side pagination
+            manualPagination={true}
+            pageCount={pageCount}
+            pagination={pagination}
+            onPaginationChange={setPagination}
+            onSearchChange={handleSearchChange}
             filterableColumns={[
               {
                 id: 'type',
@@ -133,14 +227,14 @@ export default function PaymentsPage() {
       <PaymentToProjectDialog
         open={isPaymentToProjectDialogOpen}
         onOpenChange={setIsPaymentToProjectDialogOpen}
-        onSuccess={refetch}
+        onSuccess={handleSuccess}
       />
 
       {/* Modal de registro de pago a cliente */}
       <PaymentToCustomerDialog
         open={isPaymentToCustomerDialogOpen}
         onOpenChange={setIsPaymentToCustomerDialogOpen}
-        onSuccess={refetch}
+        onSuccess={handleSuccess}
       />
     </AppLayout>
   )

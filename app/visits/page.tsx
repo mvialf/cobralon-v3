@@ -1,16 +1,41 @@
 'use client'
 
+import { useState, useEffect, useMemo } from 'react'
+import { type PaginationState } from '@tanstack/react-table'
 import { Row } from '@tanstack/react-table'
+import { useQueryClient, useQuery } from '@tanstack/react-query'
 import { AppLayout } from '@/components/layout/app-layout'
 import { NewVisitDialog } from '@/components/dialogs/visits/new-visit-dialog'
 import { DataTable } from '@/components/data-table/data-table'
 import { createColumns, type Visit } from './columns'
-import { useVisits, useUpdateVisit } from '@/hooks/queries/use-visits'
-import { useQuery } from '@tanstack/react-query'
+import { useVisits, useUpdateVisit, type VisitsQueryParams } from '@/hooks/queries/use-visits'
+import { useDebounce } from '@/hooks/use-debounce'
 
 export default function VisitsPage() {
-  // React Query hook para cargar visitas
-  const { data, isLoading } = useVisits({ limit: 100 })
+  const queryClient = useQueryClient()
+
+  // Estado de paginación server-side
+  const [pagination, setPagination] = useState<PaginationState>({
+    pageIndex: 0, // TanStack usa 0-based
+    pageSize: 50,
+  })
+
+  // Estado de búsqueda con debounce
+  const [searchTerm, setSearchTerm] = useState('')
+  const debouncedSearch = useDebounce(searchTerm, 500)
+
+  // Query params para useVisits (useMemo para evitar recreación en cada render)
+  const queryParams: VisitsQueryParams = useMemo(
+    () => ({
+      page: pagination.pageIndex + 1, // API usa 1-based
+      limit: pagination.pageSize,
+      search: debouncedSearch || undefined,
+    }),
+    [pagination.pageIndex, pagination.pageSize, debouncedSearch]
+  )
+
+  // React Query: Fetch visits con cache automático
+  const { data, isLoading, isPlaceholderData } = useVisits(queryParams)
 
   // Cargar visit statuses para el filtro
   const { data: visitStatuses } = useQuery({
@@ -20,6 +45,7 @@ export default function VisitsPage() {
       if (!response.ok) throw new Error('Error al cargar estados')
       return response.json()
     },
+    staleTime: 5 * 60 * 1000, // 5 minutos - statuses cambian raramente
   })
 
   // Mutation hook para actualizar estado de visita
@@ -27,7 +53,34 @@ export default function VisitsPage() {
 
   // Extraer data del hook (con fallbacks)
   const visits = data?.data || []
+  const pageCount = data?.pagination.totalPages || 0
   const statuses = visitStatuses || []
+
+  // Prefetch página siguiente para mejor UX
+  useEffect(() => {
+    if (!isPlaceholderData && data?.pagination) {
+      const { page, totalPages } = data.pagination
+      const hasNextPage = page < totalPages
+
+      if (hasNextPage) {
+        // Prefetch siguiente página en background
+        queryClient.prefetchQuery({
+          queryKey: ['visits', { ...queryParams, page: page + 1 }],
+          queryFn: async () => {
+            const params = new URLSearchParams({
+              page: String(page + 1),
+              limit: String(queryParams.limit),
+            })
+            if (queryParams.search) params.append('search', queryParams.search)
+
+            const response = await fetch(`/api/visits?${params}`)
+            if (!response.ok) throw new Error('Error al precargar')
+            return response.json()
+          },
+        })
+      }
+    }
+  }, [data, isPlaceholderData, queryClient, queryParams])
 
   // Mutation hook maneja loading state, errores y auto-invalidación
   const handleStatusChange = async (visitId: string, newStatusId: string) => {
@@ -35,6 +88,14 @@ export default function VisitsPage() {
       id: visitId,
       visitStatusId: newStatusId,
     })
+  }
+
+  const handleSearchChange = (search: string) => {
+    setSearchTerm(search)
+    // Resetear a página 1 cuando cambia la búsqueda
+    if (pagination.pageIndex !== 0) {
+      setPagination({ ...pagination, pageIndex: 0 })
+    }
   }
 
   const columns = createColumns({
@@ -89,7 +150,7 @@ export default function VisitsPage() {
       action={<NewVisitDialog />}
     >
       <div className="space-y-4">
-        {isLoading ? (
+        {isLoading && !isPlaceholderData ? (
           <div className="flex items-center justify-center h-64">
             <div className="text-muted-foreground">Cargando visitas...</div>
           </div>
@@ -101,6 +162,12 @@ export default function VisitsPage() {
             searchPlaceholder="Buscar por nombre, teléfono, dirección o comuna..."
             enableGlobalFilter={true}
             globalFilterFn={globalFilterFn}
+            // Server-side pagination
+            manualPagination={true}
+            pageCount={pageCount}
+            pagination={pagination}
+            onPaginationChange={setPagination}
+            onSearchChange={handleSearchChange}
             filterableColumns={[
               {
                 id: 'visitStatus',

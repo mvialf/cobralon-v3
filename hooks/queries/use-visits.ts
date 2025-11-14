@@ -1,4 +1,4 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { handleMutationError } from '@/lib/errors'
 import {
@@ -51,13 +51,35 @@ export interface UpdateVisitData extends Partial<UpdateVisitInput> {
 /**
  * Hook para obtener lista de visitas con paginación y filtros
  *
+ * @param params - Filtros opcionales
+ * @param params.page - Número de página (default: 1)
+ * @param params.limit - Registros por página (default: 50, max: 100)
+ * @param params.search - Búsqueda por nombre, teléfono, dirección o comuna
+ * @param params.visitStatusId - Filtrar por estado específico
+ *
+ * @returns Query con visits y paginación
+ *
+ * **OPTIMIZACIONES:**
+ * - `placeholderData: keepPreviousData` → Smooth transitions entre páginas (mantiene datos anteriores mientras carga)
+ * - Cache de 1 minuto → Balance entre frescura y performance
+ * - Query keys por página → Cada página se cachea individualmente
+ *
  * @example
- * const { data, isLoading, error } = useVisits({
+ * ```tsx
+ * const { data, isLoading, isPlaceholderData } = useVisits({
  *   page: 1,
  *   limit: 50,
  *   search: 'Juan',
  *   visitStatusId: 'status-id'
  * })
+ *
+ * // Prefetch página siguiente para mejor UX
+ * const queryClient = useQueryClient()
+ * queryClient.prefetchQuery({
+ *   queryKey: ['visits', { ...params, page: params.page + 1 }],
+ *   queryFn: () => fetch('/api/visits?page=2&limit=50').then(r => r.json())
+ * })
+ * ```
  */
 export function useVisits(params: VisitsQueryParams = {}) {
   return useQuery({
@@ -79,6 +101,9 @@ export function useVisits(params: VisitsQueryParams = {}) {
 
       return response.json()
     },
+    placeholderData: keepPreviousData, // ← Mantener datos anteriores durante transición
+    staleTime: 60 * 1000, // 1 minuto - datos cambian ocasionalmente
+    gcTime: 5 * 60 * 1000, // 5 minutos en cache
   })
 }
 

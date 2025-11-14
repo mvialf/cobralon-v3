@@ -1,39 +1,123 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect, useMemo } from 'react'
+import { type PaginationState } from '@tanstack/react-table'
 import { Row } from '@tanstack/react-table'
+import { useQueryClient, useQuery } from '@tanstack/react-query'
 import { AppLayout } from '@/components/layout/app-layout'
 import { NewProjectDialog } from '@/components/dialogs/projects/new-project-dialog'
+import { ImportProjectDialog } from '@/components/dialogs/projects/import-project-dialog'
 import { DataTable } from '@/components/data-table/data-table'
 import { createColumns, type Project } from './columns'
-import { useProjectsWithMetadata, useUpdateProjectStatus } from '@/hooks/queries/use-projects'
+import {
+  useProjects,
+  useUpdateProjectStatus,
+  type ProjectsQueryParams,
+} from '@/hooks/queries/use-projects'
+import { useDebounce } from '@/hooks/use-debounce'
 
 export default function ProjectsPage() {
+  const queryClient = useQueryClient()
+
+  // Estado de paginación server-side
+  const [pagination, setPagination] = useState<PaginationState>({
+    pageIndex: 0, // TanStack usa 0-based
+    pageSize: 20,
+  })
+
+  // Estado de búsqueda con debounce
+  const [searchTerm, setSearchTerm] = useState('')
+  const debouncedSearch = useDebounce(searchTerm, 500)
+
+  // Estado de filtro de proyecto (Activo/Finalizado/all)
   const [projectState, setProjectState] = useState<'Activo' | 'Finalizado' | 'all'>('Activo')
 
-  // ✅ React Query hook reemplaza todo el state management manual
-  const { data, isLoading } = useProjectsWithMetadata({ projectState })
+  // Query params para useProjects (useMemo para evitar recreación en cada render)
+  const queryParams: ProjectsQueryParams = useMemo(
+    () => ({
+      page: pagination.pageIndex + 1, // API usa 1-based
+      limit: pagination.pageSize,
+      search: debouncedSearch || undefined,
+      projectState,
+    }),
+    [pagination.pageIndex, pagination.pageSize, debouncedSearch, projectState]
+  )
 
-  // ✅ Mutation hook para actualizar estado de proyecto
+  // React Query: Fetch projects con cache automático
+  const { data, isLoading, isPlaceholderData } = useProjects(queryParams)
+
+  // Cargar statuses para el filtro (metadata)
+  const { data: statusesData } = useQuery({
+    queryKey: ['project-statuses'],
+    queryFn: async () => {
+      const response = await fetch('/api/project-statuses')
+      if (!response.ok) throw new Error('Error al cargar estados')
+      return response.json()
+    },
+    staleTime: 5 * 60 * 1000, // 5 minutos - statuses cambian raramente
+  })
+
+  // Mutation hook para actualizar estado de proyecto
   const updateStatusMutation = useUpdateProjectStatus()
 
   // Extraer data del hook (con fallbacks)
   const projects = data?.projects || []
-  const statuses = data?.metadata.projectStatuses || []
+  const pageCount = data?.pagination.totalPages || 0
+  const statuses = statusesData?.projectStatuses || []
 
-  // ✅ Mutation hook maneja loading state, errores y auto-invalidación
+  // Prefetch página siguiente para mejor UX
+  useEffect(() => {
+    if (!isPlaceholderData && data?.pagination) {
+      const { page, totalPages } = data.pagination
+      const hasNextPage = page < totalPages
+
+      if (hasNextPage) {
+        // Prefetch siguiente página en background
+        queryClient.prefetchQuery({
+          queryKey: ['projects', { ...queryParams, page: page + 1 }],
+          queryFn: async () => {
+            const params = new URLSearchParams({
+              page: String(page + 1),
+              limit: String(queryParams.limit),
+            })
+            if (queryParams.search) params.append('search', queryParams.search)
+            if (queryParams.projectState) params.append('projectState', queryParams.projectState)
+
+            const response = await fetch(`/api/projects?${params}`)
+            if (!response.ok) throw new Error('Error al precargar')
+            return response.json()
+          },
+        })
+      }
+    }
+  }, [data, isPlaceholderData, queryClient, queryParams])
+
+  // Mutation hook maneja loading state, errores y auto-invalidación
   const handleStatusChange = async (projectId: string, newStatusId: string) => {
     await updateStatusMutation.mutateAsync({ projectId, statusId: newStatusId })
   }
 
+  // Invalidar queries después de importar proyectos
+  const handleImportComplete = () => {
+    queryClient.invalidateQueries({ queryKey: ['projects'] })
+    // Resetear a página 1
+    setPagination({ ...pagination, pageIndex: 0 })
+  }
+
+  const handleSearchChange = (search: string) => {
+    setSearchTerm(search)
+    // Resetear a página 1 cuando cambia la búsqueda
+    if (pagination.pageIndex !== 0) {
+      setPagination({ ...pagination, pageIndex: 0 })
+    }
+  }
+
   const columns = createColumns({
-    // ✅ React Query auto-invalida queries, no necesitamos callbacks manuales
-    statuses: statuses.map((s) => ({
+    statuses: statuses.map((s: any) => ({
       id: s.id,
       label: s.name,
       color: { bgClass: s.color.bgClass },
     })),
-    // ✅ Mutation hook expone el projectId que está siendo actualizado
     updatingProjectId: updateStatusMutation.isPending
       ? updateStatusMutation.variables?.projectId
       : null,
@@ -67,7 +151,7 @@ export default function ProjectsPage() {
     // Opción para "Sin estado"
     { label: 'Sin estado', value: 'null' },
     // Opciones de statuses disponibles con colores
-    ...(statuses || []).map((status) => ({
+    ...(statuses || []).map((status: any) => ({
       label: status.name,
       value: status.id,
       bgClass: status.color.bgClass,
@@ -85,10 +169,15 @@ export default function ProjectsPage() {
     <AppLayout
       pageTitle="Proyectos"
       breadcrumbs={[{ label: 'Inicio', href: '/' }, { label: 'Proyectos' }]}
-      action={<NewProjectDialog />}
+      action={
+        <div className="flex items-center gap-2">
+          <ImportProjectDialog onImportComplete={handleImportComplete} />
+          <NewProjectDialog />
+        </div>
+      }
     >
       <div className="space-y-4">
-        {isLoading ? (
+        {isLoading && !isPlaceholderData ? (
           <div className="flex items-center justify-center h-64">
             <div className="text-muted-foreground">Cargando proyectos...</div>
           </div>
@@ -100,6 +189,12 @@ export default function ProjectsPage() {
             searchPlaceholder="Buscar por número, cliente o nombre..."
             enableGlobalFilter={true}
             globalFilterFn={globalFilterFn}
+            // Server-side pagination
+            manualPagination={true}
+            pageCount={pageCount}
+            pagination={pagination}
+            onPaginationChange={setPagination}
+            onSearchChange={handleSearchChange}
             filterableColumns={[
               {
                 id: 'projectStatus',
@@ -113,6 +208,10 @@ export default function ProjectsPage() {
                 onFilterChange: (values) => {
                   const newState = values.length > 0 ? values[0] : 'all'
                   setProjectState(newState as 'Activo' | 'Finalizado' | 'all')
+                  // Resetear a página 1 cuando cambia el filtro
+                  if (pagination.pageIndex !== 0) {
+                    setPagination({ ...pagination, pageIndex: 0 })
+                  }
                 },
               },
             ]}

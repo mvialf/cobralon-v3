@@ -1,4 +1,4 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { createApiError, handleMutationError } from '@/lib/errors'
 import type { Payment, CreatePaymentPayload } from '@/lib/validations/payment-validations'
@@ -91,12 +91,24 @@ export interface UpdatePaymentData {
  *
  * @returns Query con payments y paginación
  *
+ * **OPTIMIZACIONES:**
+ * - `placeholderData: keepPreviousData` → Smooth transitions entre páginas (mantiene datos anteriores mientras carga)
+ * - Cache de 1 minuto → Balance entre frescura y performance
+ * - Query keys por página → Cada página se cachea individualmente
+ *
  * @example
  * ```tsx
- * const { data, isLoading, error } = usePayments({
+ * const { data, isLoading, isPlaceholderData } = usePayments({
  *   page: 1,
  *   limit: 10,
  *   customerId: 'abc-123'
+ * })
+ *
+ * // Prefetch página siguiente para mejor UX
+ * const queryClient = useQueryClient()
+ * queryClient.prefetchQuery({
+ *   queryKey: ['payments', { ...params, page: params.page + 1 }],
+ *   queryFn: () => fetch('/api/payments?page=2&limit=10').then(r => r.json())
  * })
  * ```
  */
@@ -122,6 +134,9 @@ export function usePayments(params: PaymentsQueryParams = {}) {
 
       return response.json()
     },
+    placeholderData: keepPreviousData, // ← Mantener datos anteriores durante transición
+    staleTime: 60 * 1000, // 1 minuto - datos cambian ocasionalmente
+    gcTime: 5 * 60 * 1000, // 5 minutos en cache
   })
 }
 

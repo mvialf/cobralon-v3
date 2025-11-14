@@ -1,8 +1,9 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { Plus } from 'lucide-react'
 import { Row } from '@tanstack/react-table'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { AppLayout } from '@/components/layout/app-layout'
 import { Button } from '@/components/ui/button'
 import { DataTable } from '@/components/data-table/data-table'
@@ -10,96 +11,64 @@ import { AftersaleDialog } from '@/components/dialogs/aftersales/aftersale-dialo
 import { createColumns } from './columns'
 import type { Aftersale } from '@/lib/validations/aftersale-validations'
 import type { EditableBadgeOption } from '@/components/ui/editable-badge'
-import { toast } from 'sonner'
+import { useAftersales, useUpdateAftersale } from '@/hooks/queries/use-aftersales'
 
 export default function AftersalesPage() {
-  const [aftersales, setAftersales] = useState<Aftersale[]>([])
-  const [isLoading, setIsLoading] = useState(true)
+  const queryClient = useQueryClient()
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
-  const [statuses, setStatuses] = useState<EditableBadgeOption[]>([])
-  const [updatingAftersaleId, setUpdatingAftersaleId] = useState<string | null>(null)
 
-  const fetchAftersales = async () => {
-    try {
-      setIsLoading(true)
-      const response = await fetch('/api/aftersales')
-      const data = await response.json()
-      setAftersales(data.aftersales || [])
-    } catch (error) {
-      console.error('Error fetching aftersales:', error)
-    } finally {
-      setIsLoading(false)
-    }
-  }
+  // React Query: Fetch aftersales con cache automático
+  const { data, isLoading } = useAftersales()
 
-  const fetchStatuses = async () => {
-    try {
+  // Cargar statuses para el filtro
+  const { data: statusesData } = useQuery({
+    queryKey: ['aftersale-statuses'],
+    queryFn: async () => {
       const response = await fetch('/api/aftersale-status')
-      const data = await response.json()
-      const statusList = data.aftersaleStatuses || []
+      if (!response.ok) throw new Error('Error al cargar estados')
+      return response.json()
+    },
+    staleTime: 5 * 60 * 1000, // 5 minutos - statuses cambian raramente
+  })
 
-      // Transformar a formato EditableBadgeOption
-      const transformedStatuses: EditableBadgeOption[] = statusList.map(
-        (status: {
-          id: string
-          name: string
-          color: { bgClass: string; textClass: string }
-          isActive: boolean
-        }) => ({
-          id: status.id,
-          label: status.name,
-          color: { bgClass: status.color.bgClass },
-        })
-      )
+  // Mutation hook para actualizar estado de aftersale
+  const updateAftersaleMutation = useUpdateAftersale()
 
-      setStatuses(transformedStatuses)
-    } catch (error) {
-      console.error('Error fetching statuses:', error)
-    }
-  }
+  // Extraer data del hook (con fallbacks)
+  const aftersales = data?.aftersales || []
+  const statusList = statusesData?.aftersaleStatuses || []
 
-  useEffect(() => {
-    fetchAftersales()
-    fetchStatuses()
-  }, [])
+  // Transformar statuses a formato EditableBadgeOption
+  const statuses: EditableBadgeOption[] = statusList.map(
+    (status: {
+      id: string
+      name: string
+      color: { bgClass: string; textClass: string }
+      isActive: boolean
+    }) => ({
+      id: status.id,
+      label: status.name,
+      color: { bgClass: status.color.bgClass },
+    })
+  )
 
   const handleAftersaleUpdated = () => {
-    fetchAftersales()
+    queryClient.invalidateQueries({ queryKey: ['aftersales'] })
   }
 
   const handleStatusChange = async (aftersaleId: string, newStatusId: string) => {
-    setUpdatingAftersaleId(aftersaleId)
-
-    try {
-      const response = await fetch(`/api/aftersales/${aftersaleId}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          aftersaleStatusId: newStatusId,
-        }),
-      })
-
-      if (!response.ok) {
-        const error = await response.json()
-        throw new Error(error.error || 'Error al actualizar el estado')
-      }
-
-      toast.success('Estado actualizado correctamente')
-      await fetchAftersales()
-    } catch (error) {
-      console.error('Error updating status:', error)
-      toast.error(error instanceof Error ? error.message : 'Error al actualizar el estado')
-    } finally {
-      setUpdatingAftersaleId(null)
-    }
+    await updateAftersaleMutation.mutateAsync({
+      id: aftersaleId,
+      aftersaleStatusId: newStatusId,
+    })
   }
 
   const columns = createColumns({
     onAftersaleUpdated: handleAftersaleUpdated,
     statuses,
-    updatingAftersaleId,
+    updatingAftersaleId: updateAftersaleMutation.isPending
+      ? updateAftersaleMutation.variables?.id
+      : null,
   })
 
   // Función de filtrado global: busca en projectNumber, customer.name y description
@@ -167,7 +136,7 @@ export default function AftersalesPage() {
       <AftersaleDialog
         mode="create"
         onSuccess={() => {
-          fetchAftersales()
+          queryClient.invalidateQueries({ queryKey: ['aftersales'] })
           setIsCreateDialogOpen(false)
         }}
         open={isCreateDialogOpen}
