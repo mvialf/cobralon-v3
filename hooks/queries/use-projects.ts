@@ -232,7 +232,7 @@ export function useProject(id: string | undefined) {
  * @example
  * const createMutation = useCreateProject()
  * createMutation.mutate(projectData, {
- *   onSuccess: () => console.log('Proyecto creado')
+ *   onSuccess: () => toast.success('Proyecto creado')
  * })
  */
 export function useCreateProject() {
