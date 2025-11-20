@@ -7,6 +7,7 @@ import { FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/comp
 import { FormGrid } from '@/components/ui/form-grid'
 import { Input } from '@/components/ui/input'
 import { CurrencyInput } from '@/components/ui/currency-input'
+import { formatDateValue, parseDateValue } from '@/lib/utils'
 
 interface PaymentAmountDateFieldsProps {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -62,12 +63,8 @@ export function PaymentAmountDateFields({
             <FormControl>
               <Input
                 type="date"
-                value={
-                  field.value instanceof Date
-                    ? field.value.toISOString().split('T')[0]
-                    : field.value
-                }
-                onChange={(e) => field.onChange(new Date(e.target.value))}
+                value={formatDateValue(field.value)}
+                onChange={(e) => field.onChange(parseDateValue(e.target.value))}
                 disabled={disabled}
               />
             </FormControl>

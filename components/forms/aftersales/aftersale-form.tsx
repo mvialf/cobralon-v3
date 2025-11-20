@@ -6,6 +6,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 
 import { aftersaleSchema, type AftersaleFormValues } from '@/lib/validations/aftersale-validations'
 import { normalizePhone } from '@/lib/utils/phone'
+import { formatDateValue, parseDateValue } from '@/lib/utils'
 import { FormGrid } from '@/components/ui/form-grid'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
@@ -184,12 +185,8 @@ export const AftersaleForm = React.forwardRef<AftersaleFormHandle, AftersaleForm
                   <FormControl>
                     <Input
                       type="date"
-                      value={
-                        field.value instanceof Date
-                          ? field.value.toISOString().split('T')[0]
-                          : field.value
-                      }
-                      onChange={(e) => field.onChange(new Date(e.target.value))}
+                      value={formatDateValue(field.value)}
+                      onChange={(e) => field.onChange(parseDateValue(e.target.value))}
                     />
                   </FormControl>
                   <FormMessage />

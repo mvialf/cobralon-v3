@@ -6,6 +6,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 
 import { projectFormSchema, type ProjectFormData } from '@/lib/validations/project-validations'
 import { normalizePhone } from '@/lib/utils/phone'
+import { formatDateValue, parseDateValue } from '@/lib/utils'
 import { useCustomersList } from '@/hooks/queries/use-customers'
 
 import { Button } from '@/components/ui/button'
@@ -307,12 +308,8 @@ export const ProjectForm = React.forwardRef<ProjectFormHandle, ProjectFormProps>
                   <FormControl>
                     <Input
                       type="date"
-                      value={
-                        field.value instanceof Date
-                          ? field.value.toISOString().split('T')[0]
-                          : field.value
-                      }
-                      onChange={(e) => field.onChange(new Date(e.target.value))}
+                      value={formatDateValue(field.value)}
+                      onChange={(e) => field.onChange(parseDateValue(e.target.value))}
                     />
                   </FormControl>
                   <FormMessage />
