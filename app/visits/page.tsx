@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useMemo } from 'react'
 import { type PaginationState } from '@tanstack/react-table'
-import { Row } from '@tanstack/react-table'
 import { useQueryClient, useQuery } from '@tanstack/react-query'
 import { AppLayout } from '@/components/layout/app-layout'
 import { NewVisitDialog } from '@/components/dialogs/visits/new-visit-dialog'
@@ -107,34 +106,6 @@ export default function VisitsPage() {
     updatingVisitId: updateVisitMutation.isPending ? updateVisitMutation.variables?.id : null,
   })
 
-  // Función de filtrado global: busca en nombre, teléfono, dirección y comuna
-  const globalFilterFn = (row: Row<Visit>, _columnId: string, filterValue: string) => {
-    const visit = row.original
-    const searchValue = filterValue.toLowerCase()
-
-    // Buscar en nombre
-    if (visit.name.toLowerCase().includes(searchValue)) {
-      return true
-    }
-
-    // Buscar en teléfono
-    if (visit.phone && visit.phone.toLowerCase().includes(searchValue)) {
-      return true
-    }
-
-    // Buscar en calle
-    if (visit.street.toLowerCase().includes(searchValue)) {
-      return true
-    }
-
-    // Buscar en comuna
-    if (visit.comuna.toLowerCase().includes(searchValue)) {
-      return true
-    }
-
-    return false
-  }
-
   // Formatear opciones para el filtro de status
   const statusFilterOptions = (statuses || []).map((status: any) => ({
     label: status.name,
@@ -160,8 +131,7 @@ export default function VisitsPage() {
             data={visits}
             searchKey="search"
             searchPlaceholder="Buscar por nombre, teléfono, dirección o comuna..."
-            enableGlobalFilter={true}
-            globalFilterFn={globalFilterFn}
+            searchValue={searchTerm}
             // Server-side pagination
             manualPagination={true}
             pageCount={pageCount}

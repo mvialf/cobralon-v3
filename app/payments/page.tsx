@@ -191,6 +191,7 @@ export default function PaymentsPage() {
             data={payments}
             searchKey="associated"
             searchPlaceholder="Buscar por cliente/proyecto..."
+            searchValue={searchTerm}
             // Server-side pagination
             manualPagination={true}
             pageCount={pageCount}
