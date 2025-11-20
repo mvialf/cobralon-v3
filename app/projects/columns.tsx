@@ -19,6 +19,7 @@ import { EditProjectDialog } from '@/components/dialogs/projects/edit-project-di
 import { PaymentToProjectDialog } from '@/components/dialogs/payments/payment-to-project-dialog'
 import { toast } from 'sonner'
 import { formatDate } from '@/lib/format'
+import { calculateProjectState } from '@/lib/business-logic/project-state'
 
 export interface Project {
   id: string
@@ -157,10 +158,8 @@ export const createColumns = ({
   {
     id: 'projectState',
     accessorFn: (row) => {
-      // Calcular estado del proyecto: Activo vs Finalizado
-      const isFullyPaid = row.balance === 0
-      const hasFinalStatus = row.projectStatus?.isFinal ?? false
-      return isFullyPaid && hasFinalStatus ? 'Finalizado' : 'Activo'
+      // Calcular estado del proyecto usando helper compartido
+      return calculateProjectState(row.balance, row.projectStatus?.isFinal)
     },
     header: ({ column }) => <DataTableColumnHeader column={column} title="Estado Proyecto" />,
     cell: ({ row }) => {

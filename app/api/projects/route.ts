@@ -2,23 +2,32 @@ import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { Decimal } from '@prisma/client/runtime/library'
 import { ProjectWhereInput } from '@/types/api'
-import { calculateProjectBalance } from '@/lib/business-logic/project-balance'
+import { matchesProjectState } from '@/lib/business-logic/project-state'
 import { withLogging } from '@/lib/logger-middleware'
+import { z } from 'zod'
+
+/**
+ * Zod schema for projectState validation
+ */
+const projectStateSchema = z.enum(['Activo', 'Finalizado', 'all']).default('Activo')
 
 /**
  * GET /api/projects
  *
- * Obtiene lista de proyectos con paginaci�n opcional
+ * Obtiene lista de proyectos con paginación correcta
  *
  * Query params:
- *   - page: n�mero de p�gina (default: 1)
- *   - limit: registros por p�gina (default: 10, max: 100)
- *   - search: buscar por nombre de proyecto, n�mero o cliente
- *   - customerId: filtrar por cliente espec�fico
+ *   - page: número de página (default: 1)
+ *   - limit: registros por página (default: 10, max: 100)
+ *   - search: buscar por nombre de proyecto, número o cliente
+ *   - customerId: filtrar por cliente específico
  *   - projectState: "Activo" (default), "Finalizado", "all"
  *       - "Activo": Proyectos no finalizados (status.isFinal = false OR balance > 0)
  *       - "Finalizado": Proyectos finalizados (status.isFinal = true AND balance = 0)
  *       - "all": Todos los proyectos
+ *
+ * NOTA: La paginación se aplica DESPUÉS del filtro fino de projectState para
+ * garantizar que cada página contenga exactamente 'limit' proyectos.
  */
 export const GET = withLogging(async (request, logger) => {
   const { searchParams } = new URL(request.url)
@@ -26,7 +35,20 @@ export const GET = withLogging(async (request, logger) => {
   const limit = Math.min(parseInt(searchParams.get('limit') || '10'), 100)
   const search = searchParams.get('search') || ''
   const customerId = searchParams.get('customerId') || ''
-  const projectState = searchParams.get('projectState') || 'Activo' // Default: solo activos
+
+  // Validar y parsear projectState con Zod
+  const projectStateResult = projectStateSchema.safeParse(searchParams.get('projectState'))
+  if (!projectStateResult.success) {
+    logger.warn(
+      { invalidValue: searchParams.get('projectState') },
+      'Invalid projectState parameter'
+    )
+    return NextResponse.json(
+      { error: 'projectState debe ser "Activo", "Finalizado" o "all"' },
+      { status: 400 }
+    )
+  }
+  const projectState = projectStateResult.data
 
   logger.debug(
     {
@@ -41,10 +63,8 @@ export const GET = withLogging(async (request, logger) => {
     'Fetching projects with filters'
   )
 
-  const skip = (page - 1) * limit
-
   try {
-    // Construir filtro de búsqueda
+    // Construir filtro de búsqueda base
     const where: ProjectWhereInput = {}
 
     if (customerId) {
@@ -60,7 +80,7 @@ export const GET = withLogging(async (request, logger) => {
       ]
     }
 
-    // Pre-filtro server-side por projectStatus.isFinal
+    // Pre-filtro server-side por projectStatus.isFinal (solo para "Finalizado")
     // NOTA: Para "Activo" NO aplicamos pre-filtro porque necesitamos verificar
     // el balance (proyectos con isFinal=true pero balance>0 son "Activos")
     if (projectState === 'Finalizado') {
@@ -70,12 +90,11 @@ export const GET = withLogging(async (request, logger) => {
     }
     // 'Activo' y 'all' no agregan pre-filtro de status
 
-    // Obtener proyectos (COUNT eliminado - se calcula con filteredProjects.length)
-    const projects = await prisma.project.findMany({
-      relationLoadStrategy: 'join', // ← Fix N+1: Force database-level JOINs
+    // PASO 1: Obtener TODOS los proyectos que cumplen el pre-filtro (sin paginación)
+    // Esto es necesario para calcular el COUNT total correcto después del filtro fino
+    const allProjects = await prisma.project.findMany({
+      relationLoadStrategy: 'join', // Fix N+1: Force database-level JOINs
       where,
-      skip,
-      take: limit,
       orderBy: { createdAt: 'desc' },
       include: {
         customer: {
@@ -89,7 +108,7 @@ export const GET = withLogging(async (request, logger) => {
           select: {
             id: true,
             name: true,
-            isFinal: true, // ← Agregar campo isFinal para filtrado en frontend
+            isFinal: true,
             color: {
               select: {
                 bgClass: true,
@@ -97,25 +116,16 @@ export const GET = withLogging(async (request, logger) => {
             },
           },
         },
-        paymentAllocations: {
-          select: {
-            allocatedAmount: true,
-          },
-        },
       },
     })
 
-    // Calcular totalPaid, balance y percentPaid para cada proyecto usando helper compartido
-    const projectsWithCalculations = projects.map((project) => {
-      const { totalPaid, balance } = calculateProjectBalance({
-        totalAmount: Number(project.total),
-        allocations: project.paymentAllocations.map((alloc) => ({
-          allocatedAmount: Number(alloc.allocatedAmount),
-        })),
-      })
+    // PASO 2: Calcular totalPaid y percentPaid usando balance de DB
+    const projectsWithCalculations = allProjects.map((project) => {
+      const balance = Number(project.balance) // ✅ Leer desde columna DB
+      const totalAmount = Number(project.total)
+      const totalPaid = totalAmount - balance
 
-      // Calcular porcentaje pagado (sin redondear - frontend decide precisión)
-      const percentPaid = Number(project.total) > 0 ? (totalPaid / Number(project.total)) * 100 : 0
+      const percentPaid = totalAmount > 0 ? (totalPaid / totalAmount) * 100 : 0
 
       return {
         ...project,
@@ -125,41 +135,43 @@ export const GET = withLogging(async (request, logger) => {
       }
     })
 
-    // Filtro fino client-side: Considerar también el balance
-    // Esto captura casos edge como "Completado pero con deuda" o "En Progreso pero pagado"
+    // PASO 3: Filtro fino - Aplicar filtro de projectState usando helper compartido
     const filteredProjects = projectsWithCalculations.filter((project) => {
-      const isFullyPaid = project.balance === 0
-      const hasFinaleStatus = project.projectStatus?.isFinal ?? false
-
-      if (projectState === 'Activo') {
-        // Activo: No está finalizado O tiene deuda pendiente
-        return !hasFinaleStatus || !isFullyPaid
-      } else if (projectState === 'Finalizado') {
-        // Finalizado: Status final Y completamente pagado
-        return hasFinaleStatus && isFullyPaid
-      }
-      // 'all': No filtrar
-      return true
+      return matchesProjectState(
+        project.balance,
+        project.projectStatus?.isFinal,
+        projectState as 'Activo' | 'Finalizado' | 'all'
+      )
     })
+
+    // PASO 4: Calcular paginación DESPUÉS del filtro fino
+    const totalFiltered = filteredProjects.length
+    const totalPages = Math.ceil(totalFiltered / limit)
+    const skip = (page - 1) * limit
+
+    // PASO 5: Aplicar paginación manualmente
+    const paginatedProjects = filteredProjects.slice(skip, skip + limit)
 
     logger.info(
       {
-        beforeFilter: projectsWithCalculations.length,
-        afterFilter: filteredProjects.length,
-        filtered: projectsWithCalculations.length - filteredProjects.length,
-        projectState,
+        totalFetched: allProjects.length,
+        totalFiltered,
         page,
+        limit,
+        totalPages,
+        projectState,
+        paginatedCount: paginatedProjects.length,
       },
-      'Projects fetched and filtered successfully'
+      'Projects fetched, filtered, and paginated successfully'
     )
 
     return NextResponse.json({
-      projects: filteredProjects,
+      projects: paginatedProjects,
       pagination: {
         page,
         limit,
-        total: filteredProjects.length, // Actualizar total con proyectos filtrados
-        totalPages: Math.ceil(filteredProjects.length / limit),
+        total: totalFiltered, // ✅ Total correcto de proyectos después del filtro
+        totalPages, // ✅ Páginas correctas basadas en total filtrado
       },
     })
   } catch (error) {
