@@ -9,7 +9,7 @@ import { AppLayout } from '@/components/layout/app-layout'
 import { NewProjectDialog } from '@/components/dialogs/projects/new-project-dialog'
 import { Button } from '@/components/ui/button'
 import { DataTable } from '@/components/data-table/data-table'
-import { createColumns, type Project } from './columns'
+import { createColumns } from './columns'
 import {
   useProjects,
   useUpdateProjectStatus,

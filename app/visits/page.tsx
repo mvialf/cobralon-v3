@@ -6,7 +6,7 @@ import { useQueryClient, useQuery } from '@tanstack/react-query'
 import { AppLayout } from '@/components/layout/app-layout'
 import { NewVisitDialog } from '@/components/dialogs/visits/new-visit-dialog'
 import { DataTable } from '@/components/data-table/data-table'
-import { createColumns, type Visit } from './columns'
+import { createColumns } from './columns'
 import { useVisits, useUpdateVisit, type VisitsQueryParams } from '@/hooks/queries/use-visits'
 import { useDebounce } from '@/hooks/use-debounce'
 
