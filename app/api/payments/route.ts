@@ -665,6 +665,103 @@ export const POST = withLogging(async (request, logger) => {
       )
     }
 
+    // ========================================================================
+    // GENERACIÓN AUTOMÁTICA DE CRÉDITO POR SOBREPAGO
+    // ========================================================================
+    // Si el pago causó que algún proyecto tenga balance negativo (sobrepago),
+    // el excedente se convierte automáticamente en crédito del cliente
+
+    paymentLogger.debug({ projectIds }, 'Checking for overpayments')
+
+    // Obtener proyectos actualizados para verificar si hay sobrepago
+    const updatedProjects = await prisma.project.findMany({
+      where: { id: { in: projectIds } },
+      select: {
+        id: true,
+        projectNumber: true,
+        balance: true,
+        customerId: true,
+      },
+    })
+
+    for (const project of updatedProjects) {
+      const balance = Number(project.balance)
+
+      // Si el balance es negativo, hay sobrepago
+      if (balance < 0) {
+        const overpaymentAmount = Math.abs(balance)
+
+        paymentLogger.info(
+          {
+            projectId: project.id,
+            projectNumber: project.projectNumber,
+            negativeBalance: balance,
+            overpaymentAmount,
+          },
+          'Overpayment detected - converting to customer credit'
+        )
+
+        try {
+          // Transacción atómica para garantizar consistencia
+          await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+            // 1. Ajustar balance del proyecto a 0 (no puede ser negativo)
+            await tx.project.update({
+              where: { id: project.id },
+              data: { balance: new Decimal(0) },
+            })
+
+            // 2. Incrementar crédito del cliente
+            await tx.customer.update({
+              where: { id: project.customerId },
+              data: {
+                creditBalance: {
+                  increment: overpaymentAmount,
+                },
+              },
+            })
+
+            // 3. Crear registro de transacción de crédito
+            await tx.creditTransaction.create({
+              data: {
+                customerId: project.customerId,
+                amount: new Prisma.Decimal(overpaymentAmount), // Positivo = entrada de crédito
+                type: 'OVERPAYMENT',
+                description: `Sobrepago generado en proyecto P-${project.projectNumber}`,
+                paymentId: payment.id,
+                projectId: project.id,
+                metadata: {
+                  paymentAmount: amount,
+                  projectBalance: balance,
+                  overpaymentAmount,
+                  paymentDate: paymentDate.toISOString(),
+                },
+              },
+            })
+
+            paymentLogger.info(
+              {
+                projectId: project.id,
+                projectNumber: project.projectNumber,
+                creditGenerated: overpaymentAmount,
+              },
+              'Overpayment credit generated successfully'
+            )
+          })
+        } catch (creditError) {
+          // Log error crítico pero no fallar la petición
+          // El job de reconciliación detectará y corregirá esta inconsistencia
+          paymentLogger.error(
+            {
+              err: creditError,
+              projectId: project.id,
+              overpaymentAmount,
+            },
+            'CRITICAL: Failed to generate overpayment credit - manual intervention required'
+          )
+        }
+      }
+    }
+
     return NextResponse.json(payment, { status: 201 })
   } catch (error) {
     paymentLogger.error({ err: error }, 'Error creating payment')
