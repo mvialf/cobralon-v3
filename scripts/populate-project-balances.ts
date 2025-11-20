@@ -116,8 +116,12 @@ async function populateBalances(): Promise<Stats> {
     console.log(`✅ Actualizados:        ${stats.updated}`)
     console.log(`❌ Errores:             ${stats.errors}`)
     console.log(`\n💰 Balance total:       $${stats.totalBalance.toLocaleString('es-CL')}`)
-    console.log(`📈 Con deuda:           ${stats.projectsWithDebt} (${((stats.projectsWithDebt / stats.total) * 100).toFixed(1)}%)`)
-    console.log(`✅ Pagados completos:   ${stats.projectsFullyPaid} (${((stats.projectsFullyPaid / stats.total) * 100).toFixed(1)}%)`)
+    console.log(
+      `📈 Con deuda:           ${stats.projectsWithDebt} (${((stats.projectsWithDebt / stats.total) * 100).toFixed(1)}%)`
+    )
+    console.log(
+      `✅ Pagados completos:   ${stats.projectsFullyPaid} (${((stats.projectsFullyPaid / stats.total) * 100).toFixed(1)}%)`
+    )
     console.log('='.repeat(60))
     console.log('\n✅ Población de balances completada exitosamente!')
 

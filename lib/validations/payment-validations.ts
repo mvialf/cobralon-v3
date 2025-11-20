@@ -144,6 +144,13 @@ export const paymentToProjectSchema = z.object({
     .optional()
     .nullable(),
 
+  // Crédito del cliente a aplicar (opcional)
+  creditApplied: z.coerce
+    .number()
+    .min(0, 'El crédito aplicado no puede ser negativo')
+    .optional()
+    .default(0),
+
   // Notas adicionales (opcional)
   notes: z
     .string()

@@ -1,9 +1,11 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { Decimal } from '@prisma/client/runtime/library'
+import { Prisma } from '@prisma/client'
 import { AllocationInput, PaymentWhereInput } from '@/types/api'
 import { withLogging } from '@/lib/logger-middleware'
 import { updateMultipleProjectBalances } from '@/lib/business-logic/update-project-balance'
+import { canApplyCredit } from '@/lib/business-logic/credit-management'
 
 /**
  * GET /api/payments
@@ -170,6 +172,7 @@ export const POST = withLogging(async (request, logger) => {
     notes,
     allocations,
     selectedInstallments,
+    creditApplied, // ← Nuevo campo opcional
   } = body
 
   // Child logger con contexto de negocio
@@ -351,6 +354,72 @@ export const POST = withLogging(async (request, logger) => {
 
     paymentLogger.debug('All validations passed')
 
+    // ========================================================================
+    // VALIDACIÓN DE CRÉDITO APLICADO (si aplica)
+    // ========================================================================
+    const creditToApply = creditApplied || 0
+    let customerCreditBalance = 0
+
+    if (creditToApply > 0) {
+      paymentLogger.debug({ creditToApply }, 'Credit application requested')
+
+      // Solo permitir aplicar crédito en pagos tipo "Project" con 1 allocation
+      if (type !== 'Project' || allocations.length !== 1) {
+        paymentLogger.warn('Credit can only be applied to Project payments with 1 allocation')
+        return NextResponse.json(
+          { error: 'El crédito solo puede aplicarse a pagos de proyecto únicos' },
+          { status: 400 }
+        )
+      }
+
+      // Obtener crédito actual del cliente
+      const customer = await prisma.customer.findUnique({
+        where: { id: customerId },
+        select: { creditBalance: true },
+      })
+
+      if (!customer) {
+        paymentLogger.error('Customer not found during credit validation')
+        return NextResponse.json({ error: 'Cliente no encontrado' }, { status: 404 })
+      }
+
+      customerCreditBalance = Number(customer.creditBalance)
+
+      // Obtener balance del proyecto
+      const project = await prisma.project.findUnique({
+        where: { id: allocations[0].projectId },
+        select: { balance: true },
+      })
+
+      if (!project) {
+        paymentLogger.error('Project not found during credit validation')
+        return NextResponse.json({ error: 'Proyecto no encontrado' }, { status: 404 })
+      }
+
+      const projectBalance = Number(project.balance)
+
+      // Validar que se puede aplicar el crédito
+      const validation = canApplyCredit(creditToApply, customerCreditBalance, projectBalance)
+
+      if (!validation.valid) {
+        paymentLogger.warn(
+          {
+            creditToApply,
+            customerCredit: customerCreditBalance,
+            projectBalance,
+            error: validation.error,
+          },
+          'Credit validation failed'
+        )
+        return NextResponse.json({ error: validation.error }, { status: 400 })
+      }
+
+      paymentLogger.info(
+        { creditToApply, customerCredit: customerCreditBalance, projectBalance },
+        'Credit validation passed'
+      )
+    }
+
     // Crear el pago con sus allocations en una transacción
     const paymentDate = new Date(date)
 
@@ -358,113 +427,227 @@ export const POST = withLogging(async (request, logger) => {
       {
         installments: selectedInstallments || 1,
         hasInstallments: !!selectedInstallments && selectedInstallments > 1,
+        creditApplied: creditToApply,
       },
       'Creating payment in database'
     )
 
-    const payment = await prisma.payment.create({
-      data: {
-        type, // ← Agregar tipo de pago
-        customerId,
-        amount: new Decimal(amount),
-        currency,
-        date: paymentDate,
-        paymentMethodId,
-        reference: reference?.trim() || null,
-        notes: notes?.trim() || null,
-        selectedInstallments: selectedInstallments || null,
-        allocations: {
-          create: allocations.map((a: AllocationInput) => ({
-            projectId: a.projectId,
-            allocatedAmount: new Decimal(a.allocatedAmount),
-          })),
-        },
-        // Crear installments automáticamente si aplica
-        installments:
-          selectedInstallments && selectedInstallments > 1
-            ? {
-                create: Array.from({ length: selectedInstallments }, (_, i) => {
-                  const installmentNumber = i + 1
-                  const isLastInstallment = installmentNumber === selectedInstallments
+    // ========================================================================
+    // CREAR PAYMENT (con crédito aplicado si aplica)
+    // ========================================================================
+    let payment
 
-                  // Calcular monto de la cuota
-                  // Dividir el total entre el número de cuotas, redondeando a 2 decimales
-                  const baseInstallmentAmount =
-                    Math.floor((amount / selectedInstallments) * 100) / 100
-                  // Calcular el total de las cuotas base (todas menos la última)
-                  const totalBase = baseInstallmentAmount * (selectedInstallments - 1)
-                  // La última cuota absorbe la diferencia (centavos restantes)
-                  const lastInstallmentAmount = amount - totalBase
+    if (creditToApply > 0) {
+      // Usar transacción atómica para garantizar consistencia
+      const result = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+        // 1. Crear el payment
+        const newPayment = await tx.payment.create({
+          data: {
+            type,
+            customerId,
+            amount: new Decimal(amount),
+            currency,
+            date: paymentDate,
+            paymentMethodId,
+            reference: reference?.trim() || null,
+            notes: notes?.trim() || null,
+            selectedInstallments: selectedInstallments || null,
+            allocations: {
+              create: allocations.map((a: AllocationInput) => ({
+                projectId: a.projectId,
+                allocatedAmount: new Decimal(a.allocatedAmount),
+              })),
+            },
+            installments:
+              selectedInstallments && selectedInstallments > 1
+                ? {
+                    create: Array.from({ length: selectedInstallments }, (_, i) => {
+                      const installmentNumber = i + 1
+                      const isLastInstallment = installmentNumber === selectedInstallments
+                      const baseInstallmentAmount =
+                        Math.floor((amount / selectedInstallments) * 100) / 100
+                      const totalBase = baseInstallmentAmount * (selectedInstallments - 1)
+                      const lastInstallmentAmount = amount - totalBase
+                      const dueDate = new Date(paymentDate)
+                      dueDate.setDate(dueDate.getDate() + (installmentNumber - 1) * 30)
 
-                  // Calcular fecha de vencimiento
-                  // Primera cuota: día 0 (fecha del pago)
-                  // Subsecuentes: cada 30 días
-                  const dueDate = new Date(paymentDate)
-                  dueDate.setDate(dueDate.getDate() + (installmentNumber - 1) * 30)
-
-                  return {
-                    installmentNumber,
-                    amount: new Decimal(
-                      isLastInstallment ? lastInstallmentAmount : baseInstallmentAmount
-                    ),
-                    dueDate,
-                    status: 'pending',
+                      return {
+                        installmentNumber,
+                        amount: new Decimal(
+                          isLastInstallment ? lastInstallmentAmount : baseInstallmentAmount
+                        ),
+                        dueDate,
+                        status: 'pending',
+                      }
+                    }),
                   }
-                }),
-              }
-            : undefined,
-      },
-      include: {
-        customer: {
-          select: {
-            id: true,
-            name: true,
-            phone: true,
+                : undefined,
           },
-        },
-        paymentMethod: {
-          select: {
-            id: true,
-            name: true,
-            icon: true,
-          },
-        },
-        allocations: {
-          select: {
-            id: true,
-            allocatedAmount: true,
-            project: {
+          include: {
+            customer: { select: { id: true, name: true, phone: true } },
+            paymentMethod: { select: { id: true, name: true, icon: true } },
+            allocations: {
               select: {
                 id: true,
-                projectNumber: true,
-                projectName: true,
-                totalAmount: true,
-                currency: true,
+                allocatedAmount: true,
+                project: {
+                  select: {
+                    id: true,
+                    projectNumber: true,
+                    projectName: true,
+                    totalAmount: true,
+                    currency: true,
+                  },
+                },
+              },
+            },
+            installments: {
+              select: {
+                id: true,
+                installmentNumber: true,
+                amount: true,
+                dueDate: true,
+                paidDate: true,
+                status: true,
+              },
+              orderBy: { installmentNumber: 'asc' },
+            },
+          },
+        })
+
+        // 2. Reducir crédito del customer
+        await tx.customer.update({
+          where: { id: customerId },
+          data: { creditBalance: { decrement: creditToApply } },
+        })
+
+        // 3. Crear registro de transacción de crédito
+        await tx.creditTransaction.create({
+          data: {
+            customerId,
+            amount: new Prisma.Decimal(-creditToApply), // Negativo = salida de crédito
+            type: 'APPLIED',
+            description: `Crédito aplicado al pago ${newPayment.id.slice(0, 8)}`,
+            paymentId: newPayment.id,
+            projectId: allocations[0].projectId,
+            metadata: {
+              paymentAmount: amount,
+              creditApplied: creditToApply,
+              paymentDate: paymentDate.toISOString(),
+            },
+          },
+        })
+
+        paymentLogger.info(
+          {
+            paymentId: newPayment.id,
+            creditApplied: creditToApply,
+            newCustomerCredit: customerCreditBalance - creditToApply,
+          },
+          'Credit applied successfully in transaction'
+        )
+
+        return newPayment
+      })
+
+      payment = result
+    } else {
+      // Sin crédito aplicado: flujo original
+      payment = await prisma.payment.create({
+        data: {
+          type,
+          customerId,
+          amount: new Decimal(amount),
+          currency,
+          date: paymentDate,
+          paymentMethodId,
+          reference: reference?.trim() || null,
+          notes: notes?.trim() || null,
+          selectedInstallments: selectedInstallments || null,
+          allocations: {
+            create: allocations.map((a: AllocationInput) => ({
+              projectId: a.projectId,
+              allocatedAmount: new Decimal(a.allocatedAmount),
+            })),
+          },
+          installments:
+            selectedInstallments && selectedInstallments > 1
+              ? {
+                  create: Array.from({ length: selectedInstallments }, (_, i) => {
+                    const installmentNumber = i + 1
+                    const isLastInstallment = installmentNumber === selectedInstallments
+                    const baseInstallmentAmount =
+                      Math.floor((amount / selectedInstallments) * 100) / 100
+                    const totalBase = baseInstallmentAmount * (selectedInstallments - 1)
+                    const lastInstallmentAmount = amount - totalBase
+                    const dueDate = new Date(paymentDate)
+                    dueDate.setDate(dueDate.getDate() + (installmentNumber - 1) * 30)
+
+                    return {
+                      installmentNumber,
+                      amount: new Decimal(
+                        isLastInstallment ? lastInstallmentAmount : baseInstallmentAmount
+                      ),
+                      dueDate,
+                      status: 'pending',
+                    }
+                  }),
+                }
+              : undefined,
+        },
+        include: {
+          customer: {
+            select: {
+              id: true,
+              name: true,
+              phone: true,
+            },
+          },
+          paymentMethod: {
+            select: {
+              id: true,
+              name: true,
+              icon: true,
+            },
+          },
+          allocations: {
+            select: {
+              id: true,
+              allocatedAmount: true,
+              project: {
+                select: {
+                  id: true,
+                  projectNumber: true,
+                  projectName: true,
+                  totalAmount: true,
+                  currency: true,
+                },
               },
             },
           },
-        },
-        installments: {
-          select: {
-            id: true,
-            installmentNumber: true,
-            amount: true,
-            dueDate: true,
-            paidDate: true,
-            status: true,
+          installments: {
+            select: {
+              id: true,
+              installmentNumber: true,
+              amount: true,
+              dueDate: true,
+              paidDate: true,
+              status: true,
+            },
+            orderBy: {
+              installmentNumber: 'asc',
+            },
           },
-          orderBy: {
-            installmentNumber: 'asc',
-          },
         },
-      },
-    })
+      })
+    }
 
     paymentLogger.info(
       {
         paymentId: payment.id,
         allocationsCreated: payment.allocations.length,
         installmentsCreated: payment.installments.length,
+        creditApplied: creditToApply,
       },
       'Payment created successfully'
     )
