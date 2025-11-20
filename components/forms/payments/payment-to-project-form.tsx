@@ -11,6 +11,7 @@ import {
   type ProjectWithBalance,
 } from '@/lib/validations/payment-validations'
 import { formatCurrency } from '@/lib/format'
+import { checkCreditEligibility } from '@/lib/business-logic/credit-eligibility'
 
 import { Button } from '@/components/ui/button'
 import {
@@ -26,6 +27,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { ProjectSearchField } from '@/components/forms/search/project-search-field'
 import { PaymentMethodFields } from '@/components/forms/fields/payment-method-fields'
 import { PaymentAmountDateFields } from '@/components/forms/fields/payment-amount-date-fields'
+import { CreditApplicationFields } from '@/components/forms/fields/credit-application-fields'
 
 interface PaymentToProjectFormProps {
   onSubmit: (data: PaymentToProjectFormValues, project: ProjectWithBalance) => void | Promise<void>
@@ -50,6 +52,7 @@ export function PaymentToProjectForm({
 }: PaymentToProjectFormProps) {
   // State para proyecto seleccionado (actualizado via callback de ProjectSearchField)
   const [selectedProject, setSelectedProject] = useState<ProjectWithBalance | null>(null)
+  const [customerCreditBalance, setCustomerCreditBalance] = useState<number>(0)
 
   // Form setup
   const form = useForm<PaymentToProjectFormValues>({
@@ -59,6 +62,7 @@ export function PaymentToProjectForm({
       amount: 0,
       date: new Date(),
       paymentMethodId: '',
+      creditApplied: 0, // ← Nuevo campo
       notes: '',
     },
   })
@@ -80,6 +84,36 @@ export function PaymentToProjectForm({
       return data.paymentMethods || []
     },
   })
+
+  // Fetch customer credit cuando se selecciona proyecto
+  const { data: customerCredit } = useQuery({
+    queryKey: ['customer-credit', selectedProject?.customer.id],
+    queryFn: async () => {
+      if (!selectedProject?.customer.id) return null
+
+      const res = await fetch(`/api/customers/${selectedProject.customer.id}/credit`)
+      if (!res.ok) return null
+
+      const data = await res.json()
+      return data
+    },
+    enabled: !!selectedProject?.customer.id,
+  })
+
+  // Actualizar state de crédito cuando se obtiene la data
+  if (customerCredit && customerCredit.creditBalance !== customerCreditBalance) {
+    setCustomerCreditBalance(Number(customerCredit.creditBalance) || 0)
+  }
+
+  // Verificar elegibilidad de crédito
+  const creditEligibility = selectedProject
+    ? checkCreditEligibility(
+        customerCreditBalance,
+        selectedProject.balance,
+        selectedProject.customer.id,
+        selectedProject.customer.id // Son el mismo en este flujo
+      )
+    : { eligible: false, maxApplicable: 0 }
 
   // Submit handler
   const handleSubmit = (values: PaymentToProjectFormValues) => {
@@ -123,7 +157,17 @@ export function PaymentToProjectForm({
           onPaymentMethodChange={() => form.setValue('selectedInstallments', null)}
         />
 
-        {/* 4. Notas (opcional) */}
+        {/* 4. Crédito Disponible (condicional) */}
+        {creditEligibility.eligible && selectedProject && (
+          <CreditApplicationFields
+            form={form}
+            customerCredit={customerCreditBalance}
+            projectBalance={selectedProject.balance}
+            customerName={selectedProject.customer.name}
+          />
+        )}
+
+        {/* 5. Notas (opcional) */}
         <FormField
           control={form.control}
           name="notes"

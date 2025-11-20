@@ -2,7 +2,8 @@
 
 import { useState } from 'react'
 import { type ColumnDef } from '@tanstack/react-table'
-import { Pencil, Trash2, DollarSign } from 'lucide-react'
+import { Pencil, Trash2, DollarSign, ArrowLeftRight } from 'lucide-react'
+import { Badge } from '@/components/ui/badge'
 import { DataTableDropdown, DataTableColumnHeader } from '@/components/data-table'
 import {
   DropdownMenuItem,
@@ -10,17 +11,31 @@ import {
   DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu'
 import { PaymentToCustomerDialog } from '@/components/dialogs/payments/payment-to-customer-dialog'
+import { RefundCreditDialog } from '@/components/dialogs/customers/refund-credit-dialog'
+import { CustomerCreditBadge } from '@/components/ui/customer-credit-badge'
+import { shouldShowRefundOption } from '@/lib/business-logic/credit-eligibility'
 
 export interface Customer {
   id: string
   name: string
   phone: string // Obligatorio
   email: string | null // Opcional
+  creditBalance: number // Crédito a favor del cliente
 }
 
 // Componente para las acciones de cada customer
-function CustomerActionsCell({ customer }: { customer: Customer }) {
+function CustomerActionsCell({
+  customer,
+  onCustomerUpdated,
+}: {
+  customer: Customer
+  onCustomerUpdated?: () => void
+}) {
   const [paymentDialogOpen, setPaymentDialogOpen] = useState(false)
+  const [refundDialogOpen, setRefundDialogOpen] = useState(false)
+
+  // Verificar si se debe mostrar opción de devolución de crédito
+  const canRefund = shouldShowRefundOption(customer.creditBalance)
 
   return (
     <>
@@ -40,6 +55,24 @@ function CustomerActionsCell({ customer }: { customer: Customer }) {
         </DropdownMenuItem>
 
         <DropdownMenuSeparator />
+
+        {/* Devolver crédito - CONDICIONAL */}
+        {canRefund && (
+          <>
+            <DropdownMenuItem
+              onClick={() => setRefundDialogOpen(true)}
+              className="text-green-600 dark:text-green-400"
+            >
+              <ArrowLeftRight className="mr-2 h-4 w-4" />
+              Devolver crédito
+              <Badge variant="secondary" className="ml-auto text-xs">
+                <CustomerCreditBadge creditBalance={customer.creditBalance} compact />
+              </Badge>
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+          </>
+        )}
+
         <DropdownMenuItem>
           <Pencil className="mr-2 h-4 w-4" />
           Editar
@@ -56,20 +89,45 @@ function CustomerActionsCell({ customer }: { customer: Customer }) {
         onOpenChange={setPaymentDialogOpen}
         preselectedCustomerId={customer.id}
       />
+
+      {/* Dialog para devolver crédito */}
+      <RefundCreditDialog
+        customerId={customer.id}
+        customerName={customer.name}
+        availableCredit={customer.creditBalance}
+        open={refundDialogOpen}
+        onOpenChange={setRefundDialogOpen}
+        onSuccess={() => {
+          // Refresh tabla cuando se devuelve crédito
+          onCustomerUpdated?.()
+        }}
+      />
     </>
   )
 }
 
-export const columns: ColumnDef<Customer>[] = [
+interface ColumnsProps {
+  onCustomerUpdated?: () => void
+}
+
+export const createColumns = ({ onCustomerUpdated }: ColumnsProps = {}): ColumnDef<Customer>[] => [
   {
     accessorKey: 'name',
     header: ({ column }) => <DataTableColumnHeader column={column} title="Nombre" />,
     enableSorting: true,
+    meta: {
+      headerClassName: 'text-left',
+      cellClassName: 'text-left',
+    },
   },
   {
     accessorKey: 'phone',
     header: ({ column }) => <DataTableColumnHeader column={column} title="Teléfono" />,
     enableSorting: true,
+    meta: {
+      headerClassName: 'text-left',
+      cellClassName: 'text-left',
+    },
   },
   {
     accessorKey: 'email',
@@ -80,9 +138,37 @@ export const columns: ColumnDef<Customer>[] = [
       const emailB = rowB.original.email || ''
       return emailA.localeCompare(emailB)
     },
+    meta: {
+      headerClassName: 'text-left',
+      cellClassName: 'text-left',
+    },
+  },
+  {
+    accessorKey: 'creditBalance',
+    header: ({ column }) => <DataTableColumnHeader column={column} title="Crédito" />,
+    cell: ({ row }) => {
+      const credit = row.original.creditBalance
+
+      if (credit === 0) {
+        return <span className="text-muted-foreground">-</span>
+      }
+
+      return <CustomerCreditBadge creditBalance={credit} />
+    },
+    enableSorting: true,
+    meta: {
+      headerClassName: 'text-right',
+      cellClassName: 'text-right',
+    },
   },
   {
     id: 'actions',
-    cell: ({ row }) => <CustomerActionsCell customer={row.original} />,
+    cell: ({ row }) => (
+      <CustomerActionsCell customer={row.original} onCustomerUpdated={onCustomerUpdated} />
+    ),
+    meta: {
+      headerClassName: 'text-center',
+      cellClassName: 'text-center',
+    },
   },
 ]

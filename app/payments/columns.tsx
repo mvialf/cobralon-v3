@@ -105,7 +105,47 @@ export const createColumns = ({ onViewDetails }: ColumnsProps = {}): ColumnDef<P
     enableSorting: true,
   },
 
-  // Tipo (NUEVO)
+  // Número de Proyecto
+  {
+    id: 'projectNumber',
+    accessorFn: (row) => {
+      // Extraer todos los números de proyecto de allocations
+      return row.allocations.map((a) => a.project.projectNumber).join(', ')
+    },
+    header: ({ column }) => <DataTableColumnHeader column={column} title="N° Proyecto" />,
+    cell: ({ row }) => {
+      const payment = row.original
+
+      // Si no tiene allocations, mostrar guión
+      if (payment.allocations.length === 0) {
+        return <span className="text-muted-foreground">-</span>
+      }
+
+      // Si tiene 1 allocation, mostrar el número
+      if (payment.allocations.length === 1) {
+        return (
+          <span className="font-mono text-sm">{payment.allocations[0].project.projectNumber}</span>
+        )
+      }
+
+      // Si tiene múltiples allocations, mostrar cantidad
+      return (
+        <span className="text-sm text-muted-foreground">
+          {payment.allocations.length} proyectos
+        </span>
+      )
+    },
+    enableSorting: true,
+    filterFn: (row, _id, filterValue) => {
+      const payment = row.original
+      // Verificar si algún allocation tiene un projectNumber en el filterValue
+      return payment.allocations.some((allocation) =>
+        filterValue.includes(allocation.project.projectNumber)
+      )
+    },
+  },
+
+  // Tipo
   {
     accessorKey: 'type',
     header: ({ column }) => <DataTableColumnHeader column={column} title="Tipo" />,

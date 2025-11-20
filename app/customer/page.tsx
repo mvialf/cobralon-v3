@@ -9,12 +9,20 @@ import { AppLayout } from '@/components/layout/app-layout'
 import { NewCustomerDialog } from '@/components/dialogs/customer/new-customer-dialog'
 import { Button } from '@/components/ui/button'
 import { DataTable } from '@/components/data-table/data-table'
-import { columns } from './columns'
+import { createColumns } from './columns'
 import { useCustomers, type CustomersQueryParams } from '@/hooks/queries/use-customers'
 import { useDebounce } from '@/hooks/use-debounce'
 
 export default function CustomersPage() {
   const queryClient = useQueryClient()
+
+  // Callback para refrescar la tabla después de operaciones de crédito
+  const handleCustomerUpdated = () => {
+    queryClient.invalidateQueries({ queryKey: ['customers'] })
+  }
+
+  // Crear columnas con callback de actualización
+  const columns = useMemo(() => createColumns({ onCustomerUpdated: handleCustomerUpdated }), [])
 
   // Estado de paginación server-side
   const [pagination, setPagination] = useState<PaginationState>({

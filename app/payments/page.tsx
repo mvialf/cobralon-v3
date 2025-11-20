@@ -89,6 +89,22 @@ export default function PaymentsPage() {
     }))
   }, [allPayments])
 
+  // Calcular números de proyecto únicos para filtros
+  const uniqueProjectNumbers = useMemo(() => {
+    const projectNumbers = new Set<string>()
+    allPayments.forEach((payment) => {
+      payment.allocations.forEach((allocation) => {
+        projectNumbers.add(allocation.project.projectNumber)
+      })
+    })
+    return Array.from(projectNumbers)
+      .sort()
+      .map((number) => ({
+        label: number,
+        value: number,
+      }))
+  }, [allPayments])
+
   // Prefetch página siguiente para mejor UX
   useEffect(() => {
     if (!isPlaceholderData && data?.pagination) {
@@ -199,6 +215,11 @@ export default function PaymentsPage() {
             onPaginationChange={setPagination}
             onSearchChange={handleSearchChange}
             filterableColumns={[
+              {
+                id: 'projectNumber',
+                title: 'N° Proyecto',
+                options: uniqueProjectNumbers,
+              },
               {
                 id: 'type',
                 title: 'Tipo',
