@@ -104,6 +104,7 @@ export default function CustomersPage() {
             data={customers}
             searchKey="name"
             searchPlaceholder="Buscar cliente..."
+            searchValue={searchTerm}
             // Server-side pagination
             manualPagination={true}
             pageCount={pageCount}

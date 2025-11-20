@@ -43,6 +43,7 @@ interface DataTableProps<TData, TValue> {
   data: TData[]
   searchKey?: string
   searchPlaceholder?: string
+  searchValue?: string
   enableGlobalFilter?: boolean
   globalFilterFn?: FilterFn<TData>
   filterableColumns?: {
@@ -67,6 +68,7 @@ export function DataTable<TData, TValue>({
   data,
   searchKey = '',
   searchPlaceholder = 'Buscar...',
+  searchValue,
   enableGlobalFilter = false,
   globalFilterFn,
   filterableColumns = [],
@@ -156,6 +158,7 @@ export function DataTable<TData, TValue>({
         table={table}
         searchKey={searchKey}
         searchPlaceholder={searchPlaceholder}
+        searchValue={searchValue}
         enableGlobalFilter={enableGlobalFilter}
         filterableColumns={filterableColumns}
         onSearchChange={onSearchChange}

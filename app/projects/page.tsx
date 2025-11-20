@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useMemo } from 'react'
 import { type PaginationState } from '@tanstack/react-table'
-import { Row } from '@tanstack/react-table'
 import { useQueryClient, useQuery } from '@tanstack/react-query'
 import Link from 'next/link'
 import { Upload } from 'lucide-react'
@@ -118,29 +117,6 @@ export default function ProjectsPage() {
       : null,
   })
 
-  // Función de filtrado global: busca en projectNumber, customer.name y projectName
-  const globalFilterFn = (row: Row<Project>, _columnId: string, filterValue: string) => {
-    const project = row.original as Project
-    const searchValue = filterValue.toLowerCase()
-
-    // Buscar en número de proyecto
-    if (project.projectNumber.toLowerCase().includes(searchValue)) {
-      return true
-    }
-
-    // Buscar en nombre del cliente
-    if (project.customer.name.toLowerCase().includes(searchValue)) {
-      return true
-    }
-
-    // Buscar en nombre del proyecto (si existe)
-    if (project.projectName && project.projectName.toLowerCase().includes(searchValue)) {
-      return true
-    }
-
-    return false
-  }
-
   // Formatear opciones para el filtro de status
   const statusFilterOptions = [
     // Opción para "Sin estado"
@@ -187,8 +163,7 @@ export default function ProjectsPage() {
             data={projects}
             searchKey="search"
             searchPlaceholder="Buscar por número, cliente o nombre..."
-            enableGlobalFilter={true}
-            globalFilterFn={globalFilterFn}
+            searchValue={searchTerm}
             // Server-side pagination
             manualPagination={true}
             pageCount={pageCount}

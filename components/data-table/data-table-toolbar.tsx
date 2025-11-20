@@ -20,6 +20,7 @@ interface DataTableToolbarProps<TData> {
   table: Table<TData>
   searchKey?: string
   searchPlaceholder?: string
+  searchValue?: string
   enableGlobalFilter?: boolean
   filterableColumns?: {
     id: string
@@ -34,6 +35,7 @@ export function DataTableToolbar<TData>({
   table,
   searchKey = '',
   searchPlaceholder = 'Buscar...',
+  searchValue,
   enableGlobalFilter = false,
   filterableColumns = [],
   onSearchChange,
@@ -65,7 +67,7 @@ export function DataTableToolbar<TData>({
               placeholder={searchPlaceholder}
               value={
                 onSearchChange
-                  ? '' // Controlled externally
+                  ? (searchValue ?? '') // Use searchValue from parent for server-side
                   : enableGlobalFilter
                     ? ((table.getState().globalFilter as string) ?? '')
                     : ((table.getColumn(searchKey)?.getFilterValue() as string) ?? '')
