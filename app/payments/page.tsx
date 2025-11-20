@@ -2,15 +2,15 @@
 
 import { useState, useMemo, useEffect } from 'react'
 import { type PaginationState } from '@tanstack/react-table'
-import { Plus } from 'lucide-react'
+import { Plus, Upload } from 'lucide-react'
 import { useQueryClient } from '@tanstack/react-query'
+import Link from 'next/link'
 import { AppLayout } from '@/components/layout/app-layout'
 import { DataTable } from '@/components/data-table'
 import { createColumns, type Payment } from './columns'
 import { PaymentDetailsDialog } from '@/components/dialogs/payments/payment-details-dialog'
 import { PaymentToProjectDialog } from '@/components/dialogs/payments/payment-to-project-dialog'
 import { PaymentToCustomerDialog } from '@/components/dialogs/payments/payment-to-customer-dialog'
-import { ImportPaymentDialog } from '@/components/dialogs/payments/import-payment-dialog'
 import { Button } from '@/components/ui/button'
 import {
   DropdownMenu,
@@ -130,13 +130,6 @@ export default function PaymentsPage() {
     await deleteMutation.mutateAsync(paymentId)
   }
 
-  // Invalidar queries después de importar pagos
-  const handleImportComplete = () => {
-    queryClient.invalidateQueries({ queryKey: ['payments'] })
-    // Resetear a página 1
-    setPagination({ ...pagination, pageIndex: 0 })
-  }
-
   const handleSearchChange = (search: string) => {
     setSearchTerm(search)
     // Nota: Search es client-side, no resetea paginación
@@ -162,7 +155,12 @@ export default function PaymentsPage() {
       breadcrumbs={[{ label: 'Inicio', href: '/' }, { label: 'Pagos' }]}
       action={
         <div className="flex items-center gap-2">
-          <ImportPaymentDialog onImportComplete={handleImportComplete} />
+          <Button variant="outline" asChild>
+            <Link href="/settings/import?tab=payments">
+              <Upload className="h-4 w-4 mr-2" />
+              Importar
+            </Link>
+          </Button>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button>

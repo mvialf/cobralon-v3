@@ -3,9 +3,11 @@
 import { useState, useEffect, useMemo } from 'react'
 import { type PaginationState } from '@tanstack/react-table'
 import { useQueryClient } from '@tanstack/react-query'
+import Link from 'next/link'
+import { Upload } from 'lucide-react'
 import { AppLayout } from '@/components/layout/app-layout'
 import { NewCustomerDialog } from '@/components/dialogs/customer/new-customer-dialog'
-import { ImportCustomerDialog } from '@/components/dialogs/customer/import-customer-dialog'
+import { Button } from '@/components/ui/button'
 import { DataTable } from '@/components/data-table/data-table'
 import { columns } from './columns'
 import { useCustomers, type CustomersQueryParams } from '@/hooks/queries/use-customers'
@@ -67,13 +69,6 @@ export default function CustomersPage() {
   }, [data, isPlaceholderData, queryClient, queryParams])
 
   // Handlers
-  const handleImportComplete = () => {
-    // Invalidar todas las queries de customers (fuerza refetch)
-    queryClient.invalidateQueries({ queryKey: ['customers'] })
-    // Resetear a página 1
-    setPagination({ ...pagination, pageIndex: 0 })
-  }
-
   const handleSearchChange = (search: string) => {
     setSearchTerm(search)
     // Resetear a página 1 cuando cambia la búsqueda
@@ -88,7 +83,12 @@ export default function CustomersPage() {
       breadcrumbs={[{ label: 'Inicio', href: '/' }, { label: 'Clientes' }]}
       action={
         <div className="flex items-center gap-2">
-          <ImportCustomerDialog onImportComplete={handleImportComplete} />
+          <Button variant="outline" asChild>
+            <Link href="/settings/import?tab=customers">
+              <Upload className="h-4 w-4 mr-2" />
+              Importar
+            </Link>
+          </Button>
           <NewCustomerDialog />
         </div>
       }
