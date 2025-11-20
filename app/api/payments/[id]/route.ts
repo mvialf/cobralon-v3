@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
+import { updateMultipleProjectBalances } from '@/lib/business-logic/update-project-balance'
 
 /**
  * PUT /api/payments/[id]
@@ -78,6 +79,7 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
           select: {
             id: true,
             allocatedAmount: true,
+            projectId: true,
             project: {
               select: {
                 id: true,
@@ -91,6 +93,17 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
         },
       },
     })
+
+    // Actualizar balance de todos los proyectos afectados (si cambió el amount)
+    if (amount !== undefined && payment.allocations.length > 0) {
+      const projectIds = payment.allocations.map((alloc) => alloc.projectId)
+      try {
+        await updateMultipleProjectBalances(projectIds)
+      } catch (balanceError) {
+        console.error('Error updating project balances:', balanceError)
+        // No fallar la petición - el job nocturno corregirá inconsistencias
+      }
+    }
 
     return NextResponse.json(payment)
   } catch (error) {
@@ -112,12 +125,17 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ i
   try {
     const { id } = await params
 
-    // Verificar que el pago existe
+    // Verificar que el pago existe y obtener projectIds antes de eliminar
     const existingPayment = await prisma.payment.findUnique({
       where: { id },
       select: {
         id: true,
         selectedInstallments: true,
+        allocations: {
+          select: {
+            projectId: true,
+          },
+        },
       },
     })
 
@@ -125,10 +143,23 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ i
       return NextResponse.json({ error: 'Pago no encontrado' }, { status: 404 })
     }
 
+    // Guardar projectIds antes de eliminar
+    const projectIds = existingPayment.allocations.map((alloc) => alloc.projectId)
+
     // Eliminar el pago (cascade delete elimina installments y allocations automáticamente)
     await prisma.payment.delete({
       where: { id },
     })
+
+    // Actualizar balance de todos los proyectos afectados
+    if (projectIds.length > 0) {
+      try {
+        await updateMultipleProjectBalances(projectIds)
+      } catch (balanceError) {
+        console.error('Error updating project balances after deletion:', balanceError)
+        // No fallar la petición - el job nocturno corregirá inconsistencias
+      }
+    }
 
     return NextResponse.json(
       {

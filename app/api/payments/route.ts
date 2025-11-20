@@ -3,6 +3,7 @@ import { prisma } from '@/lib/db'
 import { Decimal } from '@prisma/client/runtime/library'
 import { AllocationInput, PaymentWhereInput } from '@/types/api'
 import { withLogging } from '@/lib/logger-middleware'
+import { updateMultipleProjectBalances } from '@/lib/business-logic/update-project-balance'
 
 /**
  * GET /api/payments
@@ -467,6 +468,19 @@ export const POST = withLogging(async (request, logger) => {
       },
       'Payment created successfully'
     )
+
+    // Actualizar balance de todos los proyectos afectados
+    paymentLogger.debug({ projectIds }, 'Updating project balances')
+    try {
+      await updateMultipleProjectBalances(projectIds)
+      paymentLogger.debug('Project balances updated successfully')
+    } catch (balanceError) {
+      // Log error pero no fallar la petición (el job nocturno corregirá inconsistencias)
+      paymentLogger.error(
+        { err: balanceError, projectIds },
+        'Error updating project balances - will be fixed by reconciliation job'
+      )
+    }
 
     return NextResponse.json(payment, { status: 201 })
   } catch (error) {
