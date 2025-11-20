@@ -35,6 +35,10 @@ Sistema completo de tablas de datos con funcionalidades avanzadas construido sob
 ✅ **Responsive** - Mobile-friendly design
 ✅ **Type-safe** - TypeScript completo
 ✅ **Extensible** - Custom cell renderers y filtros
+✅ **Server-side pagination** - Escalable a millones de registros
+✅ **React Query integration** - Cache automático por página
+✅ **Prefetching automático** - Precarga página siguiente en background
+✅ **Debounced search** - Reduce requests al servidor (500ms)
 
 ### Tech Stack
 
@@ -536,6 +540,267 @@ export default function ProductsPage() {
 
 ---
 
+## 🌐 Server-Side Pagination (Scalable)
+
+### Cuándo Usar Server-Side
+
+Usa paginación server-side cuando:
+
+- ✅ **Dataset >1000 registros** - Client-side degrada performance
+- ✅ **Datos que cambian frecuentemente** - Necesitas invalidación automática
+- ✅ **Cache granular** - Quieres cachear solo páginas visitadas
+- ✅ **Backend con paginación** - API ya soporta `page` y `limit`
+- ✅ **Búsqueda server-side** - Filtrado en base de datos
+
+### Client-Side vs Server-Side
+
+| Aspecto                        | Client-Side            | Server-Side                 |
+| ------------------------------ | ---------------------- | --------------------------- |
+| **Límite de registros**        | ~1000 registros        | Ilimitado (millones)        |
+| **Performance inicial**        | Lenta (fetch completo) | Rápida (fetch página)       |
+| **Navegación entre páginas**   | Instantánea            | Con latencia (~100-300ms)\* |
+| **Cache**                      | No necesario           | Crítico (React Query)       |
+| **Complejidad implementación** | Baja (default)         | Media-Alta                  |
+| **Búsqueda**                   | Client-side (rápida)   | Server-side (escalable)     |
+| **Memoria del cliente**        | Alta (todos los datos) | Baja (solo página actual)   |
+
+_\*Mitigado con prefetching y `placeholderData: keepPreviousData`_
+
+### Ejemplo 3: Server-Side Pagination con React Query
+
+Este ejemplo implementa el patrón completo usado en el proyecto, basado en la migración de `app/customer/page.tsx`.
+
+#### Paso 1: Hook de React Query
+
+```typescript
+// hooks/queries/use-customers.ts
+import { useQuery, keepPreviousData } from '@tanstack/react-query'
+
+export interface CustomersQueryParams {
+  page?: number
+  limit?: number
+  search?: string
+}
+
+export interface CustomersResponse {
+  customers: Customer[]
+  pagination: {
+    page: number
+    limit: number
+    total: number
+    totalPages: number
+  }
+}
+
+export function useCustomers(params: CustomersQueryParams = {}) {
+  return useQuery({
+    queryKey: ['customers', params],
+    queryFn: async (): Promise<CustomersResponse> => {
+      const searchParams = new URLSearchParams()
+
+      if (params.page) searchParams.set('page', String(params.page))
+      if (params.limit) searchParams.set('limit', String(params.limit))
+      if (params.search) searchParams.set('search', params.search)
+
+      const response = await fetch(`/api/customers?${searchParams}`)
+      if (!response.ok) throw new Error('Error al cargar clientes')
+
+      return response.json()
+    },
+    placeholderData: keepPreviousData, // ← Smooth transitions
+    staleTime: 60 * 1000, // 1 minuto
+    gcTime: 5 * 60 * 1000, // 5 minutos
+  })
+}
+```
+
+#### Paso 2: Página con Prefetching
+
+```typescript
+// app/customers/page.tsx
+"use client"
+
+import { useState, useEffect, useMemo } from 'react'
+import { type PaginationState } from '@tanstack/react-table'
+import { useQueryClient } from '@tanstack/react-query'
+import { DataTable } from '@/components/custom/data-table'
+import { columns } from './columns'
+import { useCustomers, type CustomersQueryParams } from '@/hooks/queries/use-customers'
+import { useDebounce } from '@/hooks/use-debounce'
+
+export default function CustomersPage() {
+  const queryClient = useQueryClient()
+
+  // Estado de paginación server-side
+  const [pagination, setPagination] = useState<PaginationState>({
+    pageIndex: 0, // TanStack usa 0-based
+    pageSize: 20,
+  })
+
+  // Estado de búsqueda con debounce
+  const [searchTerm, setSearchTerm] = useState('')
+  const debouncedSearch = useDebounce(searchTerm, 500)
+
+  // Query params (memoizado para evitar recreación)
+  const queryParams: CustomersQueryParams = useMemo(
+    () => ({
+      page: pagination.pageIndex + 1, // API usa 1-based
+      limit: pagination.pageSize,
+      search: debouncedSearch || undefined,
+    }),
+    [pagination.pageIndex, pagination.pageSize, debouncedSearch]
+  )
+
+  // React Query: Fetch customers con cache automático
+  const { data, isLoading, isPlaceholderData } = useCustomers(queryParams)
+
+  const customers = data?.customers || []
+  const pageCount = data?.pagination.totalPages || 0
+
+  // Prefetch página siguiente para mejor UX
+  useEffect(() => {
+    if (!isPlaceholderData && data?.pagination) {
+      const { page, totalPages } = data.pagination
+      const hasNextPage = page < totalPages
+
+      if (hasNextPage) {
+        // Prefetch siguiente página en background
+        queryClient.prefetchQuery({
+          queryKey: ['customers', { ...queryParams, page: page + 1 }],
+          queryFn: async () => {
+            const params = new URLSearchParams({
+              page: String(page + 1),
+              limit: String(queryParams.limit),
+            })
+            if (queryParams.search) params.append('search', queryParams.search)
+
+            const response = await fetch(`/api/customers?${params}`)
+            if (!response.ok) throw new Error('Error al precargar')
+            return response.json()
+          },
+        })
+      }
+    }
+  }, [data, isPlaceholderData, queryClient, queryParams])
+
+  // Handler para búsqueda
+  const handleSearchChange = (search: string) => {
+    setSearchTerm(search)
+    // Resetear a página 1 cuando cambia la búsqueda
+    if (pagination.pageIndex !== 0) {
+      setPagination({ ...pagination, pageIndex: 0 })
+    }
+  }
+
+  return (
+    <div className="container mx-auto py-10">
+      <h1 className="text-2xl font-bold mb-4">Clientes</h1>
+
+      {isLoading && !isPlaceholderData ? (
+        <div className="flex items-center justify-center h-64">
+          <div className="text-muted-foreground">Cargando clientes...</div>
+        </div>
+      ) : (
+        <DataTable
+          columns={columns}
+          data={customers}
+          searchKey="name"
+          searchPlaceholder="Buscar cliente..."
+          // ← Props server-side
+          manualPagination={true}
+          pageCount={pageCount}
+          pagination={pagination}
+          onPaginationChange={setPagination}
+          onSearchChange={handleSearchChange}
+        />
+      )}
+    </div>
+  )
+}
+```
+
+#### Paso 3: Hook useDebounce
+
+```typescript
+// hooks/use-debounce.ts
+import { useEffect, useState } from 'react'
+
+export function useDebounce<T>(value: T, delay: number = 500): T {
+  const [debouncedValue, setDebouncedValue] = useState<T>(value)
+
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedValue(value)
+    }, delay)
+
+    return () => {
+      clearTimeout(handler)
+    }
+  }, [value, delay])
+
+  return debouncedValue
+}
+```
+
+### Características Implementadas
+
+✅ **PaginationState controlado** - TanStack Table maneja estado externamente
+✅ **keepPreviousData** - Mantiene datos anteriores durante transición (sin flickering)
+✅ **Prefetching automático** - Precarga página siguiente en background
+✅ **Debounced search** - Espera 500ms de inactividad antes de buscar
+✅ **Cache por página** - Cada página se cachea independientemente (query keys granulares)
+✅ **0-based ↔ 1-based conversion** - TanStack usa 0-based, API usa 1-based
+✅ **Reset a página 1** - Cuando cambia la búsqueda
+
+### Common Pitfalls
+
+❌ **Olvidar `placeholderData: keepPreviousData`**
+
+- Síntoma: Flickering/tabla vacía al cambiar página
+- Fix: Agregar `placeholderData: keepPreviousData` en useQuery
+
+❌ **No resetear página al buscar**
+
+- Síntoma: Búsqueda retorna página 5 vacía (pero hay resultados en página 1)
+- Fix: `setPagination({ ...pagination, pageIndex: 0 })` en handleSearchChange
+
+❌ **Prefetch sin condición `isPlaceholderData`**
+
+- Síntoma: Prefetch durante loading → requests duplicados
+- Fix: `if (!isPlaceholderData && data?.pagination)`
+
+❌ **Query params no memoizados**
+
+- Síntoma: Re-fetches innecesarios
+- Fix: `useMemo(() => ({ page, limit, search }), [deps])`
+
+### Performance Tips
+
+**staleTime vs gcTime:**
+
+```typescript
+staleTime: 60 * 1000,     // 1 minuto - Cuándo considerar datos "frescos"
+gcTime: 5 * 60 * 1000,    // 5 minutos - Cuánto tiempo mantener en cache
+```
+
+**Ajustar según caso de uso:**
+
+- Datos cambian constantemente → `staleTime: 10s`
+- Datos estables → `staleTime: 5min`
+- Alta memoria disponible → `gcTime: 30min`
+
+**Prefetching condicional:**
+
+```typescript
+// Solo prefetch si usuario está navegando activamente
+const shouldPrefetch = hasNextPage && !isPlaceholderData
+if (shouldPrefetch) {
+  queryClient.prefetchQuery({ ... })
+}
+```
+
+---
+
 ## 📖 API Reference
 
 ### `<DataTable>` Component
@@ -552,6 +817,46 @@ Props principales del componente `DataTable`:
 | `onRowSelectionChange` | `(rows: TData[]) => void`    | `undefined`   | Callback cuando cambia selección        |
 | `enableRowSelection`   | `boolean`                    | `false`       | Habilitar selección de filas            |
 | `meta`                 | `any`                        | `undefined`   | Metadata adicional para columnas        |
+
+#### Server-Side Pagination Props (Optional)
+
+Usa estos props cuando necesites paginación server-side escalable (>1000 registros):
+
+| Prop                 | Tipo                               | Default     | Descripción                                              |
+| -------------------- | ---------------------------------- | ----------- | -------------------------------------------------------- |
+| `manualPagination`   | `boolean`                          | `false`     | Activa modo server-side (deshabilita paginación interna) |
+| `pageCount`          | `number`                           | `undefined` | Total de páginas calculado por servidor                  |
+| `pagination`         | `PaginationState`                  | `undefined` | Estado de paginación controlado externamente             |
+| `onPaginationChange` | `(state: PaginationState) => void` | `undefined` | Callback cuando cambia página o pageSize                 |
+| `onSearchChange`     | `(search: string) => void`         | `undefined` | Callback para búsqueda server-side                       |
+
+**Ejemplo de uso con server-side:**
+
+```typescript
+const [pagination, setPagination] = useState<PaginationState>({
+  pageIndex: 0,
+  pageSize: 20,
+})
+
+<DataTable
+  columns={columns}
+  data={data}
+  manualPagination={true}
+  pageCount={10}
+  pagination={pagination}
+  onPaginationChange={setPagination}
+  onSearchChange={(search) => setSearchTerm(search)}
+/>
+```
+
+**Tipos TypeScript:**
+
+```typescript
+interface PaginationState {
+  pageIndex: number // 0-based (TanStack Table internal)
+  pageSize: number // Registros por página
+}
+```
 
 ### `FilterableColumn` Interface
 
@@ -957,11 +1262,11 @@ Si encuentras problemas no cubiertos en este README:
 **Dependencias externas:** 15+ paquetes
 **Componentes Shadcn requeridos:** 9
 **Tiempo de setup estimado:** 1-2 horas (primera vez)
-**Versión:** 1.0.0
+**Versión:** 2.0.0 (server-side pagination added)
 
 ---
 
-**📝 Última actualización:** Octubre 2025
+**📝 Última actualización:** Noviembre 2025
 **🏗️ Construido para:** Next.js 15, React 18, TypeScript 5
 **📦 Basado en:** TanStack Table v8 + Shadcn/ui
 **✅ Validado en:** CalReact project (producción)
