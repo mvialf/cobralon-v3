@@ -4,9 +4,11 @@ import { useState, useEffect, useMemo } from 'react'
 import { type PaginationState } from '@tanstack/react-table'
 import { Row } from '@tanstack/react-table'
 import { useQueryClient, useQuery } from '@tanstack/react-query'
+import Link from 'next/link'
+import { Upload } from 'lucide-react'
 import { AppLayout } from '@/components/layout/app-layout'
 import { NewProjectDialog } from '@/components/dialogs/projects/new-project-dialog'
-import { ImportProjectDialog } from '@/components/dialogs/projects/import-project-dialog'
+import { Button } from '@/components/ui/button'
 import { DataTable } from '@/components/data-table/data-table'
 import { createColumns, type Project } from './columns'
 import {
@@ -50,7 +52,7 @@ export default function ProjectsPage() {
   const { data: statusesData } = useQuery({
     queryKey: ['project-statuses'],
     queryFn: async () => {
-      const response = await fetch('/api/project-statuses')
+      const response = await fetch('/api/project-status')
       if (!response.ok) throw new Error('Error al cargar estados')
       return response.json()
     },
@@ -95,13 +97,6 @@ export default function ProjectsPage() {
   // Mutation hook maneja loading state, errores y auto-invalidación
   const handleStatusChange = async (projectId: string, newStatusId: string) => {
     await updateStatusMutation.mutateAsync({ projectId, statusId: newStatusId })
-  }
-
-  // Invalidar queries después de importar proyectos
-  const handleImportComplete = () => {
-    queryClient.invalidateQueries({ queryKey: ['projects'] })
-    // Resetear a página 1
-    setPagination({ ...pagination, pageIndex: 0 })
   }
 
   const handleSearchChange = (search: string) => {
@@ -171,7 +166,12 @@ export default function ProjectsPage() {
       breadcrumbs={[{ label: 'Inicio', href: '/' }, { label: 'Proyectos' }]}
       action={
         <div className="flex items-center gap-2">
-          <ImportProjectDialog onImportComplete={handleImportComplete} />
+          <Button variant="outline" asChild>
+            <Link href="/settings/import?tab=projects">
+              <Upload className="h-4 w-4 mr-2" />
+              Importar
+            </Link>
+          </Button>
           <NewProjectDialog />
         </div>
       }
