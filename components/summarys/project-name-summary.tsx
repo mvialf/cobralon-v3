@@ -14,7 +14,7 @@ interface ProjectNameSummaryProps {
  * Si projectName es null o undefined, solo muestra cliente.
  */
 export function ProjectNameSummary({
-  projectId,
+  projectId: _projectId,
   projectNumber,
   customerName,
   projectName,

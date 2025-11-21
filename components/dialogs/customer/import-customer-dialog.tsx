@@ -33,7 +33,7 @@ type Step = 'upload' | 'preview' | 'importing' | 'complete'
 export function ImportCustomerDialog({ onImportComplete }: ImportCustomerDialogProps) {
   const [open, setOpen] = useState(false)
   const [step, setStep] = useState<Step>('upload')
-  const [file, setFile] = useState<File | null>(null)
+  const [_file, setFile] = useState<File | null>(null)
   const [parseResult, setParseResult] = useState<ParseResult | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [isProcessing, setIsProcessing] = useState(false)

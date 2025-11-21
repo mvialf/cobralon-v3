@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useCallback } from 'react'
 import { type PaginationState } from '@tanstack/react-table'
 import { useQueryClient } from '@tanstack/react-query'
 import Link from 'next/link'
@@ -17,12 +17,15 @@ export default function CustomersPage() {
   const queryClient = useQueryClient()
 
   // Callback para refrescar la tabla después de operaciones de crédito
-  const handleCustomerUpdated = () => {
+  const handleCustomerUpdated = useCallback(() => {
     queryClient.invalidateQueries({ queryKey: ['customers'] })
-  }
+  }, [queryClient])
 
   // Crear columnas con callback de actualización
-  const columns = useMemo(() => createColumns({ onCustomerUpdated: handleCustomerUpdated }), [])
+  const columns = useMemo(
+    () => createColumns({ onCustomerUpdated: handleCustomerUpdated }),
+    [handleCustomerUpdated]
+  )
 
   // Estado de paginación server-side
   const [pagination, setPagination] = useState<PaginationState>({
