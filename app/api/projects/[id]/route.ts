@@ -33,6 +33,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
             color: {
               select: {
                 bgClass: true,
+                textClass: true,
               },
             },
           },

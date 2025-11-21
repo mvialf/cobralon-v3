@@ -28,6 +28,7 @@ export const createProjectEventWithProjectUpdateSchema = z.object({
   notes: z.string().max(1000, 'Las notas no pueden exceder 1000 caracteres').optional().nullable(),
 
   // Datos del proyecto (validación consistente con project-validations.ts)
+  projectStatusId: z.string().uuid('ID de estado inválido'),
   phone: z
     .string()
     .min(1, 'El teléfono es requerido')
@@ -48,6 +49,7 @@ export const createProjectEventWithProjectUpdateSchema = z.object({
     .number({ invalid_type_error: 'Los m² deben ser un número' })
     .min(0, 'Los m² no pueden ser negativos'),
   description: z.string().nullable(),
+  uninstallTagIds: z.array(z.string().uuid()).optional().nullable().default([]),
 })
 
 // Schema para query params (rango de fechas)
@@ -82,6 +84,7 @@ export type ProjectEventWithProjectUpdateFormValues = {
   projectId: string
   scheduledDate: string
   notes?: string | null
+  projectStatusId: string
   phone: string
   street: string
   apartment: string | null
@@ -90,4 +93,5 @@ export type ProjectEventWithProjectUpdateFormValues = {
   windowsCount: number
   squareMeters: number
   description: string | null
+  uninstallTagIds: string[] | null
 }
