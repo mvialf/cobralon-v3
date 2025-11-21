@@ -81,3 +81,33 @@ export function formatComunaForCombobox(comuna: Comuna) {
     label: comuna.nombre,
   }
 }
+
+/**
+ * Obtiene el código de región por nombre (búsqueda flexible)
+ * Soporta nombre completo, nombre corto o búsqueda parcial
+ * Ejemplos:
+ * - "Región Metropolitana de Santiago" → "13"
+ * - "Región Metropolitana" → "13"
+ * - "Metropolitana" → "13"
+ */
+export function getRegionCodigoByNombre(nombre: string): string | null {
+  if (!nombre) return null
+
+  const nombreLower = nombre.toLowerCase().trim()
+
+  // 1. Búsqueda exacta primero (más precisa)
+  let region = REGIONES_CHILE.regiones.find(
+    (r) => r.nombre.toLowerCase() === nombreLower || r.nombre_corto.toLowerCase() === nombreLower
+  )
+
+  // 2. Si no encuentra, búsqueda parcial (el nombre contiene o está contenido)
+  if (!region) {
+    region = REGIONES_CHILE.regiones.find(
+      (r) =>
+        r.nombre.toLowerCase().includes(nombreLower) ||
+        nombreLower.includes(r.nombre_corto.toLowerCase())
+    )
+  }
+
+  return region?.codigo || null
+}
