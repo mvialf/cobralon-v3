@@ -52,6 +52,67 @@ export function useCreateProjectEvent() {
 }
 
 // ============================================================================
+// MUTATIONS: CREATE WITH PROJECT UPDATE
+// ============================================================================
+
+interface CreateProjectEventWithUpdateInput {
+  projectId: string
+  scheduledDate: Date | string
+  notes?: string | null
+  phone: string
+  street: string
+  apartment: string | null
+  comuna: string
+  region: string
+  windowsCount: number
+  squareMeters: number
+  description: string | null
+}
+
+interface CreateProjectEventWithUpdateResponse {
+  event: ProjectEventWithRelations
+  projectUpdated: boolean
+}
+
+async function createProjectEventWithUpdate(
+  data: CreateProjectEventWithUpdateInput
+): Promise<CreateProjectEventWithUpdateResponse> {
+  const response = await fetch('/api/project-events-with-update', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  })
+
+  if (!response.ok) {
+    const error = await response.json()
+    throw new Error(error.error || 'Error al crear evento')
+  }
+
+  return response.json()
+}
+
+export function useCreateProjectEventWithUpdate() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: createProjectEventWithUpdate,
+    onSuccess: (result) => {
+      queryClient.invalidateQueries({ queryKey: ['calendar-events'] })
+
+      // Toast diferenciado según si se actualizó el proyecto
+      if (result.projectUpdated) {
+        toast.success('Evento creado y datos del proyecto actualizados')
+      } else {
+        toast.success('Evento creado exitosamente')
+      }
+    },
+    onError: (error) => {
+      handleMutationError(error)
+    },
+  })
+}
+
+// ============================================================================
 // MUTATIONS: UPDATE
 // ============================================================================
 

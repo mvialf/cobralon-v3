@@ -16,9 +16,12 @@ import {
   ProjectEventForm,
   type ProjectEventFormHandle,
 } from '@/components/forms/calendar/project-event-form'
-import type { ProjectEventFormValues } from '@/lib/validations/calendar-validations'
+import type { ProjectEventWithProjectUpdateFormValues } from '@/lib/validations/calendar-validations'
 import type { ProjectEventWithRelations } from '@/lib/types/calendar'
-import { useCreateProjectEvent, useUpdateProjectEvent } from '@/hooks/queries/use-project-events'
+import {
+  useCreateProjectEventWithUpdate,
+  useUpdateProjectEvent,
+} from '@/hooks/queries/use-project-events'
 
 interface ProjectEventDialogProps {
   mode: 'create' | 'edit'
@@ -36,7 +39,7 @@ export function ProjectEventDialog({
   onOpenChange,
 }: ProjectEventDialogProps) {
   const formRef = React.useRef<ProjectEventFormHandle>(null)
-  const createMutation = useCreateProjectEvent()
+  const createWithUpdateMutation = useCreateProjectEventWithUpdate()
   const updateMutation = useUpdateProjectEvent()
 
   // Early return si event no está presente en modo edit
@@ -44,16 +47,24 @@ export function ProjectEventDialog({
     return null
   }
 
-  const isSubmitting = createMutation.isPending || updateMutation.isPending
+  const isSubmitting = createWithUpdateMutation.isPending || updateMutation.isPending
 
-  const handleSubmit = async (data: ProjectEventFormValues) => {
+  const handleSubmit = async (data: ProjectEventWithProjectUpdateFormValues) => {
     try {
       if (mode === 'create') {
-        // Convertir scheduledDate de string a Date
-        await createMutation.mutateAsync({
+        // Crear evento Y actualizar proyecto si hay cambios
+        await createWithUpdateMutation.mutateAsync({
           projectId: data.projectId,
           scheduledDate: new Date(data.scheduledDate),
           notes: data.notes,
+          phone: data.phone,
+          street: data.street,
+          apartment: data.apartment,
+          comuna: data.comuna,
+          region: data.region,
+          windowsCount: data.windowsCount,
+          squareMeters: data.squareMeters,
+          description: data.description,
         })
       } else if (event) {
         await updateMutation.mutateAsync({
@@ -80,8 +91,10 @@ export function ProjectEventDialog({
   }
 
   // Preparar defaultValues según modo
-  const getDefaultValues = (): Partial<ProjectEventFormValues> => {
+  const getDefaultValues = (): Partial<ProjectEventWithProjectUpdateFormValues> => {
     if (mode === 'edit' && event) {
+      // En modo edit solo editamos fecha y notas del evento
+      // Los campos del proyecto se mostrarán pero no se usan en el submit
       return {
         projectId: event.projectId,
         scheduledDate: format(new Date(event.scheduledDate), 'yyyy-MM-dd'),

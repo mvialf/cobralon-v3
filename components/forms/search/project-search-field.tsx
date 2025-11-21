@@ -21,8 +21,17 @@ interface ProjectSearchFieldProps {
   /**
    * Si es true, solo muestra proyectos con projectState.isFinal = true
    * Útil para casos de postventa
+   * @deprecated Usar filterMode en su lugar
    */
   filterByFinalState?: boolean
+  /**
+   * Modo de filtrado de proyectos:
+   * - 'with-balance': Proyectos con balance > 0 (para pagos)
+   * - 'finished': Proyectos finalizados (isFinal = true, para postventas)
+   * - 'active': Proyectos NO finalizados (isFinal = false, para calendario)
+   * Default: 'with-balance' (mantiene compatibilidad)
+   */
+  filterMode?: 'with-balance' | 'finished' | 'active'
   /**
    * Si es true, muestra cards de balance pendiente y total del proyecto
    * Default: true (para mantener compatibilidad con formularios existentes)
@@ -50,8 +59,16 @@ export function ProjectSearchField({
   preselectedProjectId,
   onProjectSelect,
   filterByFinalState = false,
+  filterMode,
   showFinancialCards = true,
 }: ProjectSearchFieldProps) {
+  // Resolver modo de filtrado (deprecado vs nuevo)
+  const resolvedFilterMode: 'with-balance' | 'finished' | 'active' = filterMode
+    ? filterMode
+    : filterByFinalState
+      ? 'finished'
+      : 'with-balance'
+
   // State para búsqueda de proyectos
   const [searchTerm, setSearchTerm] = React.useState('')
   const debouncedSearch = useDebounce(searchTerm, 300)
@@ -72,12 +89,22 @@ export function ProjectSearchField({
 
   // Fetch proyectos (server-side search) - solo si NO hay proyecto pre-seleccionado
   const { data: projects = [], isLoading: loadingProjects } = useQuery({
-    queryKey: ['projects-search', debouncedSearch, filterByFinalState],
+    queryKey: ['projects-search', debouncedSearch, resolvedFilterMode],
     queryFn: async () => {
-      // Usar endpoint específico según filtro
-      const endpoint = filterByFinalState
-        ? `/api/projects/search-finished?q=${debouncedSearch}&limit=20`
-        : `/api/payments/search-projects?q=${debouncedSearch}&limit=20`
+      // Seleccionar endpoint según modo de filtrado
+      let endpoint: string
+      switch (resolvedFilterMode) {
+        case 'finished':
+          endpoint = `/api/projects/search-finished?q=${debouncedSearch}&limit=20`
+          break
+        case 'active':
+          endpoint = `/api/projects/search-active?q=${debouncedSearch}&limit=20`
+          break
+        case 'with-balance':
+        default:
+          endpoint = `/api/payments/search-projects?q=${debouncedSearch}&limit=20`
+          break
+      }
 
       const res = await fetch(endpoint)
       if (!res.ok) throw new Error('Error al buscar proyectos')
@@ -166,9 +193,11 @@ export function ProjectSearchField({
                   emptyMessage={
                     debouncedSearch.length < 2
                       ? 'Escribe al menos 2 caracteres para buscar'
-                      : filterByFinalState
+                      : resolvedFilterMode === 'finished'
                         ? 'No se encontraron proyectos finalizados'
-                        : 'No se encontraron proyectos con balance pendiente'
+                        : resolvedFilterMode === 'active'
+                          ? 'No se encontraron proyectos activos'
+                          : 'No se encontraron proyectos con balance pendiente'
                   }
                   loading={loadingProjects}
                   loadingText="Buscando proyectos..."

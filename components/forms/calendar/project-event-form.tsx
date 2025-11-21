@@ -6,14 +6,17 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { format } from 'date-fns'
 
 import {
-  createProjectEventSchema,
-  type ProjectEventFormValues,
+  createProjectEventWithProjectUpdateSchema,
+  type ProjectEventWithProjectUpdateFormValues,
 } from '@/lib/validations/calendar-validations'
 
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
+import { PhoneInput } from '@/components/ui/phone-input'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { ProjectSearchField } from '@/components/forms/search/project-search-field'
-import { ProjectDetailsSummary } from '@/components/summarys/project-details-summary'
+import { AddressFields } from '@/components/forms/fields/address-fields'
+import { ProjectDetailsFields } from '@/components/forms/fields/project-details-fields'
 import {
   Form,
   FormControl,
@@ -25,8 +28,8 @@ import {
 } from '@/components/ui/form'
 
 interface ProjectEventFormProps {
-  onSubmit: (data: ProjectEventFormValues) => void | Promise<void>
-  defaultValues?: Partial<ProjectEventFormValues>
+  onSubmit: (data: ProjectEventWithProjectUpdateFormValues) => void | Promise<void>
+  defaultValues?: Partial<ProjectEventWithProjectUpdateFormValues>
 }
 
 export interface ProjectEventFormHandle {
@@ -61,12 +64,20 @@ export const ProjectEventForm = React.forwardRef<ProjectEventFormHandle, Project
       description: string | null
     } | null>(null)
 
-    const form = useForm<ProjectEventFormValues>({
-      resolver: zodResolver(createProjectEventSchema),
+    const form = useForm<ProjectEventWithProjectUpdateFormValues>({
+      resolver: zodResolver(createProjectEventWithProjectUpdateSchema),
       defaultValues: {
         projectId: '',
         scheduledDate: '',
         notes: '',
+        phone: '',
+        street: '',
+        apartment: null,
+        comuna: '',
+        region: '',
+        windowsCount: 0,
+        squareMeters: 0,
+        description: null,
         ...defaultValues,
       },
     })
@@ -89,7 +100,7 @@ export const ProjectEventForm = React.forwardRef<ProjectEventFormHandle, Project
       fetch(`/api/projects/${projectId}`)
         .then((res) => res.json())
         .then((data) => {
-          setProjectDetails({
+          const details = {
             projectNumber: data.projectNumber,
             projectName: data.projectName,
             projectStatus: data.projectStatus
@@ -113,13 +124,30 @@ export const ProjectEventForm = React.forwardRef<ProjectEventFormHandle, Project
             windowsCount: data.windowsCount,
             squareMeters: Number(data.squareMeters),
             description: data.description,
+          }
+
+          setProjectDetails(details)
+
+          // Poblar campos del formulario con datos del proyecto
+          form.reset({
+            projectId: data.id,
+            scheduledDate: form.getValues('scheduledDate') || '',
+            notes: form.getValues('notes') || '',
+            phone: data.phone,
+            street: data.street,
+            apartment: data.apartment || null,
+            comuna: data.comuna,
+            region: data.region,
+            windowsCount: data.windowsCount,
+            squareMeters: Number(data.squareMeters),
+            description: data.description || null,
           })
         })
         .catch((err) => {
           console.error('Error fetching project details:', err)
           setProjectDetails(null)
         })
-    }, [projectId])
+    }, [projectId, form])
 
     // Formatear fecha para el input type="date"
     const formatDateForInput = (date: Date | string): string => {
@@ -130,11 +158,11 @@ export const ProjectEventForm = React.forwardRef<ProjectEventFormHandle, Project
 
     return (
       <Form {...form}>
-        <div className="grid gap-4">
-          {/* Campo: Proyecto */}
+        <div className="space-y-4">
+          {/* 1. Selección de Proyecto */}
           <ProjectSearchField
             control={form.control}
-            filterByFinalState={false}
+            filterMode="active"
             showFinancialCards={false}
             onProjectSelect={(project) => {
               if (project) {
@@ -144,71 +172,91 @@ export const ProjectEventForm = React.forwardRef<ProjectEventFormHandle, Project
             }}
           />
 
-          {/* Detalles del proyecto seleccionado */}
+          {/* 2. Datos del Proyecto (editables) */}
           {projectDetails && (
-            <ProjectDetailsSummary
-              projectNumber={projectDetails.projectNumber}
-              projectName={projectDetails.projectName}
-              projectStatus={projectDetails.projectStatus}
-              customerName={projectDetails.customer.name}
-              phone={projectDetails.phone}
-              address={{
-                street: projectDetails.street,
-                apartment: projectDetails.apartment,
-                comuna: projectDetails.comuna,
-                region: projectDetails.region,
-              }}
-              windowsCount={projectDetails.windowsCount}
-              squareMeters={projectDetails.squareMeters}
-              description={projectDetails.description}
-            />
+            <Card>
+              <CardHeader>
+                <CardTitle>Datos del Proyecto</CardTitle>
+                <CardDescription>Verifica y corrige los datos si es necesario</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {/* Teléfono */}
+                <FormField
+                  control={form.control}
+                  name="phone"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Teléfono *</FormLabel>
+                      <FormControl>
+                        <PhoneInput {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                {/* Dirección */}
+                <AddressFields control={form.control} />
+
+                {/* Detalles del proyecto */}
+                <ProjectDetailsFields control={form.control} />
+              </CardContent>
+            </Card>
           )}
 
-          {/* Campo: Fecha programada */}
-          <FormField
-            control={form.control}
-            name="scheduledDate"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Fecha programada *</FormLabel>
-                <FormControl>
-                  <Input
-                    type="date"
-                    {...field}
-                    value={field.value ? formatDateForInput(field.value) : ''}
-                    onChange={(e) => {
-                      // Convertir string del input a Date
-                      const dateValue = e.target.value
-                      field.onChange(dateValue)
-                    }}
-                  />
-                </FormControl>
-                <FormDescription>Fecha en la que se realizará el evento</FormDescription>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+          {/* 3. Datos del Evento */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Información del Evento</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {/* Campo: Fecha programada */}
+              <FormField
+                control={form.control}
+                name="scheduledDate"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Fecha programada *</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="date"
+                        {...field}
+                        value={field.value ? formatDateForInput(field.value) : ''}
+                        onChange={(e) => {
+                          // Convertir string del input a Date
+                          const dateValue = e.target.value
+                          field.onChange(dateValue)
+                        }}
+                      />
+                    </FormControl>
+                    <FormDescription>Fecha en la que se realizará el evento</FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
-          {/* Campo: Notas (opcional) */}
-          <FormField
-            control={form.control}
-            name="notes"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Notas</FormLabel>
-                <FormControl>
-                  <Textarea
-                    placeholder="Notas adicionales sobre el evento..."
-                    className="resize-none"
-                    rows={4}
-                    {...field}
-                    value={field.value || ''}
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+              {/* Campo: Notas (opcional) */}
+              <FormField
+                control={form.control}
+                name="notes"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Notas</FormLabel>
+                    <FormControl>
+                      <Textarea
+                        placeholder="Notas adicionales sobre el evento..."
+                        className="resize-none"
+                        rows={4}
+                        {...field}
+                        value={field.value || ''}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </CardContent>
+          </Card>
         </div>
       </Form>
     )
