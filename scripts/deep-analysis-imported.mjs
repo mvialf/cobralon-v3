@@ -5,7 +5,7 @@ const prisma = new PrismaClient()
 async function deepAnalysis() {
   try {
     console.log('🧠 ANÁLISIS PROFUNDO: DETECCIÓN DE PROYECTOS IMPORTADOS\n')
-    console.log('=' .repeat(80))
+    console.log('='.repeat(80))
 
     // Obtener todos los proyectos con todas las relaciones
     const projects = await prisma.project.findMany({
@@ -16,13 +16,13 @@ async function deepAnalysis() {
           include: {
             payment: {
               include: {
-                paymentMethod: true
-              }
-            }
-          }
-        }
+                paymentMethod: true,
+              },
+            },
+          },
+        },
       },
-      orderBy: { createdAt: 'asc' }
+      orderBy: { createdAt: 'asc' },
     })
 
     console.log(`\n📊 Total proyectos analizados: ${projects.length}\n`)
@@ -33,56 +33,53 @@ async function deepAnalysis() {
 
     const indicators = {
       // 1. Campo legacy
-      hasProjectStatusLegacy: projects.filter(p => p.projectStatusLegacy !== '').length,
+      hasProjectStatusLegacy: projects.filter((p) => p.projectStatusLegacy !== '').length,
 
       // 2. Status null (no migrado)
-      hasNullProjectStatusId: projects.filter(p => p.projectStatusId === null).length,
+      hasNullProjectStatusId: projects.filter((p) => p.projectStatusId === null).length,
 
       // 3. Sin nombre de proyecto
-      hasNullProjectName: projects.filter(p => p.projectName === null).length,
+      hasNullProjectName: projects.filter((p) => p.projectName === null).length,
 
       // 4. totalAmount null (no usa sistema de pagos)
-      hasNullTotalAmount: projects.filter(p => p.totalAmount === null).length,
+      hasNullTotalAmount: projects.filter((p) => p.totalAmount === null).length,
 
       // 5. Sin tags de desinstalación
-      hasEmptyUninstallTags: projects.filter(p => p.uninstallTagIds.length === 0).length,
+      hasEmptyUninstallTags: projects.filter((p) => p.uninstallTagIds.length === 0).length,
 
       // 6. Timestamps idénticos (nunca editado post-import)
-      hasSameTimestamps: projects.filter(p =>
-        p.createdAt.getTime() === p.updatedAt.getTime()
-      ).length,
+      hasSameTimestamps: projects.filter((p) => p.createdAt.getTime() === p.updatedAt.getTime())
+        .length,
 
       // 7. TaxRate diferente de 19% (indicador de importación con taxRate legacy)
-      hasNon19TaxRate: projects.filter(p => !p.taxRate.equals(19.0)).length,
+      hasNon19TaxRate: projects.filter((p) => !p.taxRate.equals(19.0)).length,
 
       // 8. Phone == customer.phone (copiado en importación)
-      phoneMatchesCustomer: projects.filter(p =>
-        p.phone === p.customer.phone
-      ).length
+      phoneMatchesCustomer: projects.filter((p) => p.phone === p.customer.phone).length,
     }
 
     console.log('🔍 INDICADORES PRIMARIOS DE IMPORTACIÓN')
-    console.log('=' .repeat(80))
+    console.log('='.repeat(80))
     console.log(`
-1. projectStatusLegacy no vacío:     ${indicators.hasProjectStatusLegacy}/${projects.length} (${((indicators.hasProjectStatusLegacy/projects.length)*100).toFixed(1)}%)
-2. projectStatusId es NULL:          ${indicators.hasNullProjectStatusId}/${projects.length} (${((indicators.hasNullProjectStatusId/projects.length)*100).toFixed(1)}%)
-3. projectName es NULL:              ${indicators.hasNullProjectName}/${projects.length} (${((indicators.hasNullProjectName/projects.length)*100).toFixed(1)}%)
-4. totalAmount es NULL:              ${indicators.hasNullTotalAmount}/${projects.length} (${((indicators.hasNullTotalAmount/projects.length)*100).toFixed(1)}%)
-5. uninstallTagIds vacío:            ${indicators.hasEmptyUninstallTags}/${projects.length} (${((indicators.hasEmptyUninstallTags/projects.length)*100).toFixed(1)}%)
-6. createdAt == updatedAt:           ${indicators.hasSameTimestamps}/${projects.length} (${((indicators.hasSameTimestamps/projects.length)*100).toFixed(1)}%)
-7. taxRate != 19%:                   ${indicators.hasNon19TaxRate}/${projects.length} (${((indicators.hasNon19TaxRate/projects.length)*100).toFixed(1)}%)
-8. phone == customer.phone:          ${indicators.phoneMatchesCustomer}/${projects.length} (${((indicators.phoneMatchesCustomer/projects.length)*100).toFixed(1)}%)
+1. projectStatusLegacy no vacío:     ${indicators.hasProjectStatusLegacy}/${projects.length} (${((indicators.hasProjectStatusLegacy / projects.length) * 100).toFixed(1)}%)
+2. projectStatusId es NULL:          ${indicators.hasNullProjectStatusId}/${projects.length} (${((indicators.hasNullProjectStatusId / projects.length) * 100).toFixed(1)}%)
+3. projectName es NULL:              ${indicators.hasNullProjectName}/${projects.length} (${((indicators.hasNullProjectName / projects.length) * 100).toFixed(1)}%)
+4. totalAmount es NULL:              ${indicators.hasNullTotalAmount}/${projects.length} (${((indicators.hasNullTotalAmount / projects.length) * 100).toFixed(1)}%)
+5. uninstallTagIds vacío:            ${indicators.hasEmptyUninstallTags}/${projects.length} (${((indicators.hasEmptyUninstallTags / projects.length) * 100).toFixed(1)}%)
+6. createdAt == updatedAt:           ${indicators.hasSameTimestamps}/${projects.length} (${((indicators.hasSameTimestamps / projects.length) * 100).toFixed(1)}%)
+7. taxRate != 19%:                   ${indicators.hasNon19TaxRate}/${projects.length} (${((indicators.hasNon19TaxRate / projects.length) * 100).toFixed(1)}%)
+8. phone == customer.phone:          ${indicators.phoneMatchesCustomer}/${projects.length} (${((indicators.phoneMatchesCustomer / projects.length) * 100).toFixed(1)}%)
 `)
 
     // ============================================================
     // CLASIFICACIÓN POR SCORE DE IMPORTACIÓN
     // ============================================================
 
-    console.log('=' .repeat(80))
+    console.log('='.repeat(80))
     console.log('🎯 CLASIFICACIÓN POR SCORE DE IMPORTACIÓN')
-    console.log('=' .repeat(80))
+    console.log('='.repeat(80))
 
-    const scoredProjects = projects.map(p => {
+    const scoredProjects = projects.map((p) => {
       let score = 0
       const reasons = []
 
@@ -131,15 +128,15 @@ async function deepAnalysis() {
       return {
         project: p,
         score,
-        reasons
+        reasons,
       }
     })
 
     // Clasificar por score
-    const highScore = scoredProjects.filter(sp => sp.score >= 8)  // Muy probable importado
-    const mediumScore = scoredProjects.filter(sp => sp.score >= 5 && sp.score < 8)  // Probable importado
-    const lowScore = scoredProjects.filter(sp => sp.score >= 2 && sp.score < 5)  // Posiblemente importado
-    const nativeScore = scoredProjects.filter(sp => sp.score < 2)  // Probable nativo
+    const highScore = scoredProjects.filter((sp) => sp.score >= 8) // Muy probable importado
+    const mediumScore = scoredProjects.filter((sp) => sp.score >= 5 && sp.score < 8) // Probable importado
+    const lowScore = scoredProjects.filter((sp) => sp.score >= 2 && sp.score < 5) // Posiblemente importado
+    const nativeScore = scoredProjects.filter((sp) => sp.score < 2) // Probable nativo
 
     console.log(`\n🔴 ALTA PROBABILIDAD (score ≥8):    ${highScore.length} proyectos`)
     console.log(`🟡 MEDIA PROBABILIDAD (score 5-7):  ${mediumScore.length} proyectos`)
@@ -150,13 +147,13 @@ async function deepAnalysis() {
     // ANÁLISIS DE PATRONES DE DATOS
     // ============================================================
 
-    console.log('\n' + '=' .repeat(80))
+    console.log('\n' + '='.repeat(80))
     console.log('📊 ANÁLISIS DE PATRONES DE DATOS')
-    console.log('=' .repeat(80))
+    console.log('='.repeat(80))
 
     // Distribución de taxRate
     const taxRateDistribution = {}
-    projects.forEach(p => {
+    projects.forEach((p) => {
       const rate = p.taxRate.toString()
       taxRateDistribution[rate] = (taxRateDistribution[rate] || 0) + 1
     })
@@ -171,7 +168,7 @@ async function deepAnalysis() {
 
     // Distribución de projectStatus
     const statusDistribution = {}
-    projects.forEach(p => {
+    projects.forEach((p) => {
       const status = p.projectStatus?.name || 'NULL'
       statusDistribution[status] = (statusDistribution[status] || 0) + 1
     })
@@ -185,24 +182,29 @@ async function deepAnalysis() {
       })
 
     // Análisis de pagos
-    const withPayments = projects.filter(p => p.paymentAllocations.length > 0)
-    const withoutPayments = projects.filter(p => p.paymentAllocations.length === 0)
+    const withPayments = projects.filter((p) => p.paymentAllocations.length > 0)
+    const withoutPayments = projects.filter((p) => p.paymentAllocations.length === 0)
 
     console.log('\n💳 Análisis de Pagos:')
-    console.log(`   Con pagos: ${withPayments.length} (${((withPayments.length/projects.length)*100).toFixed(1)}%)`)
-    console.log(`   Sin pagos: ${withoutPayments.length} (${((withoutPayments.length/projects.length)*100).toFixed(1)}%)`)
+    console.log(
+      `   Con pagos: ${withPayments.length} (${((withPayments.length / projects.length) * 100).toFixed(1)}%)`
+    )
+    console.log(
+      `   Sin pagos: ${withoutPayments.length} (${((withoutPayments.length / projects.length) * 100).toFixed(1)}%)`
+    )
 
     // Promedio de pagos por proyecto
-    const avgPayments = withPayments.reduce((sum, p) => sum + p.paymentAllocations.length, 0) / withPayments.length
+    const avgPayments =
+      withPayments.reduce((sum, p) => sum + p.paymentAllocations.length, 0) / withPayments.length
     console.log(`   Promedio pagos (de los que tienen): ${avgPayments.toFixed(2)}`)
 
     // ============================================================
     // DIFERENCIAS CLAVE: IMPORTADOS VS NATIVOS
     // ============================================================
 
-    console.log('\n' + '=' .repeat(80))
+    console.log('\n' + '='.repeat(80))
     console.log('🔬 DIFERENCIAS CLAVE: IMPORTADOS VS NATIVOS')
-    console.log('=' .repeat(80))
+    console.log('='.repeat(80))
 
     console.log(`
 📋 PROYECTOS IMPORTADOS deberían tener:
@@ -228,15 +230,17 @@ async function deepAnalysis() {
     // RESULTADO DEL ANÁLISIS
     // ============================================================
 
-    console.log('=' .repeat(80))
+    console.log('='.repeat(80))
     console.log('🎯 RESULTADO DEL ANÁLISIS')
-    console.log('=' .repeat(80))
+    console.log('='.repeat(80))
 
     console.log('\n📊 ESTADO ACTUAL DE LA BASE DE DATOS:\n')
 
-    if (indicators.hasProjectStatusLegacy === 0 &&
-        indicators.hasNullProjectStatusId === 0 &&
-        indicators.hasNullTotalAmount === 0) {
+    if (
+      indicators.hasProjectStatusLegacy === 0 &&
+      indicators.hasNullProjectStatusId === 0 &&
+      indicators.hasNullTotalAmount === 0
+    ) {
       console.log('✅ TODOS LOS PROYECTOS HAN SIDO COMPLETAMENTE MIGRADOS')
       console.log('   - Sin projectStatusLegacy')
       console.log('   - Todos tienen projectStatusId')
@@ -276,9 +280,9 @@ async function deepAnalysis() {
     }
 
     // Scoring final
-    console.log('\n' + '=' .repeat(80))
+    console.log('\n' + '='.repeat(80))
     console.log('📈 SCORING FINAL')
-    console.log('=' .repeat(80))
+    console.log('='.repeat(80))
 
     const avgScore = scoredProjects.reduce((sum, sp) => sum + sp.score, 0) / scoredProjects.length
 
@@ -296,9 +300,9 @@ async function deepAnalysis() {
 
     // Muestra de proyectos con score alto
     if (highScore.length > 0) {
-      console.log('\n' + '=' .repeat(80))
+      console.log('\n' + '='.repeat(80))
       console.log('📋 MUESTRA: PROYECTOS CON ALTA PROBABILIDAD DE SER IMPORTADOS')
-      console.log('=' .repeat(80))
+      console.log('='.repeat(80))
 
       for (const sp of highScore.slice(0, 3)) {
         const p = sp.project
@@ -309,8 +313,7 @@ async function deepAnalysis() {
       }
     }
 
-    console.log('\n' + '=' .repeat(80))
-
+    console.log('\n' + '='.repeat(80))
   } catch (error) {
     console.error('❌ Error:', error)
   } finally {

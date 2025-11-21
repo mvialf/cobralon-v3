@@ -4,9 +4,9 @@ const prisma = new PrismaClient()
 
 async function main() {
   const project = await prisma.project.findFirst({
-    where: { projectNumber: "17208" }
+    where: { projectNumber: '17208' },
   })
-  
+
   if (project) {
     console.log('✅ Proyecto encontrado:')
     console.log('ID:', project.id)

@@ -40,7 +40,6 @@ async function main() {
     } else {
       console.log('\n⚠️  Advertencia: Algunos registros podrían no haberse borrado.')
     }
-
   } catch (error) {
     console.error('\n❌ Error al borrar pagos:', error)
     process.exit(1)

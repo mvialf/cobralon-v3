@@ -5,7 +5,7 @@ const prisma = new PrismaClient()
 async function analyzeProjects() {
   try {
     console.log('🔍 ANÁLISIS EXHAUSTIVO DE PROYECTOS IMPORTADOS VS NATIVOS\n')
-    console.log('=' .repeat(80))
+    console.log('='.repeat(80))
 
     // 1. Obtener todos los proyectos
     const allProjects = await prisma.project.findMany({
@@ -14,59 +14,59 @@ async function analyzeProjects() {
         projectStatus: true,
         paymentAllocations: {
           include: {
-            payment: true
-          }
-        }
+            payment: true,
+          },
+        },
       },
-      orderBy: { createdAt: 'asc' }
+      orderBy: { createdAt: 'asc' },
     })
 
     console.log(`\n📊 Total de proyectos: ${allProjects.length}\n`)
 
     // 2. Análisis de campos clave
-    console.log('=' .repeat(80))
+    console.log('='.repeat(80))
     console.log('📋 ANÁLISIS DE CAMPOS CLAVE')
-    console.log('=' .repeat(80))
+    console.log('='.repeat(80))
 
     const analysis = {
       projectStatusLegacy: {
         empty: 0,
         nonEmpty: 0,
-        values: new Set()
+        values: new Set(),
       },
       projectStatusId: {
         null: 0,
-        nonNull: 0
+        nonNull: 0,
       },
       phone: {
         matchesCustomer: 0,
         differsFromCustomer: 0,
-        customerHasNoPhone: 0
+        customerHasNoPhone: 0,
       },
       projectName: {
         null: 0,
-        nonNull: 0
+        nonNull: 0,
       },
       totalAmount: {
         null: 0,
         nonNull: 0,
         matchesTotal: 0,
-        differsFromTotal: 0
+        differsFromTotal: 0,
       },
       uninstallTagIds: {
         empty: 0,
-        nonEmpty: 0
+        nonEmpty: 0,
       },
       taxRate: {
         is19: 0,
         isNot19: 0,
-        values: new Set()
+        values: new Set(),
       },
       currency: {
         clp: 0,
         other: 0,
-        values: new Set()
-      }
+        values: new Set(),
+      },
     }
 
     // 3. Analizar cada proyecto
@@ -145,7 +145,9 @@ async function analyzeProjects() {
     console.log(`   ✅ Vacío (esperado en nativos): ${analysis.projectStatusLegacy.empty}`)
     console.log(`   ⚠️  No vacío (importados): ${analysis.projectStatusLegacy.nonEmpty}`)
     if (analysis.projectStatusLegacy.values.size > 0) {
-      console.log(`   📝 Valores encontrados: ${Array.from(analysis.projectStatusLegacy.values).join(', ')}`)
+      console.log(
+        `   📝 Valores encontrados: ${Array.from(analysis.projectStatusLegacy.values).join(', ')}`
+      )
     }
 
     console.log('\n2️⃣ projectStatusId (nuevo sistema):')
@@ -190,8 +192,8 @@ async function analyzeProjects() {
     console.log('📅 ANÁLISIS DE TIMESTAMPS')
     console.log('='.repeat(80))
 
-    const sameTimestamps = allProjects.filter(p =>
-      p.createdAt.getTime() === p.updatedAt.getTime()
+    const sameTimestamps = allProjects.filter(
+      (p) => p.createdAt.getTime() === p.updatedAt.getTime()
     ).length
 
     console.log(`\n✅ createdAt == updatedAt (sin modificación): ${sameTimestamps}`)
@@ -202,7 +204,7 @@ async function analyzeProjects() {
     console.log('🔗 ANÁLISIS DE RELACIONES')
     console.log('='.repeat(80))
 
-    const withPayments = allProjects.filter(p => p.paymentAllocations.length > 0).length
+    const withPayments = allProjects.filter((p) => p.paymentAllocations.length > 0).length
     const withoutPayments = allProjects.length - withPayments
 
     console.log(`\n✅ Con pagos asignados: ${withPayments}`)
@@ -237,24 +239,36 @@ async function analyzeProjects() {
     console.log('='.repeat(80))
 
     console.log('\n✅ Todos los proyectos SON importados si:')
-    console.log(`   - projectStatusLegacy tiene valores (${analysis.projectStatusLegacy.nonEmpty}/${allProjects.length})`)
-    console.log(`   - projectStatusId es NULL (${analysis.projectStatusId.null}/${allProjects.length})`)
+    console.log(
+      `   - projectStatusLegacy tiene valores (${analysis.projectStatusLegacy.nonEmpty}/${allProjects.length})`
+    )
+    console.log(
+      `   - projectStatusId es NULL (${analysis.projectStatusId.null}/${allProjects.length})`
+    )
     console.log(`   - totalAmount es NULL (${analysis.totalAmount.null}/${allProjects.length})`)
-    console.log(`   - uninstallTagIds está vacío (${analysis.uninstallTagIds.empty}/${allProjects.length})`)
+    console.log(
+      `   - uninstallTagIds está vacío (${analysis.uninstallTagIds.empty}/${allProjects.length})`
+    )
     console.log(`   - createdAt == updatedAt (${sameTimestamps}/${allProjects.length})`)
 
     console.log('\n⚠️  Diferencias encontradas:')
 
     if (analysis.projectStatusLegacy.nonEmpty > 0) {
-      console.log(`   🔸 ${analysis.projectStatusLegacy.nonEmpty} proyectos tienen projectStatusLegacy`)
+      console.log(
+        `   🔸 ${analysis.projectStatusLegacy.nonEmpty} proyectos tienen projectStatusLegacy`
+      )
     }
 
     if (analysis.projectStatusId.null > 0) {
-      console.log(`   🔸 ${analysis.projectStatusId.null} proyectos sin projectStatusId (no migrados)`)
+      console.log(
+        `   🔸 ${analysis.projectStatusId.null} proyectos sin projectStatusId (no migrados)`
+      )
     }
 
     if (analysis.phone.differsFromCustomer > 0) {
-      console.log(`   🔸 ${analysis.phone.differsFromCustomer} proyectos con teléfono diferente al cliente`)
+      console.log(
+        `   🔸 ${analysis.phone.differsFromCustomer} proyectos con teléfono diferente al cliente`
+      )
     }
 
     if (analysis.totalAmount.null > 0) {
@@ -266,7 +280,6 @@ async function analyzeProjects() {
     }
 
     console.log('\n' + '='.repeat(80))
-
   } catch (error) {
     console.error('❌ Error:', error)
   } finally {
