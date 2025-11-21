@@ -1,7 +1,7 @@
 'use client'
 
 import { Calendar, CalendarDays, List } from 'lucide-react'
-import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
+import { Select, SelectContent, SelectItem, SelectTrigger } from '@/components/ui/select'
 
 type CalendarView = 'week' | 'month' | 'agenda'
 
@@ -17,26 +17,27 @@ const VIEW_OPTIONS = [
 ]
 
 export function ViewSelector({ currentView, onViewChange }: ViewSelectorProps) {
+  const currentOption = VIEW_OPTIONS.find((opt) => opt.value === currentView)
+  const IconComponent = currentOption?.icon
+
   return (
-    <ToggleGroup
-      type="single"
-      value={currentView}
-      onValueChange={(value) => {
-        if (value) onViewChange(value as CalendarView)
-      }}
-      className="justify-start"
-    >
-      {VIEW_OPTIONS.map((option) => (
-        <ToggleGroupItem
-          key={option.value}
-          value={option.value}
-          aria-label={`Vista ${option.label}`}
-          className="gap-2"
-        >
-          <option.icon className="h-4 w-4" />
-          <span className="hidden sm:inline">{option.label}</span>
-        </ToggleGroupItem>
-      ))}
-    </ToggleGroup>
+    <Select value={currentView} onValueChange={onViewChange}>
+      <SelectTrigger className="w-[110px] sm:w-[140px]">
+        <div className="flex items-center gap-2">
+          {IconComponent && <IconComponent className="h-4 w-4" />}
+          <span className="hidden sm:inline">{currentOption?.label}</span>
+        </div>
+      </SelectTrigger>
+      <SelectContent>
+        {VIEW_OPTIONS.map((option) => (
+          <SelectItem key={option.value} value={option.value}>
+            <div className="flex items-center gap-2">
+              <option.icon className="h-4 w-4" />
+              <span>{option.label}</span>
+            </div>
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
   )
 }
