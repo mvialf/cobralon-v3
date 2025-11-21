@@ -14,13 +14,14 @@ interface AddressFieldsProps {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   control: Control<any>
   defaultRegion?: string
+  disabled?: boolean
 }
 
 /**
  * Componente reutilizable para campos de dirección
  * Incluye: calle, casa/dpto, comuna, región
  */
-export function AddressFields({ control, defaultRegion }: AddressFieldsProps) {
+export function AddressFields({ control, defaultRegion, disabled }: AddressFieldsProps) {
   const regiones = getRegiones()
 
   // Watch región del formulario para filtrar comunas
@@ -43,7 +44,7 @@ export function AddressFields({ control, defaultRegion }: AddressFieldsProps) {
             <FormItem className="col-span-5 w-full">
               <FormLabel>Calle y numeración *</FormLabel>
               <FormControl>
-                <Input {...field} className="w-full" />
+                <Input {...field} className="w-full" disabled={disabled} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -60,7 +61,12 @@ export function AddressFields({ control, defaultRegion }: AddressFieldsProps) {
                 <Building className="h-4 w-4" />
               </FormLabel>
               <FormControl>
-                <Input {...field} value={field.value ?? ''} className="w-full" />
+                <Input
+                  {...field}
+                  value={field.value ?? ''}
+                  className="w-full"
+                  disabled={disabled}
+                />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -91,6 +97,7 @@ export function AddressFields({ control, defaultRegion }: AddressFieldsProps) {
                   searchPlaceholder="Buscar región..."
                   emptyMessage="No se encontró la región"
                   contentWidth="300px"
+                  disabled={disabled}
                 />
               </FormControl>
               <FormMessage />
@@ -118,7 +125,7 @@ export function AddressFields({ control, defaultRegion }: AddressFieldsProps) {
                   searchPlaceholder="Buscar comuna..."
                   emptyMessage="No se encontró la comuna"
                   contentWidth="300px"
-                  disabled={!regionCodigo}
+                  disabled={disabled || !regionCodigo}
                 />
               </FormControl>
               <FormMessage />

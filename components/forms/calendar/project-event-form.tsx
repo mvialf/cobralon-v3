@@ -84,7 +84,11 @@ export const ProjectEventForm = React.forwardRef<ProjectEventFormHandle, Project
 
     // Exponer métodos al parent via ref
     React.useImperativeHandle(ref, () => ({
-      submit: () => form.handleSubmit(onSubmit)(),
+      submit: () => {
+        // Usar getValues() para capturar TODOS los valores (incluidos disabled)
+        const allValues = form.getValues()
+        form.handleSubmit(() => onSubmit(allValues))()
+      },
       reset: () => form.reset(),
     }))
 
@@ -173,36 +177,38 @@ export const ProjectEventForm = React.forwardRef<ProjectEventFormHandle, Project
           />
 
           {/* 2. Datos del Proyecto (editables) */}
-          {projectDetails && (
-            <Card>
-              <CardHeader>
-                <CardTitle>Datos del Proyecto</CardTitle>
-                <CardDescription>Verifica y corrige los datos si es necesario</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {/* Teléfono */}
-                <FormField
-                  control={form.control}
-                  name="phone"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Teléfono *</FormLabel>
-                      <FormControl>
-                        <PhoneInput {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+          <Card>
+            <CardHeader>
+              <CardTitle>Datos del Proyecto</CardTitle>
+              <CardDescription>
+                {projectDetails
+                  ? 'Verifica y corrige los datos si es necesario'
+                  : 'Selecciona un proyecto para habilitar estos campos'}
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {/* Teléfono */}
+              <FormField
+                control={form.control}
+                name="phone"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Teléfono *</FormLabel>
+                    <FormControl>
+                      <PhoneInput {...field} disabled={!projectDetails} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
-                {/* Dirección */}
-                <AddressFields control={form.control} />
+              {/* Dirección */}
+              <AddressFields control={form.control} disabled={!projectDetails} />
 
-                {/* Detalles del proyecto */}
-                <ProjectDetailsFields control={form.control} />
-              </CardContent>
-            </Card>
-          )}
+              {/* Detalles del proyecto */}
+              <ProjectDetailsFields control={form.control} disabled={!projectDetails} />
+            </CardContent>
+          </Card>
 
           {/* 3. Datos del Evento */}
           <Card>

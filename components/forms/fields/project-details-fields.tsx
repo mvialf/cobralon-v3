@@ -15,6 +15,7 @@ interface ProjectDetailsFieldsProps {
   squareMetersLabel?: string
   descriptionLabel?: string
   descriptionPlaceholder?: string
+  disabled?: boolean
 }
 
 /**
@@ -33,6 +34,7 @@ export function ProjectDetailsFields({
   squareMetersLabel = 'm²',
   descriptionLabel = 'Descripción',
   descriptionPlaceholder = 'Descripción detallada del proyecto',
+  disabled,
 }: ProjectDetailsFieldsProps) {
   return (
     <>
@@ -50,6 +52,7 @@ export function ProjectDetailsFields({
                   min="0"
                   {...field}
                   onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
+                  disabled={disabled}
                 />
               </FormControl>
               <FormMessage />
@@ -71,6 +74,7 @@ export function ProjectDetailsFields({
                   min="0"
                   {...field}
                   onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
+                  disabled={disabled}
                 />
               </FormControl>
               <FormMessage />
@@ -92,6 +96,7 @@ export function ProjectDetailsFields({
                 value={field.value ?? ''}
                 placeholder={descriptionPlaceholder}
                 rows={4}
+                disabled={disabled}
               />
             </FormControl>
             <FormMessage />
