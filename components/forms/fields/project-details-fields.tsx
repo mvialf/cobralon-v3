@@ -87,7 +87,12 @@ export function ProjectDetailsFields({
           <FormItem>
             <FormLabel>{descriptionLabel}</FormLabel>
             <FormControl>
-              <Textarea {...field} placeholder={descriptionPlaceholder} rows={4} />
+              <Textarea
+                {...field}
+                value={field.value ?? ''}
+                placeholder={descriptionPlaceholder}
+                rows={4}
+              />
             </FormControl>
             <FormMessage />
           </FormItem>

@@ -60,7 +60,7 @@ export function AddressFields({ control, defaultRegion }: AddressFieldsProps) {
                 <Building className="h-4 w-4" />
               </FormLabel>
               <FormControl>
-                <Input {...field} className="w-full" />
+                <Input {...field} value={field.value ?? ''} className="w-full" />
               </FormControl>
               <FormMessage />
             </FormItem>
