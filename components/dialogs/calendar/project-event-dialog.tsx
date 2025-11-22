@@ -3,13 +3,15 @@
 import * as React from 'react'
 import { format } from 'date-fns'
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog'
+  ScrollableDialog,
+  ScrollableDialogBody,
+  ScrollableDialogClose,
+  ScrollableDialogContent,
+  ScrollableDialogDescription,
+  ScrollableDialogFooter,
+  ScrollableDialogHeader,
+  ScrollableDialogTitle,
+} from '@/components/ui/scrollable-dialog'
 import { Button } from '@/components/ui/button'
 
 import {
@@ -86,10 +88,6 @@ export function ProjectEventDialog({
     formRef.current?.submit()
   }
 
-  const handleCancel = () => {
-    onOpenChange?.(false)
-  }
-
   // Preparar defaultValues según modo
   const getDefaultValues = (): Partial<ProjectEventWithProjectUpdateFormValues> => {
     if (mode === 'edit' && event) {
@@ -112,29 +110,37 @@ export function ProjectEventDialog({
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl">
-        <DialogHeader>
-          <DialogTitle>{mode === 'create' ? 'Crear Evento' : 'Editar Evento'}</DialogTitle>
-          <DialogDescription>
-            {mode === 'create'
-              ? 'Programa un evento de proyecto en el calendario'
-              : 'Modifica la fecha o notas del evento'}
-          </DialogDescription>
-        </DialogHeader>
+    <ScrollableDialog open={open} onOpenChange={onOpenChange}>
+      <ScrollableDialogContent className="sm">
+        <ScrollableDialogHeader>
+          <ScrollableDialogTitle>
+            {mode === 'create' ? 'Crear Evento' : 'Editar Evento'}
+          </ScrollableDialogTitle>
+        </ScrollableDialogHeader>
 
-        <div className="py-4">
-          <ProjectEventForm
-            ref={formRef}
-            onSubmit={handleSubmit}
-            defaultValues={getDefaultValues()}
-          />
-        </div>
+        <ScrollableDialogBody>
+          <ScrollableDialogDescription asChild>
+            <div className="space-y-6">
+              <p className="text-sm text-muted-foreground">
+                {mode === 'create'
+                  ? 'Programa un evento de proyecto en el calendario'
+                  : 'Modifica la fecha o notas del evento'}
+              </p>
+              <ProjectEventForm
+                ref={formRef}
+                onSubmit={handleSubmit}
+                defaultValues={getDefaultValues()}
+              />
+            </div>
+          </ScrollableDialogDescription>
+        </ScrollableDialogBody>
 
-        <DialogFooter>
-          <Button variant="outline" onClick={handleCancel} disabled={isSubmitting}>
-            Cancelar
-          </Button>
+        <ScrollableDialogFooter>
+          <ScrollableDialogClose asChild>
+            <Button variant="outline" disabled={isSubmitting}>
+              Cancelar
+            </Button>
+          </ScrollableDialogClose>
           <Button onClick={handleSave} disabled={isSubmitting}>
             {isSubmitting
               ? mode === 'create'
@@ -144,8 +150,8 @@ export function ProjectEventDialog({
                 ? 'Crear Evento'
                 : 'Guardar Cambios'}
           </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+        </ScrollableDialogFooter>
+      </ScrollableDialogContent>
+    </ScrollableDialog>
   )
 }
