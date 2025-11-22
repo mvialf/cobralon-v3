@@ -17,7 +17,6 @@ import { PhoneInput } from '@/components/ui/phone-input'
 import { Combobox } from '@/components/ui/combobox'
 import { StatusBadge } from '@/components/ui/status-badge'
 import { FormGrid } from '@/components/ui/form-grid'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { ProjectSearchField } from '@/components/forms/search/project-search-field'
 import { AddressFields } from '@/components/forms/fields/address-fields'
 import { ProjectDetailsFields } from '@/components/forms/fields/project-details-fields'
@@ -247,125 +246,17 @@ export const ProjectEventForm = React.forwardRef<ProjectEventFormHandle, Project
           />
 
           {/* 2. Datos del Proyecto (editables) */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Datos del Proyecto</CardTitle>
-              <CardDescription>
-                {projectDetails
-                  ? 'Verifica y corrige los datos si es necesario'
-                  : 'Selecciona un proyecto para habilitar estos campos'}
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {/* Grid: Estado + Teléfono */}
-              <FormGrid columns={2}>
-                {/* Estado - Combobox */}
-                <FormField
-                  control={form.control}
-                  name="projectStatusId"
-                  render={({ field }) => (
-                    <FormItem className="flex flex-col">
-                      <FormLabel>Estado *</FormLabel>
-                      <FormControl>
-                        <Combobox
-                          value={field.value || ''}
-                          onValueChange={field.onChange}
-                          options={projectStatuses}
-                          getOptionValue={(status) => status.id}
-                          getOptionLabel={(status) => status.name}
-                          renderOption={(status) => (
-                            <StatusBadge bgClass={status.color.bgClass} label={status.name} />
-                          )}
-                          placeholder="Seleccionar estado"
-                          searchPlaceholder="Buscar estado..."
-                          emptyMessage="No se encontraron estados"
-                          contentWidth="300px"
-                          loading={loadingStatuses}
-                          disabled={!projectDetails}
-                          modal
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
 
-                {/* Teléfono */}
-                <FormField
-                  control={form.control}
-                  name="phone"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Teléfono *</FormLabel>
-                      <FormControl>
-                        <PhoneInput {...field} disabled={!projectDetails} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </FormGrid>
-
-              {/* Dirección */}
-              <AddressFields control={form.control} disabled={!projectDetails} />
-
-              {/* Detalles del proyecto */}
-              <ProjectDetailsFields control={form.control} disabled={!projectDetails} />
-
-              {/* Tags de Desinstalación - usando TagSelector profesional */}
-              <FormField
-                control={form.control}
-                name="uninstallTagIds"
-                render={({ field }) => {
-                  // Transformar IDs a objetos UninstallTag completos para TagSelector
-                  const selectedTagObjects =
-                    (field.value
-                      ?.map((id) => availableTags.find((tag) => tag.id === id))
-                      .filter(Boolean) as UninstallTag[]) || []
-
-                  // Handler: recibir objetos UninstallTag, enviar IDs al form
-                  const handleChange = (tags: UninstallTag[]) => {
-                    field.onChange(tags.map((t) => t.id))
-                  }
-
-                  return (
-                    <FormItem>
-                      <FormControl>
-                        <div className={cn(!projectDetails && 'opacity-50 pointer-events-none')}>
-                          <TagSelector
-                            selectedTags={selectedTagObjects}
-                            availableTags={availableTags}
-                            availableColors={availableColors}
-                            onTagsChange={handleChange}
-                            onCreateTag={createTag}
-                            onEditTag={editTag}
-                            onDeleteTag={deleteTag}
-                            label="Desinstalación"
-                            showFullNameInSelected
-                          />
-                        </div>
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )
-                }}
-              />
-            </CardContent>
-          </Card>
-
-          {/* 3. Datos del Evento */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Información del Evento</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
+          <div className="space-y-4">
+            {/* Grid: Fecha programada + Estado + Teléfono */}
+            <FormGrid columns={3}>
               {/* Campo: Fecha programada */}
               <FormField
                 control={form.control}
                 name="scheduledDate"
                 render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Fecha programada *</FormLabel>
+                  <FormItem className="">
+                    <FormLabel>Fecha evento *</FormLabel>
                     <FormControl>
                       <Input
                         type="date"
@@ -378,34 +269,151 @@ export const ProjectEventForm = React.forwardRef<ProjectEventFormHandle, Project
                         }}
                       />
                     </FormControl>
-                    <FormDescription>Fecha en la que se realizará el evento</FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
               />
-
-              {/* Campo: Notas (opcional) */}
+              {/* Estado - Combobox */}
               <FormField
                 control={form.control}
-                name="notes"
+                name="projectStatusId"
                 render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Notas</FormLabel>
+                  <FormItem className="flex flex-col">
+                    <FormLabel>Estado *</FormLabel>
                     <FormControl>
-                      <Textarea
-                        placeholder="Notas adicionales sobre el evento..."
-                        className="resize-none"
-                        rows={4}
-                        {...field}
+                      <Combobox
                         value={field.value || ''}
+                        onValueChange={field.onChange}
+                        options={projectStatuses}
+                        getOptionValue={(status) => status.id}
+                        getOptionLabel={(status) => status.name}
+                        renderOption={(status) => (
+                          <StatusBadge bgClass={status.color.bgClass} label={status.name} />
+                        )}
+                        placeholder="Seleccionar estado"
+                        searchPlaceholder="Buscar estado..."
+                        emptyMessage="No se encontraron estados"
+                        contentWidth="300px"
+                        loading={loadingStatuses}
+                        disabled={!projectDetails}
+                        modal
                       />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
               />
-            </CardContent>
-          </Card>
+
+              {/* Teléfono */}
+              <FormField
+                control={form.control}
+                name="phone"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Teléfono *</FormLabel>
+                    <FormControl>
+                      <PhoneInput {...field} disabled={!projectDetails} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </FormGrid>
+
+            {/* Dirección */}
+            <AddressFields control={form.control} disabled={!projectDetails} />
+
+            {/* Detalles del proyecto */}
+            <ProjectDetailsFields control={form.control} disabled={!projectDetails} />
+
+            {/* Tags de Desinstalación - usando TagSelector profesional */}
+            <FormField
+              control={form.control}
+              name="uninstallTagIds"
+              render={({ field }) => {
+                // Transformar IDs a objetos UninstallTag completos para TagSelector
+                const selectedTagObjects =
+                  (field.value
+                    ?.map((id) => availableTags.find((tag) => tag.id === id))
+                    .filter(Boolean) as UninstallTag[]) || []
+
+                // Handler: recibir objetos UninstallTag, enviar IDs al form
+                const handleChange = (tags: UninstallTag[]) => {
+                  field.onChange(tags.map((t) => t.id))
+                }
+
+                return (
+                  <FormItem>
+                    <FormControl>
+                      <div className={cn(!projectDetails && 'opacity-50 pointer-events-none')}>
+                        <TagSelector
+                          selectedTags={selectedTagObjects}
+                          availableTags={availableTags}
+                          availableColors={availableColors}
+                          onTagsChange={handleChange}
+                          onCreateTag={createTag}
+                          onEditTag={editTag}
+                          onDeleteTag={deleteTag}
+                          label="Desinstalación"
+                          showFullNameInSelected
+                        />
+                      </div>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )
+              }}
+            />
+          </div>
+
+          {/* 3. Datos del Evento */}
+          <div>
+            {/* Campo: Fecha programada */}
+            <FormField
+              control={form.control}
+              name="scheduledDate"
+              render={({ field }) => (
+                <FormItem className="w-1/2">
+                  <FormLabel>Fecha programada *</FormLabel>
+                  <FormControl>
+                    <Input
+                      type="date"
+                      {...field}
+                      value={field.value ? formatDateForInput(field.value) : ''}
+                      onChange={(e) => {
+                        // Convertir string del input a Date
+                        const dateValue = e.target.value
+                        field.onChange(dateValue)
+                      }}
+                    />
+                  </FormControl>
+                  <FormDescription>Fecha en la que se realizará el evento</FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            {/* Campo: Notas (opcional) */}
+            <FormField
+              control={form.control}
+              name="notes"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Notas</FormLabel>
+                  <FormControl>
+                    <Textarea
+                      placeholder="Notas adicionales sobre el evento..."
+                      className="resize-none"
+                      rows={4}
+                      {...field}
+                      value={field.value || ''}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
         </div>
       </Form>
     )
