@@ -115,12 +115,18 @@ export function EventCalendar() {
     }
 
     // Si la fecha es la misma, no hacer nada
-    const currentDate = new Date(eventData.scheduledDate)
-    if (
-      currentDate.getFullYear() === targetDate.getFullYear() &&
-      currentDate.getMonth() === targetDate.getMonth() &&
-      currentDate.getDate() === targetDate.getDate()
-    ) {
+    // IMPORTANTE: Comparar usando strings YYYY-MM-DD para evitar problemas de timezone
+    // Sin esto, eventos en UTC pueden ser considerados "mismo día" incorrectamente
+    const currentDateStr = eventData.scheduledDate.substring(0, 10)
+    const targetDateStr = new Date(
+      targetDate.getFullYear(),
+      targetDate.getMonth(),
+      targetDate.getDate()
+    )
+      .toISOString()
+      .substring(0, 10)
+
+    if (currentDateStr === targetDateStr) {
       setActiveEvent(null)
       return
     }

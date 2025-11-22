@@ -1,6 +1,6 @@
 'use client'
 
-import { MoreVertical } from 'lucide-react'
+import { MoreVertical, CheckCircle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
   DropdownMenu,
@@ -11,6 +11,7 @@ import {
 import { Badge } from '@/components/ui/badge'
 import { Card } from '@/components/ui/card'
 import type { ProjectEventWithRelations } from '@/lib/types/calendar'
+import type { TodoItem } from '@/hooks/use-todo-list'
 
 interface ProjectEventCardProps {
   event: ProjectEventWithRelations
@@ -64,6 +65,17 @@ export function ProjectEventCard({ event, onEdit, onDelete }: ProjectEventCardPr
           >
             {project.projectStatus.name}
           </Badge>
+        )}
+
+        {/* Tasks Badge */}
+        {event.tasks && Array.isArray(event.tasks) && event.tasks.length > 0 && (
+          <div className="flex items-center gap-1 text-xs text-muted-foreground">
+            <CheckCircle className="h-3 w-3" />
+            <span>
+              {(event.tasks as unknown as TodoItem[]).filter((t) => t.completed).length}/
+              {event.tasks.length} tareas
+            </span>
+          </div>
         )}
       </div>
     </Card>

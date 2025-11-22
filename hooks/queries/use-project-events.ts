@@ -85,6 +85,11 @@ async function createProjectEventWithUpdate(
 
   if (!response.ok) {
     const error = await response.json()
+    // Log detalles de validación para debugging
+    if (error.details) {
+      console.error('❌ Validation errors:', error.details)
+      console.error('📤 Data sent:', data)
+    }
     throw new Error(error.error || 'Error al crear evento')
   }
 
@@ -206,7 +211,7 @@ export function useUpdateProjectEventDate() {
                 ...event,
                 data: {
                   ...event.data,
-                  scheduledDate,
+                  scheduledDate: scheduledDate.toISOString(), // ✅ Mantener consistencia de tipos
                 },
               }
             }
@@ -225,10 +230,12 @@ export function useUpdateProjectEventDate() {
       }
       handleMutationError(error)
     },
-    // Refetch para sincronizar con servidor
+    // Invalidar queries después de la mutación para refrescar UI
+    // Usa onSettled (no onSuccess) para ejecutar siempre, incluso si falla
     onSettled: () => {
+      // Invalidar sin await para evitar bloqueo
       queryClient.invalidateQueries({ queryKey: ['calendar-events'] })
-    },
+    }
   })
 }
 

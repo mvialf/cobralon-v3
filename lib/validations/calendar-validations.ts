@@ -1,5 +1,7 @@
 import { z } from 'zod'
 import { normalizePhone } from '@/lib/utils/phone'
+import { todoListOptionalSchema } from '@/lib/validations/todo-validations'
+import type { TodoItem } from '@/hooks/use-todo-list'
 
 // Schema base para eventos
 const baseEventSchema = z.object({
@@ -7,6 +9,7 @@ const baseEventSchema = z.object({
     required_error: 'La fecha es requerida',
     invalid_type_error: 'Fecha inválida',
   }),
+  tasks: todoListOptionalSchema.optional(),
 })
 
 // ProjectEvent schemas
@@ -24,9 +27,10 @@ export const createProjectEventWithProjectUpdateSchema = z.object({
   // Datos del evento
   projectId: z.string().uuid('ID de proyecto inválido'),
   scheduledDate: z.string().min(1, 'La fecha es requerida'),
+  tasks: todoListOptionalSchema.optional(),
 
   // Datos del proyecto (validación consistente con project-validations.ts)
-  projectStatusId: z.string().uuid('ID de estado inválido'),
+  projectStatusId: z.string().uuid('ID de estado inválido').optional(),
   phone: z
     .string()
     .min(1, 'El teléfono es requerido')
@@ -80,7 +84,8 @@ export type ProjectEventFormValues = {
 export type ProjectEventWithProjectUpdateFormValues = {
   projectId: string
   scheduledDate: string
-  projectStatusId: string
+  tasks?: TodoItem[]
+  projectStatusId?: string
   phone: string
   street: string
   apartment: string | null

@@ -22,6 +22,7 @@ import { ProjectDetailsFields } from '@/components/forms/fields/project-details-
 import { TagSelector } from '@/components/custom/tag-system'
 import { useUninstallTags } from '@/hooks/use-uninstall-tags'
 import type { UninstallTag } from '@/components/custom/tag-system/types'
+import { TodoListField } from '@/components/custom/todo'
 import { cn } from '@/lib/utils'
 import { getRegionCodigoByNombre } from '@/lib/regiones-chile'
 import {
@@ -120,6 +121,7 @@ export const ProjectEventForm = React.forwardRef<ProjectEventFormHandle, Project
         squareMeters: 0,
         description: null,
         uninstallTagIds: [],
+        tasks: [],
         ...defaultValues,
       },
     })
@@ -203,6 +205,7 @@ export const ProjectEventForm = React.forwardRef<ProjectEventFormHandle, Project
             squareMeters: Number(data.squareMeters),
             description: data.description || null,
             uninstallTagIds: data.uninstallTagIds || [],
+            tasks: data.tasks || [],
           }
 
           console.log('📝 Setting form values:', formData)
@@ -361,30 +364,26 @@ export const ProjectEventForm = React.forwardRef<ProjectEventFormHandle, Project
                 )
               }}
             />
-          </div>
 
-          {/* 3. Datos del Evento */}
-          <div>
-            {/* Campo: Fecha programada */}
+            {/* Tareas del Evento */}
             <FormField
               control={form.control}
-              name="scheduledDate"
-              render={({ field }) => (
-                <FormItem className="w-1/2">
-                  <FormLabel>Fecha programada *</FormLabel>
+              name="tasks"
+              render={({ field, fieldState }) => (
+                <FormItem>
+                  <FormLabel>Tareas del Evento</FormLabel>
+                  <FormDescription>
+                    Checklist de tareas a realizar durante el evento
+                  </FormDescription>
                   <FormControl>
-                    <Input
-                      type="date"
-                      {...field}
-                      value={field.value ? formatDateForInput(field.value) : ''}
-                      onChange={(e) => {
-                        // Convertir string del input a Date
-                        const dateValue = e.target.value
-                        field.onChange(dateValue)
-                      }}
+                    <TodoListField
+                      value={field.value || []}
+                      onChange={field.onChange}
+                      error={fieldState.error?.message}
+                      disabled={!projectDetails}
+                      placeholder="Ej: Medir ventanas, tomar fotos, confirmar material..."
                     />
                   </FormControl>
-                  <FormDescription>Fecha en la que se realizará el evento</FormDescription>
                   <FormMessage />
                 </FormItem>
               )}

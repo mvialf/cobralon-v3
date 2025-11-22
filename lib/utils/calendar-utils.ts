@@ -63,9 +63,25 @@ export function getVisibleDateRange(
 
 /**
  * Filtra eventos que corresponden a un día específico
+ *
+ * IMPORTANTE: Compara solo la parte de fecha (YYYY-MM-DD) ignorando
+ * completamente timezone. Esto evita que eventos en UTC se muestren
+ * en el día incorrecto debido a la conversión a hora local.
+ *
+ * Ejemplo del bug que esto previene:
+ * - scheduledDate: "2025-11-21T00:00:00.000Z" (UTC)
+ * - En Chile (UTC-3): se convertiría a Nov 20 21:00
+ * - Sin este fix: evento de día 21 aparecería en día 20
  */
 export function getEventsForDay(events: CalendarEvent[], day: Date): CalendarEvent[] {
-  return events.filter((event) => isSameDay(new Date(event.data.scheduledDate), day))
+  // Formatear el día a YYYY-MM-DD (ignora timezone)
+  const dayStr = format(day, 'yyyy-MM-dd')
+
+  return events.filter((event) => {
+    // Extraer YYYY-MM-DD del scheduledDate (primeros 10 caracteres)
+    const eventDateStr = event.data.scheduledDate.substring(0, 10)
+    return eventDateStr === dayStr
+  })
 }
 
 /**
