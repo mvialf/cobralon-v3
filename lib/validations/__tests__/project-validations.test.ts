@@ -16,7 +16,7 @@ describe('projectFormSchema', () => {
     street: 'Av. Providencia 123',
     apartment: 'Depto 45',
     comuna: 'Providencia',
-    region: 'Región Metropolitana',
+    region: '13', // ✅ Formato canonical (código de región)
     projectStatusId: '123e4567-e89b-12d3-a456-426614174001',
     date: new Date('2025-12-01T10:00:00Z'),
     subtotal: 1000000,
@@ -509,6 +509,62 @@ describe('projectFormSchema', () => {
       expect(result.success).toBe(false)
     })
   })
+
+  describe('backward compatibility: nombres de regiones', () => {
+    it('debe aceptar códigos de región (formato canonical)', () => {
+      const dataWithCode = {
+        ...validInput,
+        region: '13',
+      }
+
+      const result = projectFormSchema.safeParse(dataWithCode)
+      expect(result.success).toBe(true)
+      if (result.success) {
+        expect(result.data.region).toBe('13')
+      }
+    })
+
+    it('debe aceptar nombres completos de regiones (backward compatibility)', () => {
+      const dataWithFullName = {
+        ...validInput,
+        region: 'Región Metropolitana de Santiago',
+      }
+
+      const result = projectFormSchema.safeParse(dataWithFullName)
+      expect(result.success).toBe(true)
+      if (result.success) {
+        // Nombres se aceptan sin conversión en validación
+        // La conversión ocurre en el parser (normalizeRegionValue)
+        expect(result.data.region).toBe('Región Metropolitana de Santiago')
+      }
+    })
+
+    it('debe aceptar nombres cortos de regiones', () => {
+      const dataWithShortName = {
+        ...validInput,
+        region: 'Metropolitana',
+      }
+
+      const result = projectFormSchema.safeParse(dataWithShortName)
+      expect(result.success).toBe(true)
+      if (result.success) {
+        expect(result.data.region).toBe('Metropolitana')
+      }
+    })
+
+    it('debe aceptar nombres sin acentos (edge case de imports)', () => {
+      const dataWithoutAccent = {
+        ...validInput,
+        region: 'Región de Valparaiso', // sin tilde
+      }
+
+      const result = projectFormSchema.safeParse(dataWithoutAccent)
+      expect(result.success).toBe(true)
+      if (result.success) {
+        expect(result.data.region).toBe('Región de Valparaiso')
+      }
+    })
+  })
 })
 
 describe('projectSchema', () => {
@@ -520,7 +576,7 @@ describe('projectSchema', () => {
     street: 'Av. Providencia 123',
     apartment: 'Depto 45',
     comuna: 'Providencia',
-    region: 'Región Metropolitana',
+    region: '13', // ✅ Formato canonical (código de región)
     projectStatusId: '123e4567-e89b-12d3-a456-426614174001',
     date: new Date('2025-12-01T10:00:00Z'),
     subtotal: 1000000,
@@ -631,7 +687,7 @@ describe('projectFormToPayload', () => {
       phone: '+56912345678',
       street: 'Av. Providencia 123',
       comuna: 'Providencia',
-      region: 'Región Metropolitana',
+      region: 'Región Metropolitana', // ⚠️ Backward compatibility: nombres aún funcionan
       projectStatusId: '123e4567-e89b-12d3-a456-426614174001',
       date: new Date('2025-12-01T10:00:00Z'),
       subtotal: 1000000,
@@ -673,7 +729,7 @@ describe('integración completa', () => {
       street: 'Av. Providencia 123',
       apartment: 'Depto 45',
       comuna: 'Providencia',
-      region: 'Región Metropolitana',
+      region: '13', // ✅ Formato canonical (código de región)
       projectStatusId: '123e4567-e89b-12d3-a456-426614174001',
       date: new Date('2025-12-01T10:00:00Z'),
       subtotal: 1000000,

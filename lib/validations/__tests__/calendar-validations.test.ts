@@ -169,6 +169,24 @@ describe('createProjectEventWithProjectUpdateSchema', () => {
 
       expect(result.success).toBe(true)
     })
+
+    it('debe aceptar projectStatusId como opcional (undefined)', () => {
+      const result = createProjectEventWithProjectUpdateSchema.safeParse({
+        ...validEventWithProject,
+        projectStatusId: undefined,
+      })
+
+      expect(result.success).toBe(true)
+    })
+
+    it('debe aceptar projectStatusId con UUID válido', () => {
+      const result = createProjectEventWithProjectUpdateSchema.safeParse({
+        ...validEventWithProject,
+        projectStatusId: '550e8400-e29b-41d4-a716-446655440001',
+      })
+
+      expect(result.success).toBe(true)
+    })
   })
 
   describe('validación de phone (teléfono chileno)', () => {
@@ -403,6 +421,111 @@ describe('createProjectEventWithProjectUpdateSchema', () => {
       const result = createProjectEventWithProjectUpdateSchema.safeParse(event)
 
       expect(result.success).toBe(false)
+    })
+  })
+
+  describe('validación de tasks', () => {
+    it('debe aceptar tasks vacío (array vacío)', () => {
+      const result = createProjectEventWithProjectUpdateSchema.safeParse({
+        ...validEventWithProject,
+        tasks: [],
+      })
+
+      expect(result.success).toBe(true)
+    })
+
+    it('debe aceptar tasks con TodoItems válidos', () => {
+      const result = createProjectEventWithProjectUpdateSchema.safeParse({
+        ...validEventWithProject,
+        tasks: [
+          { id: crypto.randomUUID(), text: 'Medir ventanas', completed: false },
+          { id: crypto.randomUUID(), text: 'Tomar fotos', completed: true },
+          { id: crypto.randomUUID(), text: 'Confirmar material', completed: false },
+        ],
+      })
+
+      expect(result.success).toBe(true)
+      if (result.success) {
+        expect(result.data.tasks).toHaveLength(3)
+        expect(result.data.tasks![0].text).toBe('Medir ventanas')
+        expect(result.data.tasks![1].completed).toBe(true)
+      }
+    })
+
+    it('debe aceptar tasks como undefined (campo opcional)', () => {
+      const result = createProjectEventWithProjectUpdateSchema.safeParse({
+        ...validEventWithProject,
+        tasks: undefined,
+      })
+
+      expect(result.success).toBe(true)
+    })
+
+    it('debe rechazar tasks con más de 50 items', () => {
+      const tooManyTasks = Array.from({ length: 51 }, (_, i) => ({
+        id: crypto.randomUUID(),
+        text: `Tarea ${i + 1}`,
+        completed: false,
+      }))
+
+      const result = createProjectEventWithProjectUpdateSchema.safeParse({
+        ...validEventWithProject,
+        tasks: tooManyTasks,
+      })
+
+      expect(result.success).toBe(false)
+      if (!result.success) {
+        expect(result.error.issues[0].message).toContain('Máximo 50')
+      }
+    })
+
+    it('debe rechazar tasks con item sin id', () => {
+      const result = createProjectEventWithProjectUpdateSchema.safeParse({
+        ...validEventWithProject,
+        tasks: [{ text: 'Tarea sin ID', completed: false }],
+      })
+
+      expect(result.success).toBe(false)
+      if (!result.success) {
+        expect(result.error.issues[0].path).toContain('tasks')
+      }
+    })
+
+    it('debe rechazar tasks con item sin text', () => {
+      const result = createProjectEventWithProjectUpdateSchema.safeParse({
+        ...validEventWithProject,
+        tasks: [{ id: crypto.randomUUID(), completed: false }],
+      })
+
+      expect(result.success).toBe(false)
+      if (!result.success) {
+        expect(result.error.issues[0].path).toContain('tasks')
+      }
+    })
+
+    it('debe rechazar tasks con text vacío', () => {
+      const result = createProjectEventWithProjectUpdateSchema.safeParse({
+        ...validEventWithProject,
+        tasks: [{ id: crypto.randomUUID(), text: '', completed: false }],
+      })
+
+      expect(result.success).toBe(false)
+      if (!result.success) {
+        expect(result.error.issues[0].message).toContain('tarea no puede estar vacía')
+      }
+    })
+
+    it('debe rechazar tasks con text muy largo (más de 200 caracteres)', () => {
+      const longText = 'a'.repeat(201)
+      const result = createProjectEventWithProjectUpdateSchema.safeParse({
+        ...validEventWithProject,
+        tasks: [{ id: crypto.randomUUID(), text: longText, completed: false }],
+      })
+
+      expect(result.success).toBe(false)
+      if (!result.success) {
+        expect(result.error.issues[0].message).toContain('200')
+      }
     })
   })
 })
