@@ -91,7 +91,6 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
       where: { id },
       data: {
         scheduledDate: data.scheduledDate,
-        notes: data.notes,
       },
       include: {
         project: {

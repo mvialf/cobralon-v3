@@ -15,7 +15,7 @@ import { withLogging } from '@/lib/logger-middleware'
  * - Rollback autom�tico si falla alguna operaci�n
  *
  * Body:
- * - projectId, scheduledDate, notes (datos del evento)
+ * - projectId, scheduledDate (datos del evento)
  * - phone, street, apartment, comuna, region, windowsCount, squareMeters, description (datos del proyecto)
  */
 export const POST = withLogging(async (request, logger) => {
@@ -131,7 +131,6 @@ export const POST = withLogging(async (request, logger) => {
         data: {
           projectId: data.projectId,
           scheduledDate: new Date(data.scheduledDate),
-          notes: data.notes || null,
         },
         include: {
           project: {
