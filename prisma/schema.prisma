@@ -296,7 +296,6 @@ model ProjectEvent {
   id            String   @id @default(uuid())
   projectId     String
   scheduledDate DateTime @db.Date
-  notes         String?  @db.Text
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
