@@ -25,12 +25,10 @@ export type CalendarEvent = {
 export interface CreateProjectEventInput {
   projectId: string
   scheduledDate: Date
-  notes?: string | null
 }
 
 export interface UpdateProjectEventInput {
   scheduledDate?: Date
-  notes?: string | null
 }
 
 // Query params para rango de fechas

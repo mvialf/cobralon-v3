@@ -7,7 +7,6 @@ const baseEventSchema = z.object({
     required_error: 'La fecha es requerida',
     invalid_type_error: 'Fecha inválida',
   }),
-  notes: z.string().max(1000, 'Las notas no pueden exceder 1000 caracteres').optional().nullable(),
 })
 
 // ProjectEvent schemas
@@ -25,7 +24,6 @@ export const createProjectEventWithProjectUpdateSchema = z.object({
   // Datos del evento
   projectId: z.string().uuid('ID de proyecto inválido'),
   scheduledDate: z.string().min(1, 'La fecha es requerida'),
-  notes: z.string().max(1000, 'Las notas no pueden exceder 1000 caracteres').optional().nullable(),
 
   // Datos del proyecto (validación consistente con project-validations.ts)
   projectStatusId: z.string().uuid('ID de estado inválido'),
@@ -74,7 +72,6 @@ export type CalendarQueryInput = z.infer<typeof calendarQuerySchema>
 export type ProjectEventFormValues = {
   projectId: string
   scheduledDate: string
-  notes?: string | null
 }
 
 /**
@@ -83,7 +80,6 @@ export type ProjectEventFormValues = {
 export type ProjectEventWithProjectUpdateFormValues = {
   projectId: string
   scheduledDate: string
-  notes?: string | null
   projectStatusId: string
   phone: string
   street: string
