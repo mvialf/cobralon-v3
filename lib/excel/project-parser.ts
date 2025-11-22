@@ -1,5 +1,6 @@
 import * as XLSX from 'xlsx'
 import { normalizePhone } from '@/lib/utils/phone'
+import { normalizeRegionValue } from '@/lib/regiones-chile'
 
 /**
  * Datos parseados de un proyecto individual desde Excel
@@ -271,7 +272,7 @@ export async function parseProjectExcel(file: File): Promise<ProjectParseResult>
           const apartment =
             apartmentIndex !== null ? String(row[apartmentIndex] || '').trim() : undefined
           const comuna = String(row[comunaIndex!] || '').trim()
-          const region = String(row[regionIndex!] || '').trim()
+          const regionInput = String(row[regionIndex!] || '').trim()
           const projectStatusName = String(row[statusIndex!] || '').trim()
           const dateValue = row[dateIndex!]
           const subtotal = parseNumber(row[subtotalIndex!])
@@ -283,13 +284,22 @@ export async function parseProjectExcel(file: File): Promise<ProjectParseResult>
           const description =
             descriptionIndex !== null ? String(row[descriptionIndex] || '').trim() : undefined
 
+          // Normalizar región (convierte nombres a códigos si es necesario)
+          const region = normalizeRegionValue(regionInput)
+
           // Validar campos requeridos
           if (!projectNumber) errors.push('Número de proyecto es requerido')
           if (!customerName) errors.push('Cliente es requerido')
           // phone es opcional - si no se proporciona, se usará el del cliente
           if (!street) errors.push('Calle es requerida')
           if (!comuna) errors.push('Comuna es requerida')
-          if (!region) errors.push('Región es requerida')
+          if (!regionInput) {
+            errors.push('Región es requerida')
+          } else if (!region) {
+            errors.push(
+              `Región "${regionInput}" no es válida. Use código (ej: "13") o nombre (ej: "Metropolitana")`
+            )
+          }
           if (!projectStatusName) errors.push('Estado es requerido')
           if (!subtotal || subtotal <= 0) errors.push('Subtotal debe ser mayor a 0')
 
@@ -317,7 +327,7 @@ export async function parseProjectExcel(file: File): Promise<ProjectParseResult>
             errors.push('IVA debe estar entre 0% y 100%')
           }
 
-          if (errors.length === 0 && date) {
+          if (errors.length === 0 && date && region) {
             projects.push({
               data: {
                 projectNumber,
