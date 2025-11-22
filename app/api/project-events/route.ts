@@ -68,6 +68,7 @@ export const POST = withLogging(async (request, logger) => {
       data: {
         projectId: data.projectId,
         scheduledDate: data.scheduledDate,
+        tasks: data.tasks || [],
       },
       include: {
         project: {

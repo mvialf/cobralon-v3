@@ -67,9 +67,25 @@ export const GET = withLogging(async (request, logger) => {
     // TODO: En el futuro, agregar AftersaleEvents y VisitEvents aquí
 
     // Unificar eventos con tipo discriminado
+    // IMPORTANTE: Convertir Decimals a números para serialización JSON
     const unifiedEvents = projectEvents.map((event) => ({
       type: 'project' as const,
-      data: event,
+      data: {
+        ...event,
+        project: {
+          ...event.project,
+          subtotal: Number(event.project.subtotal),
+          taxRate: Number(event.project.taxRate),
+          total: Number(event.project.total),
+          balance: Number(event.project.balance),
+          squareMeters: Number(event.project.squareMeters),
+          totalAmount: event.project.totalAmount ? Number(event.project.totalAmount) : null,
+          customer: {
+            ...event.project.customer,
+            creditBalance: Number(event.project.customer.creditBalance),
+          },
+        },
+      },
     }))
 
     logger.info(

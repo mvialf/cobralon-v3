@@ -56,7 +56,7 @@ export type APIHandler = (
  * ```
  */
 export function withLogging(handler: APIHandler) {
-  return async (request: NextRequest, context: { params: Promise<Record<string, string>> }) => {
+  return async (request: NextRequest, context?: { params?: Promise<Record<string, string>> }) => {
     const startTime = performance.now()
     const requestId = generateRequestId()
 
