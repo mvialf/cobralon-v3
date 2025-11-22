@@ -12,7 +12,6 @@ import {
 } from '@/lib/validations/calendar-validations'
 
 import { Input } from '@/components/ui/input'
-import { Textarea } from '@/components/ui/textarea'
 import { PhoneInput } from '@/components/ui/phone-input'
 import { Combobox } from '@/components/ui/combobox'
 import { StatusBadge } from '@/components/ui/status-badge'
@@ -390,7 +389,6 @@ export const ProjectEventForm = React.forwardRef<ProjectEventFormHandle, Project
                 </FormItem>
               )}
             />
-
           </div>
         </div>
       </Form>

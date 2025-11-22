@@ -4,8 +4,6 @@ import {
   updateProjectEventSchema,
   createProjectEventWithProjectUpdateSchema,
   calendarQuerySchema,
-  type ProjectEventFormValues,
-  type ProjectEventWithProjectUpdateFormValues,
 } from '../calendar-validations'
 
 describe('createProjectEventSchema', () => {
