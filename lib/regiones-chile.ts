@@ -83,31 +83,80 @@ export function formatComunaForCombobox(comuna: Comuna) {
 }
 
 /**
+ * Normaliza un string para comparación insensible a acentos y mayúsculas
+ * @internal
+ */
+function normalizeString(str: string): string {
+  return str
+    .toLowerCase()
+    .trim()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '') // Remover acentos
+}
+
+/**
  * Obtiene el código de región por nombre (búsqueda flexible)
  * Soporta nombre completo, nombre corto o búsqueda parcial
+ * Insensible a acentos y mayúsculas
+ *
  * Ejemplos:
  * - "Región Metropolitana de Santiago" → "13"
  * - "Región Metropolitana" → "13"
  * - "Metropolitana" → "13"
+ * - "Valparaiso" (sin tilde) → "05"
+ * - "Valparaíso" (con tilde) → "05"
  */
 export function getRegionCodigoByNombre(nombre: string): string | null {
   if (!nombre) return null
 
-  const nombreLower = nombre.toLowerCase().trim()
+  const nombreNormalized = normalizeString(nombre)
 
   // 1. Búsqueda exacta primero (más precisa)
-  let region = REGIONES_CHILE.regiones.find(
-    (r) => r.nombre.toLowerCase() === nombreLower || r.nombre_corto.toLowerCase() === nombreLower
-  )
+  let region = REGIONES_CHILE.regiones.find((r) => {
+    const nombreRegion = normalizeString(r.nombre)
+    const nombreCorto = normalizeString(r.nombre_corto)
+    return nombreRegion === nombreNormalized || nombreCorto === nombreNormalized
+  })
 
   // 2. Si no encuentra, búsqueda parcial (el nombre contiene o está contenido)
   if (!region) {
-    region = REGIONES_CHILE.regiones.find(
-      (r) =>
-        r.nombre.toLowerCase().includes(nombreLower) ||
-        nombreLower.includes(r.nombre_corto.toLowerCase())
-    )
+    region = REGIONES_CHILE.regiones.find((r) => {
+      const nombreRegion = normalizeString(r.nombre)
+      const nombreCorto = normalizeString(r.nombre_corto)
+      return nombreRegion.includes(nombreNormalized) || nombreNormalized.includes(nombreCorto)
+    })
   }
 
   return region?.codigo || null
+}
+
+/**
+ * Normaliza un valor de región a su código oficial
+ *
+ * Acepta códigos existentes O nombres para convertir.
+ * Útil para procesar datos de usuarios que pueden venir en cualquier formato.
+ *
+ * @param value - Código ("13") o nombre ("Metropolitana", "Región Metropolitana")
+ * @returns Código oficial o null si el valor no es válido
+ *
+ * @example
+ * normalizeRegionValue("13") → "13" (código válido, se mantiene)
+ * normalizeRegionValue("Metropolitana") → "13" (nombre convertido a código)
+ * normalizeRegionValue("Región Metropolitana de Santiago") → "13"
+ * normalizeRegionValue("Atlantida") → null (región inválida)
+ * normalizeRegionValue("") → null (valor vacío)
+ */
+export function normalizeRegionValue(value: string): string | null {
+  const trimmed = value.trim()
+  if (!trimmed) return null
+
+  // Fast path: verificar si ya es un código válido
+  // Esto maneja casos donde el Excel ya tiene códigos ("13", "05", etc.)
+  if (getRegionByCodigo(trimmed)) {
+    return trimmed
+  }
+
+  // Slow path: intentar conversión de nombre → código
+  // Esto maneja casos donde el Excel tiene nombres ("Metropolitana", etc.)
+  return getRegionCodigoByNombre(trimmed)
 }
