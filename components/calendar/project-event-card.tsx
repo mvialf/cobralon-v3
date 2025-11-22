@@ -65,9 +65,6 @@ export function ProjectEventCard({ event, onEdit, onDelete }: ProjectEventCardPr
             {project.projectStatus.name}
           </Badge>
         )}
-
-        {/* Notes (if any) */}
-        {event.notes && <p className="text-xs text-muted-foreground line-clamp-2">{event.notes}</p>}
       </div>
     </Card>
   )

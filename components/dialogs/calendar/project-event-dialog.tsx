@@ -58,7 +58,6 @@ export function ProjectEventDialog({
         await createWithUpdateMutation.mutateAsync({
           projectId: data.projectId,
           scheduledDate: new Date(data.scheduledDate),
-          notes: data.notes,
           phone: data.phone,
           street: data.street,
           apartment: data.apartment,
@@ -73,7 +72,6 @@ export function ProjectEventDialog({
           id: event.id,
           data: {
             scheduledDate: new Date(data.scheduledDate),
-            notes: data.notes,
           },
         })
       }
@@ -91,12 +89,11 @@ export function ProjectEventDialog({
   // Preparar defaultValues según modo
   const getDefaultValues = (): Partial<ProjectEventWithProjectUpdateFormValues> => {
     if (mode === 'edit' && event) {
-      // En modo edit solo editamos fecha y notas del evento
+      // En modo edit solo editamos fecha del evento
       // Los campos del proyecto se mostrarán pero no se usan en el submit
       return {
         projectId: event.projectId,
         scheduledDate: format(new Date(event.scheduledDate), 'yyyy-MM-dd'),
-        notes: event.notes || '',
       }
     }
 
@@ -124,7 +121,7 @@ export function ProjectEventDialog({
               <p className="text-sm text-muted-foreground">
                 {mode === 'create'
                   ? 'Programa un evento de proyecto en el calendario'
-                  : 'Modifica la fecha o notas del evento'}
+                  : 'Modifica la fecha del evento'}
               </p>
               <ProjectEventForm
                 ref={formRef}

@@ -111,7 +111,6 @@ export const ProjectEventForm = React.forwardRef<ProjectEventFormHandle, Project
       defaultValues: {
         projectId: '',
         scheduledDate: '',
-        notes: '',
         projectStatusId: '',
         phone: '',
         street: '',
@@ -195,7 +194,6 @@ export const ProjectEventForm = React.forwardRef<ProjectEventFormHandle, Project
           const formData = {
             projectId: data.id,
             scheduledDate: form.getValues('scheduledDate') || '',
-            notes: form.getValues('notes') || '',
             projectStatusId: data.projectStatus?.id || '',
             phone: data.phone,
             street: data.street,
@@ -393,26 +391,6 @@ export const ProjectEventForm = React.forwardRef<ProjectEventFormHandle, Project
               )}
             />
 
-            {/* Campo: Notas (opcional) */}
-            <FormField
-              control={form.control}
-              name="notes"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Notas</FormLabel>
-                  <FormControl>
-                    <Textarea
-                      placeholder="Notas adicionales sobre el evento..."
-                      className="resize-none"
-                      rows={4}
-                      {...field}
-                      value={field.value || ''}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
           </div>
         </div>
       </Form>
