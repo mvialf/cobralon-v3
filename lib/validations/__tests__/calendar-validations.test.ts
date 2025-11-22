@@ -12,7 +12,6 @@ describe('createProjectEventSchema', () => {
   const validEvent = {
     projectId: '550e8400-e29b-41d4-a716-446655440000',
     scheduledDate: new Date('2025-02-15'),
-    notes: 'Visita programada',
   }
 
   describe('validación completa', () => {
@@ -23,24 +22,7 @@ describe('createProjectEventSchema', () => {
       if (result.success) {
         expect(result.data.projectId).toBe(validEvent.projectId)
         expect(result.data.scheduledDate).toEqual(validEvent.scheduledDate)
-        expect(result.data.notes).toBe(validEvent.notes)
       }
-    })
-
-    it('debe aceptar evento sin notas', () => {
-      const { notes, ...event } = validEvent
-      const result = createProjectEventSchema.safeParse(event)
-
-      expect(result.success).toBe(true)
-    })
-
-    it('debe aceptar notas como null', () => {
-      const result = createProjectEventSchema.safeParse({
-        ...validEvent,
-        notes: null,
-      })
-
-      expect(result.success).toBe(true)
     })
   })
 
@@ -120,54 +102,12 @@ describe('createProjectEventSchema', () => {
       }
     })
   })
-
-  describe('validación de notes', () => {
-    it('debe aceptar notas cortas', () => {
-      const result = createProjectEventSchema.safeParse({
-        ...validEvent,
-        notes: 'Nota breve',
-      })
-
-      expect(result.success).toBe(true)
-    })
-
-    it('debe aceptar notas de 1000 caracteres (límite)', () => {
-      const notasLargas = 'A'.repeat(1000)
-      const result = createProjectEventSchema.safeParse({
-        ...validEvent,
-        notes: notasLargas,
-      })
-
-      expect(result.success).toBe(true)
-    })
-
-    it('debe rechazar notas > 1000 caracteres', () => {
-      const notasExcesivas = 'A'.repeat(1001)
-      const result = createProjectEventSchema.safeParse({
-        ...validEvent,
-        notes: notasExcesivas,
-      })
-
-      expect(result.success).toBe(false)
-      if (!result.success) {
-        expect(result.error.issues[0].message).toContain('1000 caracteres')
-      }
-    })
-  })
 })
 
 describe('updateProjectEventSchema', () => {
   it('debe permitir actualización parcial (solo scheduledDate)', () => {
     const result = updateProjectEventSchema.safeParse({
       scheduledDate: new Date('2025-06-20'),
-    })
-
-    expect(result.success).toBe(true)
-  })
-
-  it('debe permitir actualización parcial (solo notes)', () => {
-    const result = updateProjectEventSchema.safeParse({
-      notes: 'Notas actualizadas',
     })
 
     expect(result.success).toBe(true)
@@ -186,22 +126,12 @@ describe('updateProjectEventSchema', () => {
 
     expect(result.success).toBe(false)
   })
-
-  it('debe aplicar mismas validaciones a notes cuando presente', () => {
-    const notasExcesivas = 'A'.repeat(1001)
-    const result = updateProjectEventSchema.safeParse({
-      notes: notasExcesivas,
-    })
-
-    expect(result.success).toBe(false)
-  })
 })
 
 describe('createProjectEventWithProjectUpdateSchema', () => {
   const validEventWithProject = {
     projectId: '550e8400-e29b-41d4-a716-446655440000',
     scheduledDate: '2025-02-15',
-    notes: 'Visita programada',
     phone: '+56912345678',
     street: 'Av. Principal 123',
     apartment: null,
@@ -473,28 +403,6 @@ describe('createProjectEventWithProjectUpdateSchema', () => {
     it('debe rechazar sin el campo scheduledDate', () => {
       const { scheduledDate, ...event } = validEventWithProject
       const result = createProjectEventWithProjectUpdateSchema.safeParse(event)
-
-      expect(result.success).toBe(false)
-    })
-  })
-
-  describe('validación de notes (1000 caracteres)', () => {
-    it('debe aceptar notas de 1000 caracteres', () => {
-      const notas = 'A'.repeat(1000)
-      const result = createProjectEventWithProjectUpdateSchema.safeParse({
-        ...validEventWithProject,
-        notes: notas,
-      })
-
-      expect(result.success).toBe(true)
-    })
-
-    it('debe rechazar notas > 1000 caracteres', () => {
-      const notas = 'A'.repeat(1001)
-      const result = createProjectEventWithProjectUpdateSchema.safeParse({
-        ...validEventWithProject,
-        notes: notas,
-      })
 
       expect(result.success).toBe(false)
     })
