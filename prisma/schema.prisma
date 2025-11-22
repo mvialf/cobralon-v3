@@ -296,6 +296,7 @@ model ProjectEvent {
   id            String   @id @default(uuid())
   projectId     String
   scheduledDate DateTime @db.Date
+  tasks         Json     @default("[]")
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
