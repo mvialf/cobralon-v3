@@ -48,3 +48,8 @@ coverage/
 
 # Archivos de datos de importación
 *.txt
+
+# Scripts - backups y logs de desarrollo
+scripts/backups/
+scripts/logs/
+*.backup
