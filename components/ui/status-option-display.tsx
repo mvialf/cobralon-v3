@@ -1,7 +1,6 @@
 import * as React from 'react'
 import { Check, CheckIcon } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { StatusBadge } from '@/components/ui/status-badge'
 
 /**
  * Interface compartida para opciones de status
@@ -45,11 +44,11 @@ export interface StatusOptionDisplayProps {
  * en diferentes contextos (filtros, forms, badges).
  *
  * Características:
- * - Muestra StatusBadge con colores consistentes
+ * - Muestra icono cuadrado de color + texto del status
  * - Soporta checkbox para multi-select (filtros)
  * - Soporta check icon para single-select (badge/form)
  * - Opcionalmente muestra contador de items (facets en filtros)
- * - Visual consistente en toda la aplicación
+ * - Visual consistente, limpio y compacto
  *
  * @example
  * ```tsx
@@ -93,8 +92,11 @@ export function StatusOptionDisplay({
           </div>
         )}
 
-        {/* Color badge del status */}
-        <StatusBadge bgClass={option.color.bgClass} label={option.label} />
+        {/* Icono cuadrado pequeño con el color del status */}
+        <div className={cn('h-3 w-3 rounded-sm flex-shrink-0', option.color.bgClass)} />
+
+        {/* Texto del nombre del status */}
+        <span className={cn('text-sm', isSelected && 'font-medium')}>{option.label}</span>
 
         {/* Check icon para single-select (badge/form) */}
         {showCheck && isSelected && <Check className="h-4 w-4 text-primary" aria-hidden="true" />}
