@@ -2,7 +2,7 @@ import { Building2, MapPin, Phone, Ruler, Hash } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { cn } from '@/lib/utils'
 
-interface ProjectDetailsSummaryProps {
+interface ProjectEventSummaryProps {
   projectNumber: string
   projectName?: string | null
   projectStatus?: {
@@ -28,10 +28,17 @@ interface ProjectDetailsSummaryProps {
 
 /**
  * Componente reutilizable para mostrar detalles completos de un proyecto
- * Usado en formularios de calendario y otros contextos donde se necesita
- * ver información del proyecto sin datos financieros
+ * en el contexto de eventos del calendario.
+ *
+ * Muestra información del proyecto sin datos financieros:
+ * - Número y nombre del proyecto
+ * - Estado actual
+ * - Cliente y contacto
+ * - Dirección completa
+ * - Especificaciones (ventanas, m²)
+ * - Descripción
  */
-export function ProjectDetailsSummary({
+export function ProjectEventSummary({
   projectNumber,
   projectName,
   projectStatus,
@@ -42,7 +49,7 @@ export function ProjectDetailsSummary({
   squareMeters,
   description,
   className,
-}: ProjectDetailsSummaryProps) {
+}: ProjectEventSummaryProps) {
   return (
     <div className={cn('space-y-3 rounded-lg border bg-muted/30 p-4', className)}>
       {/* Header: Número de proyecto + Estado */}

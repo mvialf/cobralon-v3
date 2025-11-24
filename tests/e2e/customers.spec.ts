@@ -214,7 +214,9 @@ test.describe('Módulo de Clientes', () => {
 
     // Llenar solo nombre y teléfono (email vacío)
     await dialog.getByLabel(/nombre/i).fill(customerName)
-    await dialog.getByLabel(/teléfono/i).fill(customerPhone)
+    // Usar getByRole en lugar de getByLabel para mejor compatibilidad Firefox
+    const phoneInput = dialog.getByRole('textbox', { name: /teléfono/i })
+    await phoneInput.fill(customerPhone)
     // NO llenar email
 
     // Enviar formulario
