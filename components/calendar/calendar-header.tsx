@@ -14,7 +14,7 @@ export function CalendarHeader({ currentDate, view, onNavigate }: CalendarHeader
   const dateDisplay = formatDateDisplay(currentDate, view)
 
   return (
-    <div className="flex items-center justify-between mb-6">
+    <div className="flex items-center justify-between mb-6 gap-4">
       {/* Navegación */}
       <div className="flex items-center gap-2">
         <Button variant="outline" size="icon" onClick={() => onNavigate('prev')}>
@@ -32,9 +32,6 @@ export function CalendarHeader({ currentDate, view, onNavigate }: CalendarHeader
 
       {/* Display de fecha */}
       <div className="text-xl font-semibold capitalize">{dateDisplay}</div>
-
-      {/* Placeholder para ViewSelector (lo haremos después) */}
-      <div className="w-[200px]">{/* ViewSelector aquí */}</div>
     </div>
   )
 }

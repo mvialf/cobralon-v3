@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { DndContext, DragEndEvent, DragOverlay } from '@dnd-kit/core'
 import { CalendarHeader } from './calendar-header'
 import { WeekView } from './views/week-view'
@@ -8,7 +8,6 @@ import { MonthView } from './views/month-view'
 import { AgendaView } from './views/agenda-view'
 import { ViewSelector } from './view-selector'
 import { ProjectEventDialog } from '@/components/dialogs/calendar/project-event-dialog'
-import { ProjectEventCard } from './project-event-card'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -20,17 +19,26 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
 import { useCalendarEvents } from '@/hooks/queries/use-calendar-events'
-import {
-  useDeleteProjectEvent,
-  useUpdateProjectEventDate,
-} from '@/hooks/queries/use-project-events'
 import { getVisibleDateRange, navigateDate } from '@/lib/utils/calendar-utils'
 import type { CalendarEvent } from '@/lib/types/calendar'
 import { Skeleton } from '@/components/ui/skeleton'
+import { EVENT_TYPE_REGISTRY, getEventDialog } from '@/lib/config/event-types-config'
 
 export function EventCalendar() {
   const [currentDate, setCurrentDate] = useState(new Date())
   const [currentView, setCurrentView] = useState<'week' | 'month' | 'agenda'>('week')
+
+  // Estado para filtro de fin de semana (persistido en localStorage)
+  const [showWeekends, setShowWeekends] = useState(() => {
+    if (typeof window === 'undefined') return true
+    const saved = localStorage.getItem('calendar-show-weekends')
+    return saved === null ? true : saved === 'true'
+  })
+
+  // Persistir preferencia de fin de semana
+  useEffect(() => {
+    localStorage.setItem('calendar-show-weekends', String(showWeekends))
+  }, [showWeekends])
 
   // Estado para dialog de crear/editar
   const [createDialogOpen, setCreateDialogOpen] = useState(false)
@@ -49,9 +57,15 @@ export function EventCalendar() {
   const { start, end } = getVisibleDateRange(currentDate, currentView)
   const { data, isLoading } = useCalendarEvents({ start, end })
 
-  // Mutations
-  const deleteEventMutation = useDeleteProjectEvent()
-  const updateDateMutation = useUpdateProjectEventDate()
+  // Mutations - Instanciar TODOS los hooks al inicio (Rules of Hooks)
+  // Luego en los handlers seleccionamos cuál usar según el tipo de evento
+  const deleteProjectMutation = EVENT_TYPE_REGISTRY.project.useDeleteMutation()
+  const deleteAftersaleMutation = EVENT_TYPE_REGISTRY.aftersale.useDeleteMutation()
+  const deleteVisitMutation = EVENT_TYPE_REGISTRY.visit.useDeleteMutation()
+
+  const updateProjectDateMutation = EVENT_TYPE_REGISTRY.project.useUpdateDateMutation()
+  const updateAftersaleDateMutation = EVENT_TYPE_REGISTRY.aftersale.useUpdateDateMutation()
+  const updateVisitDateMutation = EVENT_TYPE_REGISTRY.visit.useUpdateDateMutation()
 
   // Handlers
   const handleNavigate = (direction: 'prev' | 'next' | 'today') => {
@@ -78,46 +92,53 @@ export function EventCalendar() {
   }
 
   const confirmDelete = () => {
-    if (eventToDelete?.type === 'project') {
-      deleteEventMutation.mutate(eventToDelete.data.id)
+    if (!eventToDelete) return
+
+    // Switch en lugar de condicional hardcodeado
+    // TypeScript exhaustiveness checking garantiza que cubrimos todos los tipos
+    switch (eventToDelete.type) {
+      case 'project':
+        deleteProjectMutation.mutate(eventToDelete.data.id)
+        break
+      case 'aftersale':
+        deleteAftersaleMutation.mutate(eventToDelete.data.id)
+        break
+      case 'visit':
+        deleteVisitMutation.mutate(eventToDelete.data.id)
+        break
     }
+
     setDeleteDialogOpen(false)
     setEventToDelete(null)
   }
 
   // Handlers de drag & drop
   const handleDragStart = (event: any) => {
-    const eventData = event.active.data.current?.event
-    if (eventData) {
-      const calendarEvent: CalendarEvent = {
-        type: 'project',
-        data: eventData,
-      }
-      setActiveEvent(calendarEvent)
+    const draggedEvent = event.active.data.current?.calendarEvent as CalendarEvent | undefined
+    if (draggedEvent) {
+      setActiveEvent(draggedEvent)
     }
   }
 
   const handleDragEnd = (event: DragEndEvent) => {
-    const { active, over } = event
+    const { over } = event
 
-    if (!over) {
+    if (!over || !activeEvent) {
       setActiveEvent(null)
       return
     }
 
-    // Obtener evento y fecha de destino
-    const eventData = active.data.current?.event
+    // Obtener fecha de destino
     const targetDate = over.data.current?.date
 
-    if (!eventData || !targetDate) {
+    if (!targetDate) {
       setActiveEvent(null)
       return
     }
 
     // Si la fecha es la misma, no hacer nada
     // IMPORTANTE: Comparar usando strings YYYY-MM-DD para evitar problemas de timezone
-    // Sin esto, eventos en UTC pueden ser considerados "mismo día" incorrectamente
-    const currentDateStr = eventData.scheduledDate.substring(0, 10)
+    const currentDateStr = activeEvent.data.scheduledDate.toString().substring(0, 10)
     const targetDateStr = new Date(
       targetDate.getFullYear(),
       targetDate.getMonth(),
@@ -132,10 +153,23 @@ export function EventCalendar() {
     }
 
     // Actualizar fecha con optimistic update
-    updateDateMutation.mutate({
-      id: eventData.id,
+    // Switch para seleccionar el mutation correcto según el tipo
+    const updateParams = {
+      id: activeEvent.data.id,
       scheduledDate: targetDate,
-    })
+    }
+
+    switch (activeEvent.type) {
+      case 'project':
+        updateProjectDateMutation.mutate(updateParams)
+        break
+      case 'aftersale':
+        updateAftersaleDateMutation.mutate(updateParams)
+        break
+      case 'visit':
+        updateVisitDateMutation.mutate(updateParams)
+        break
+    }
 
     setActiveEvent(null)
   }
@@ -150,7 +184,12 @@ export function EventCalendar() {
             view={currentView}
             onNavigate={handleNavigate}
           />
-          <ViewSelector currentView={currentView} onViewChange={setCurrentView} />
+          <ViewSelector
+            currentView={currentView}
+            onViewChange={setCurrentView}
+            showWeekends={showWeekends}
+            onToggleWeekends={setShowWeekends}
+          />
         </div>
 
         {/* Vista actual */}
@@ -168,6 +207,7 @@ export function EventCalendar() {
                 onCreateEvent={handleCreateEvent}
                 onEditEvent={handleEditEvent}
                 onDeleteEvent={handleDeleteEvent}
+                showWeekends={showWeekends}
               />
             )}
             {currentView === 'month' && (
@@ -177,6 +217,7 @@ export function EventCalendar() {
                 onCreateEvent={handleCreateEvent}
                 onEditEvent={handleEditEvent}
                 onDeleteEvent={handleDeleteEvent}
+                showWeekends={showWeekends}
               />
             )}
             {currentView === 'agenda' && (
@@ -192,15 +233,21 @@ export function EventCalendar() {
 
         {/* DragOverlay para mostrar el evento siendo arrastrado */}
         <DragOverlay>
-          {activeEvent?.type === 'project' && (
-            <div className="opacity-80">
-              <ProjectEventCard event={activeEvent.data} />
-            </div>
-          )}
+          {activeEvent &&
+            (() => {
+              // Renderizar card dinámicamente según el tipo
+              const EventCard = EVENT_TYPE_REGISTRY[activeEvent.type].Card
+              return (
+                <div className="opacity-80">
+                  <EventCard event={activeEvent.data as any} />
+                </div>
+              )
+            })()}
         </DragOverlay>
       </div>
 
-      {/* Dialogs */}
+      {/* Dialogs - Renderizados dinámicamente según el tipo */}
+      {/* Dialog de creación - Por ahora solo para project */}
       <ProjectEventDialog
         mode="create"
         defaultDate={selectedDate || undefined}
@@ -208,23 +255,37 @@ export function EventCalendar() {
         onOpenChange={setCreateDialogOpen}
       />
 
-      {selectedEvent?.type === 'project' && (
-        <ProjectEventDialog
-          mode="edit"
-          event={selectedEvent.data}
-          open={editDialogOpen}
-          onOpenChange={setEditDialogOpen}
-        />
-      )}
+      {/* Dialog de edición - Dinámico según tipo de evento */}
+      {selectedEvent &&
+        (() => {
+          const EventDialog = getEventDialog(selectedEvent.type)
+          return (
+            <EventDialog
+              mode="edit"
+              event={selectedEvent.data as any}
+              open={editDialogOpen}
+              onOpenChange={setEditDialogOpen}
+            />
+          )
+        })()}
 
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Eliminar evento</AlertDialogTitle>
             <AlertDialogDescription>
-              {eventToDelete?.type === 'project'
-                ? `¿Estás seguro de eliminar el evento del proyecto ${eventToDelete.data.project.customer.name}? Esta acción no se puede deshacer.`
-                : '¿Estás seguro de eliminar este evento? Esta acción no se puede deshacer.'}
+              {eventToDelete &&
+                (() => {
+                  // Mensaje dinámico según el tipo de evento
+                  switch (eventToDelete.type) {
+                    case 'project':
+                      return `¿Estás seguro de eliminar el evento del proyecto ${eventToDelete.data.project.customer.name}? Esta acción no se puede deshacer.`
+                    case 'aftersale':
+                      return `¿Estás seguro de eliminar el evento de postventa? Esta acción no se puede deshacer.`
+                    case 'visit':
+                      return `¿Estás seguro de eliminar el evento de visita de ${eventToDelete.data.visit.name}? Esta acción no se puede deshacer.`
+                  }
+                })()}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
