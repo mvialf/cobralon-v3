@@ -1,8 +1,10 @@
-import { Building2, MapPin, Phone, Ruler, Hash } from 'lucide-react'
+import { MapPin, Phone, Ruler, Hash } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
+import { ProjectNameSummary } from '@/components/summarys/project-name-summary'
 import { cn } from '@/lib/utils'
 
 interface ProjectEventSummaryProps {
+  projectId: string
   projectNumber: string
   projectName?: string | null
   projectStatus?: {
@@ -39,6 +41,7 @@ interface ProjectEventSummaryProps {
  * - Descripción
  */
 export function ProjectEventSummary({
+  projectId,
   projectNumber,
   projectName,
   projectStatus,
@@ -52,18 +55,17 @@ export function ProjectEventSummary({
 }: ProjectEventSummaryProps) {
   return (
     <div className={cn('space-y-3 rounded-lg border bg-muted/30 p-4', className)}>
-      {/* Header: Número de proyecto + Estado */}
-      <div className="flex items-start justify-between gap-2">
-        <div className="flex-1 space-y-1">
-          <div className="flex items-center gap-2">
-            <Building2 className="h-4 w-4 text-muted-foreground" />
-            <p className="text-sm font-medium">
-              Proyecto #{projectNumber}
-              {projectName && ` - ${projectName}`}
-            </p>
-          </div>
-          <p className="text-sm text-muted-foreground">{customerName}</p>
-        </div>
+      {/* Header: Nombre del proyecto + Estado */}
+      <div className="flex items-start justify-between ">
+        <ProjectNameSummary
+          projectId={projectId}
+          projectNumber={projectNumber}
+          projectName={projectName}
+          customerName={customerName}
+          className="flex-1"
+        />
+      </div>
+      <div>
         {projectStatus && (
           <Badge
             className={cn(

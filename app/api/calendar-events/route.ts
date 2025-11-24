@@ -55,7 +55,11 @@ export const GET = withLogging(async (request, logger) => {
         project: {
           include: {
             customer: true,
-            projectStatus: true,
+            projectStatus: {
+              include: {
+                color: true,
+              },
+            },
           },
         },
       },
@@ -63,6 +67,29 @@ export const GET = withLogging(async (request, logger) => {
         scheduledDate: 'asc',
       },
     })
+
+    // Extraer todos los uninstallTagIds únicos de todos los proyectos
+    const allTagIds = Array.from(
+      new Set(projectEvents.flatMap((event) => event.project.uninstallTagIds))
+    )
+
+    // Fetch todos los tags necesarios con sus colores
+    const uninstallTags =
+      allTagIds.length > 0
+        ? await prisma.uninstallTag.findMany({
+            where: {
+              id: {
+                in: allTagIds,
+              },
+            },
+            include: {
+              color: true,
+            },
+          })
+        : []
+
+    // Crear Map para acceso rápido
+    const tagsMap = new Map(uninstallTags.map((tag) => [tag.id, tag]))
 
     // TODO: En el futuro, agregar AftersaleEvents y VisitEvents aquí
 
@@ -84,6 +111,10 @@ export const GET = withLogging(async (request, logger) => {
             ...event.project.customer,
             creditBalance: Number(event.project.customer.creditBalance),
           },
+          // Mapear uninstallTagIds a objetos completos
+          uninstallTags: event.project.uninstallTagIds
+            .map((tagId) => tagsMap.get(tagId))
+            .filter((tag): tag is NonNullable<typeof tag> => tag !== undefined),
         },
       },
     }))

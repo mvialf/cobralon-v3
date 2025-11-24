@@ -1,4 +1,11 @@
-import type { ProjectEvent, Project, Customer, ProjectStatus, BadgeColor } from '@prisma/client'
+import type {
+  ProjectEvent,
+  Project,
+  Customer,
+  ProjectStatus,
+  BadgeColor,
+  UninstallTag,
+} from '@prisma/client'
 
 // Tipo unificado para eventos en UI
 export type CalendarEventType = 'project' | 'aftersale' | 'visit'
@@ -12,6 +19,11 @@ export type ProjectEventWithRelations = ProjectEvent & {
           color: BadgeColor
         })
       | null
+    uninstallTags: Array<
+      UninstallTag & {
+        color: BadgeColor
+      }
+    >
   }
 }
 

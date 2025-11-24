@@ -1,6 +1,6 @@
 'use client'
 
-import { MoreVertical, CheckCircle } from 'lucide-react'
+import { MoreVertical } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
   DropdownMenu,
@@ -8,10 +8,8 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { Badge } from '@/components/ui/badge'
-import { Card } from '@/components/ui/card'
+import { ProjectEventSummaryCompact } from '@/components/summarys/calendar/project-event-summary-compact'
 import type { ProjectEventWithRelations } from '@/lib/types/calendar'
-import type { TodoItem } from '@/hooks/use-todo-list'
 
 interface ProjectEventCardProps {
   event: ProjectEventWithRelations
@@ -23,17 +21,14 @@ export function ProjectEventCard({ event, onEdit, onDelete }: ProjectEventCardPr
   const { project } = event
 
   return (
-    <Card
-      className="group relative p-3 hover:shadow-md transition-shadow border-l-4"
-      style={{ borderLeftColor: 'hsl(var(--chart-1))' }}
-    >
+    <div className="group relative">
       {/* Actions Dropdown */}
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button
             variant="ghost"
             size="icon"
-            className="absolute right-1 top-1 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
+            className="absolute right-1 top-1 h-6 w-6 z-10 opacity-0 group-hover:opacity-100 transition-opacity"
           >
             <MoreVertical className="h-4 w-4" />
           </Button>
@@ -46,38 +41,36 @@ export function ProjectEventCard({ event, onEdit, onDelete }: ProjectEventCardPr
         </DropdownMenuContent>
       </DropdownMenu>
 
-      {/* Content */}
-      <div className="space-y-2 pr-6">
-        {/* Customer Name */}
-        <div className="font-medium text-sm line-clamp-1">{project.customer.name}</div>
-
-        {/* Project Number */}
-        <div className="text-xs text-muted-foreground">#{project.projectNumber}</div>
-
-        {/* Status Badge */}
-        {project.projectStatus && (
-          <Badge
-            variant="outline"
-            className="text-xs"
-            style={{
-              backgroundColor: project.projectStatus.color?.bgClass || 'transparent',
-            }}
-          >
-            {project.projectStatus.name}
-          </Badge>
-        )}
-
-        {/* Tasks Badge */}
-        {event.tasks && Array.isArray(event.tasks) && event.tasks.length > 0 && (
-          <div className="flex items-center gap-1 text-xs text-muted-foreground">
-            <CheckCircle className="h-3 w-3" />
-            <span>
-              {(event.tasks as unknown as TodoItem[]).filter((t) => t.completed).length}/
-              {event.tasks.length} tareas
-            </span>
-          </div>
-        )}
-      </div>
-    </Card>
+      {/* Content - ProjectEventSummaryCompact ES la card completa */}
+      <ProjectEventSummaryCompact
+        projectId={project.id}
+        projectNumber={project.projectNumber}
+        projectName={project.projectName}
+        customerName={project.customer.name}
+        projectStatus={
+          project.projectStatus
+            ? {
+                name: project.projectStatus.name,
+                color: {
+                  bgClass: project.projectStatus.color.bgClass,
+                  textClass: project.projectStatus.color.textClass || undefined,
+                },
+              }
+            : undefined
+        }
+        comuna={project.comuna}
+        uninstallTags={project.uninstallTags.map((tag) => ({
+          id: tag.id,
+          name: tag.name,
+          color: {
+            bgClass: tag.color.bgClass,
+            textClass: tag.color.textClass || undefined,
+          },
+        }))}
+        windowsCount={project.windowsCount}
+        squareMeters={Number(project.squareMeters)}
+        tasks={event.tasks}
+      />
+    </div>
   )
 }
