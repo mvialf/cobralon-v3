@@ -59,25 +59,23 @@ export const PATCH = withLogging(async (request, logger, context) => {
 
     const { scheduledDate } = validationResult.data
 
-    // Actualizar solo scheduledDate
-    const event = await prisma.projectEvent.update({
+    // Actualizar solo scheduledDate (SIN include para máxima performance)
+    // Optimistic update en frontend maneja la UI, no necesitamos retornar datos completos
+    await prisma.projectEvent.update({
       where: { id },
       data: {
         scheduledDate: new Date(scheduledDate),
-      },
-      include: {
-        project: {
-          include: {
-            customer: true,
-            projectStatus: true,
-          },
-        },
       },
     })
 
     logger.info({ eventId: id, newDate: scheduledDate }, 'Project event date updated successfully')
 
-    return NextResponse.json(serializeProjectEvent(event))
+    // Retornar solo lo esencial - React Query invalida el cache automáticamente
+    return NextResponse.json({
+      success: true,
+      id,
+      scheduledDate,
+    })
   } catch (error) {
     if ((error as any).code === 'P2025') {
       logger.warn({ eventId: id }, 'Project event not found')
