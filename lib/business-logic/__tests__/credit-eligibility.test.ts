@@ -4,7 +4,6 @@ import {
   shouldShowCreditOption,
   shouldShowRefundOption,
   getCreditTransactionTypeLabel,
-  type CreditEligibilityCheck,
 } from '../credit-eligibility'
 
 describe('checkCreditEligibility', () => {

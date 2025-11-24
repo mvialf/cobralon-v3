@@ -8,23 +8,17 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { StatusBadge } from '@/components/ui/status-badge'
-import { Check } from 'lucide-react'
+import { StatusOptionDisplay, type StatusOption } from '@/components/ui/status-option-display'
 import { cn } from '@/lib/utils'
 
 /**
- * Interfaz para opciones de badge editables
+ * Tipo para opciones de badge editables
+ * @deprecated Usar StatusOption en su lugar (alias por compatibilidad)
  */
-export interface EditableBadgeOption {
-  /** ID único de la opción */
-  id: string
-  /** Etiqueta a mostrar */
-  label: string
-  /** Configuración de color */
-  color: {
-    /** Clase de background (ej: "bg-blue-500") */
-    bgClass: string
-  }
-}
+export type EditableBadgeOption = StatusOption
+
+// Re-exportar StatusOption como alias principal
+export type { StatusOption }
 
 /**
  * Props para el componente EditableBadge
@@ -144,11 +138,10 @@ export function EditableBadge({
                   onChange(option.id)
                 }
               }}
-              className="flex items-center justify-between"
+              className="cursor-pointer"
               aria-current={isSelected ? 'true' : 'false'}
             >
-              <span className={cn(isSelected && 'font-medium text-primary')}>{option.label}</span>
-              {isSelected && <Check className="ml-2 h-4 w-4 text-primary" aria-hidden="true" />}
+              <StatusOptionDisplay option={option} isSelected={isSelected} showCheck />
             </DropdownMenuItem>
           )
         })}

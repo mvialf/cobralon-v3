@@ -19,8 +19,13 @@ export default defineConfig({
   // Reintentos en caso de fallo
   retries: process.env.CI ? 2 : 0,
 
-  // Workers: 1 en CI para evitar race conditions, automático en local
-  workers: process.env.CI ? 1 : undefined,
+  // Workers: 1 para evitar race conditions en compilación de Next.js
+  // Next.js tarda 6+ segundos en compilar rutas en primera carga
+  // Múltiples navegadores en paralelo causan page crashes
+  workers: 1,
+
+  // Timeout global para tests (60 segundos)
+  timeout: 60 * 1000,
 
   // Reporter: HTML para debugging local, GitHub Actions en CI
   reporter: process.env.CI ? 'github' : 'html',

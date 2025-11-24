@@ -18,7 +18,7 @@ async function checkRegions() {
     })
 
     console.log('\n📊 Análisis de regiones en proyectos:\n')
-    console.log('=' .repeat(80))
+    console.log('='.repeat(80))
 
     const regionStats = {}
     const comunaStats = {}
@@ -42,17 +42,16 @@ async function checkRegions() {
     console.log(`Total proyectos analizados: ${projects.length}`)
     console.log('\nDistribución de tipos de región:')
     Object.entries(regionStats).forEach(([type, count]) => {
-      console.log(`  ${type}: ${count} (${((count/projects.length)*100).toFixed(1)}%)`)
+      console.log(`  ${type}: ${count} (${((count / projects.length) * 100).toFixed(1)}%)`)
     })
 
     // Ejemplos de regiones únicas
-    const uniqueRegions = [...new Set(projects.map(p => p.region))]
+    const uniqueRegions = [...new Set(projects.map((p) => p.region))]
     console.log(`\nRegiones únicas encontradas: ${uniqueRegions.length}`)
     uniqueRegions.slice(0, 10).forEach((region, i) => {
       const isCode = /^\d{1,2}$/.test(region)
       console.log(`  ${i + 1}. "${region}" ${isCode ? '(código ✅)' : '(nombre ⚠️)'}`)
     })
-
   } catch (error) {
     console.error('❌ Error:', error)
   } finally {

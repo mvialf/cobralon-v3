@@ -3,7 +3,6 @@ import {
   endOfWeek,
   addDays,
   format,
-  isSameDay,
   startOfMonth,
   endOfMonth,
   startOfDay,
@@ -78,8 +77,13 @@ export function getEventsForDay(events: CalendarEvent[], day: Date): CalendarEve
   const dayStr = format(day, 'yyyy-MM-dd')
 
   return events.filter((event) => {
-    // Extraer YYYY-MM-DD del scheduledDate (primeros 10 caracteres)
-    const eventDateStr = event.data.scheduledDate.substring(0, 10)
+    // Extraer YYYY-MM-DD del scheduledDate
+    // Manejar tanto Date (desde Prisma) como string (desde API JSON)
+    const scheduledDate = event.data.scheduledDate
+    const eventDateStr =
+      scheduledDate instanceof Date
+        ? format(scheduledDate, 'yyyy-MM-dd')
+        : String(scheduledDate).substring(0, 10)
     return eventDateStr === dayStr
   })
 }

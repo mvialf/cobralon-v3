@@ -235,7 +235,7 @@ export function useUpdateProjectEventDate() {
     onSettled: () => {
       // Invalidar sin await para evitar bloqueo
       queryClient.invalidateQueries({ queryKey: ['calendar-events'] })
-    }
+    },
   })
 }
 

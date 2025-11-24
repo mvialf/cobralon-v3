@@ -10,7 +10,6 @@ import {
   type ProjectWithBalance,
   type ProjectWithBalanceSerialized,
 } from '../payment-validations'
-import { FINANCIAL } from '@/lib/constants/financial-constants'
 
 describe('paymentToProjectSchema (flujo 1:1)', () => {
   const validPayment: PaymentToProjectFormValues = {

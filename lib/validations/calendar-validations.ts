@@ -19,6 +19,44 @@ export const createProjectEventSchema = baseEventSchema.extend({
 
 export const updateProjectEventSchema = baseEventSchema.partial()
 
+// AftersaleEvent schemas
+export const createAftersaleEventSchema = z.object({
+  aftersaleId: z.string().uuid('ID de postventa inválido'),
+  scheduledDate: z.coerce.date({
+    required_error: 'La fecha es requerida',
+    invalid_type_error: 'Fecha inválida',
+  }),
+  notes: z.string().nullable().optional(),
+})
+
+export const updateAftersaleEventSchema = z.object({
+  scheduledDate: z.coerce
+    .date({
+      invalid_type_error: 'Fecha inválida',
+    })
+    .optional(),
+  notes: z.string().nullable().optional(),
+})
+
+// VisitEvent schemas
+export const createVisitEventSchema = z.object({
+  visitId: z.string().uuid('ID de visita inválido'),
+  scheduledDate: z.coerce.date({
+    required_error: 'La fecha es requerida',
+    invalid_type_error: 'Fecha inválida',
+  }),
+  notes: z.string().nullable().optional(),
+})
+
+export const updateVisitEventSchema = z.object({
+  scheduledDate: z.coerce
+    .date({
+      invalid_type_error: 'Fecha inválida',
+    })
+    .optional(),
+  notes: z.string().nullable().optional(),
+})
+
 /**
  * Schema extendido para crear evento Y actualizar datos del proyecto
  * Combina datos del evento con campos editables del proyecto

@@ -70,23 +70,19 @@ describe('useAftersales', () => {
             projectNumber: 'P 0001-2025',
             projectName: 'Proyecto Test',
             customer: {
-              id: 'cust-1',
               name: 'Cliente A',
             },
           },
           aftersaleStatus: {
             id: 'status-1',
             name: 'Abierto',
-            color: { id: 'color-1', bgClass: 'bg-yellow-500' },
+            color: { bgClass: 'bg-yellow-500', textClass: 'text-yellow-900' },
           },
           tasks: [
             {
               id: 'task-1',
-              title: 'Tarea 1',
-              description: 'Descripción tarea',
-              isCompleted: false,
-              createdAt: new Date('2025-01-15'),
-              updatedAt: new Date('2025-01-15'),
+              text: 'Tarea 1',
+              completed: false,
             },
           ],
         },
@@ -144,14 +140,13 @@ describe('useAftersale', () => {
         projectNumber: 'P 0001-2025',
         projectName: 'Proyecto Test',
         customer: {
-          id: 'cust-1',
           name: 'Cliente A',
         },
       },
       aftersaleStatus: {
         id: 'status-1',
         name: 'Abierto',
-        color: { id: 'color-1', bgClass: 'bg-yellow-500' },
+        color: { bgClass: 'bg-yellow-500', textClass: 'text-yellow-900' },
       },
       tasks: [],
     }
@@ -217,14 +212,13 @@ describe('useCreateAftersale', () => {
         projectNumber: 'P 0001-2025',
         projectName: 'Proyecto Test',
         customer: {
-          id: 'cust-1',
           name: 'Cliente A',
         },
       },
       aftersaleStatus: {
         id: 'status-1',
         name: 'Abierto',
-        color: { id: 'color-1', bgClass: 'bg-yellow-500' },
+        color: { bgClass: 'bg-yellow-500', textClass: 'text-yellow-900' },
       },
       tasks: [],
     }
@@ -241,7 +235,7 @@ describe('useCreateAftersale', () => {
       aftersaleStatusId: 'status-1',
       contactPhone: '+56912345678',
       description: 'Nuevo caso',
-      reportedAt: new Date('2025-01-20'),
+      reportedAt: '2025-01-20',
     }
 
     const created = await result.current.mutateAsync(aftersaleData)
@@ -268,7 +262,7 @@ describe('useCreateAftersale', () => {
       projectId: 'proj-active', // Proyecto activo (no finalizado)
       aftersaleStatusId: 'status-1',
       contactPhone: '+56912345678',
-      reportedAt: new Date('2025-01-20'),
+      reportedAt: '2025-01-20',
     }
 
     await expect(result.current.mutateAsync(invalidData)).rejects.toThrow(
@@ -288,7 +282,7 @@ describe('useCreateAftersale', () => {
       projectId: 'proj-1',
       aftersaleStatusId: 'status-inactive', // Status inactivo
       contactPhone: '+56912345678',
-      reportedAt: new Date('2025-01-20'),
+      reportedAt: '2025-01-20',
     }
 
     await expect(result.current.mutateAsync(invalidData)).rejects.toThrow(
@@ -308,7 +302,7 @@ describe('useCreateAftersale', () => {
       projectId: 'proj-1',
       aftersaleStatusId: 'status-1',
       contactPhone: '+1234567890', // Teléfono NO chileno
-      reportedAt: new Date('2025-01-20'),
+      reportedAt: '2025-01-20',
     }
 
     await expect(result.current.mutateAsync(invalidData)).rejects.toThrow(
@@ -331,23 +325,19 @@ describe('useCreateAftersale', () => {
         projectNumber: 'P 0001-2025',
         projectName: null,
         customer: {
-          id: 'cust-1',
           name: 'Cliente A',
         },
       },
       aftersaleStatus: {
         id: 'status-1',
         name: 'Abierto',
-        color: { id: 'color-1', bgClass: 'bg-yellow-500' },
+        color: { bgClass: 'bg-yellow-500', textClass: 'text-yellow-900' },
       },
       tasks: [
         {
           id: 'task-1',
-          title: 'Tarea 1',
-          description: null,
-          isCompleted: false,
-          createdAt: new Date('2025-01-20'),
-          updatedAt: new Date('2025-01-20'),
+          text: 'Tarea 1',
+          completed: false,
         },
       ],
     }
@@ -364,12 +354,12 @@ describe('useCreateAftersale', () => {
       aftersaleStatusId: 'status-1',
       contactPhone: '+56912345678',
       description: 'Caso con tareas',
-      reportedAt: new Date('2025-01-20'),
+      reportedAt: '2025-01-20',
       tasks: [
         {
-          title: 'Tarea 1',
-          description: null,
-          isCompleted: false,
+          id: 'task-1',
+          text: 'Tarea 1',
+          completed: false,
         },
       ],
     }
@@ -399,14 +389,13 @@ describe('useUpdateAftersale', () => {
         projectNumber: 'P 0001-2025',
         projectName: null,
         customer: {
-          id: 'cust-1',
           name: 'Cliente A',
         },
       },
       aftersaleStatus: {
         id: 'status-2',
         name: 'Resuelto',
-        color: { id: 'color-2', bgClass: 'bg-green-500' },
+        color: { bgClass: 'bg-green-500', textClass: 'text-green-900' },
       },
       tasks: [],
     }
@@ -441,7 +430,7 @@ describe('useUpdateAftersale', () => {
       projectId: 'proj-1',
       aftersaleStatusId: 'status-1',
       contactPhone: '+56912345678',
-      description: null,
+      description: '',
       reportedAt: new Date('2025-01-15'),
       createdAt: new Date('2025-01-15'),
       updatedAt: new Date('2025-01-20'),
@@ -450,23 +439,19 @@ describe('useUpdateAftersale', () => {
         projectNumber: 'P 0001-2025',
         projectName: null,
         customer: {
-          id: 'cust-1',
           name: 'Cliente A',
         },
       },
       aftersaleStatus: {
         id: 'status-1',
         name: 'Abierto',
-        color: { id: 'color-1', bgClass: 'bg-yellow-500' },
+        color: { bgClass: 'bg-yellow-500', textClass: 'text-yellow-900' },
       },
       tasks: [
         {
           id: 'task-1',
-          title: 'Nueva tarea',
-          description: null,
-          isCompleted: false,
-          createdAt: new Date('2025-01-20'),
-          updatedAt: new Date('2025-01-20'),
+          text: 'Nueva tarea',
+          completed: false,
         },
       ],
     }
@@ -482,9 +467,9 @@ describe('useUpdateAftersale', () => {
       id: 'after-1',
       tasks: [
         {
-          title: 'Nueva tarea',
-          description: null,
-          isCompleted: false,
+          id: 'task-1',
+          text: 'Nueva tarea',
+          completed: false,
         },
       ],
     }
@@ -542,7 +527,7 @@ describe('useDeleteAftersale', () => {
           projectId: 'proj-1',
           aftersaleStatusId: 'status-1',
           contactPhone: '+56911111111',
-          description: null,
+          description: '',
           reportedAt: new Date(),
           createdAt: new Date(),
           updatedAt: new Date(),
@@ -550,12 +535,12 @@ describe('useDeleteAftersale', () => {
             id: 'proj-1',
             projectNumber: 'P 0001-2025',
             projectName: null,
-            customer: { id: 'cust-1', name: 'Cliente A' },
+            customer: { name: 'Cliente A' },
           },
           aftersaleStatus: {
             id: 'status-1',
             name: 'Abierto',
-            color: { id: 'color-1', bgClass: 'bg-yellow-500' },
+            color: { bgClass: 'bg-yellow-500', textClass: 'text-yellow-900' },
           },
           tasks: [],
         },
@@ -564,7 +549,7 @@ describe('useDeleteAftersale', () => {
           projectId: 'proj-2',
           aftersaleStatusId: 'status-1',
           contactPhone: '+56922222222',
-          description: null,
+          description: '',
           reportedAt: new Date(),
           createdAt: new Date(),
           updatedAt: new Date(),
@@ -572,12 +557,12 @@ describe('useDeleteAftersale', () => {
             id: 'proj-2',
             projectNumber: 'P 0002-2025',
             projectName: null,
-            customer: { id: 'cust-2', name: 'Cliente B' },
+            customer: { name: 'Cliente B' },
           },
           aftersaleStatus: {
             id: 'status-1',
             name: 'Abierto',
-            color: { id: 'color-1', bgClass: 'bg-yellow-500' },
+            color: { bgClass: 'bg-yellow-500', textClass: 'text-yellow-900' },
           },
           tasks: [],
         },
@@ -625,7 +610,7 @@ describe('useDeleteAftersale', () => {
           projectId: 'proj-1',
           aftersaleStatusId: 'status-1',
           contactPhone: '+56911111111',
-          description: null,
+          description: '',
           reportedAt: new Date(),
           createdAt: new Date(),
           updatedAt: new Date(),
@@ -633,12 +618,12 @@ describe('useDeleteAftersale', () => {
             id: 'proj-1',
             projectNumber: 'P 0001-2025',
             projectName: null,
-            customer: { id: 'cust-1', name: 'Cliente A' },
+            customer: { name: 'Cliente A' },
           },
           aftersaleStatus: {
             id: 'status-1',
             name: 'Abierto',
-            color: { id: 'color-1', bgClass: 'bg-yellow-500' },
+            color: { bgClass: 'bg-yellow-500', textClass: 'text-yellow-900' },
           },
           tasks: [],
         },

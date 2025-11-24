@@ -13,7 +13,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { PhoneInput } from '@/components/ui/phone-input'
 import { FormGrid } from '@/components/ui/form-grid'
-import { StatusBadge } from '@/components/ui/status-badge'
+import { StatusOptionDisplay } from '@/components/ui/status-option-display'
 import { Combobox } from '@/components/ui/combobox'
 import { AddressFields } from '@/components/forms/fields/address-fields'
 import { ProjectFinancialFields } from '@/components/forms/fields/project-financial-fields'
@@ -283,7 +283,9 @@ export const ProjectForm = React.forwardRef<ProjectFormHandle, ProjectFormProps>
                       getOptionValue={(status) => status.id}
                       getOptionLabel={(status) => status.name}
                       renderOption={(status) => (
-                        <StatusBadge bgClass={status.color.bgClass} label={status.name} />
+                        <StatusOptionDisplay
+                          option={{ id: status.id, label: status.name, color: status.color }}
+                        />
                       )}
                       placeholder="Seleccionar estado"
                       searchPlaceholder="Buscar estado..."

@@ -25,6 +25,20 @@ import { test, expect } from '@playwright/test'
  */
 
 test.describe('Módulo de Clientes', () => {
+  // Health check antes de ejecutar tests para verificar que la DB está activa
+  test.beforeAll(async ({ request }) => {
+    const response = await request.get('http://localhost:3000/api/health/warmup')
+    expect(response.ok()).toBeTruthy()
+
+    const data = await response.json()
+    expect(data.status).toBe('ok')
+
+    // Log si hubo cold start (útil para debugging)
+    if (data.coldStart) {
+      console.info(`⚠️  Database cold start detected (${data.latency})`)
+    }
+  })
+
   test.beforeEach(async ({ page }) => {
     // Navegar a la página de clientes antes de cada test
     await page.goto('/customer')
@@ -68,9 +82,7 @@ test.describe('Módulo de Clientes', () => {
     await expect(dialog.getByRole('heading', { name: /nuevo cliente/i })).toBeVisible()
 
     // Verificar descripción del dialog
-    await expect(
-      dialog.getByText(/ingresa los datos del nuevo cliente/i)
-    ).toBeVisible()
+    await expect(dialog.getByText(/ingresa los datos del nuevo cliente/i)).toBeVisible()
 
     // Verificar que los 3 campos del formulario están presentes
     await expect(dialog.getByLabel(/nombre/i)).toBeVisible()
@@ -93,14 +105,10 @@ test.describe('Módulo de Clientes', () => {
 
     // Verificar mensajes de error de validación
     // Nombre: mínimo 2 caracteres
-    await expect(
-      dialog.getByText(/el nombre debe tener al menos 2 caracteres/i)
-    ).toBeVisible()
+    await expect(dialog.getByText(/el nombre debe tener al menos 2 caracteres/i)).toBeVisible()
 
     // Teléfono: obligatorio
-    await expect(
-      dialog.getByText(/el teléfono es requerido/i)
-    ).toBeVisible()
+    await expect(dialog.getByText(/el teléfono es requerido/i)).toBeVisible()
 
     // Email: no tiene mensaje de error porque es opcional
     // (solo valida formato si se ingresa algo)
@@ -121,9 +129,7 @@ test.describe('Módulo de Clientes', () => {
     await dialog.getByRole('button', { name: /crear cliente/i }).click()
 
     // Verificar mensaje de error de formato
-    await expect(
-      dialog.getByText(/formato inválido.*teléfono chileno válido/i)
-    ).toBeVisible()
+    await expect(dialog.getByText(/formato inválido.*teléfono chileno válido/i)).toBeVisible()
   })
 
   test('debe validar formato de email si se proporciona', async ({ page }) => {
@@ -331,10 +337,13 @@ test.describe('Módulo de Clientes', () => {
     await page.waitForLoadState('networkidle')
 
     // Verificar que existen controles de paginación
-    const paginationControls = page.locator('[aria-label*="pagination"]').or(
-      page.locator('button:has-text("Anterior"), button:has-text("Siguiente")')
-    )
-    const hasPagination = await paginationControls.first().isVisible().catch(() => false)
+    const paginationControls = page
+      .locator('[aria-label*="pagination"]')
+      .or(page.locator('button:has-text("Anterior"), button:has-text("Siguiente")'))
+    const hasPagination = await paginationControls
+      .first()
+      .isVisible()
+      .catch(() => false)
 
     if (hasPagination) {
       // Intentar navegar a la siguiente página

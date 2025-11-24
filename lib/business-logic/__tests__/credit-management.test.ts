@@ -4,8 +4,6 @@ import {
   calculateMaxCreditApplication,
   canApplyCredit,
   canRefundCredit,
-  type ProcessPaymentWithCreditResult,
-  type CreditApplicationValidation,
 } from '../credit-management'
 
 describe('calculatePaymentDistribution', () => {

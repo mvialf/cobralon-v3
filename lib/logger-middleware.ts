@@ -15,13 +15,13 @@ import { logger, generateRequestId } from './logger'
 /**
  * Handler type para API routes con logger inyectado
  *
- * Note: context es opcional para backward compatibility,
- * pero el wrapper externo siempre lo recibe de Next.js 15
+ * Note: En Next.js 15, params siempre es una Promise (aunque puede ser vacía para
+ * rutas sin parámetros dinámicos)
  */
 export type APIHandler = (
   request: NextRequest,
   logger: pino.Logger,
-  context?: { params?: Promise<Record<string, string>> }
+  context: { params: Promise<Record<string, string>> }
 ) => Promise<NextResponse> | NextResponse
 
 /**
@@ -56,7 +56,7 @@ export type APIHandler = (
  * ```
  */
 export function withLogging(handler: APIHandler) {
-  return async (request: NextRequest, context?: { params?: Promise<Record<string, string>> }) => {
+  return async (request: NextRequest, context: { params: Promise<Record<string, string>> }) => {
     const startTime = performance.now()
     const requestId = generateRequestId()
 
@@ -79,7 +79,6 @@ export function withLogging(handler: APIHandler) {
 
     try {
       // Ejecutar handler con logger inyectado
-      // Pasar context tal cual - el handler decide si usa params o no
       const response = await handler(request, requestLogger, context)
 
       // Calcular duración

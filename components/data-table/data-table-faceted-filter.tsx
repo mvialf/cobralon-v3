@@ -7,6 +7,7 @@ import { Column } from '@tanstack/react-table'
 import { cn } from '@/lib/utils'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { StatusOptionDisplay } from '@/components/ui/status-option-display'
 import {
   Command,
   CommandEmpty,
@@ -83,6 +84,8 @@ export function DataTableFacetedFilter<TData, TValue>({
             <CommandGroup>
               {options.map((option) => {
                 const isSelected = selectedValues.has(option.value)
+                const facetCount = facets?.get(option.value)
+
                 return (
                   <CommandItem
                     key={option.value}
@@ -97,23 +100,42 @@ export function DataTableFacetedFilter<TData, TValue>({
                       onFilterChange?.(filterValues)
                     }}
                   >
-                    <div
-                      className={cn(
-                        'mr-2 flex h-4 w-4 items-center justify-center rounded-sm border border-primary',
-                        isSelected
-                          ? 'bg-primary text-primary-foreground'
-                          : 'opacity-50 [&_svg]:invisible'
-                      )}
-                    >
-                      <CheckIcon className={cn('h-4 w-4')} />
-                    </div>
-                    {option.icon && <option.icon className="h-4 w-4 text-muted-foreground" />}
-                    {option.bgClass && <div className={cn('h-3 w-3 rounded-sm', option.bgClass)} />}
-                    <span>{option.label}</span>
-                    {facets?.get(option.value) && (
-                      <span className="flex h-4 w-4 items-center justify-center font-mono text-xs">
-                        {facets.get(option.value)}
-                      </span>
+                    {/* Usar StatusOptionDisplay si la opción tiene bgClass (es un status) */}
+                    {option.bgClass ? (
+                      <StatusOptionDisplay
+                        option={{
+                          id: option.value,
+                          label: option.label,
+                          color: { bgClass: option.bgClass },
+                        }}
+                        isSelected={isSelected}
+                        showCheckbox
+                        showCounter
+                        count={facetCount}
+                      />
+                    ) : (
+                      /* Fallback para opciones sin bgClass (filtros simples) */
+                      <>
+                        <div
+                          className={cn(
+                            'mr-2 flex h-4 w-4 items-center justify-center rounded-sm border border-primary',
+                            isSelected
+                              ? 'bg-primary text-primary-foreground'
+                              : 'opacity-50 [&_svg]:invisible'
+                          )}
+                        >
+                          <CheckIcon className={cn('h-4 w-4')} />
+                        </div>
+                        {option.icon && (
+                          <option.icon className="mr-2 h-4 w-4 text-muted-foreground" />
+                        )}
+                        <span>{option.label}</span>
+                        {facetCount && (
+                          <span className="ml-auto flex h-4 w-4 items-center justify-center font-mono text-xs">
+                            {facetCount}
+                          </span>
+                        )}
+                      </>
                     )}
                   </CommandItem>
                 )
