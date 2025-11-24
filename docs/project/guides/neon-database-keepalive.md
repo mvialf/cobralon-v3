@@ -25,6 +25,7 @@ DIRECT_URL="...?sslmode=require&connect_timeout=30"
 ```
 
 **Parámetros**:
+
 - `connect_timeout=15`: Espera 15s para conectar (default: 5s)
 - `pool_timeout=20`: Connection pool timeout de Prisma (default: 10s)
 
@@ -51,6 +52,7 @@ if (!isActive) {
 ```
 
 **Uso recomendado**:
+
 - Llamar al iniciar sesión del usuario
 - Health checks
 - Antes de operaciones críticas
@@ -67,6 +69,7 @@ console.log(isActive ? 'DB activa' : 'DB suspendida')
 ```
 
 **Uso recomendado**:
+
 - Status indicators en UI
 - Monitoreo de salud
 
@@ -99,6 +102,7 @@ curl http://localhost:3000/api/health/warmup
 ```
 
 **Response**:
+
 ```json
 {
   "status": "ok",
@@ -111,6 +115,7 @@ curl http://localhost:3000/api/health/warmup
 ```
 
 **Uso recomendado**:
+
 - Monitoreo externo (uptime monitoring)
 - Warmup manual desde frontend
 - Debugging de latencia
@@ -144,11 +149,13 @@ function Dashboard() {
 ```
 
 **Características**:
+
 - Hace ping a `/api/health/warmup` cada 4 minutos
 - Funciona solo en client components
 - Cleanup automático al desmontar
 
 **Uso recomendado**:
+
 - Dashboards con sesiones largas
 - Admin panels
 - Apps SaaS con usuarios activos
@@ -171,9 +178,7 @@ export default function RootLayout({ children }) {
   return (
     <html>
       <body>
-        <DatabaseKeepaliveProvider autoEnable={true}>
-          {children}
-        </DatabaseKeepaliveProvider>
+        <DatabaseKeepaliveProvider autoEnable={true}>{children}</DatabaseKeepaliveProvider>
       </body>
     </html>
   )
@@ -184,9 +189,7 @@ export default function RootLayout({ children }) {
 
 ```tsx
 // app/layout.tsx
-<DatabaseKeepaliveProvider autoEnable={false}>
-  {children}
-</DatabaseKeepaliveProvider>
+<DatabaseKeepaliveProvider autoEnable={false}>{children}</DatabaseKeepaliveProvider>
 ```
 
 Se activa automáticamente cuando el usuario interactúa con la app (click, scroll, tecleo).
@@ -194,6 +197,7 @@ Se activa automáticamente cuando el usuario interactúa con la app (click, scro
 **Ventaja**: No consume recursos si el usuario está inactivo (idle tab).
 
 **Uso recomendado**:
+
 - Habilitar en layout principal si tienes usuarios activos frecuentemente
 - Desactivar en producción si prefieres control manual
 - Usar `autoEnable={false}` para activación lazy
@@ -206,17 +210,17 @@ Se activa automáticamente cuando el usuario interactúa con la app (click, scro
 
 ```tsx
 // app/layout.tsx
-<DatabaseKeepaliveProvider autoEnable={true}>
-  {children}
-</DatabaseKeepaliveProvider>
+<DatabaseKeepaliveProvider autoEnable={true}>{children}</DatabaseKeepaliveProvider>
 ```
 
 **Pros**:
+
 - ✅ DB siempre activa durante sesiones de usuario
 - ✅ Cero cold starts para usuarios activos
 - ✅ Implementación simple (solo envolver layout)
 
 **Cons**:
+
 - ⚠️ Consume recursos incluso si usuario está idle
 - ⚠️ Aumenta requests al server
 
@@ -239,11 +243,13 @@ export async function POST(request: Request) {
 ```
 
 **Pros**:
+
 - ✅ DB despierta justo cuando el usuario entra
 - ✅ No consume recursos cuando no hay usuarios
 - ✅ Compatible con cualquier sistema de auth
 
 **Cons**:
+
 - ⚠️ Primera request después de login puede ser lenta
 - ⚠️ Requiere implementación manual en login
 
@@ -268,11 +274,13 @@ function MarketingPage() {
 ```
 
 **Pros**:
+
 - ✅ Balance perfecto entre performance y recursos
 - ✅ Control granular por página
 - ✅ Optimiza consumo
 
 **Cons**:
+
 - ⚠️ Más complejo de mantener
 - ⚠️ Requiere decisión por página
 

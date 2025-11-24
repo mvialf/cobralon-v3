@@ -19,7 +19,7 @@ Este proyecto incluye un sistema de **keep-alive automático** que hace ping a l
 **Ubicación:** `app/api/health/warmup/route.ts`
 
 ```typescript
-GET /api/health/warmup
+GET / api / health / warmup
 ```
 
 **Respuesta:**
@@ -90,9 +90,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="es">
       <body>
         <ThemeProvider>
-          <DatabaseKeepaliveProvider autoEnable={false}>
-            {children}
-          </DatabaseKeepaliveProvider>
+          <DatabaseKeepaliveProvider autoEnable={false}>{children}</DatabaseKeepaliveProvider>
         </ThemeProvider>
       </body>
     </html>
