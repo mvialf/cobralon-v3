@@ -15,11 +15,12 @@ import {
   useReactTable,
   FilterFn,
   TableMeta,
+  RowData,
 } from '@tanstack/react-table'
 
 // Extender ColumnMeta para incluir clases CSS personalizadas
 declare module '@tanstack/react-table' {
-  interface ColumnMeta<_TData, _TValue> {
+  interface ColumnMeta<TData extends RowData, TValue> {
     headerClassName?: string
     cellClassName?: string
   }

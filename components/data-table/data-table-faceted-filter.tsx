@@ -107,13 +107,11 @@ export function DataTableFacetedFilter<TData, TValue>({
                     >
                       <CheckIcon className={cn('h-4 w-4')} />
                     </div>
-                    {option.icon && <option.icon className="mr-2 h-4 w-4 text-muted-foreground" />}
-                    {option.bgClass && (
-                      <div className={cn('mr-2 h-3 w-3 rounded-sm', option.bgClass)} />
-                    )}
+                    {option.icon && <option.icon className="h-4 w-4 text-muted-foreground" />}
+                    {option.bgClass && <div className={cn('h-3 w-3 rounded-sm', option.bgClass)} />}
                     <span>{option.label}</span>
                     {facets?.get(option.value) && (
-                      <span className="ml-auto flex h-4 w-4 items-center justify-center font-mono text-xs">
+                      <span className="flex h-4 w-4 items-center justify-center font-mono text-xs">
                         {facets.get(option.value)}
                       </span>
                     )}
