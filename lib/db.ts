@@ -12,6 +12,10 @@ export const prisma =
     log: ['error'], // Solo errors, incluso en desarrollo
   })
 
+// ✅ Habilitar extensiones de Prisma para mejor performance
+// relationJoins ya está habilitado en schema.prisma como preview feature
+// Esto convierte múltiples queries en JOINs SQL, reduciendo roundtrips a la DB
+
 if (process.env.NODE_ENV !== 'production') {
   globalForPrisma.prisma = prisma
 }
