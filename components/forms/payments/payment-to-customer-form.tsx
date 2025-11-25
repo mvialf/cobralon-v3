@@ -160,10 +160,14 @@ export function PaymentToCustomerForm({
   }, [customerProjects])
 
   // Sincronizar allocations con form
+  // ✅ FIX: Usar opciones para evitar re-renders innecesarios que causan loop infinito
   useEffect(() => {
-    form.setValue('allocations', allocations)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [allocations])
+    form.setValue('allocations', allocations, {
+      shouldValidate: false, // No validar en cada cambio
+      shouldDirty: false, // No marcar como dirty
+      shouldTouch: false, // No marcar como touched
+    })
+  }, [allocations, form])
 
   // Handler: Calcular FIFO
   const handleCalculateFIFO = () => {
@@ -199,6 +203,20 @@ export function PaymentToCustomerForm({
   const handlePaymentMethodChange = useCallback(() => {
     form.setValue('selectedInstallments', null)
     // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  // Handler: Callback para CustomerSearchField cuando cambia el cliente seleccionado
+  // ✅ FIX: Memoizado para evitar loop infinito de re-renders
+  // Este callback se pasa a CustomerSearchField, que lo usa en un useEffect con dependencias
+  const handleCustomerSelect = useCallback((customer: { id: string } | null) => {
+    if (customer) {
+      setSelectedCustomerId(customer.id)
+    } else {
+      setSelectedCustomerId(null)
+    }
+    // Reset allocations y modo cuando cambia cliente
+    setAllocations([])
+    setDistributionMode('manual')
   }, [])
 
   // Calcular suma de allocations
@@ -237,16 +255,7 @@ export function PaymentToCustomerForm({
         <CustomerSearchField
           control={form.control}
           preselectedCustomerId={preselectedCustomerId}
-          onCustomerSelect={(customer) => {
-            if (customer) {
-              setSelectedCustomerId(customer.id)
-            } else {
-              setSelectedCustomerId(null)
-            }
-            // Reset allocations y modo cuando cambia cliente
-            setAllocations([])
-            setDistributionMode('manual')
-          }}
+          onCustomerSelect={handleCustomerSelect}
         />
 
         {/* 3. Monto y Fecha */}
