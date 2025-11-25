@@ -1,12 +1,17 @@
-import { MapPin, Phone, Ruler, Hash } from 'lucide-react'
+import { MapPin, Hash, Ruler, CheckCircle } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { ProjectNameSummary } from '@/components/summarys/project-name-summary'
 import { cn } from '@/lib/utils'
+
+interface TodoItem {
+  completed: boolean
+}
 
 interface ProjectEventSummaryProps {
   projectId: string
   projectNumber: string
   projectName?: string | null
+  customerName: string
   projectStatus?: {
     name: string
     color: {
@@ -14,62 +19,70 @@ interface ProjectEventSummaryProps {
       textClass?: string
     }
   } | null
-  customerName: string
-  phone: string
-  address: {
-    street: string
-    apartment?: string | null
-    comuna: string
-    region: string
-  }
-  windowsCount?: number
-  squareMeters?: number
-  description?: string | null
+  comuna?: string | null
+  uninstallTags?: Array<{
+    id: string
+    name: string
+    color: {
+      bgClass: string
+      textClass?: string
+    }
+  }> | null
+  windowsCount?: number | null
+  squareMeters?: number | null
+  tasks?: unknown | null
   className?: string
 }
 
 /**
- * Componente reutilizable para mostrar detalles completos de un proyecto
- * en el contexto de eventos del calendario.
+ * Componente de resumen de proyecto para vistas de calendario.
  *
- * Muestra información del proyecto sin datos financieros:
- * - Número y nombre del proyecto
- * - Estado actual
- * - Cliente y contacto
- * - Dirección completa
- * - Especificaciones (ventanas, m²)
- * - Descripción
+ * Muestra información esencial del proyecto en formato denso:
+ * - Identificación del proyecto (número, nombre, cliente)
+ * - Estado actual con badge
+ * - Ubicación (comuna)
+ * - Tags de desinstalación (todos, con wrap)
+ * - Especificaciones técnicas (elementos, m²)
+ *
+ * Toda la información se renderiza condicionalmente si está disponible.
+ * La altura es dinámica según el contenido.
  */
 export function ProjectEventSummary({
   projectId,
   projectNumber,
   projectName,
-  projectStatus,
   customerName,
-  phone,
-  address,
+  projectStatus,
+  comuna,
+  uninstallTags,
   windowsCount,
   squareMeters,
-  description,
+  tasks,
   className,
 }: ProjectEventSummaryProps) {
+  const hasSpecs =
+    (windowsCount !== null && windowsCount !== undefined && windowsCount > 0) ||
+    (squareMeters !== null && squareMeters !== undefined && squareMeters > 0)
+  const hasTasks = Array.isArray(tasks) && tasks.length > 0
+
   return (
-    <div className={cn('space-y-3 rounded-lg border bg-muted/30 p-4', className)}>
-      {/* Header: Nombre del proyecto + Estado */}
-      <div className="flex items-start justify-between ">
+    <div
+      className={cn('space-y-2 rounded-lg border bg-card p-3 pr-6 text-card-foreground', className)}
+    >
+      <div className="flex items-start justify-between gap-2">
         <ProjectNameSummary
           projectId={projectId}
           projectNumber={projectNumber}
           projectName={projectName}
           customerName={customerName}
-          className="flex-1"
+          className="flex-1 min-w-0"
         />
       </div>
       <div>
         {projectStatus && (
           <Badge
             className={cn(
-              'shrink-0',
+              'shrink-0 text-xs',
               projectStatus.color.bgClass,
               projectStatus.color.textClass || 'text-white'
             )}
@@ -79,50 +92,55 @@ export function ProjectEventSummary({
         )}
       </div>
 
-      {/* Dirección */}
-      <div className="flex items-start gap-2">
-        <MapPin className="h-4 w-4 shrink-0 text-muted-foreground" />
-        <div className="text-sm">
-          <p>
-            {address.street}
-            {address.apartment && `, ${address.apartment}`}
-          </p>
-          <p className="text-muted-foreground">
-            {address.comuna}, {address.region}
-          </p>
+      {comuna && (
+        <div className="flex items-center gap-1.5">
+          <MapPin className="h-3.5 w-3.5 text-muted-foreground" />
+          <span className="text-xs text-muted-foreground">{comuna}</span>
         </div>
-      </div>
+      )}
 
-      {/* Teléfono */}
-      <div className="flex items-center gap-2">
-        <Phone className="h-4 w-4 text-muted-foreground" />
-        <p className="text-sm">{phone}</p>
-      </div>
+      {Array.isArray(uninstallTags) &&
+        uninstallTags.length > 0 &&
+        (() => (
+          <div className="flex flex-wrap gap-1">
+            {uninstallTags.map((tag) => (
+              <Badge
+                key={tag.id}
+                variant="outline"
+                className={cn('text-xs font-normal', tag.color.bgClass, tag.color.textClass)}
+              >
+                {tag.name}
+              </Badge>
+            ))}
+          </div>
+        ))()}
 
-      {/* Elementos y m2 (si están disponibles) */}
-      {(windowsCount !== undefined || squareMeters !== undefined) && (
-        <div className="flex items-center gap-4">
-          {windowsCount !== undefined && windowsCount > 0 && (
-            <div className="flex items-center gap-2">
-              <Hash className="h-4 w-4 text-muted-foreground" />
-              <p className="text-sm">
+      {hasSpecs && (
+        <div className="flex items-center gap-3 text-xs text-muted-foreground">
+          {windowsCount !== null && windowsCount !== undefined && windowsCount > 0 && (
+            <div className="flex items-center gap-1">
+              <Hash className="h-3.5 w-3.5" />
+              <span>
                 {windowsCount} {windowsCount === 1 ? 'elemento' : 'elementos'}
-              </p>
+              </span>
             </div>
           )}
-          {squareMeters !== undefined && squareMeters > 0 && (
-            <div className="flex items-center gap-2">
-              <Ruler className="h-4 w-4 text-muted-foreground" />
-              <p className="text-sm">{squareMeters} m²</p>
+          {squareMeters !== null && squareMeters !== undefined && squareMeters > 0 && (
+            <div className="flex items-center gap-1">
+              <Ruler className="h-3.5 w-3.5" />
+              <span>{squareMeters} m²</span>
             </div>
           )}
         </div>
       )}
 
-      {/* Descripción (si está disponible) */}
-      {description && (
-        <div className="border-t pt-3">
-          <p className="text-sm text-muted-foreground">{description}</p>
+      {hasTasks && (
+        <div className="flex items-center gap-1 text-xs text-muted-foreground">
+          <CheckCircle className="h-3 w-3" />
+          <span>
+            {(tasks as TodoItem[]).filter((t) => t.completed).length}/{(tasks as TodoItem[]).length}{' '}
+            tareas
+          </span>
         </div>
       )}
     </div>

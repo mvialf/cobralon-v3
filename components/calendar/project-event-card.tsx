@@ -8,7 +8,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { ProjectEventSummaryCompact } from '@/components/summarys/calendar/project-event-summary-compact'
+import { ProjectEventSummary } from '@/components/summarys/calendar/project-event-summary'
 import type { ProjectEventWithRelations } from '@/lib/types/calendar'
 
 interface ProjectEventCardProps {
@@ -41,8 +41,8 @@ export function ProjectEventCard({ event, onEdit, onDelete }: ProjectEventCardPr
         </DropdownMenuContent>
       </DropdownMenu>
 
-      {/* Content - ProjectEventSummaryCompact ES la card completa */}
-      <ProjectEventSummaryCompact
+      {/* Content - ProjectEventSummary ES la card completa */}
+      <ProjectEventSummary
         projectId={project.id}
         projectNumber={project.projectNumber}
         projectName={project.projectName}
