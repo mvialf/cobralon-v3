@@ -544,12 +544,11 @@ async function main() {
 
   const statusCanceladaVisit = await prisma.visitStatus.upsert({
     where: { name: 'Cancelada' },
-    update: { order: 998 }, // Actualizar order si ya existe
+    update: { order: 20 }, // Actualizar order si ya existe
     create: {
       name: 'Cancelada',
       colorId: redColor.id,
-      order: 998, // Final (pero antes de Completada)
-      isFinal: true,
+      order: 20, // Estado normal (después de Agendada)
       isActive: true,
     },
   })
@@ -558,7 +557,7 @@ async function main() {
   console.log('📊 Created/Updated visit statuses (ordered):', {
     statusContactada, // order: 0 (inicial)
     statusAgendada, // order: 10
-    statusCanceladaVisit, // order: 998 (final)
+    statusCanceladaVisit, // order: 20
     statusCompletadaVisit, // order: 999 (final)
   })
 
