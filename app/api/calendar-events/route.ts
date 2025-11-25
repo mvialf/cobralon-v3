@@ -91,11 +91,42 @@ export const GET = withLogging(async (request, logger) => {
     // Crear Map para acceso rápido
     const tagsMap = new Map(uninstallTags.map((tag) => [tag.id, tag]))
 
-    // TODO: En el futuro, agregar AftersaleEvents y VisitEvents aquí
+    // Fetch AftersaleEvents en paralelo
+    const aftersaleEvents = await prisma.aftersaleEvent.findMany({
+      where: {
+        scheduledDate: {
+          gte: start,
+          lte: end,
+        },
+      },
+      include: {
+        aftersale: {
+          include: {
+            project: {
+              include: {
+                customer: true,
+              },
+            },
+            aftersaleStatus: {
+              include: {
+                color: true,
+              },
+            },
+          },
+        },
+      },
+      orderBy: {
+        scheduledDate: 'asc',
+      },
+    })
+
+    // TODO: En el futuro, agregar VisitEvents aquí
 
     // Unificar eventos con tipo discriminado
     // IMPORTANTE: Convertir Decimals a números para serialización JSON
-    const unifiedEvents = projectEvents.map((event) => ({
+
+    // 1. Transformar ProjectEvents
+    const unifiedProjectEvents = projectEvents.map((event) => ({
       type: 'project' as const,
       data: {
         ...event,
@@ -119,10 +150,41 @@ export const GET = withLogging(async (request, logger) => {
       },
     }))
 
+    // 2. Transformar AftersaleEvents
+    const unifiedAftersaleEvents = aftersaleEvents.map((event) => ({
+      type: 'aftersale' as const,
+      data: {
+        ...event,
+        aftersale: {
+          ...event.aftersale,
+          project: {
+            ...event.aftersale.project,
+            // Convertir Decimals del proyecto
+            subtotal: Number(event.aftersale.project.subtotal),
+            taxRate: Number(event.aftersale.project.taxRate),
+            total: Number(event.aftersale.project.total),
+            balance: Number(event.aftersale.project.balance),
+            squareMeters: Number(event.aftersale.project.squareMeters),
+            totalAmount: event.aftersale.project.totalAmount
+              ? Number(event.aftersale.project.totalAmount)
+              : null,
+            customer: {
+              ...event.aftersale.project.customer,
+              creditBalance: Number(event.aftersale.project.customer.creditBalance),
+            },
+          },
+        },
+      },
+    }))
+
+    // 3. Combinar todos los eventos
+    const unifiedEvents = [...unifiedProjectEvents, ...unifiedAftersaleEvents]
+
     logger.info(
       {
         totalEvents: unifiedEvents.length,
         projectEvents: projectEvents.length,
+        aftersaleEvents: aftersaleEvents.length,
       },
       'Calendar events fetched successfully'
     )
