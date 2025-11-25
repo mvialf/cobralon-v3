@@ -2,9 +2,11 @@ import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { z } from 'zod'
 import { todoListOptionalSchema } from '@/lib/validations/todo-validations'
+import { getRegionByCodigo } from '@/lib/regiones-chile'
 
 /**
  * Schema de validación para crear Aftersale
+ * Incluye campos de dirección del proyecto (editables desde aftersale)
  */
 const createAftersaleSchema = z.object({
   projectId: z.string().uuid('Project ID inválido'),
@@ -13,12 +15,14 @@ const createAftersaleSchema = z.object({
     .string()
     .min(1, 'El teléfono de contacto es obligatorio')
     .regex(/^\+56[2-9]\d{8}$/, 'Formato inválido. Debe ser un teléfono chileno válido'),
-  description: z
-    .string()
-    .min(1, 'La descripción es obligatoria')
-    .max(1000, 'Máximo 1000 caracteres'),
+  description: z.string().max(1000, 'Máximo 1000 caracteres').optional().default(''),
   reportedAt: z.string().datetime('Fecha inválida'),
   tasks: todoListOptionalSchema, // Lista de tareas para resolver el caso
+  // Campos de dirección del proyecto
+  street: z.string().min(1, 'La calle es obligatoria'),
+  apartment: z.string().nullable().optional(),
+  comuna: z.string().min(1, 'La comuna es obligatoria'),
+  region: z.string().min(1, 'La región es obligatoria'),
 })
 
 /**
@@ -152,43 +156,63 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'El estado seleccionado no está activo' }, { status: 400 })
     }
 
-    // Crear el caso de postventa
-    const aftersale = await prisma.aftersale.create({
-      data: {
-        projectId: validatedData.projectId,
-        aftersaleStatusId: validatedData.aftersaleStatusId,
-        contactPhone: validatedData.contactPhone,
-        description: validatedData.description,
-        reportedAt: new Date(validatedData.reportedAt),
-        tasks: validatedData.tasks || [], // Incluir tareas (default vacío)
-      },
-      include: {
-        project: {
-          select: {
-            projectNumber: true,
-            projectName: true,
-            customer: {
-              select: {
-                name: true,
+    // Convertir código de región a nombre para guardar en proyecto
+    const regionData = getRegionByCodigo(validatedData.region)
+    const regionNombre = regionData?.nombre || validatedData.region
+
+    // Usar transacción para crear aftersale y actualizar proyecto
+    const result = await prisma.$transaction(async (tx) => {
+      // 1. Actualizar el proyecto con la nueva dirección
+      await tx.project.update({
+        where: { id: validatedData.projectId },
+        data: {
+          street: validatedData.street,
+          apartment: validatedData.apartment,
+          comuna: validatedData.comuna,
+          region: regionNombre,
+        },
+      })
+
+      // 2. Crear el caso de postventa
+      const aftersale = await tx.aftersale.create({
+        data: {
+          projectId: validatedData.projectId,
+          aftersaleStatusId: validatedData.aftersaleStatusId,
+          contactPhone: validatedData.contactPhone,
+          description: validatedData.description,
+          reportedAt: new Date(validatedData.reportedAt),
+          tasks: validatedData.tasks || [], // Incluir tareas (default vacío)
+        },
+        include: {
+          project: {
+            select: {
+              projectNumber: true,
+              projectName: true,
+              customer: {
+                select: {
+                  name: true,
+                },
+              },
+            },
+          },
+          aftersaleStatus: {
+            select: {
+              name: true,
+              color: {
+                select: {
+                  bgClass: true,
+                  textClass: true,
+                },
               },
             },
           },
         },
-        aftersaleStatus: {
-          select: {
-            name: true,
-            color: {
-              select: {
-                bgClass: true,
-                textClass: true,
-              },
-            },
-          },
-        },
-      },
+      })
+
+      return aftersale
     })
 
-    return NextResponse.json({ aftersale }, { status: 201 })
+    return NextResponse.json({ aftersale: result }, { status: 201 })
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json({ error: 'Datos inválidos', details: error.errors }, { status: 400 })

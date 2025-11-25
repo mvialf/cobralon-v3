@@ -72,6 +72,10 @@ describe('useAftersales', () => {
             customer: {
               name: 'Cliente A',
             },
+            street: 'Av. Providencia 1234',
+            apartment: 'Depto 501',
+            comuna: 'Providencia',
+            region: 'Metropolitana de Santiago',
           },
           aftersaleStatus: {
             id: 'status-1',
@@ -142,6 +146,10 @@ describe('useAftersale', () => {
         customer: {
           name: 'Cliente A',
         },
+        street: 'Av. Providencia 1234',
+        apartment: 'Depto 501',
+        comuna: 'Providencia',
+        region: 'Metropolitana de Santiago',
       },
       aftersaleStatus: {
         id: 'status-1',
@@ -214,6 +222,10 @@ describe('useCreateAftersale', () => {
         customer: {
           name: 'Cliente A',
         },
+        street: 'Av. Providencia 1234',
+        apartment: 'Depto 501',
+        comuna: 'Providencia',
+        region: 'Metropolitana de Santiago',
       },
       aftersaleStatus: {
         id: 'status-1',
@@ -236,6 +248,10 @@ describe('useCreateAftersale', () => {
       contactPhone: '+56912345678',
       description: 'Nuevo caso',
       reportedAt: '2025-01-20',
+      street: 'Av. Providencia 1234',
+      apartment: 'Depto 501',
+      comuna: 'Providencia',
+      region: '13',
     }
 
     const created = await result.current.mutateAsync(aftersaleData)
@@ -263,6 +279,9 @@ describe('useCreateAftersale', () => {
       aftersaleStatusId: 'status-1',
       contactPhone: '+56912345678',
       reportedAt: '2025-01-20',
+      street: 'Av. Providencia 1234',
+      comuna: 'Providencia',
+      region: '13',
     }
 
     await expect(result.current.mutateAsync(invalidData)).rejects.toThrow(
@@ -283,6 +302,9 @@ describe('useCreateAftersale', () => {
       aftersaleStatusId: 'status-inactive', // Status inactivo
       contactPhone: '+56912345678',
       reportedAt: '2025-01-20',
+      street: 'Av. Providencia 1234',
+      comuna: 'Providencia',
+      region: '13',
     }
 
     await expect(result.current.mutateAsync(invalidData)).rejects.toThrow(
@@ -303,6 +325,9 @@ describe('useCreateAftersale', () => {
       aftersaleStatusId: 'status-1',
       contactPhone: '+1234567890', // Teléfono NO chileno
       reportedAt: '2025-01-20',
+      street: 'Av. Providencia 1234',
+      comuna: 'Providencia',
+      region: '13',
     }
 
     await expect(result.current.mutateAsync(invalidData)).rejects.toThrow(
@@ -327,6 +352,10 @@ describe('useCreateAftersale', () => {
         customer: {
           name: 'Cliente A',
         },
+        street: 'Av. Providencia 1234',
+        apartment: null,
+        comuna: 'Providencia',
+        region: 'Metropolitana de Santiago',
       },
       aftersaleStatus: {
         id: 'status-1',
@@ -362,6 +391,9 @@ describe('useCreateAftersale', () => {
           completed: false,
         },
       ],
+      street: 'Calle Test 123',
+      comuna: 'Santiago',
+      region: 'Metropolitana de Santiago',
     }
 
     const created = await result.current.mutateAsync(dataWithTasks)
@@ -391,6 +423,10 @@ describe('useUpdateAftersale', () => {
         customer: {
           name: 'Cliente A',
         },
+        street: 'Av. Providencia 1234',
+        apartment: null,
+        comuna: 'Providencia',
+        region: 'Metropolitana de Santiago',
       },
       aftersaleStatus: {
         id: 'status-2',
@@ -441,6 +477,10 @@ describe('useUpdateAftersale', () => {
         customer: {
           name: 'Cliente A',
         },
+        street: 'Av. Providencia 1234',
+        apartment: null,
+        comuna: 'Providencia',
+        region: 'Metropolitana de Santiago',
       },
       aftersaleStatus: {
         id: 'status-1',
@@ -536,6 +576,10 @@ describe('useDeleteAftersale', () => {
             projectNumber: 'P 0001-2025',
             projectName: null,
             customer: { name: 'Cliente A' },
+            street: 'Calle Uno 100',
+            apartment: null,
+            comuna: 'Santiago',
+            region: 'Metropolitana de Santiago',
           },
           aftersaleStatus: {
             id: 'status-1',
@@ -558,6 +602,10 @@ describe('useDeleteAftersale', () => {
             projectNumber: 'P 0002-2025',
             projectName: null,
             customer: { name: 'Cliente B' },
+            street: 'Calle Dos 200',
+            apartment: 'Depto 5',
+            comuna: 'Providencia',
+            region: 'Metropolitana de Santiago',
           },
           aftersaleStatus: {
             id: 'status-1',
@@ -619,6 +667,10 @@ describe('useDeleteAftersale', () => {
             projectNumber: 'P 0001-2025',
             projectName: null,
             customer: { name: 'Cliente A' },
+            street: 'Calle Uno 100',
+            apartment: null,
+            comuna: 'Santiago',
+            region: 'Metropolitana de Santiago',
           },
           aftersaleStatus: {
             id: 'status-1',

@@ -4,6 +4,7 @@ import { normalizePhone } from '@/lib/utils/phone'
 
 /**
  * Schema de validación para crear/editar casos de postventa
+ * Incluye campos de dirección del proyecto (editables)
  */
 export const aftersaleSchema = z.object({
   projectId: z.string().uuid('Debe seleccionar un proyecto válido'),
@@ -27,6 +28,11 @@ export const aftersaleSchema = z.object({
     invalid_type_error: 'Fecha inválida',
   }),
   tasks: todoListOptionalSchema, // Lista de tareas para resolver el caso de postventa
+  // Campos de dirección del proyecto (editables desde aftersale)
+  street: z.string().min(1, 'La calle es obligatoria'),
+  apartment: z.string().nullable().optional(),
+  comuna: z.string().min(1, 'La comuna es obligatoria'),
+  region: z.string().min(1, 'La región es obligatoria'),
 })
 
 /**
@@ -54,6 +60,11 @@ export type Aftersale = {
     customer: {
       name: string
     }
+    // Campos de dirección del proyecto
+    street: string
+    apartment: string | null
+    comuna: string
+    region: string
   }
   aftersaleStatus: {
     id: string
@@ -75,6 +86,11 @@ export type CreateAftersalePayload = {
   description?: string
   reportedAt: string // ISO string for API
   tasks?: TodoItemFormData[] // Lista de tareas para resolver el caso
+  // Campos de dirección del proyecto
+  street: string
+  apartment?: string | null
+  comuna: string
+  region: string
 }
 
 /**
@@ -93,6 +109,11 @@ export function formValuesToPayload(values: AftersaleFormValues): CreateAftersal
     description: values.description,
     reportedAt: values.reportedAt.toISOString(),
     tasks: values.tasks, // Incluir tareas
+    // Campos de dirección del proyecto
+    street: values.street,
+    apartment: values.apartment,
+    comuna: values.comuna,
+    region: values.region,
   }
 }
 
@@ -107,5 +128,10 @@ export function aftersaleToFormValues(aftersale: Aftersale): AftersaleFormValues
     description: aftersale.description,
     reportedAt: new Date(aftersale.reportedAt),
     tasks: aftersale.tasks || [], // Incluir tareas (default vacío si no existen)
+    // Campos de dirección del proyecto
+    street: aftersale.project.street,
+    apartment: aftersale.project.apartment,
+    comuna: aftersale.project.comuna,
+    region: aftersale.project.region,
   }
 }

@@ -7,13 +7,14 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { aftersaleSchema, type AftersaleFormValues } from '@/lib/validations/aftersale-validations'
 import { normalizePhone } from '@/lib/utils/phone'
 import { formatDateValue, parseDateValue } from '@/lib/utils'
+import { getRegionCodigoByNombre } from '@/lib/regiones-chile'
 import { FormGrid } from '@/components/ui/form-grid'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Combobox } from '@/components/ui/combobox'
 import { PhoneInput } from '@/components/ui/phone-input'
 import { ProjectSearchField } from '@/components/forms/search/project-search-field'
-import { AddressProjectSummary } from '@/components/summarys/address-project-summary'
+import { AddressFields } from '@/components/forms/fields/address-fields'
 import { TodoListField } from '@/components/custom/todo'
 import {
   Form,
@@ -47,12 +48,8 @@ export const AftersaleForm = React.forwardRef<AftersaleFormHandle, AftersaleForm
   ({ onSubmit, defaultValues }, ref) => {
     const [aftersaleStatuses, setAftersaleStatuses] = React.useState<AftersaleStatus[]>([])
     const [loadingStatuses, setLoadingStatuses] = React.useState(true)
-    const [selectedProjectDetails, setSelectedProjectDetails] = React.useState<{
-      street: string
-      apartment: string | null
-      comuna: string
-      region: string
-    } | null>(null)
+    // Flag para mostrar campos de dirección solo cuando hay proyecto seleccionado
+    const [hasProjectDetails, setHasProjectDetails] = React.useState(false)
 
     const form = useForm<AftersaleFormValues>({
       resolver: zodResolver(aftersaleSchema),
@@ -63,6 +60,11 @@ export const AftersaleForm = React.forwardRef<AftersaleFormHandle, AftersaleForm
         description: '',
         reportedAt: new Date(),
         tasks: [], // Lista de tareas vacía por defecto
+        // Campos de dirección (se poblarán al seleccionar proyecto)
+        street: '',
+        apartment: null,
+        comuna: '',
+        region: '',
         ...defaultValues,
       },
     })
@@ -102,31 +104,46 @@ export const AftersaleForm = React.forwardRef<AftersaleFormHandle, AftersaleForm
       // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [])
 
-    // Cargar detalles del proyecto seleccionado (dirección y teléfono)
+    // Cargar detalles del proyecto seleccionado y poblar formulario
     const projectId = form.watch('projectId')
     React.useEffect(() => {
       if (!projectId) {
-        setSelectedProjectDetails(null)
+        setHasProjectDetails(false)
         return
       }
 
-      // Fetch proyecto completo para obtener dirección y teléfono
+      // Fetch proyecto completo para obtener todos los detalles
       fetch(`/api/projects/${projectId}`)
-        .then((res) => res.json())
-        .then((data) => {
-          setSelectedProjectDetails({
-            street: data.street,
-            apartment: data.apartment,
-            comuna: data.comuna,
-            region: data.region,
-          })
-
-          // Autocompletar teléfono del proyecto (normalizado para manejar datos legacy)
-          if (data.phone) {
-            form.setValue('contactPhone', normalizePhone(data.phone))
-          }
+        .then((res) => {
+          if (!res.ok) throw new Error(`HTTP ${res.status}`)
+          return res.json()
         })
-        .catch((err) => console.error('Error fetching project details:', err))
+        .then((data) => {
+          // Convertir nombre de región a código (API devuelve nombre, form necesita código)
+          const regionCodigo = getRegionCodigoByNombre(data.region) || data.region
+
+          // Poblar todos los campos del formulario con datos del proyecto
+          const formData = {
+            projectId: data.id,
+            aftersaleStatusId: form.getValues('aftersaleStatusId') || '',
+            contactPhone: normalizePhone(data.phone || ''),
+            description: form.getValues('description') || '',
+            reportedAt: form.getValues('reportedAt') || new Date(),
+            tasks: form.getValues('tasks') || [],
+            // Campos de dirección
+            street: data.street,
+            apartment: data.apartment || null,
+            comuna: data.comuna,
+            region: regionCodigo,
+          }
+
+          form.reset(formData)
+          setHasProjectDetails(true)
+        })
+        .catch((err) => {
+          console.error('Error fetching project details:', err)
+          setHasProjectDetails(false)
+        })
       // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [projectId])
 
@@ -137,6 +154,7 @@ export const AftersaleForm = React.forwardRef<AftersaleFormHandle, AftersaleForm
           <ProjectSearchField
             control={form.control}
             filterByFinalState={true}
+            showFinancialCards={false}
             onProjectSelect={(project) => {
               if (project) {
                 form.setValue('projectId', project.id)
@@ -209,15 +227,8 @@ export const AftersaleForm = React.forwardRef<AftersaleFormHandle, AftersaleForm
             />
           </FormGrid>
 
-          {/* Dirección del Proyecto */}
-          {selectedProjectDetails && (
-            <AddressProjectSummary
-              street={selectedProjectDetails.street}
-              apartment={selectedProjectDetails.apartment}
-              comuna={selectedProjectDetails.comuna}
-              region={selectedProjectDetails.region}
-            />
-          )}
+          {/* Dirección del Proyecto (editable) */}
+          <AddressFields control={form.control} disabled={!hasProjectDetails} />
 
           {/* Descripción */}
           <FormField
