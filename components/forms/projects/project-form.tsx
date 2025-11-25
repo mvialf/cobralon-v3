@@ -8,6 +8,7 @@ import { projectFormSchema, type ProjectFormData } from '@/lib/validations/proje
 import { normalizePhone } from '@/lib/utils/phone'
 import { formatDateValue, parseDateValue } from '@/lib/utils'
 import { useCustomersList } from '@/hooks/queries/use-customers'
+import { useProjectStatuses, getInitialStatus } from '@/hooks/queries/use-project-statuses'
 
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -42,15 +43,6 @@ export interface ProjectFormHandle {
   reset: () => void
 }
 
-interface ProjectStatus {
-  id: string
-  name: string
-  isInitial?: boolean
-  color: {
-    bgClass: string
-  }
-}
-
 export const ProjectForm = React.forwardRef<ProjectFormHandle, ProjectFormProps>(
   ({ onSubmit, isSubmitting, defaultValues, showSubmitButton = true }, ref) => {
     const { configuration } = useConfiguration()
@@ -59,8 +51,8 @@ export const ProjectForm = React.forwardRef<ProjectFormHandle, ProjectFormProps>
     const { data: customersData, isLoading: loadingCustomers } = useCustomersList()
     const customers = customersData?.customers || []
 
-    const [projectStatuses, setProjectStatuses] = React.useState<ProjectStatus[]>([])
-    const [loadingStatuses, setLoadingStatuses] = React.useState(true)
+    // Fetch project statuses usando hook compartido con caché
+    const { data: projectStatuses = [], isLoading: loadingStatuses } = useProjectStatuses()
 
     const form = useForm<ProjectFormData>({
       resolver: zodResolver(projectFormSchema),
@@ -140,33 +132,19 @@ export const ProjectForm = React.forwardRef<ProjectFormHandle, ProjectFormProps>
       }
     }, [defaultValues, form, configuration])
 
-    // Cargar lista de project statuses al montar
+    // Auto-seleccionar estado inicial cuando los statuses cargan (solo en creación)
     React.useEffect(() => {
-      async function loadStatuses() {
-        try {
-          const response = await fetch('/api/project-status')
-          if (!response.ok) throw new Error('Error al cargar estados')
-          const data = await response.json()
-          const statuses = data.projectStatuses || []
-          setProjectStatuses(statuses)
-
-          // Si no hay projectStatusId seteado y no estamos editando, usar initialStatus
-          if (!defaultValues?.projectStatusId && !form.getValues('projectStatusId')) {
-            const initialStatus = statuses.find((s: ProjectStatus) => s.isInitial)
-            if (initialStatus) {
-              form.setValue('projectStatusId', initialStatus.id)
-            }
+      if (!loadingStatuses && projectStatuses.length > 0) {
+        // Si no hay projectStatusId seteado y no estamos editando, usar initialStatus
+        if (!defaultValues?.projectStatusId && !form.getValues('projectStatusId')) {
+          const initialStatus = getInitialStatus(projectStatuses)
+          if (initialStatus) {
+            form.setValue('projectStatusId', initialStatus.id)
           }
-        } catch (error) {
-          console.error('Error al cargar estados:', error)
-        } finally {
-          setLoadingStatuses(false)
         }
       }
-
-      loadStatuses()
       // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [])
+    }, [loadingStatuses, projectStatuses])
 
     // Cuando se selecciona un customer, autocompletar phone
     const handleCustomerSelect = (customerId: string) => {

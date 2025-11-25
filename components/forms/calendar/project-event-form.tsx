@@ -4,17 +4,17 @@ import * as React from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { format } from 'date-fns'
-import { useQuery } from '@tanstack/react-query'
 
 import {
   createProjectEventWithProjectUpdateSchema,
   type ProjectEventWithProjectUpdateFormValues,
 } from '@/lib/validations/calendar-validations'
+import { useProjectStatuses } from '@/hooks/queries/use-project-statuses'
 
 import { Input } from '@/components/ui/input'
 import { PhoneInput } from '@/components/ui/phone-input'
 import { Combobox } from '@/components/ui/combobox'
-import { StatusBadge } from '@/components/ui/status-badge'
+import { StatusOptionDisplay } from '@/components/ui/status-option-display'
 import { FormGrid } from '@/components/ui/form-grid'
 import { ProjectSearchField } from '@/components/forms/search/project-search-field'
 import { AddressFields } from '@/components/forms/fields/address-fields'
@@ -45,30 +45,10 @@ export interface ProjectEventFormHandle {
   reset: () => void
 }
 
-interface ProjectStatus {
-  id: string
-  name: string
-  color: {
-    bgClass: string
-    textClass?: string
-  }
-}
-
 export const ProjectEventForm = React.forwardRef<ProjectEventFormHandle, ProjectEventFormProps>(
   ({ onSubmit, defaultValues }, ref) => {
-    // Fetch project statuses
-    const { data: projectStatuses = [], isLoading: loadingStatuses } = useQuery<ProjectStatus[]>({
-      queryKey: ['project-statuses'],
-      queryFn: async () => {
-        console.log('🔄 Fetching project statuses...')
-        const res = await fetch('/api/project-status')
-        if (!res.ok) throw new Error('Error al cargar estados')
-        const data = await res.json()
-        console.log('✅ Project statuses loaded:', data.projectStatuses.length, 'statuses')
-        console.log('📋 Statuses:', data.projectStatuses)
-        return data.projectStatuses
-      },
-    })
+    // Fetch project statuses usando hook compartido con caché
+    const { data: projectStatuses = [], isLoading: loadingStatuses } = useProjectStatuses()
 
     // Hook para uninstall tags (reemplaza useQuery manual)
     const {
@@ -288,7 +268,13 @@ export const ProjectEventForm = React.forwardRef<ProjectEventFormHandle, Project
                         getOptionValue={(status) => status.id}
                         getOptionLabel={(status) => status.name}
                         renderOption={(status) => (
-                          <StatusBadge bgClass={status.color.bgClass} label={status.name} />
+                          <StatusOptionDisplay
+                            option={{
+                              id: status.id,
+                              label: status.name,
+                              color: status.color,
+                            }}
+                          />
                         )}
                         placeholder="Seleccionar estado"
                         searchPlaceholder="Buscar estado..."
