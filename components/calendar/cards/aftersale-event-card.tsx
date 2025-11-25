@@ -1,6 +1,6 @@
 'use client'
 
-import { Wrench, MoreVertical } from 'lucide-react'
+import { MoreVertical } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
   DropdownMenu,
@@ -8,7 +8,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { Badge } from '@/components/ui/badge'
+import { AftersaleEventSummary } from '@/components/summarys/calendar/aftersale-event-summary'
 import type { AftersaleEventWithRelations } from '@/lib/types/calendar'
 
 interface AftersaleEventCardProps {
@@ -20,12 +20,6 @@ interface AftersaleEventCardProps {
 export function AftersaleEventCard({ event, onEdit, onDelete }: AftersaleEventCardProps) {
   const { aftersale } = event
   const { project, aftersaleStatus } = aftersale
-
-  // Truncar descripción si es muy larga
-  const truncatedDescription =
-    aftersale.description.length > 60
-      ? aftersale.description.substring(0, 60) + '...'
-      : aftersale.description
 
   return (
     <div className="group relative">
@@ -48,43 +42,23 @@ export function AftersaleEventCard({ event, onEdit, onDelete }: AftersaleEventCa
         </DropdownMenuContent>
       </DropdownMenu>
 
-      {/* Card Content */}
-      <div className="p-3 rounded-lg border bg-card hover:bg-accent/50 transition-colors cursor-pointer">
-        <div className="flex items-start gap-2">
-          {/* Icon */}
-          <div className="flex-shrink-0 mt-0.5">
-            <div className="p-1.5 rounded bg-orange-100 dark:bg-orange-900/30">
-              <Wrench className="h-3.5 w-3.5 text-orange-600 dark:text-orange-400" />
-            </div>
-          </div>
-
-          {/* Content */}
-          <div className="flex-1 min-w-0 space-y-1.5">
-            {/* Cliente */}
-            <p className="text-sm font-medium truncate">{project.customer.name}</p>
-
-            {/* Descripción */}
-            <p className="text-xs text-muted-foreground line-clamp-2">{truncatedDescription}</p>
-
-            {/* Footer: Status + Phone */}
-            <div className="flex items-center gap-2 flex-wrap">
-              <Badge
-                variant="secondary"
-                className={aftersaleStatus.color.bgClass}
-                style={{
-                  color: aftersaleStatus.color.textClass || undefined,
-                }}
-              >
-                {aftersaleStatus.name}
-              </Badge>
-
-              {aftersale.contactPhone && (
-                <span className="text-xs text-muted-foreground">{aftersale.contactPhone}</span>
-              )}
-            </div>
-          </div>
-        </div>
-      </div>
+      {/* Content - AftersaleEventSummary ES la card completa */}
+      <AftersaleEventSummary
+        projectId={project.id}
+        projectNumber={project.projectNumber}
+        projectName={project.projectName}
+        customerName={project.customer.name}
+        description={aftersale.description}
+        aftersaleStatus={{
+          name: aftersaleStatus.name,
+          color: {
+            bgClass: aftersaleStatus.color.bgClass,
+            textClass: aftersaleStatus.color.textClass || undefined,
+          },
+        }}
+        contactPhone={aftersale.contactPhone}
+        tasks={aftersale.tasks}
+      />
     </div>
   )
 }

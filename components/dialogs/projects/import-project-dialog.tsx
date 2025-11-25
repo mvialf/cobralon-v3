@@ -5,14 +5,14 @@ import { useDropzone } from 'react-dropzone'
 import { Upload, FileSpreadsheet, Download, Loader2, CheckCircle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from '@/components/ui/dialog'
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetFooter,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from '@/components/ui/sheet'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Progress } from '@/components/ui/progress'
 import { ImportPreviewTable } from '@/components/forms/projects/import-preview-table'
@@ -144,7 +144,7 @@ export function ImportProjectDialog({ onImportComplete }: ImportProjectDialogPro
   }
 
   return (
-    <Dialog
+    <Sheet
       open={open}
       onOpenChange={(isOpen) => {
         if (!isOpen) {
@@ -154,27 +154,30 @@ export function ImportProjectDialog({ onImportComplete }: ImportProjectDialogPro
         }
       }}
     >
-      <DialogTrigger asChild>
+      <SheetTrigger asChild>
         <Button variant="outline" className="gap-2">
           <Upload className="h-4 w-4" />
           Importar
         </Button>
-      </DialogTrigger>
+      </SheetTrigger>
 
-      <DialogContent className="max-w-5xl max-h-[85vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>Importar Proyectos</DialogTitle>
-          <DialogDescription>
+      <SheetContent
+        side="right"
+        className="w-full sm:max-w-2xl lg:max-w-4xl xl:max-w-5xl overflow-y-auto"
+      >
+        <SheetHeader>
+          <SheetTitle>Importar Proyectos</SheetTitle>
+          <SheetDescription>
             {step === 'upload' && 'Sube un archivo Excel con los datos de tus proyectos'}
             {step === 'preview' && 'Revisa los datos antes de importar'}
             {step === 'importing' && 'Importando proyectos...'}
             {step === 'complete' && 'Importación completada'}
-          </DialogDescription>
-        </DialogHeader>
+          </SheetDescription>
+        </SheetHeader>
 
         {/* Paso 1: Upload */}
         {step === 'upload' && (
-          <div className="space-y-4">
+          <div className="space-y-4 px-4">
             {/* Dropzone */}
             <div
               {...getRootProps()}
@@ -253,7 +256,7 @@ export function ImportProjectDialog({ onImportComplete }: ImportProjectDialogPro
 
         {/* Paso 2: Preview */}
         {step === 'preview' && parseResult && (
-          <div className="space-y-4">
+          <div className="space-y-4 px-4 flex-1 overflow-hidden">
             <ImportPreviewTable
               projects={parseResult.projects}
               validCount={parseResult.validCount}
@@ -264,7 +267,7 @@ export function ImportProjectDialog({ onImportComplete }: ImportProjectDialogPro
 
         {/* Paso 3: Importing */}
         {step === 'importing' && (
-          <div className="space-y-4 py-8">
+          <div className="space-y-4 py-8 px-4">
             <div className="flex flex-col items-center gap-4">
               <Loader2 className="h-12 w-12 animate-spin text-primary" />
               <div className="text-center space-y-2 w-full max-w-md">
@@ -277,7 +280,7 @@ export function ImportProjectDialog({ onImportComplete }: ImportProjectDialogPro
 
         {/* Paso 4: Complete */}
         {step === 'complete' && (
-          <div className="space-y-4 py-8">
+          <div className="space-y-4 py-8 px-4">
             <div className="flex flex-col items-center gap-4">
               <div className="rounded-full bg-green-100 p-3">
                 <CheckCircle className="h-12 w-12 text-green-600" />
@@ -294,7 +297,7 @@ export function ImportProjectDialog({ onImportComplete }: ImportProjectDialogPro
         )}
 
         {/* Footer */}
-        <DialogFooter>
+        <SheetFooter className="flex-row justify-end gap-2">
           {step === 'upload' && (
             <Button variant="outline" onClick={handleClose}>
               Cancelar
@@ -317,8 +320,8 @@ export function ImportProjectDialog({ onImportComplete }: ImportProjectDialogPro
           )}
 
           {step === 'complete' && <Button onClick={handleClose}>Cerrar</Button>}
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+        </SheetFooter>
+      </SheetContent>
+    </Sheet>
   )
 }

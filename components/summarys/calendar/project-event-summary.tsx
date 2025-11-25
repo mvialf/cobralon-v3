@@ -2,6 +2,7 @@ import { MapPin, Hash, Ruler, CheckCircle } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { ProjectNameSummary } from '@/components/summarys/project-name-summary'
 import { cn } from '@/lib/utils'
+import { EVENT_TYPE_BORDER_COLORS } from '@/lib/constants/calendar'
 
 interface TodoItem {
   completed: boolean
@@ -67,7 +68,11 @@ export function ProjectEventSummary({
 
   return (
     <div
-      className={cn('space-y-2 rounded-lg border bg-card p-3 pr-6 text-card-foreground', className)}
+      className={cn(
+        'space-y-2 rounded-lg border bg-card p-3 pr-6 text-card-foreground',
+        EVENT_TYPE_BORDER_COLORS.project,
+        className
+      )}
     >
       <div className="flex items-start justify-between gap-2">
         <ProjectNameSummary

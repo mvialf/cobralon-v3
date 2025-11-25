@@ -5,14 +5,14 @@ import { useDropzone } from 'react-dropzone'
 import { Upload, FileSpreadsheet, Download, Loader2, CheckCircle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from '@/components/ui/dialog'
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetFooter,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from '@/components/ui/sheet'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Progress } from '@/components/ui/progress'
 import { ImportPreviewTable } from '@/components/forms/customer/import-preview-table'
@@ -141,28 +141,31 @@ export function ImportCustomerDialog({ onImportComplete }: ImportCustomerDialogP
   }
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
+    <Sheet open={open} onOpenChange={setOpen}>
+      <SheetTrigger asChild>
         <Button variant="outline" className="gap-2">
           <Upload className="h-4 w-4" />
           Importar
         </Button>
-      </DialogTrigger>
+      </SheetTrigger>
 
-      <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>Importar Clientes</DialogTitle>
-          <DialogDescription>
+      <SheetContent
+        side="right"
+        className="w-full sm:max-w-2xl lg:max-w-4xl xl:max-w-5xl overflow-y-auto"
+      >
+        <SheetHeader>
+          <SheetTitle>Importar Clientes</SheetTitle>
+          <SheetDescription>
             {step === 'upload' && 'Sube un archivo Excel con los datos de tus clientes'}
             {step === 'preview' && 'Revisa los datos antes de importar'}
             {step === 'importing' && 'Importando clientes...'}
             {step === 'complete' && 'Importación completada'}
-          </DialogDescription>
-        </DialogHeader>
+          </SheetDescription>
+        </SheetHeader>
 
         {/* Paso 1: Upload */}
         {step === 'upload' && (
-          <div className="space-y-4">
+          <div className="space-y-4 px-4">
             {/* Dropzone */}
             <div
               {...getRootProps()}
@@ -239,7 +242,7 @@ export function ImportCustomerDialog({ onImportComplete }: ImportCustomerDialogP
 
         {/* Paso 2: Preview */}
         {step === 'preview' && parseResult && (
-          <div className="space-y-4">
+          <div className="space-y-4 px-4 flex-1 overflow-hidden">
             <ImportPreviewTable
               customers={parseResult.customers}
               validCount={parseResult.validCount}
@@ -250,7 +253,7 @@ export function ImportCustomerDialog({ onImportComplete }: ImportCustomerDialogP
 
         {/* Paso 3: Importing */}
         {step === 'importing' && (
-          <div className="space-y-4 py-8">
+          <div className="space-y-4 py-8 px-4">
             <div className="flex flex-col items-center gap-4">
               <Loader2 className="h-12 w-12 animate-spin text-primary" />
               <div className="text-center space-y-2 w-full max-w-md">
@@ -263,7 +266,7 @@ export function ImportCustomerDialog({ onImportComplete }: ImportCustomerDialogP
 
         {/* Paso 4: Complete */}
         {step === 'complete' && (
-          <div className="space-y-4 py-8">
+          <div className="space-y-4 py-8 px-4">
             <div className="flex flex-col items-center gap-4">
               <div className="rounded-full bg-green-100 p-3">
                 <CheckCircle className="h-12 w-12 text-green-600" />
@@ -280,7 +283,7 @@ export function ImportCustomerDialog({ onImportComplete }: ImportCustomerDialogP
         )}
 
         {/* Footer */}
-        <DialogFooter>
+        <SheetFooter className="flex-row justify-end gap-2">
           {step === 'upload' && (
             <Button variant="outline" onClick={handleClose}>
               Cancelar
@@ -303,8 +306,8 @@ export function ImportCustomerDialog({ onImportComplete }: ImportCustomerDialogP
           )}
 
           {step === 'complete' && <Button onClick={handleClose}>Cerrar</Button>}
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+        </SheetFooter>
+      </SheetContent>
+    </Sheet>
   )
 }

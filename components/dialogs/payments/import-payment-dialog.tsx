@@ -4,14 +4,14 @@ import { useState } from 'react'
 import { useDropzone } from 'react-dropzone'
 import { FileSpreadsheet, Upload, CheckCircle2, Download } from 'lucide-react'
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from '@/components/ui/dialog'
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetFooter,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from '@/components/ui/sheet'
 import { Button } from '@/components/ui/button'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Progress } from '@/components/ui/progress'
@@ -126,34 +126,37 @@ export function ImportPaymentDialog({ onImportComplete }: ImportPaymentDialogPro
   }
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
+    <Sheet open={open} onOpenChange={setOpen}>
+      <SheetTrigger asChild>
         <Button variant="outline">
           <Upload className="mr-2 h-4 w-4" />
           Importar Pagos
         </Button>
-      </DialogTrigger>
+      </SheetTrigger>
 
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>
+      <SheetContent
+        side="right"
+        className="w-full sm:max-w-2xl lg:max-w-4xl xl:max-w-5xl overflow-y-auto"
+      >
+        <SheetHeader>
+          <SheetTitle>
             {state === 'upload' && 'Importar Pagos desde Excel'}
             {state === 'preview' && 'Vista Previa de Importación'}
             {state === 'importing' && 'Importando Pagos...'}
             {state === 'complete' && 'Importación Completada'}
-          </DialogTitle>
-          <DialogDescription>
+          </SheetTitle>
+          <SheetDescription>
             {state === 'upload' &&
               'Sube un archivo Excel con los datos de los pagos. Solo se permiten pagos 1:1 (un pago asignado completamente a un proyecto).'}
             {state === 'preview' && 'Revisa los datos antes de importar'}
             {state === 'importing' && 'Procesando los pagos...'}
             {state === 'complete' && 'Los pagos fueron importados exitosamente'}
-          </DialogDescription>
-        </DialogHeader>
+          </SheetDescription>
+        </SheetHeader>
 
         {/* Estado: Upload */}
         {state === 'upload' && (
-          <div className="space-y-4">
+          <div className="space-y-4 px-4">
             {/* Dropzone */}
             <div
               {...getRootProps()}
@@ -225,7 +228,7 @@ export function ImportPaymentDialog({ onImportComplete }: ImportPaymentDialogPro
 
         {/* Estado: Preview */}
         {state === 'preview' && parseResult && (
-          <div className="space-y-4">
+          <div className="space-y-4 px-4 flex-1 overflow-hidden">
             <ImportPreviewTable
               payments={parseResult.payments}
               validCount={parseResult.validCount}
@@ -242,7 +245,7 @@ export function ImportPaymentDialog({ onImportComplete }: ImportPaymentDialogPro
 
         {/* Estado: Importing */}
         {state === 'importing' && (
-          <div className="space-y-4 py-8">
+          <div className="space-y-4 py-8 px-4">
             <Progress value={importProgress} className="w-full" />
             <p className="text-center text-sm text-muted-foreground">
               Importando {parseResult?.validCount} pagos...
@@ -252,7 +255,7 @@ export function ImportPaymentDialog({ onImportComplete }: ImportPaymentDialogPro
 
         {/* Estado: Complete */}
         {state === 'complete' && (
-          <div className="py-8 text-center space-y-4">
+          <div className="py-8 px-4 text-center space-y-4">
             <CheckCircle2 className="mx-auto h-16 w-16 text-green-500" />
             <div>
               <p className="text-lg font-semibold">¡Importación Exitosa!</p>
@@ -264,7 +267,7 @@ export function ImportPaymentDialog({ onImportComplete }: ImportPaymentDialogPro
         )}
 
         {/* Footer */}
-        <DialogFooter>
+        <SheetFooter className="flex-row justify-end gap-2">
           {state === 'upload' && (
             <Button variant="outline" onClick={handleClose}>
               Cancelar
@@ -281,7 +284,7 @@ export function ImportPaymentDialog({ onImportComplete }: ImportPaymentDialogPro
                   setError(null)
                 }}
               >
-                Volver
+                ← Volver
               </Button>
               <Button
                 onClick={handleImport}
@@ -293,13 +296,9 @@ export function ImportPaymentDialog({ onImportComplete }: ImportPaymentDialogPro
             </>
           )}
 
-          {state === 'complete' && (
-            <Button onClick={handleClose} className="w-full">
-              Cerrar
-            </Button>
-          )}
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+          {state === 'complete' && <Button onClick={handleClose}>Cerrar</Button>}
+        </SheetFooter>
+      </SheetContent>
+    </Sheet>
   )
 }
