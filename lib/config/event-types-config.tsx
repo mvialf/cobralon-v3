@@ -89,9 +89,8 @@ import {
 
 // Visit imports
 import { VisitEventCard } from '@/components/calendar/cards/visit-event-card'
+import { VisitEventDialog } from '@/components/dialogs/calendar/visit-event-dialog'
 import { useDeleteVisitEvent, useUpdateVisitEventDate } from '@/hooks/queries/use-visit-events'
-// TODO: Importar cuando se cree
-// import { VisitEventDialog } from '@/components/dialogs/calendar/visit-event-dialog'
 
 // ============================================================================
 // STUB COMPONENTS (Reemplazar cuando existan los reales)
@@ -162,7 +161,7 @@ export const EVENT_TYPE_REGISTRY = {
   },
 
   visit: {
-    Dialog: StubEventDialog<VisitEventWithRelations>,
+    Dialog: VisitEventDialog,
     Card: VisitEventCard,
     useDeleteMutation: useDeleteVisitEvent,
     useUpdateDateMutation: useUpdateVisitEventDate,

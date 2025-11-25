@@ -120,7 +120,29 @@ export const GET = withLogging(async (request, logger) => {
       },
     })
 
-    // TODO: En el futuro, agregar VisitEvents aquí
+    // Fetch VisitEvents en paralelo
+    const visitEvents = await prisma.visitEvent.findMany({
+      where: {
+        scheduledDate: {
+          gte: start,
+          lte: end,
+        },
+      },
+      include: {
+        visit: {
+          include: {
+            visitStatus: {
+              include: {
+                color: true,
+              },
+            },
+          },
+        },
+      },
+      orderBy: {
+        scheduledDate: 'asc',
+      },
+    })
 
     // Unificar eventos con tipo discriminado
     // IMPORTANTE: Convertir Decimals a números para serialización JSON
@@ -177,14 +199,30 @@ export const GET = withLogging(async (request, logger) => {
       },
     }))
 
-    // 3. Combinar todos los eventos
-    const unifiedEvents = [...unifiedProjectEvents, ...unifiedAftersaleEvents]
+    // 3. Transformar VisitEvents
+    const unifiedVisitEvents = visitEvents.map((event) => ({
+      type: 'visit' as const,
+      data: {
+        ...event,
+        visit: {
+          ...event.visit,
+        },
+      },
+    }))
+
+    // 4. Combinar todos los eventos
+    const unifiedEvents = [
+      ...unifiedProjectEvents,
+      ...unifiedAftersaleEvents,
+      ...unifiedVisitEvents,
+    ]
 
     logger.info(
       {
         totalEvents: unifiedEvents.length,
         projectEvents: projectEvents.length,
         aftersaleEvents: aftersaleEvents.length,
+        visitEvents: visitEvents.length,
       },
       'Calendar events fetched successfully'
     )

@@ -50,6 +50,82 @@ export function useCreateVisitEvent() {
 }
 
 // ============================================================================
+// MUTATIONS: CREATE WITH UPDATE (Transaccional)
+// ============================================================================
+
+/**
+ * Input para crear evento con actualización de visit
+ */
+interface CreateVisitEventWithUpdateInput {
+  visitId: string
+  scheduledDate: string
+  visitStatusId: string
+  name: string
+  phone?: string
+  observations?: string | null
+  street: string
+  apartment?: string | null
+  comuna: string
+  region: string
+}
+
+/**
+ * Response del endpoint transaccional
+ */
+interface CreateVisitEventWithUpdateResponse {
+  event: VisitEventWithRelations
+  visitUpdated: boolean
+}
+
+async function createVisitEventWithUpdate(
+  data: CreateVisitEventWithUpdateInput
+): Promise<CreateVisitEventWithUpdateResponse> {
+  const response = await fetch('/api/visit-events-with-update', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  })
+
+  if (!response.ok) {
+    const error = await response.json()
+    throw new Error(error.error || 'Error al crear evento de visita')
+  }
+
+  return response.json()
+}
+
+/**
+ * Hook para crear evento de visita Y actualizar datos de la visita
+ *
+ * Usa transacción atómica en el backend:
+ * 1. Actualiza Visit (status, name, phone, observations, dirección)
+ * 2. Crea VisitEvent
+ *
+ * Toast diferenciado según qué se actualizó.
+ */
+export function useCreateVisitEventWithUpdate() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: createVisitEventWithUpdate,
+    onSuccess: (result) => {
+      queryClient.invalidateQueries({ queryKey: ['calendar-events'] })
+      queryClient.invalidateQueries({ queryKey: ['visits'] })
+
+      // Toast diferenciado según qué se actualizó
+      if (result.visitUpdated) {
+        toast.success('Evento creado y datos de visita actualizados')
+      } else {
+        toast.success('Evento de visita creado exitosamente')
+      }
+    },
+    onError: (error) => {
+      handleMutationError(error)
+    },
+  })
+}
+
+// ============================================================================
 // MUTATIONS: UPDATE
 // ============================================================================
 
