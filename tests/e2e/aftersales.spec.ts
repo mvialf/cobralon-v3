@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test'
+import { cleanupE2EAftersales } from './helpers/cleanup'
 
 /**
  * Tests E2E para el Módulo de Postventas (Aftersales)
@@ -548,5 +549,10 @@ test.describe('Módulo de Postventas (Aftersales)', () => {
       const hasAddressText = (await dialog.getByText(/calle|avenida|comuna|región/i).count()) > 0
       expect(hasAddressText).toBeTruthy()
     }
+  })
+
+  // Cleanup: Eliminar todos los aftersales creados por tests E2E
+  test.afterAll(async ({ request }) => {
+    await cleanupE2EAftersales(request)
   })
 })

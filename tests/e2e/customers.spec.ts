@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test'
+import { cleanupE2ECustomers } from './helpers/cleanup'
 
 /**
  * Tests E2E para el Módulo de Clientes
@@ -18,6 +19,9 @@ import { test, expect } from '@playwright/test'
  * Prerequisitos:
  * - Base de datos debe tener al menos 1 cliente existente
  * - El cliente de prueba que crearemos NO debe existir previamente
+ *
+ * CLEANUP: Este archivo limpia automáticamente los customers E2E
+ * después de ejecutar todos los tests (afterAll).
  *
  * Para ejecutar:
  * - npm run test:e2e -- customers.spec.ts
@@ -383,5 +387,10 @@ test.describe('Módulo de Clientes', () => {
     await expect(page.getByRole('button', { name: 'Crédito' })).toBeVisible()
 
     // La columna de "Acciones" generalmente no tiene texto, solo el header con botones
+  })
+
+  // Cleanup: Eliminar todos los customers creados por tests E2E
+  test.afterAll(async ({ request }) => {
+    await cleanupE2ECustomers(request)
   })
 })

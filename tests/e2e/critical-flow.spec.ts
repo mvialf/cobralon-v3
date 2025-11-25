@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test'
+import { cleanupE2EProjects } from './helpers/cleanup'
 
 /**
  * Test E2E Crítico: Flujo Completo Proyecto → Pago → Balance
@@ -346,5 +347,10 @@ test.describe('Flujo Crítico: Proyecto → Pago → Balance', () => {
     await expect(updatedProjectRow).toBeVisible()
 
     console.log('✅ Test completado exitosamente')
+  })
+
+  // Cleanup: Eliminar projects creados por tests E2E
+  test.afterAll(async ({ request }) => {
+    await cleanupE2EProjects(request)
   })
 })
