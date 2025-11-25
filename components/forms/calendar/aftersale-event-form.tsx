@@ -173,8 +173,14 @@ export const AftersaleEventForm = React.forwardRef<
   }, [aftersaleId])
 
   // Formatear fecha para el input type="date"
+  // IMPORTANTE: Si ya es string yyyy-MM-dd, devolverlo directo (evita bugs de timezone)
   const formatDateForInput = (date: Date | string): string => {
     if (!date) return ''
+    // Si ya es string con formato correcto (yyyy-MM-dd), devolverlo directo
+    if (typeof date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(date)) {
+      return date
+    }
+    // Solo convertir si es Date object
     const d = typeof date === 'string' ? new Date(date) : date
     return format(d, 'yyyy-MM-dd')
   }

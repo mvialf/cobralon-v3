@@ -28,7 +28,7 @@ import {
 interface AftersaleEventDialogProps {
   mode: 'create' | 'edit'
   event?: AftersaleEventWithRelations
-  defaultDate?: Date
+  defaultDate?: string // Formato yyyy-MM-dd (solo fecha, sin timezone)
   open?: boolean
   onOpenChange?: (open: boolean) => void
 }
@@ -99,7 +99,7 @@ export function AftersaleEventDialog({
 
     if (mode === 'create' && defaultDate) {
       return {
-        scheduledDate: format(defaultDate, 'yyyy-MM-dd'),
+        scheduledDate: defaultDate, // Ya viene como string yyyy-MM-dd
       }
     }
 

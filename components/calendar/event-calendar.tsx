@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, forwardRef, useImperativeHandle } from 'react'
 import { DndContext, DragEndEvent, DragOverlay } from '@dnd-kit/core'
 import { CalendarHeader } from './calendar-header'
 import { WeekView } from './views/week-view'
@@ -24,7 +24,21 @@ import type { CalendarEvent, CalendarEventType } from '@/lib/types/calendar'
 import { Skeleton } from '@/components/ui/skeleton'
 import { EVENT_TYPE_REGISTRY, getEventDialog } from '@/lib/config/event-types-config'
 
-export function EventCalendar() {
+// Helper para convertir Date a string yyyy-MM-dd sin problemas de timezone
+// Usa métodos locales (getFullYear, getMonth, getDate) que respetan la zona horaria local
+function toLocalDateString(date: Date): string {
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
+
+// Tipo para exponer métodos públicos via ref
+export interface EventCalendarHandle {
+  openNewEvent: (date?: Date | string) => void
+}
+
+export const EventCalendar = forwardRef<EventCalendarHandle>(function EventCalendar(_, ref) {
   const [currentDate, setCurrentDate] = useState(new Date())
   const [currentView, setCurrentView] = useState<'week' | 'month' | 'agenda'>('week')
 
@@ -45,7 +59,7 @@ export function EventCalendar() {
   const [createEventType, setCreateEventType] = useState<CalendarEventType | null>(null)
   const [createDialogOpen, setCreateDialogOpen] = useState(false)
   const [editDialogOpen, setEditDialogOpen] = useState(false)
-  const [selectedDate, setSelectedDate] = useState<Date | null>(null)
+  const [selectedDate, setSelectedDate] = useState<string | null>(null) // Formato yyyy-MM-dd
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null)
 
   // Estado para dialog de confirmación de eliminación
@@ -54,6 +68,17 @@ export function EventCalendar() {
 
   // Estado para drag & drop
   const [activeEvent, setActiveEvent] = useState<CalendarEvent | null>(null)
+
+  // Exponer método público para abrir el selector de nuevo evento
+  useImperativeHandle(ref, () => ({
+    openNewEvent: (date?: Date | string) => {
+      // Convertir a string yyyy-MM-dd si es Date, o usar directamente si es string
+      const dateStr =
+        date instanceof Date ? toLocalDateString(date) : date || toLocalDateString(new Date())
+      setSelectedDate(dateStr)
+      setTypeSelectorOpen(true)
+    },
+  }))
 
   // Fetch eventos en el rango visible
   const { start, end } = getVisibleDateRange(currentDate, currentView)
@@ -79,7 +104,7 @@ export function EventCalendar() {
   }
 
   const handleCreateEvent = (date: Date) => {
-    setSelectedDate(date)
+    setSelectedDate(toLocalDateString(date))
     setTypeSelectorOpen(true)
   }
 
@@ -271,11 +296,13 @@ export function EventCalendar() {
       />
 
       {/* Dialog de creación - Dinámico según tipo seleccionado */}
+      {/* key={selectedDate} fuerza re-mount del form cuando cambia la fecha */}
       {createEventType &&
         (() => {
           const CreateDialog = getEventDialog(createEventType)
           return (
             <CreateDialog
+              key={selectedDate || 'no-date'}
               mode="create"
               defaultDate={selectedDate || undefined}
               open={createDialogOpen}
@@ -325,4 +352,4 @@ export function EventCalendar() {
       </AlertDialog>
     </DndContext>
   )
-}
+})
