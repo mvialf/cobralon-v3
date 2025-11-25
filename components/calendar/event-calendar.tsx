@@ -7,7 +7,7 @@ import { WeekView } from './views/week-view'
 import { MonthView } from './views/month-view'
 import { AgendaView } from './views/agenda-view'
 import { ViewSelector } from './view-selector'
-import { ProjectEventDialog } from '@/components/dialogs/calendar/project-event-dialog'
+import { EventTypeSelector } from './event-type-selector'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -20,7 +20,7 @@ import {
 } from '@/components/ui/alert-dialog'
 import { useCalendarEvents } from '@/hooks/queries/use-calendar-events'
 import { getVisibleDateRange, navigateDate } from '@/lib/utils/calendar-utils'
-import type { CalendarEvent } from '@/lib/types/calendar'
+import type { CalendarEvent, CalendarEventType } from '@/lib/types/calendar'
 import { Skeleton } from '@/components/ui/skeleton'
 import { EVENT_TYPE_REGISTRY, getEventDialog } from '@/lib/config/event-types-config'
 
@@ -41,6 +41,8 @@ export function EventCalendar() {
   }, [showWeekends])
 
   // Estado para dialog de crear/editar
+  const [typeSelectorOpen, setTypeSelectorOpen] = useState(false)
+  const [createEventType, setCreateEventType] = useState<CalendarEventType | null>(null)
   const [createDialogOpen, setCreateDialogOpen] = useState(false)
   const [editDialogOpen, setEditDialogOpen] = useState(false)
   const [selectedDate, setSelectedDate] = useState<Date | null>(null)
@@ -78,7 +80,22 @@ export function EventCalendar() {
 
   const handleCreateEvent = (date: Date) => {
     setSelectedDate(date)
+    setTypeSelectorOpen(true)
+  }
+
+  // Handler cuando se selecciona un tipo de evento
+  const handleEventTypeSelected = (type: CalendarEventType) => {
+    setCreateEventType(type)
     setCreateDialogOpen(true)
+  }
+
+  // Handler cuando se cierra el dialog de creación
+  const handleCreateDialogClose = (open: boolean) => {
+    setCreateDialogOpen(open)
+    if (!open) {
+      // Limpiar el tipo seleccionado cuando se cierra
+      setCreateEventType(null)
+    }
   }
 
   const handleEditEvent = (event: CalendarEvent) => {
@@ -246,14 +263,26 @@ export function EventCalendar() {
         </DragOverlay>
       </div>
 
-      {/* Dialogs - Renderizados dinámicamente según el tipo */}
-      {/* Dialog de creación - Por ahora solo para project */}
-      <ProjectEventDialog
-        mode="create"
-        defaultDate={selectedDate || undefined}
-        open={createDialogOpen}
-        onOpenChange={setCreateDialogOpen}
+      {/* Selector de tipo de evento */}
+      <EventTypeSelector
+        open={typeSelectorOpen}
+        onOpenChange={setTypeSelectorOpen}
+        onSelectType={handleEventTypeSelected}
       />
+
+      {/* Dialog de creación - Dinámico según tipo seleccionado */}
+      {createEventType &&
+        (() => {
+          const CreateDialog = getEventDialog(createEventType)
+          return (
+            <CreateDialog
+              mode="create"
+              defaultDate={selectedDate || undefined}
+              open={createDialogOpen}
+              onOpenChange={handleCreateDialogClose}
+            />
+          )
+        })()}
 
       {/* Dialog de edición - Dinámico según tipo de evento */}
       {selectedEvent &&
