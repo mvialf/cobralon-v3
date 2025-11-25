@@ -2,13 +2,13 @@ import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { handleMutationError } from '@/lib/errors'
 import type {
-  ProjectEventWithRelations,
-  CreateProjectEventInput,
-  UpdateProjectEventInput,
+  AftersaleEventWithRelations,
+  CreateAftersaleEventInput,
+  UpdateAftersaleEventInput,
 } from '@/lib/types/calendar'
 
 /**
- * Hooks de React Query para ProjectEvents
+ * Hooks de React Query para AftersaleEvents
  *
  * Convenciones:
  * - Mutations invalidan ['calendar-events'] automáticamente
@@ -19,10 +19,10 @@ import type {
 // MUTATIONS: CREATE
 // ============================================================================
 
-async function createProjectEvent(
-  data: CreateProjectEventInput
-): Promise<ProjectEventWithRelations> {
-  const response = await fetch('/api/project-events', {
+async function createAftersaleEvent(
+  data: CreateAftersaleEventInput
+): Promise<AftersaleEventWithRelations> {
+  const response = await fetch('/api/aftersale-events', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data),
@@ -30,86 +30,20 @@ async function createProjectEvent(
 
   if (!response.ok) {
     const error = await response.json()
-    throw new Error(error.error || 'Error al crear evento')
+    throw new Error(error.error || 'Error al crear evento de postventa')
   }
 
   return response.json()
 }
 
-export function useCreateProjectEvent() {
+export function useCreateAftersaleEvent() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: createProjectEvent,
+    mutationFn: createAftersaleEvent,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['calendar-events'] })
-      toast.success('Evento creado exitosamente')
-    },
-    onError: (error) => {
-      handleMutationError(error)
-    },
-  })
-}
-
-// ============================================================================
-// MUTATIONS: CREATE WITH PROJECT UPDATE
-// ============================================================================
-
-interface CreateProjectEventWithUpdateInput {
-  projectId: string
-  scheduledDate: Date | string
-  notes?: string | null
-  phone: string
-  street: string
-  apartment: string | null
-  comuna: string
-  region: string
-  windowsCount: number
-  squareMeters: number
-  description: string | null
-}
-
-interface CreateProjectEventWithUpdateResponse {
-  event: ProjectEventWithRelations
-  projectUpdated: boolean
-}
-
-async function createProjectEventWithUpdate(
-  data: CreateProjectEventWithUpdateInput
-): Promise<CreateProjectEventWithUpdateResponse> {
-  const response = await fetch('/api/project-events-with-update', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(data),
-  })
-
-  if (!response.ok) {
-    const error = await response.json()
-    // Log detalles de validación para debugging
-    if (error.details) {
-      console.error('❌ Validation errors:', error.details)
-      console.error('📤 Data sent:', data)
-    }
-    throw new Error(error.error || 'Error al crear evento')
-  }
-
-  return response.json()
-}
-
-export function useCreateProjectEventWithUpdate() {
-  const queryClient = useQueryClient()
-
-  return useMutation({
-    mutationFn: createProjectEventWithUpdate,
-    onSuccess: (result) => {
-      queryClient.invalidateQueries({ queryKey: ['calendar-events'] })
-
-      // Toast diferenciado según si se actualizó el proyecto
-      if (result.projectUpdated) {
-        toast.success('Evento creado y datos del proyecto actualizados')
-      } else {
-        toast.success('Evento creado exitosamente')
-      }
+      toast.success('Evento de postventa creado exitosamente')
     },
     onError: (error) => {
       handleMutationError(error)
@@ -121,16 +55,16 @@ export function useCreateProjectEventWithUpdate() {
 // MUTATIONS: UPDATE
 // ============================================================================
 
-interface UpdateProjectEventParams {
+interface UpdateAftersaleEventParams {
   id: string
-  data: UpdateProjectEventInput
+  data: UpdateAftersaleEventInput
 }
 
-async function updateProjectEvent({
+async function updateAftersaleEvent({
   id,
   data,
-}: UpdateProjectEventParams): Promise<ProjectEventWithRelations> {
-  const response = await fetch(`/api/project-events/${id}`, {
+}: UpdateAftersaleEventParams): Promise<AftersaleEventWithRelations> {
+  const response = await fetch(`/api/aftersale-events/${id}`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data),
@@ -138,20 +72,20 @@ async function updateProjectEvent({
 
   if (!response.ok) {
     const error = await response.json()
-    throw new Error(error.error || 'Error al actualizar evento')
+    throw new Error(error.error || 'Error al actualizar evento de postventa')
   }
 
   return response.json()
 }
 
-export function useUpdateProjectEvent() {
+export function useUpdateAftersaleEvent() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: updateProjectEvent,
+    mutationFn: updateAftersaleEvent,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['calendar-events'] })
-      toast.success('Evento actualizado exitosamente')
+      toast.success('Evento de postventa actualizado exitosamente')
     },
     onError: (error) => {
       handleMutationError(error)
@@ -163,16 +97,16 @@ export function useUpdateProjectEvent() {
 // MUTATIONS: UPDATE DATE (Drag & Drop con Optimistic Updates)
 // ============================================================================
 
-interface UpdateProjectEventDateParams {
+interface UpdateAftersaleEventDateParams {
   id: string
   scheduledDate: Date
 }
 
-async function updateProjectEventDate({
+async function updateAftersaleEventDate({
   id,
   scheduledDate,
-}: UpdateProjectEventDateParams): Promise<ProjectEventWithRelations> {
-  const response = await fetch(`/api/project-events/${id}`, {
+}: UpdateAftersaleEventDateParams): Promise<AftersaleEventWithRelations> {
+  const response = await fetch(`/api/aftersale-events/${id}`, {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ scheduledDate: scheduledDate.toISOString() }),
@@ -186,11 +120,11 @@ async function updateProjectEventDate({
   return response.json()
 }
 
-export function useUpdateProjectEventDate() {
+export function useUpdateAftersaleEventDate() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: updateProjectEventDate,
+    mutationFn: updateAftersaleEventDate,
     // Optimistic update: actualiza UI inmediatamente
     onMutate: async ({ id, scheduledDate }) => {
       // Cancelar queries en curso para evitar que sobrescriban el optimistic update
@@ -210,7 +144,7 @@ export function useUpdateProjectEventDate() {
         return {
           ...old,
           events: old.events.map((event: any) => {
-            if (event.type === 'project' && event.data.id === id) {
+            if (event.type === 'aftersale' && event.data.id === id) {
               return {
                 ...event,
                 data: {
@@ -238,9 +172,7 @@ export function useUpdateProjectEventDate() {
       handleMutationError(error)
     },
     // Invalidar queries después de la mutación para refrescar UI
-    // Usa onSettled (no onSuccess) para ejecutar siempre, incluso si falla
     onSettled: () => {
-      // Invalidar sin await para evitar bloqueo
       queryClient.invalidateQueries({ queryKey: ['calendar-events'] })
     },
   })
@@ -250,25 +182,25 @@ export function useUpdateProjectEventDate() {
 // MUTATIONS: DELETE
 // ============================================================================
 
-async function deleteProjectEvent(id: string): Promise<void> {
-  const response = await fetch(`/api/project-events/${id}`, {
+async function deleteAftersaleEvent(id: string): Promise<void> {
+  const response = await fetch(`/api/aftersale-events/${id}`, {
     method: 'DELETE',
   })
 
   if (!response.ok) {
     const error = await response.json()
-    throw new Error(error.error || 'Error al eliminar evento')
+    throw new Error(error.error || 'Error al eliminar evento de postventa')
   }
 }
 
-export function useDeleteProjectEvent() {
+export function useDeleteAftersaleEvent() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: deleteProjectEvent,
+    mutationFn: deleteAftersaleEvent,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['calendar-events'] })
-      toast.success('Evento eliminado exitosamente')
+      toast.success('Evento de postventa eliminado exitosamente')
     },
     onError: (error) => {
       handleMutationError(error)
