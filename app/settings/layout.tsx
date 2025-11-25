@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Globe, ListTodo, CreditCard, Headphones, Calendar, Upload } from 'lucide-react'
+import { Globe, ListTodo, CreditCard, Upload } from 'lucide-react'
 import { AppLayout } from '@/components/layout/app-layout'
 import { cn } from '@/lib/utils'
 
@@ -24,19 +24,9 @@ const settingsSections: SettingsSection[] = [
     icon: Upload,
   },
   {
-    title: 'Project Status',
-    href: '/settings/project-status',
+    title: 'Estados del Sistema',
+    href: '/settings/status-config',
     icon: ListTodo,
-  },
-  {
-    title: 'Aftersale Status',
-    href: '/settings/aftersale-status',
-    icon: Headphones,
-  },
-  {
-    title: 'Visit Status',
-    href: '/settings/visit-status',
-    icon: Calendar,
   },
   {
     title: 'Métodos de Pago',
@@ -61,7 +51,7 @@ export default function SettingsLayout({ children }: { children: React.ReactNode
           </div>
           {settingsSections.map((section) => {
             const Icon = section.icon
-            const isActive = pathname === section.href
+            const isActive = pathname === section.href || pathname.startsWith(section.href + '/')
 
             return (
               <Link

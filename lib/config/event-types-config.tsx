@@ -18,11 +18,7 @@
 
 import type { ComponentType } from 'react'
 import type { UseMutationResult } from '@tanstack/react-query'
-import type {
-  CalendarEventType,
-  AftersaleEventWithRelations,
-  VisitEventWithRelations,
-} from '@/lib/types/calendar'
+import type { CalendarEventType, VisitEventWithRelations } from '@/lib/types/calendar'
 
 // ============================================================================
 // TYPE DEFINITIONS
@@ -85,12 +81,11 @@ import {
 
 // Aftersale imports
 import { AftersaleEventCard } from '@/components/calendar/cards/aftersale-event-card'
+import { AftersaleEventDialog } from '@/components/dialogs/calendar/aftersale-event-dialog'
 import {
   useDeleteAftersaleEvent,
   useUpdateAftersaleEventDate,
 } from '@/hooks/queries/use-aftersale-events'
-// TODO: Importar cuando se cree
-// import { AftersaleEventDialog } from '@/components/dialogs/calendar/aftersale-event-dialog'
 
 // Visit imports
 import { VisitEventCard } from '@/components/calendar/cards/visit-event-card'
@@ -160,7 +155,7 @@ export const EVENT_TYPE_REGISTRY = {
   },
 
   aftersale: {
-    Dialog: StubEventDialog<AftersaleEventWithRelations>,
+    Dialog: AftersaleEventDialog,
     Card: AftersaleEventCard,
     useDeleteMutation: useDeleteAftersaleEvent,
     useUpdateDateMutation: useUpdateAftersaleEventDate,

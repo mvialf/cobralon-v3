@@ -52,6 +52,88 @@ export function useCreateAftersaleEvent() {
 }
 
 // ============================================================================
+// MUTATIONS: CREATE WITH UPDATE (Transaccional)
+// ============================================================================
+
+/**
+ * Input para crear evento con actualización de aftersale + project
+ */
+interface CreateAftersaleEventWithUpdateInput {
+  aftersaleId: string
+  scheduledDate: string
+  aftersaleStatusId: string
+  contactPhone: string
+  description?: string
+  tasks?: unknown[]
+  street: string
+  apartment: string | null
+  comuna: string
+  region: string
+}
+
+/**
+ * Response del endpoint transaccional
+ */
+interface CreateAftersaleEventWithUpdateResponse {
+  event: AftersaleEventWithRelations
+  aftersaleUpdated: boolean
+  projectUpdated: boolean
+}
+
+async function createAftersaleEventWithUpdate(
+  data: CreateAftersaleEventWithUpdateInput
+): Promise<CreateAftersaleEventWithUpdateResponse> {
+  const response = await fetch('/api/aftersale-events-with-update', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  })
+
+  if (!response.ok) {
+    const error = await response.json()
+    throw new Error(error.error || 'Error al crear evento de postventa')
+  }
+
+  return response.json()
+}
+
+/**
+ * Hook para crear evento de aftersale Y actualizar datos del aftersale + project
+ *
+ * Usa transacción atómica en el backend:
+ * 1. Actualiza Aftersale (status, phone, description, tasks)
+ * 2. Actualiza Project (dirección)
+ * 3. Crea AftersaleEvent
+ *
+ * Toast diferenciado según qué se actualizó.
+ */
+export function useCreateAftersaleEventWithUpdate() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: createAftersaleEventWithUpdate,
+    onSuccess: (result) => {
+      queryClient.invalidateQueries({ queryKey: ['calendar-events'] })
+      queryClient.invalidateQueries({ queryKey: ['aftersales'] })
+
+      // Toast diferenciado según qué se actualizó
+      if (result.aftersaleUpdated && result.projectUpdated) {
+        toast.success('Evento creado y datos de postventa y proyecto actualizados')
+      } else if (result.aftersaleUpdated) {
+        toast.success('Evento creado y datos de postventa actualizados')
+      } else if (result.projectUpdated) {
+        toast.success('Evento creado y dirección del proyecto actualizada')
+      } else {
+        toast.success('Evento de postventa creado exitosamente')
+      }
+    },
+    onError: (error) => {
+      handleMutationError(error)
+    },
+  })
+}
+
+// ============================================================================
 // MUTATIONS: UPDATE
 // ============================================================================
 

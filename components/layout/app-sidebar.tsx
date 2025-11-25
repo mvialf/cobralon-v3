@@ -140,19 +140,9 @@ const settingsItems: NavigationItem[] = [
     icon: Settings,
     items: [
       {
-        title: 'Estados de Proyecto',
-        url: '/settings/project-status',
+        title: 'Estados del Sistema',
+        url: '/settings/status-config',
         icon: BadgeCheck,
-      },
-      {
-        title: 'Estados de Postventa',
-        url: '/settings/aftersale-status',
-        icon: Headphones,
-      },
-      {
-        title: 'Estados de Visita',
-        url: '/settings/visit-status',
-        icon: Calendar,
       },
       {
         title: 'Métodos de Pago',
