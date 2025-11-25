@@ -6,8 +6,14 @@ import { Plus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { DroppableDayCell } from '../dnd/droppable-day-cell'
 import { DraggableEventCard } from '../dnd/draggable-event-card'
-import { getMonthDays, getEventsForDay, DAYS_OF_WEEK_SHORT } from '@/lib/utils/calendar-utils'
+import {
+  getMonthDays,
+  getEventsForDay,
+  DAYS_OF_WEEK_SHORT,
+  isWeekend,
+} from '@/lib/utils/calendar-utils'
 import type { CalendarEvent } from '@/lib/types/calendar'
+import { EVENT_TYPE_REGISTRY } from '@/lib/config/event-types-config'
 
 interface MonthViewProps {
   currentDate: Date
@@ -15,6 +21,7 @@ interface MonthViewProps {
   onCreateEvent?: (date: Date) => void
   onEditEvent?: (event: CalendarEvent) => void
   onDeleteEvent?: (event: CalendarEvent) => void
+  showWeekends: boolean
 }
 
 export function MonthView({
@@ -23,22 +30,25 @@ export function MonthView({
   onCreateEvent,
   onEditEvent,
   onDeleteEvent,
+  showWeekends,
 }: MonthViewProps) {
-  const monthDays = getMonthDays(currentDate)
+  const allMonthDays = getMonthDays(currentDate)
+  const monthDays = showWeekends ? allMonthDays : allMonthDays.filter((day) => !isWeekend(day))
+  const dayHeaders = showWeekends ? DAYS_OF_WEEK_SHORT : DAYS_OF_WEEK_SHORT.slice(0, 5)
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col min-h-[14rem]">
       {/* Header con nombres de días */}
-      <div className="grid grid-cols-7 gap-2 pb-3 border-b">
-        {DAYS_OF_WEEK_SHORT.map((dayName) => (
+      <div className={`grid gap-2 pb-3 border-b ${showWeekends ? 'grid-cols-7' : 'grid-cols-5'}`}>
+        {dayHeaders.map((dayName) => (
           <div key={dayName} className="text-center text-xs font-medium text-muted-foreground">
             {dayName}
           </div>
         ))}
       </div>
 
-      {/* Grid de 6 semanas x 7 días */}
-      <div className="grid grid-cols-7 gap-2 flex-1 pt-2 overflow-auto">
+      {/* Grid de días del mes */}
+      <div className={`grid gap-2 pt-2 ${showWeekends ? 'grid-cols-7' : 'grid-cols-5'}`}>
         {monthDays.map((day) => {
           const isToday = format(day, 'yyyy-MM-dd') === format(new Date(), 'yyyy-MM-dd')
           const isCurrentMonth = dateIsSameMonth(day, currentDate)
@@ -84,17 +94,19 @@ export function MonthView({
               {/* Lista de eventos del día */}
               <div className="space-y-1 flex-1 overflow-auto">
                 {dayEvents.map((event) => {
-                  if (event.type === 'project') {
-                    return (
-                      <DraggableEventCard
-                        key={event.data.id}
-                        event={event.data}
-                        onEdit={() => onEditEvent?.(event)}
-                        onDelete={() => onDeleteEvent?.(event)}
-                      />
-                    )
-                  }
-                  return null
+                  // Renderizar card dinámicamente según el tipo
+                  const EventCard = EVENT_TYPE_REGISTRY[event.type].Card
+
+                  return (
+                    <DraggableEventCard
+                      key={event.data.id}
+                      calendarEvent={event}
+                      onEdit={() => onEditEvent?.(event)}
+                      onDelete={() => onDeleteEvent?.(event)}
+                    >
+                      <EventCard event={event.data as any} />
+                    </DraggableEventCard>
+                  )
                 })}
               </div>
             </DroppableDayCell>

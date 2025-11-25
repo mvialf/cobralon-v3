@@ -3,9 +3,9 @@
 import { format, isSameDay, compareAsc } from 'date-fns'
 import { es } from 'date-fns/locale'
 import { Calendar } from 'lucide-react'
-import { ProjectEventCard } from '../project-event-card'
 import { Card } from '@/components/ui/card'
 import type { CalendarEvent } from '@/lib/types/calendar'
+import { EVENT_TYPE_REGISTRY } from '@/lib/config/event-types-config'
 
 interface AgendaViewProps {
   currentDate: Date
@@ -82,18 +82,18 @@ export function AgendaView({ events, onEditEvent, onDeleteEvent }: AgendaViewPro
               {/* Lista de eventos del día */}
               <div className="space-y-2 pl-6">
                 {dayEvents.map((event) => {
-                  if (event.type === 'project') {
-                    return (
-                      <Card key={event.data.id} className="p-3">
-                        <ProjectEventCard
-                          event={event.data}
-                          onEdit={() => onEditEvent?.(event)}
-                          onDelete={() => onDeleteEvent?.(event)}
-                        />
-                      </Card>
-                    )
-                  }
-                  return null
+                  // Renderizar card dinámicamente según el tipo
+                  const EventCard = EVENT_TYPE_REGISTRY[event.type].Card
+
+                  return (
+                    <Card key={event.data.id} className="p-3">
+                      <EventCard
+                        event={event.data as any}
+                        onEdit={() => onEditEvent?.(event)}
+                        onDelete={() => onDeleteEvent?.(event)}
+                      />
+                    </Card>
+                  )
                 })}
               </div>
             </div>

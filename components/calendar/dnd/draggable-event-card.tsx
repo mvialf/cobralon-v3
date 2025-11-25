@@ -2,24 +2,27 @@
 
 import { useDraggable } from '@dnd-kit/core'
 import { CSS } from '@dnd-kit/utilities'
-import { ProjectEventCard } from '../project-event-card'
-import type { ProjectEventWithRelations } from '@/lib/types/calendar'
+import type { CalendarEvent } from '@/lib/types/calendar'
 
 interface DraggableEventCardProps {
-  event: ProjectEventWithRelations
+  calendarEvent: CalendarEvent
   onEdit?: () => void
   onDelete?: () => void
+  children: React.ReactNode
 }
 
 /**
- * Wrapper que hace draggable un ProjectEventCard
+ * Wrapper genérico que hace draggable cualquier tipo de Event Card
+ *
+ * Refactorizado para soportar múltiples tipos de eventos (project, aftersale, visit)
+ * usando el pattern de children composition.
  */
-export function DraggableEventCard({ event, onEdit, onDelete }: DraggableEventCardProps) {
+export function DraggableEventCard({ calendarEvent, children }: DraggableEventCardProps) {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
-    id: event.id,
+    id: calendarEvent.data.id,
     data: {
-      event,
-      type: 'project-event',
+      calendarEvent, // Pasar el CalendarEvent completo para que EventCalendar pueda determinar el tipo
+      type: `${calendarEvent.type}-event`,
     },
   })
 
@@ -31,7 +34,7 @@ export function DraggableEventCard({ event, onEdit, onDelete }: DraggableEventCa
 
   return (
     <div ref={setNodeRef} style={style} {...listeners} {...attributes}>
-      <ProjectEventCard event={event} onEdit={onEdit} onDelete={onDelete} />
+      {children}
     </div>
   )
 }

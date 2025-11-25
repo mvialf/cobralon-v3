@@ -7,7 +7,7 @@ export default function CalendarPage() {
       pageTitle="Calendario"
       pageDescription="Gestión de eventos de proyectos, postventas y visitas"
     >
-      <div className="h-[calc(100vh-12rem)]">
+      <div className="min-h-[14rem]">
         <EventCalendar />
       </div>
     </AppLayout>

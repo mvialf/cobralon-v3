@@ -6,8 +6,14 @@ import { Plus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { DroppableDayCell } from '../dnd/droppable-day-cell'
 import { DraggableEventCard } from '../dnd/draggable-event-card'
-import { getWeekDays, getEventsForDay, DAYS_OF_WEEK_SHORT } from '@/lib/utils/calendar-utils'
+import {
+  getWeekDays,
+  getEventsForDay,
+  DAYS_OF_WEEK_SHORT,
+  isWeekend,
+} from '@/lib/utils/calendar-utils'
 import type { CalendarEvent } from '@/lib/types/calendar'
+import { EVENT_TYPE_REGISTRY } from '@/lib/config/event-types-config'
 
 interface WeekViewProps {
   currentDate: Date
@@ -15,6 +21,7 @@ interface WeekViewProps {
   onCreateEvent?: (date: Date) => void
   onEditEvent?: (event: CalendarEvent) => void
   onDeleteEvent?: (event: CalendarEvent) => void
+  showWeekends: boolean
 }
 
 export function WeekView({
@@ -23,19 +30,22 @@ export function WeekView({
   onCreateEvent,
   onEditEvent,
   onDeleteEvent,
+  showWeekends,
 }: WeekViewProps) {
-  const weekDays = getWeekDays(currentDate)
+  const allWeekDays = getWeekDays(currentDate)
+  const weekDays = showWeekends ? allWeekDays : allWeekDays.filter((day) => !isWeekend(day))
+  const dayHeaders = showWeekends ? DAYS_OF_WEEK_SHORT : DAYS_OF_WEEK_SHORT.slice(0, 5)
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col min-h-[14rem]">
       {/* Header con nombres de días */}
-      <div className="grid grid-cols-7 gap-2 pb-3 border-b">
+      <div className={`grid gap-2 pb-3 border-b ${showWeekends ? 'grid-cols-7' : 'grid-cols-5'}`}>
         {weekDays.map((day, index) => {
           const isToday = format(day, 'yyyy-MM-dd') === format(new Date(), 'yyyy-MM-dd')
 
           return (
             <div key={day.toISOString()} className="text-center">
-              <div className="text-xs text-muted-foreground mb-1">{DAYS_OF_WEEK_SHORT[index]}</div>
+              <div className="text-xs text-muted-foreground mb-1">{dayHeaders[index]}</div>
               <div
                 className={`text-lg font-semibold ${
                   isToday
@@ -51,7 +61,7 @@ export function WeekView({
       </div>
 
       {/* Grid de días con eventos */}
-      <div className="grid grid-cols-7 gap-2 flex-1 pt-4 overflow-auto">
+      <div className={`grid gap-2 pt-4 ${showWeekends ? 'grid-cols-7' : 'grid-cols-5'}`}>
         {weekDays.map((day) => {
           const dayEvents = getEventsForDay(events, day)
 
@@ -75,17 +85,19 @@ export function WeekView({
               {/* Lista de eventos del día */}
               <div className="space-y-2 flex-1">
                 {dayEvents.map((event) => {
-                  if (event.type === 'project') {
-                    return (
-                      <DraggableEventCard
-                        key={event.data.id}
-                        event={event.data}
-                        onEdit={() => onEditEvent?.(event)}
-                        onDelete={() => onDeleteEvent?.(event)}
-                      />
-                    )
-                  }
-                  return null
+                  // Renderizar card dinámicamente según el tipo
+                  const EventCard = EVENT_TYPE_REGISTRY[event.type].Card
+
+                  return (
+                    <DraggableEventCard
+                      key={event.data.id}
+                      calendarEvent={event}
+                      onEdit={() => onEditEvent?.(event)}
+                      onDelete={() => onDeleteEvent?.(event)}
+                    >
+                      <EventCard event={event.data as any} />
+                    </DraggableEventCard>
+                  )
                 })}
               </div>
             </DroppableDayCell>

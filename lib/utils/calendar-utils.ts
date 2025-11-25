@@ -122,6 +122,14 @@ export const EVENT_TYPE_COLORS = {
 export const DAYS_OF_WEEK_SHORT = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom']
 
 /**
+ * Verifica si una fecha es fin de semana (sábado o domingo)
+ */
+export function isWeekend(date: Date): boolean {
+  const day = date.getDay()
+  return day === 0 || day === 6 // Domingo (0) o Sábado (6)
+}
+
+/**
  * Navegar a siguiente/anterior periodo
  */
 export function navigateDate(
