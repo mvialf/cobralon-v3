@@ -1,4 +1,4 @@
-import { MapPin, Hash, Ruler, CheckCircle } from 'lucide-react'
+import { MapPin, Hash, Ruler, CheckCircle, Users } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { ProjectNameSummary } from '@/components/summarys/project-name-summary'
 import { cn } from '@/lib/utils'
@@ -22,6 +22,14 @@ interface ProjectEventSummaryProps {
   } | null
   comuna?: string | null
   uninstallTags?: Array<{
+    id: string
+    name: string
+    color: {
+      bgClass: string
+      textClass?: string
+    }
+  }> | null
+  teamTags?: Array<{
     id: string
     name: string
     color: {
@@ -56,6 +64,7 @@ export function ProjectEventSummary({
   projectStatus,
   comuna,
   uninstallTags,
+  teamTags,
   windowsCount,
   squareMeters,
   tasks,
@@ -119,6 +128,24 @@ export function ProjectEventSummary({
             ))}
           </div>
         ))()}
+
+      {/* Team Tags - Integrantes asignados */}
+      {Array.isArray(teamTags) && teamTags.length > 0 && (
+        <div className="flex items-center gap-1.5">
+          <Users className="h-3.5 w-3.5 text-muted-foreground" />
+          <div className="flex flex-wrap gap-1">
+            {teamTags.map((tag) => (
+              <Badge
+                key={tag.id}
+                variant="outline"
+                className={cn('text-xs font-normal', tag.color.bgClass, tag.color.textClass)}
+              >
+                {tag.name}
+              </Badge>
+            ))}
+          </div>
+        </div>
+      )}
 
       {hasSpecs && (
         <div className="flex items-center gap-3 text-xs text-muted-foreground">

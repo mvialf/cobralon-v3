@@ -57,6 +57,14 @@ export function VisitEventCard({ event, onEdit, onDelete }: VisitEventCardProps)
             textClass: visitStatus.color.textClass || undefined,
           },
         }}
+        teamTags={event.teamTags?.map((tag) => ({
+          id: tag.id,
+          name: tag.name,
+          color: {
+            bgClass: tag.color.bgClass,
+            textClass: tag.color.textClass || undefined,
+          },
+        }))}
       />
     </div>
   )

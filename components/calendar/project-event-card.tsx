@@ -67,6 +67,14 @@ export function ProjectEventCard({ event, onEdit, onDelete }: ProjectEventCardPr
             textClass: tag.color.textClass || undefined,
           },
         }))}
+        teamTags={event.teamTags?.map((tag) => ({
+          id: tag.id,
+          name: tag.name,
+          color: {
+            bgClass: tag.color.bgClass,
+            textClass: tag.color.textClass || undefined,
+          },
+        }))}
         windowsCount={project.windowsCount}
         squareMeters={Number(project.squareMeters)}
         tasks={event.tasks}

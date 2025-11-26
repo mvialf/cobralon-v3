@@ -1,4 +1,4 @@
-import { MapPin, Phone } from 'lucide-react'
+import { MapPin, Phone, Users } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { cn } from '@/lib/utils'
 import { EVENT_TYPE_BORDER_COLORS } from '@/lib/constants/calendar'
@@ -17,6 +17,14 @@ interface VisitEventSummaryProps {
       textClass?: string
     }
   } | null
+  teamTags?: Array<{
+    id: string
+    name: string
+    color: {
+      bgClass: string
+      textClass?: string
+    }
+  }> | null
   className?: string
 }
 
@@ -42,6 +50,7 @@ export function VisitEventSummary({
   phone,
   observations,
   visitStatus,
+  teamTags,
   className,
 }: VisitEventSummaryProps) {
   // Construir dirección completa
@@ -85,6 +94,24 @@ export function VisitEventSummary({
           >
             {visitStatus.name}
           </Badge>
+        </div>
+      )}
+
+      {/* Team Tags - Integrantes asignados */}
+      {Array.isArray(teamTags) && teamTags.length > 0 && (
+        <div className="flex items-center gap-1.5">
+          <Users className="h-3.5 w-3.5 text-muted-foreground" />
+          <div className="flex flex-wrap gap-1">
+            {teamTags.map((tag) => (
+              <Badge
+                key={tag.id}
+                variant="outline"
+                className={cn('text-xs font-normal', tag.color.bgClass, tag.color.textClass)}
+              >
+                {tag.name}
+              </Badge>
+            ))}
+          </div>
         </div>
       )}
 

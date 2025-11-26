@@ -57,6 +57,14 @@ export function AftersaleEventCard({ event, onEdit, onDelete }: AftersaleEventCa
           },
         }}
         contactPhone={aftersale.contactPhone}
+        teamTags={event.teamTags?.map((tag) => ({
+          id: tag.id,
+          name: tag.name,
+          color: {
+            bgClass: tag.color.bgClass,
+            textClass: tag.color.textClass || undefined,
+          },
+        }))}
         tasks={aftersale.tasks}
       />
     </div>

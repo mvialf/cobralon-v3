@@ -1,4 +1,4 @@
-import { Wrench, Phone, CheckCircle } from 'lucide-react'
+import { Wrench, Phone, CheckCircle, Users } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { ProjectNameSummary } from '@/components/summarys/project-name-summary'
 import { cn } from '@/lib/utils'
@@ -22,6 +22,14 @@ interface AftersaleEventSummaryProps {
     }
   } | null
   contactPhone?: string | null
+  teamTags?: Array<{
+    id: string
+    name: string
+    color: {
+      bgClass: string
+      textClass?: string
+    }
+  }> | null
   tasks?: unknown | null
   className?: string
 }
@@ -48,6 +56,7 @@ export function AftersaleEventSummary({
   description,
   aftersaleStatus,
   contactPhone,
+  teamTags,
   tasks,
   className,
 }: AftersaleEventSummaryProps) {
@@ -98,6 +107,24 @@ export function AftersaleEventSummary({
           >
             {aftersaleStatus.name}
           </Badge>
+        </div>
+      )}
+
+      {/* Team Tags - Integrantes asignados */}
+      {Array.isArray(teamTags) && teamTags.length > 0 && (
+        <div className="flex items-center gap-1.5">
+          <Users className="h-3.5 w-3.5 text-muted-foreground" />
+          <div className="flex flex-wrap gap-1">
+            {teamTags.map((tag) => (
+              <Badge
+                key={tag.id}
+                variant="outline"
+                className={cn('text-xs font-normal', tag.color.bgClass, tag.color.textClass)}
+              >
+                {tag.name}
+              </Badge>
+            ))}
+          </div>
         </div>
       )}
 
