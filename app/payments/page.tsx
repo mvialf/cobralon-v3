@@ -1,8 +1,8 @@
 'use client'
 
-import { useState, useMemo, useEffect } from 'react'
+import { useState, useMemo, useEffect, useCallback } from 'react'
 import { type PaginationState } from '@tanstack/react-table'
-import { Plus, Upload } from 'lucide-react'
+import { Plus, Upload, Download } from 'lucide-react'
 import { useQueryClient } from '@tanstack/react-query'
 import Link from 'next/link'
 import { AppLayout } from '@/components/layout/app-layout'
@@ -12,6 +12,16 @@ import { PaymentDetailsDialog } from '@/components/dialogs/payments/payment-deta
 import { PaymentToProjectDialog } from '@/components/dialogs/payments/payment-to-project-dialog'
 import { PaymentToCustomerDialog } from '@/components/dialogs/payments/payment-to-customer-dialog'
 import { Button } from '@/components/ui/button'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -28,6 +38,8 @@ import { useDebounce } from '@/hooks/use-debounce'
 
 export default function PaymentsPage() {
   const queryClient = useQueryClient()
+  const [isExporting, setIsExporting] = useState(false)
+  const [showExportDialog, setShowExportDialog] = useState(false)
 
   // Estado de paginación server-side
   const [pagination, setPagination] = useState<PaginationState>({
@@ -38,6 +50,39 @@ export default function PaymentsPage() {
   // Estado de búsqueda con debounce
   const [searchTerm, setSearchTerm] = useState('')
   const debouncedSearch = useDebounce(searchTerm, 500)
+
+  // Handler para exportar pagos a Excel
+  const handleExport = useCallback(async (options?: { type?: 'Project' | 'Customer' | 'all' }) => {
+    setIsExporting(true)
+    setShowExportDialog(false)
+    try {
+      const params = new URLSearchParams()
+      if (options?.type && options.type !== 'all') params.append('type', options.type)
+
+      const response = await fetch(`/api/payments/export?${params}`)
+
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.error || 'Error al exportar')
+      }
+
+      // Descargar el archivo
+      const blob = await response.blob()
+      const url = URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = url
+      link.download = `pagos-${new Date().toISOString().split('T')[0]}.xlsx`
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      URL.revokeObjectURL(url)
+    } catch (error) {
+      console.error('Error exportando pagos:', error)
+      // TODO: Mostrar toast de error
+    } finally {
+      setIsExporting(false)
+    }
+  }, [])
 
   // Query params para usePayments (useMemo para evitar recreación en cada render)
   const queryParams: PaymentsQueryParams = useMemo(
@@ -171,6 +216,14 @@ export default function PaymentsPage() {
       breadcrumbs={[{ label: 'Inicio', href: '/' }, { label: 'Pagos' }]}
       action={
         <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            onClick={() => setShowExportDialog(true)}
+            disabled={isExporting}
+          >
+            <Download className="h-4 w-4 mr-2" />
+            {isExporting ? 'Exportando...' : 'Exportar'}
+          </Button>
           <Button variant="outline" asChild>
             <Link href="/settings/import?tab=payments">
               <Upload className="h-4 w-4 mr-2" />
@@ -262,6 +315,39 @@ export default function PaymentsPage() {
         onOpenChange={setIsPaymentToCustomerDialogOpen}
         onSuccess={handleSuccess}
       />
+
+      {/* Diálogo de exportación */}
+      <AlertDialog open={showExportDialog} onOpenChange={setShowExportDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Qué deseas exportar?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Selecciona el tipo de pagos que deseas exportar a Excel.
+              {data?.pagination.total !== undefined && (
+                <span className="block mt-2 font-medium">
+                  ({data.pagination.total} pago{data.pagination.total !== 1 ? 's' : ''} en total)
+                </span>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="flex-col sm:flex-row gap-2">
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => handleExport({ type: 'Project' })}
+              className="bg-secondary text-secondary-foreground hover:bg-secondary/80"
+            >
+              Solo Proyectos
+            </AlertDialogAction>
+            <AlertDialogAction
+              onClick={() => handleExport({ type: 'Customer' })}
+              className="bg-secondary text-secondary-foreground hover:bg-secondary/80"
+            >
+              Solo Clientes
+            </AlertDialogAction>
+            <AlertDialogAction onClick={() => handleExport()}>Exportar todos</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </AppLayout>
   )
 }
