@@ -18,7 +18,7 @@
 
 import type { ComponentType } from 'react'
 import type { UseMutationResult } from '@tanstack/react-query'
-import type { CalendarEventType, VisitEventWithRelations } from '@/lib/types/calendar'
+import type { CalendarEventType } from '@/lib/types/calendar'
 
 // ============================================================================
 // TYPE DEFINITIONS

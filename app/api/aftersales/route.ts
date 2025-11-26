@@ -55,6 +55,7 @@ const createAftersaleSchema = z.object({
 export async function GET() {
   try {
     const aftersales = await prisma.aftersale.findMany({
+      relationLoadStrategy: 'join', // Evita N+1 queries
       orderBy: {
         reportedAt: 'desc', // Más recientes primero
       },

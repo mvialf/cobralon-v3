@@ -174,10 +174,13 @@ export function Combobox<T>({
 }: ComboboxProps<T>) {
   const [open, setOpen] = React.useState(false)
 
+  // Asegurar que options siempre sea un array (manejo defensivo)
+  const safeOptions = React.useMemo(() => (Array.isArray(options) ? options : []), [options])
+
   // Encontrar opción seleccionada
   const selectedOption = React.useMemo(
-    () => options.find((option) => getOptionValue(option) === value),
-    [options, value, getOptionValue]
+    () => safeOptions.find((option) => getOptionValue(option) === value),
+    [safeOptions, value, getOptionValue]
   )
 
   // Handler para cambio de open state
@@ -235,7 +238,7 @@ export function Combobox<T>({
           <CommandList id={listboxId}>
             <CommandEmpty>{emptyMessage}</CommandEmpty>
             <CommandGroup>
-              {options.map((option) => {
+              {safeOptions.map((option) => {
                 const optionValue = getOptionValue(option)
                 const isSelected = optionValue === value
 

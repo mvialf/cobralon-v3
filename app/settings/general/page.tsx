@@ -80,7 +80,7 @@ export default function GeneralSettingsPage() {
                         codigo: r.codigo,
                         displayText: `${r.nombre_corto} (${r.numero_romano})`,
                       }))}
-                      getOptionValue={(r) => r.displayText}
+                      getOptionValue={(r) => r.codigo}
                       getOptionLabel={(r) => r.displayText}
                       placeholder="Selecciona una región..."
                       searchPlaceholder="Buscar región..."
