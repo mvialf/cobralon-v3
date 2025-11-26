@@ -22,6 +22,8 @@ import {
   PanelRightOpen,
   PanelRightClose,
   Calendar,
+  Upload,
+  Download,
 } from 'lucide-react'
 
 import {
@@ -148,6 +150,16 @@ const settingsItems: NavigationItem[] = [
         title: 'Métodos de Pago',
         url: '/settings/payments',
         icon: Wallet,
+      },
+      {
+        title: 'Importar Datos',
+        url: '/settings/import',
+        icon: Upload,
+      },
+      {
+        title: 'Exportar Datos',
+        url: '/settings/export',
+        icon: Download,
       },
     ],
   },
