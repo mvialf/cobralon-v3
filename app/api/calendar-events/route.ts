@@ -43,8 +43,9 @@ export const GET = withLogging(async (request, logger) => {
 
     const { start, end } = validationResult.data
 
-    // Fetch ProjectEvents en paralelo
+    // Fetch ProjectEvents con relación M:M de uninstallTags y teamTags
     const projectEvents = await prisma.projectEvent.findMany({
+      relationLoadStrategy: 'join', // Evita N+1 queries
       where: {
         scheduledDate: {
           gte: start,
@@ -60,39 +61,31 @@ export const GET = withLogging(async (request, logger) => {
                 color: true,
               },
             },
+            // Relación M:M con UninstallTags (elimina workaround manual)
+            uninstallTags: {
+              include: {
+                uninstallTag: {
+                  include: {
+                    color: true,
+                  },
+                },
+              },
+            },
+          },
+        },
+        // TeamTags asignados al evento
+        teamTags: {
+          include: {
+            color: true,
           },
         },
       },
-      orderBy: {
-        scheduledDate: 'asc',
-      },
+      orderBy: [{ scheduledDate: 'asc' }, { order: 'asc' }],
     })
-
-    // Extraer todos los uninstallTagIds únicos de todos los proyectos
-    const allTagIds = Array.from(
-      new Set(projectEvents.flatMap((event) => event.project.uninstallTagIds))
-    )
-
-    // Fetch todos los tags necesarios con sus colores
-    const uninstallTags =
-      allTagIds.length > 0
-        ? await prisma.uninstallTag.findMany({
-            where: {
-              id: {
-                in: allTagIds,
-              },
-            },
-            include: {
-              color: true,
-            },
-          })
-        : []
-
-    // Crear Map para acceso rápido
-    const tagsMap = new Map(uninstallTags.map((tag) => [tag.id, tag]))
 
     // Fetch AftersaleEvents en paralelo
     const aftersaleEvents = await prisma.aftersaleEvent.findMany({
+      relationLoadStrategy: 'join', // Evita N+1 queries
       where: {
         scheduledDate: {
           gte: start,
@@ -114,14 +107,19 @@ export const GET = withLogging(async (request, logger) => {
             },
           },
         },
+        // TeamTags asignados al evento
+        teamTags: {
+          include: {
+            color: true,
+          },
+        },
       },
-      orderBy: {
-        scheduledDate: 'asc',
-      },
+      orderBy: [{ scheduledDate: 'asc' }, { order: 'asc' }],
     })
 
     // Fetch VisitEvents en paralelo
     const visitEvents = await prisma.visitEvent.findMany({
+      relationLoadStrategy: 'join', // Evita N+1 queries
       where: {
         scheduledDate: {
           gte: start,
@@ -138,10 +136,14 @@ export const GET = withLogging(async (request, logger) => {
             },
           },
         },
+        // TeamTags asignados al evento
+        teamTags: {
+          include: {
+            color: true,
+          },
+        },
       },
-      orderBy: {
-        scheduledDate: 'asc',
-      },
+      orderBy: [{ scheduledDate: 'asc' }, { order: 'asc' }],
     })
 
     // Unificar eventos con tipo discriminado
@@ -164,10 +166,8 @@ export const GET = withLogging(async (request, logger) => {
             ...event.project.customer,
             creditBalance: Number(event.project.customer.creditBalance),
           },
-          // Mapear uninstallTagIds a objetos completos
-          uninstallTags: event.project.uninstallTagIds
-            .map((tagId) => tagsMap.get(tagId))
-            .filter((tag): tag is NonNullable<typeof tag> => tag !== undefined),
+          // Usar relación M:M directamente (elimina workaround de lookup manual)
+          uninstallTags: event.project.uninstallTags.map((rel) => rel.uninstallTag),
         },
       },
     }))

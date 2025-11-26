@@ -23,6 +23,9 @@ import {
   type VisitSearchResult,
 } from '@/components/forms/search/visit-search-field'
 import { AddressFields } from '@/components/forms/fields/address-fields'
+import { TagSelector } from '@/components/custom/tag-system'
+import { useTeamTags, type TeamTag } from '@/hooks/use-team-tags'
+import { cn } from '@/lib/utils'
 import {
   Form,
   FormControl,
@@ -47,6 +50,15 @@ export const VisitEventForm = React.forwardRef<VisitEventFormHandle, VisitEventF
     // Fetch visit statuses usando hook compartido con caché
     const { data: visitStatuses = [], isLoading: loadingStatuses } = useVisitStatuses()
 
+    // Hook para team tags (integrantes del equipo)
+    const {
+      availableTags: availableTeamTags,
+      availableColors: teamTagColors,
+      createTag: createTeamTag,
+      editTag: editTeamTag,
+      deleteTag: deleteTeamTag,
+    } = useTeamTags()
+
     // State para detalles de la visita seleccionada
     const [visitDetails, setVisitDetails] = React.useState<VisitSearchResult | null>(null)
 
@@ -63,6 +75,7 @@ export const VisitEventForm = React.forwardRef<VisitEventFormHandle, VisitEventF
         apartment: null,
         comuna: '',
         region: '',
+        teamTagIds: [],
         ...defaultValues,
       },
     })
@@ -128,6 +141,8 @@ export const VisitEventForm = React.forwardRef<VisitEventFormHandle, VisitEventF
             apartment: data.apartment || null,
             comuna: data.comuna,
             region: regionCodigo,
+            // Team tags (inicialmente vacío, se cargarán cuando existan eventos)
+            teamTagIds: [],
           }
 
           console.log('📝 Setting form values:', formData)
@@ -280,6 +295,45 @@ export const VisitEventForm = React.forwardRef<VisitEventFormHandle, VisitEventF
 
             {/* Dirección */}
             <AddressFields control={form.control} disabled={!visitDetails} />
+
+            {/* Team Tags - Integrantes asignados al evento */}
+            <FormField
+              control={form.control}
+              name="teamTagIds"
+              render={({ field }) => {
+                // Transformar IDs a objetos TeamTag completos para TagSelector
+                const selectedTeamTagObjects =
+                  (field.value
+                    ?.map((id) => availableTeamTags.find((tag) => tag.id === id))
+                    .filter(Boolean) as TeamTag[]) || []
+
+                // Handler: recibir objetos TeamTag, enviar IDs al form
+                const handleTeamTagChange = (tags: TeamTag[]) => {
+                  field.onChange(tags.map((t) => t.id))
+                }
+
+                return (
+                  <FormItem>
+                    <FormControl>
+                      <div className={cn(!visitDetails && 'opacity-50 pointer-events-none')}>
+                        <TagSelector
+                          selectedTags={selectedTeamTagObjects}
+                          availableTags={availableTeamTags}
+                          availableColors={teamTagColors}
+                          onTagsChange={handleTeamTagChange}
+                          onCreateTag={createTeamTag}
+                          onEditTag={editTeamTag}
+                          onDeleteTag={deleteTeamTag}
+                          label="Integrantes"
+                          showFullNameInSelected
+                        />
+                      </div>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )
+              }}
+            />
 
             {/* Observaciones */}
             <FormField

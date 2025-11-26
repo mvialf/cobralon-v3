@@ -3,6 +3,9 @@ import { normalizePhone } from '@/lib/utils/phone'
 import { todoListOptionalSchema } from '@/lib/validations/todo-validations'
 import type { TodoItem } from '@/hooks/use-todo-list'
 
+// Schema para teamTagIds (integrantes asignados al evento)
+const teamTagIdsSchema = z.array(z.string().uuid()).optional().nullable().default([])
+
 // Schema base para eventos
 const baseEventSchema = z.object({
   scheduledDate: z.coerce.date({
@@ -10,6 +13,7 @@ const baseEventSchema = z.object({
     invalid_type_error: 'Fecha inválida',
   }),
   tasks: todoListOptionalSchema.optional(),
+  teamTagIds: teamTagIdsSchema,
 })
 
 // ProjectEvent schemas
@@ -27,6 +31,7 @@ export const createAftersaleEventSchema = z.object({
     invalid_type_error: 'Fecha inválida',
   }),
   notes: z.string().nullable().optional(),
+  teamTagIds: teamTagIdsSchema,
 })
 
 export const updateAftersaleEventSchema = z.object({
@@ -36,6 +41,7 @@ export const updateAftersaleEventSchema = z.object({
     })
     .optional(),
   notes: z.string().nullable().optional(),
+  teamTagIds: teamTagIdsSchema,
 })
 
 // VisitEvent schemas
@@ -46,6 +52,7 @@ export const createVisitEventSchema = z.object({
     invalid_type_error: 'Fecha inválida',
   }),
   notes: z.string().nullable().optional(),
+  teamTagIds: teamTagIdsSchema,
 })
 
 export const updateVisitEventSchema = z.object({
@@ -55,6 +62,7 @@ export const updateVisitEventSchema = z.object({
     })
     .optional(),
   notes: z.string().nullable().optional(),
+  teamTagIds: teamTagIdsSchema,
 })
 
 /**
@@ -90,6 +98,7 @@ export const createProjectEventWithProjectUpdateSchema = z.object({
     .min(0, 'Los m² no pueden ser negativos'),
   description: z.string().nullable(),
   uninstallTagIds: z.array(z.string().uuid()).optional().nullable().default([]),
+  teamTagIds: teamTagIdsSchema,
 })
 
 // Schema para query params (rango de fechas)
@@ -102,9 +111,25 @@ export const calendarQuerySchema = z.object({
   }),
 })
 
+// Schema para reordenar eventos dentro de un día
+export const reorderEventsSchema = z.object({
+  events: z
+    .array(
+      z.object({
+        id: z.string().uuid('ID de evento inválido'),
+        type: z.enum(['project', 'aftersale', 'visit'], {
+          errorMap: () => ({ message: 'Tipo de evento inválido' }),
+        }),
+        order: z.number().int().min(0, 'El orden debe ser un número positivo'),
+      })
+    )
+    .min(1, 'Se requiere al menos un evento'),
+})
+
 // Types inferidos
 export type CreateProjectEventInput = z.infer<typeof createProjectEventSchema>
 export type UpdateProjectEventInput = z.infer<typeof updateProjectEventSchema>
+export type ReorderEventsInput = z.infer<typeof reorderEventsSchema>
 export type CreateProjectEventWithProjectUpdateInput = z.infer<
   typeof createProjectEventWithProjectUpdateSchema
 >
@@ -133,4 +158,5 @@ export type ProjectEventWithProjectUpdateFormValues = {
   squareMeters: number
   description: string | null
   uninstallTagIds: string[] | null
+  teamTagIds: string[] | null
 }

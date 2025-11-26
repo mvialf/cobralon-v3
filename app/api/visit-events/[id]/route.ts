@@ -89,13 +89,23 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
       }
     }
 
+    // Construir data para update
+    const updateData: Record<string, any> = {
+      scheduledDate: data.scheduledDate,
+      notes: data.notes,
+    }
+
+    // Manejar teamTags: usar 'set' para reemplazar todos los teamTags
+    if (data.teamTagIds !== undefined) {
+      updateData.teamTags = {
+        set: data.teamTagIds?.map((id) => ({ id })) || [],
+      }
+    }
+
     // Actualizar evento
     const updatedEvent = await prisma.visitEvent.update({
       where: { id },
-      data: {
-        scheduledDate: data.scheduledDate,
-        notes: data.notes,
-      },
+      data: updateData,
       include: {
         visit: {
           include: {
@@ -104,6 +114,11 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
                 color: true,
               },
             },
+          },
+        },
+        teamTags: {
+          include: {
+            color: true,
           },
         },
       },

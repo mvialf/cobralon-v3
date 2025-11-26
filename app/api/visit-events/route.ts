@@ -56,12 +56,19 @@ export async function POST(request: Request) {
       )
     }
 
-    // Crear evento
+    // Crear evento con teamTags si se proporcionan
     const newEvent = await prisma.visitEvent.create({
       data: {
         visitId: data.visitId,
         scheduledDate: data.scheduledDate,
         notes: data.notes,
+        // Conectar teamTags si se proporcionan
+        ...(data.teamTagIds &&
+          data.teamTagIds.length > 0 && {
+            teamTags: {
+              connect: data.teamTagIds.map((id) => ({ id })),
+            },
+          }),
       },
       include: {
         visit: {
@@ -71,6 +78,11 @@ export async function POST(request: Request) {
                 color: true,
               },
             },
+          },
+        },
+        teamTags: {
+          include: {
+            color: true,
           },
         },
       },

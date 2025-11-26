@@ -63,18 +63,30 @@ export const POST = withLogging(async (request, logger) => {
       )
     }
 
-    // Crear evento
+    // Crear evento con teamTags si se proporcionan
     const event = await prisma.projectEvent.create({
       data: {
         projectId: data.projectId,
         scheduledDate: data.scheduledDate,
         tasks: data.tasks || [],
+        // Conectar teamTags si se proporcionan
+        ...(data.teamTagIds &&
+          data.teamTagIds.length > 0 && {
+            teamTags: {
+              connect: data.teamTagIds.map((id) => ({ id })),
+            },
+          }),
       },
       include: {
         project: {
           include: {
             customer: true,
             projectStatus: true,
+          },
+        },
+        teamTags: {
+          include: {
+            color: true,
           },
         },
       },

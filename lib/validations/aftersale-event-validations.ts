@@ -40,6 +40,9 @@ export const createAftersaleEventWithUpdateSchema = z.object({
   apartment: z.string().nullable(),
   comuna: z.string().min(1, 'La comuna es obligatoria'),
   region: z.string().min(1, 'La región es obligatoria'),
+
+  // Team tags (integrantes asignados al evento)
+  teamTagIds: z.array(z.string().uuid()).optional().nullable().default([]),
 })
 
 /**
@@ -63,4 +66,5 @@ export type AftersaleEventWithUpdateFormValues = {
   apartment: string | null
   comuna: string
   region: string
+  teamTagIds: string[] | null
 }

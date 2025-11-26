@@ -39,6 +39,9 @@ export const createVisitEventWithUpdateSchema = z.object({
   apartment: z.string().nullable().optional(),
   comuna: z.string().min(1, 'La comuna es obligatoria'),
   region: z.string().min(1, 'La región es obligatoria'),
+
+  // Team tags (integrantes asignados al evento)
+  teamTagIds: z.array(z.string().uuid()).optional().nullable().default([]),
 })
 
 /**
@@ -60,4 +63,5 @@ export type VisitEventWithUpdateFormValues = {
   apartment?: string | null
   comuna: string
   region: string
+  teamTagIds: string[] | null
 }

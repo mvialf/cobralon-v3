@@ -111,11 +111,18 @@ export const PUT = withLogging(async (request, logger, context) => {
       )
     }
 
-    const { scheduledDate } = validationResult.data
+    const { scheduledDate, teamTagIds } = validationResult.data
 
     // Construir data para update
     const eventData: Record<string, any> = {}
     if (scheduledDate !== undefined) eventData.scheduledDate = scheduledDate
+
+    // Manejar teamTags: usar 'set' para reemplazar todos los teamTags
+    if (teamTagIds !== undefined) {
+      eventData.teamTags = {
+        set: teamTagIds?.map((id) => ({ id })) || [],
+      }
+    }
 
     // Actualizar evento
     const event = await prisma.projectEvent.update({
@@ -126,6 +133,11 @@ export const PUT = withLogging(async (request, logger, context) => {
           include: {
             customer: true,
             projectStatus: true,
+          },
+        },
+        teamTags: {
+          include: {
+            color: true,
           },
         },
       },

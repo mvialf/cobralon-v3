@@ -21,6 +21,7 @@ import { AddressFields } from '@/components/forms/fields/address-fields'
 import { ProjectDetailsFields } from '@/components/forms/fields/project-details-fields'
 import { TagSelector } from '@/components/custom/tag-system'
 import { useUninstallTags } from '@/hooks/use-uninstall-tags'
+import { useTeamTags, type TeamTag } from '@/hooks/use-team-tags'
 import type { UninstallTag } from '@/components/custom/tag-system/types'
 import { TodoListField } from '@/components/custom/todo'
 import { cn } from '@/lib/utils'
@@ -59,6 +60,15 @@ export const ProjectEventForm = React.forwardRef<ProjectEventFormHandle, Project
       deleteTag,
       loading: _loadingTags,
     } = useUninstallTags()
+
+    // Hook para team tags (integrantes del equipo)
+    const {
+      availableTags: availableTeamTags,
+      availableColors: teamTagColors,
+      createTag: createTeamTag,
+      editTag: editTeamTag,
+      deleteTag: deleteTeamTag,
+    } = useTeamTags()
 
     // State para detalles del proyecto seleccionado
     const [projectDetails, setProjectDetails] = React.useState<{
@@ -101,6 +111,7 @@ export const ProjectEventForm = React.forwardRef<ProjectEventFormHandle, Project
         squareMeters: 0,
         description: null,
         uninstallTagIds: [],
+        teamTagIds: [],
         tasks: [],
         ...defaultValues,
       },
@@ -137,7 +148,12 @@ export const ProjectEventForm = React.forwardRef<ProjectEventFormHandle, Project
         .then((data) => {
           console.log('📦 Project data received:', data)
           console.log('🎨 Project status:', data.projectStatus)
-          console.log('🏷️ UninstallTagIds from API:', data.uninstallTagIds)
+
+          // Extraer tag IDs desde la relación M:M o usar legacy field
+          const tagIds = data.uninstallTags
+            ? data.uninstallTags.map((rel: { uninstallTagId: string }) => rel.uninstallTagId)
+            : data.uninstallTagIds || []
+          console.log('🏷️ UninstallTagIds from API:', tagIds)
 
           const details = {
             projectNumber: data.projectNumber,
@@ -184,13 +200,13 @@ export const ProjectEventForm = React.forwardRef<ProjectEventFormHandle, Project
             windowsCount: data.windowsCount,
             squareMeters: Number(data.squareMeters),
             description: data.description || null,
-            uninstallTagIds: data.uninstallTagIds || [],
+            uninstallTagIds: tagIds,
             tasks: data.tasks || [],
           }
 
           console.log('📝 Setting form values:', formData)
           console.log('🔖 ProjectStatusId being set:', formData.projectStatusId)
-          console.log('🏷️ UninstallTagIds being set:', formData.uninstallTagIds)
+          console.log('🏷️ UninstallTagIds being set:', tagIds)
           console.log('🗺️ Region converted:', data.region, '→', regionCodigo)
 
           form.reset(formData)
@@ -347,6 +363,45 @@ export const ProjectEventForm = React.forwardRef<ProjectEventFormHandle, Project
                           onEditTag={editTag}
                           onDeleteTag={deleteTag}
                           label="Desinstalación"
+                          showFullNameInSelected
+                        />
+                      </div>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )
+              }}
+            />
+
+            {/* Team Tags - Integrantes asignados al evento */}
+            <FormField
+              control={form.control}
+              name="teamTagIds"
+              render={({ field }) => {
+                // Transformar IDs a objetos TeamTag completos para TagSelector
+                const selectedTeamTagObjects =
+                  (field.value
+                    ?.map((id) => availableTeamTags.find((tag) => tag.id === id))
+                    .filter(Boolean) as TeamTag[]) || []
+
+                // Handler: recibir objetos TeamTag, enviar IDs al form
+                const handleTeamTagChange = (tags: TeamTag[]) => {
+                  field.onChange(tags.map((t) => t.id))
+                }
+
+                return (
+                  <FormItem>
+                    <FormControl>
+                      <div className={cn(!projectDetails && 'opacity-50 pointer-events-none')}>
+                        <TagSelector
+                          selectedTags={selectedTeamTagObjects}
+                          availableTags={availableTeamTags}
+                          availableColors={teamTagColors}
+                          onTagsChange={handleTeamTagChange}
+                          onCreateTag={createTeamTag}
+                          onEditTag={editTeamTag}
+                          onDeleteTag={deleteTeamTag}
+                          label="Integrantes"
                           showFullNameInSelected
                         />
                       </div>
