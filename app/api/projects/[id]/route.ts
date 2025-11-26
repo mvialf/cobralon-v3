@@ -43,6 +43,15 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
             allocatedAmount: true,
           },
         },
+        uninstallTags: {
+          include: {
+            uninstallTag: {
+              include: {
+                color: true,
+              },
+            },
+          },
+        },
       },
     })
 
@@ -145,34 +154,65 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
     if (body.windowsCount !== undefined) updateData.windowsCount = body.windowsCount
     if (body.squareMeters !== undefined) updateData.squareMeters = new Decimal(body.squareMeters)
     if (body.description !== undefined) updateData.description = body.description?.trim() || null
-    if (body.uninstallTagIds !== undefined) {
-      updateData.uninstallTagIds = body.uninstallTagIds
-    }
+    // Usar transacción para actualizar proyecto y relaciones M:M de tags
+    const project = await prisma.$transaction(async (tx) => {
+      // 1. Actualizar proyecto
+      await tx.project.update({
+        where: { id },
+        data: updateData,
+      })
 
-    // Actualizar proyecto
-    const project = await prisma.project.update({
-      where: { id },
-      data: updateData,
-      include: {
-        customer: {
-          select: {
-            id: true,
-            name: true,
-            phone: true,
+      // 2. Si se enviaron uninstallTagIds, actualizar relaciones M:M
+      if (body.uninstallTagIds !== undefined) {
+        // Eliminar relaciones existentes
+        await tx.projectUninstallTag.deleteMany({
+          where: { projectId: id },
+        })
+
+        // Crear nuevas relaciones si hay tags
+        if (body.uninstallTagIds.length > 0) {
+          await tx.projectUninstallTag.createMany({
+            data: body.uninstallTagIds.map((tagId: string) => ({
+              projectId: id,
+              uninstallTagId: tagId,
+            })),
+          })
+        }
+      }
+
+      // 3. Retornar proyecto con todas las relaciones
+      return tx.project.findUnique({
+        where: { id },
+        include: {
+          customer: {
+            select: {
+              id: true,
+              name: true,
+              phone: true,
+            },
           },
-        },
-        projectStatus: {
-          select: {
-            id: true,
-            name: true,
-            color: {
-              select: {
-                bgClass: true,
+          projectStatus: {
+            select: {
+              id: true,
+              name: true,
+              color: {
+                select: {
+                  bgClass: true,
+                },
+              },
+            },
+          },
+          uninstallTags: {
+            include: {
+              uninstallTag: {
+                include: {
+                  color: true,
+                },
               },
             },
           },
         },
-      },
+      })
     })
 
     return NextResponse.json(project)

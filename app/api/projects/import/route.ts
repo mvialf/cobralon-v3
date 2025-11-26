@@ -161,7 +161,7 @@ export const POST = withLogging(async (request, logger) => {
             windowsCount: projectData.windowsCount,
             squareMeters: new Decimal(projectData.squareMeters),
             description: projectData.description || null,
-            uninstallTagIds: [], // Array vacío por defecto
+            // UninstallTags se agregan después vía relación M:M si es necesario
           },
         })
 

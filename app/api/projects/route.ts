@@ -305,50 +305,81 @@ export const POST = withLogging(async (request, logger) => {
       'Creating project in database'
     )
 
-    // Crear proyecto
-    const project = await prisma.project.create({
-      data: {
-        customerId,
-        projectNumber: projectNumber.trim(),
-        projectName: projectName?.trim() || null,
-        phone: phone.trim(),
-        street: street.trim(),
-        apartment: apartment?.trim() || null,
-        comuna: comuna.trim(),
-        region: region.trim(),
-        projectStatusId: projectStatusId || null,
-        date: date ? new Date(date) : new Date(),
-        subtotal: new Decimal(subtotal),
-        taxRate: new Decimal(finalTaxRate),
-        total: new Decimal(calculatedTotal),
-        totalAmount: finalTotalAmount ? new Decimal(finalTotalAmount) : null,
-        currency: currency || 'CLP',
-        windowsCount: windowsCount || 0,
-        squareMeters: new Decimal(squareMeters || 0),
-        description: description?.trim() || null,
-        uninstallTagIds: uninstallTagIds || [],
-      },
-      include: {
-        customer: {
-          select: {
-            id: true,
-            name: true,
-            phone: true,
-          },
+    // Crear proyecto usando transacción (para crear relaciones M:M de uninstallTags)
+    const project = await prisma.$transaction(async (tx) => {
+      // 1. Crear el proyecto
+      const newProject = await tx.project.create({
+        data: {
+          customerId,
+          projectNumber: projectNumber.trim(),
+          projectName: projectName?.trim() || null,
+          phone: phone.trim(),
+          street: street.trim(),
+          apartment: apartment?.trim() || null,
+          comuna: comuna.trim(),
+          region: region.trim(),
+          projectStatusId: projectStatusId || null,
+          date: date ? new Date(date) : new Date(),
+          subtotal: new Decimal(subtotal),
+          taxRate: new Decimal(finalTaxRate),
+          total: new Decimal(calculatedTotal),
+          totalAmount: finalTotalAmount ? new Decimal(finalTotalAmount) : null,
+          currency: currency || 'CLP',
+          windowsCount: windowsCount || 0,
+          squareMeters: new Decimal(squareMeters || 0),
+          description: description?.trim() || null,
         },
-        projectStatus: {
-          select: {
-            id: true,
-            name: true,
-            color: {
-              select: {
-                bgClass: true,
+      })
+
+      // 2. Crear relaciones M:M con UninstallTags si hay tags
+      if (uninstallTagIds && uninstallTagIds.length > 0) {
+        await tx.projectUninstallTag.createMany({
+          data: uninstallTagIds.map((tagId: string) => ({
+            projectId: newProject.id,
+            uninstallTagId: tagId,
+          })),
+        })
+      }
+
+      // 3. Retornar proyecto con todas las relaciones
+      return tx.project.findUnique({
+        where: { id: newProject.id },
+        include: {
+          customer: {
+            select: {
+              id: true,
+              name: true,
+              phone: true,
+            },
+          },
+          projectStatus: {
+            select: {
+              id: true,
+              name: true,
+              color: {
+                select: {
+                  bgClass: true,
+                },
+              },
+            },
+          },
+          uninstallTags: {
+            include: {
+              uninstallTag: {
+                include: {
+                  color: true,
+                },
               },
             },
           },
         },
-      },
+      })
     })
+
+    // Project no puede ser null porque acabamos de crearlo
+    if (!project) {
+      throw new Error('Error inesperado: proyecto no encontrado después de crear')
+    }
 
     projectLogger.info(
       {
