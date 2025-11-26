@@ -8,6 +8,10 @@ import { aftersaleSchema, type AftersaleFormValues } from '@/lib/validations/aft
 import { normalizePhone } from '@/lib/utils/phone'
 import { formatDateValue, parseDateValue } from '@/lib/utils'
 import { getRegionCodigoByNombre } from '@/lib/regiones-chile'
+import {
+  useAftersaleStatuses,
+  getInitialAftersaleStatus,
+} from '@/hooks/queries/use-aftersale-statuses'
 import { FormGrid } from '@/components/ui/form-grid'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
@@ -35,19 +39,10 @@ export interface AftersaleFormHandle {
   reset: () => void
 }
 
-interface AftersaleStatus {
-  id: string
-  name: string
-  color: {
-    bgClass: string
-    textClass: string
-  }
-}
-
 export const AftersaleForm = React.forwardRef<AftersaleFormHandle, AftersaleFormProps>(
   ({ onSubmit, defaultValues }, ref) => {
-    const [aftersaleStatuses, setAftersaleStatuses] = React.useState<AftersaleStatus[]>([])
-    const [loadingStatuses, setLoadingStatuses] = React.useState(true)
+    // Usar hook de React Query con caché compartido
+    const { data: aftersaleStatuses = [], isLoading: loadingStatuses } = useAftersaleStatuses()
     // Flag para mostrar campos de dirección solo cuando hay proyecto seleccionado
     const [hasProjectDetails, setHasProjectDetails] = React.useState(false)
 
@@ -75,34 +70,18 @@ export const AftersaleForm = React.forwardRef<AftersaleFormHandle, AftersaleForm
       reset: () => form.reset(),
     }))
 
-    // Cargar estados de postventa
+    // Auto-seleccionar estado inicial cuando los datos cargan (solo si no hay valor por defecto)
     React.useEffect(() => {
-      const loadStatuses = async () => {
-        try {
-          const response = await fetch('/api/aftersale-status')
-          const data = await response.json()
-          const statuses = data.aftersaleStatuses || []
-          setAftersaleStatuses(statuses)
-
-          // Si no hay aftersaleStatusId seteado y no estamos editando, usar initialStatus
-          if (!defaultValues?.aftersaleStatusId && !form.getValues('aftersaleStatusId')) {
-            const initialStatus = statuses.find(
-              (s: AftersaleStatus & { isInitial?: boolean }) => s.isInitial
-            )
-            if (initialStatus) {
-              form.setValue('aftersaleStatusId', initialStatus.id)
-            }
+      if (!loadingStatuses && aftersaleStatuses.length > 0 && !defaultValues?.aftersaleStatusId) {
+        const currentValue = form.getValues('aftersaleStatusId')
+        if (!currentValue) {
+          const initialStatus = getInitialAftersaleStatus(aftersaleStatuses)
+          if (initialStatus) {
+            form.setValue('aftersaleStatusId', initialStatus.id)
           }
-        } catch (error) {
-          console.error('Error al cargar estados:', error)
-        } finally {
-          setLoadingStatuses(false)
         }
       }
-
-      loadStatuses()
-      // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [])
+    }, [loadingStatuses, aftersaleStatuses, defaultValues?.aftersaleStatusId, form])
 
     // Cargar detalles del proyecto seleccionado y poblar formulario
     const projectId = form.watch('projectId')
