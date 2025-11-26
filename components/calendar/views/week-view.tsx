@@ -4,8 +4,8 @@ import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
 import { Plus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { DroppableDayCell } from '../dnd/droppable-day-cell'
-import { DraggableEventCard } from '../dnd/draggable-event-card'
+import { SortableDayContainer } from '../dnd/sortable-day-container'
+import { SortableEventCard } from '../dnd/sortable-event-card'
 import {
   getWeekDays,
   getEventsForDay,
@@ -65,10 +65,16 @@ export function WeekView({
         {weekDays.map((day) => {
           const dayEvents = getEventsForDay(events, day)
 
+          // Ordenar eventos por campo order para mantener el orden del usuario
+          const sortedDayEvents = [...dayEvents].sort(
+            (a, b) => (a.data.order ?? 0) - (b.data.order ?? 0)
+          )
+
           return (
-            <DroppableDayCell
+            <SortableDayContainer
               key={day.toISOString()}
               date={day}
+              events={sortedDayEvents}
               className="border rounded-lg p-2 bg-muted/20 hover:bg-muted/40 transition-colors min-h-[200px] flex flex-col"
             >
               {/* Botón para crear evento */}
@@ -82,25 +88,24 @@ export function WeekView({
                 Crear evento
               </Button>
 
-              {/* Lista de eventos del día */}
+              {/* Lista de eventos del día (ordenados) */}
               <div className="space-y-2 flex-1">
-                {dayEvents.map((event) => {
+                {sortedDayEvents.map((event) => {
                   // Renderizar card dinámicamente según el tipo
                   const EventCard = EVENT_TYPE_REGISTRY[event.type].Card
 
                   return (
-                    <DraggableEventCard
-                      key={event.data.id}
-                      calendarEvent={event}
-                      onEdit={() => onEditEvent?.(event)}
-                      onDelete={() => onDeleteEvent?.(event)}
-                    >
-                      <EventCard event={event.data as any} />
-                    </DraggableEventCard>
+                    <SortableEventCard key={event.data.id} calendarEvent={event}>
+                      <EventCard
+                        event={event.data as any}
+                        onEdit={() => onEditEvent?.(event)}
+                        onDelete={() => onDeleteEvent?.(event)}
+                      />
+                    </SortableEventCard>
                   )
                 })}
               </div>
-            </DroppableDayCell>
+            </SortableDayContainer>
           )
         })}
       </div>

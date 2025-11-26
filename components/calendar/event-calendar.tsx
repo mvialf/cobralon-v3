@@ -2,6 +2,7 @@
 
 import { useState, useEffect, forwardRef, useImperativeHandle } from 'react'
 import { DndContext, DragEndEvent, DragOverlay } from '@dnd-kit/core'
+import { arrayMove } from '@dnd-kit/sortable'
 import { CalendarHeader } from './calendar-header'
 import { WeekView } from './views/week-view'
 import { MonthView } from './views/month-view'
@@ -18,7 +19,8 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
-import { useCalendarEvents } from '@/hooks/queries/use-calendar-events'
+import { useCalendarEvents, useReorderEvents } from '@/hooks/queries/use-calendar-events'
+import { getEventsForDay } from '@/lib/utils/calendar-utils'
 import { getVisibleDateRange, navigateDate } from '@/lib/utils/calendar-utils'
 import type { CalendarEvent, CalendarEventType } from '@/lib/types/calendar'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -94,6 +96,9 @@ export const EventCalendar = forwardRef<EventCalendarHandle>(function EventCalen
   const updateAftersaleDateMutation = EVENT_TYPE_REGISTRY.aftersale.useUpdateDateMutation()
   const updateVisitDateMutation = EVENT_TYPE_REGISTRY.visit.useUpdateDateMutation()
 
+  // Mutation para reordenar eventos dentro del mismo día
+  const reorderMutation = useReorderEvents()
+
   // Handlers
   const handleNavigate = (direction: 'prev' | 'next' | 'today') => {
     if (direction === 'today') {
@@ -163,54 +168,93 @@ export const EventCalendar = forwardRef<EventCalendarHandle>(function EventCalen
   }
 
   const handleDragEnd = (event: DragEndEvent) => {
-    const { over } = event
+    const { active, over } = event
 
     if (!over || !activeEvent) {
       setActiveEvent(null)
       return
     }
 
-    // Obtener fecha de destino
-    const targetDate = over.data.current?.date
+    const overId = over.id
+    const activeId = active.id
 
-    if (!targetDate) {
+    // CASO 1: Soltado sobre un día (day-cell) - Movimiento de fecha
+    if (over.data.current?.type === 'day-cell') {
+      const targetDate = over.data.current?.date
+
+      if (!targetDate) {
+        setActiveEvent(null)
+        return
+      }
+
+      // Comparar fechas usando strings YYYY-MM-DD
+      const currentDateStr = activeEvent.data.scheduledDate.toString().substring(0, 10)
+      const targetDateStr = new Date(
+        targetDate.getFullYear(),
+        targetDate.getMonth(),
+        targetDate.getDate()
+      )
+        .toISOString()
+        .substring(0, 10)
+
+      // Si la fecha es la misma, no hacer nada
+      if (currentDateStr === targetDateStr) {
+        setActiveEvent(null)
+        return
+      }
+
+      // Actualizar fecha
+      const updateParams = {
+        id: activeEvent.data.id,
+        scheduledDate: targetDate,
+      }
+
+      switch (activeEvent.type) {
+        case 'project':
+          updateProjectDateMutation.mutate(updateParams)
+          break
+        case 'aftersale':
+          updateAftersaleDateMutation.mutate(updateParams)
+          break
+        case 'visit':
+          updateVisitDateMutation.mutate(updateParams)
+          break
+      }
+
       setActiveEvent(null)
       return
     }
 
-    // Si la fecha es la misma, no hacer nada
-    // IMPORTANTE: Comparar usando strings YYYY-MM-DD para evitar problemas de timezone
-    const currentDateStr = activeEvent.data.scheduledDate.toString().substring(0, 10)
-    const targetDateStr = new Date(
-      targetDate.getFullYear(),
-      targetDate.getMonth(),
-      targetDate.getDate()
-    )
-      .toISOString()
-      .substring(0, 10)
+    // CASO 2: Soltado sobre otro evento - Reordenamiento dentro del mismo día
+    if (activeId !== overId && data?.events) {
+      // Encontrar la fecha del evento activo
+      const eventDateStr = activeEvent.data.scheduledDate.toString().substring(0, 10)
+      const eventDate = new Date(eventDateStr + 'T12:00:00') // Usar mediodía para evitar problemas de timezone
 
-    if (currentDateStr === targetDateStr) {
-      setActiveEvent(null)
-      return
-    }
+      // Obtener todos los eventos del mismo día
+      const dayEvents = getEventsForDay(data.events, eventDate)
 
-    // Actualizar fecha con optimistic update
-    // Switch para seleccionar el mutation correcto según el tipo
-    const updateParams = {
-      id: activeEvent.data.id,
-      scheduledDate: targetDate,
-    }
+      // Ordenar por order actual
+      const sortedEvents = [...dayEvents].sort((a, b) => (a.data.order ?? 0) - (b.data.order ?? 0))
 
-    switch (activeEvent.type) {
-      case 'project':
-        updateProjectDateMutation.mutate(updateParams)
-        break
-      case 'aftersale':
-        updateAftersaleDateMutation.mutate(updateParams)
-        break
-      case 'visit':
-        updateVisitDateMutation.mutate(updateParams)
-        break
+      // Encontrar índices
+      const oldIndex = sortedEvents.findIndex((e) => e.data.id === activeId)
+      const newIndex = sortedEvents.findIndex((e) => e.data.id === overId)
+
+      if (oldIndex !== -1 && newIndex !== -1) {
+        // Reordenar usando arrayMove
+        const reorderedEvents = arrayMove(sortedEvents, oldIndex, newIndex)
+
+        // Crear array de actualizaciones con nuevos órdenes
+        const updates = reorderedEvents.map((event, index) => ({
+          id: event.data.id,
+          type: event.type,
+          order: index,
+        }))
+
+        // Llamar a la API de reorder
+        reorderMutation.mutate({ events: updates })
+      }
     }
 
     setActiveEvent(null)

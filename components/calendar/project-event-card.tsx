@@ -29,6 +29,7 @@ export function ProjectEventCard({ event, onEdit, onDelete }: ProjectEventCardPr
             variant="ghost"
             size="icon"
             className="absolute right-1 top-1 h-6 w-6 z-10 opacity-0 group-hover:opacity-100 transition-opacity"
+            onPointerDown={(e) => e.stopPropagation()}
           >
             <MoreVertical className="h-4 w-4" />
           </Button>
