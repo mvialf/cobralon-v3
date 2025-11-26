@@ -11,6 +11,7 @@ import type {
   VisitEvent,
   Visit,
   VisitStatus,
+  TeamTag,
 } from '@prisma/client'
 
 // Tipo unificado para eventos en UI
@@ -19,6 +20,11 @@ export type CalendarEventType = 'project' | 'aftersale' | 'visit'
 // ============================================================================
 // PROJECT EVENT TYPES
 // ============================================================================
+
+// TeamTag con color para uso en eventos
+export type TeamTagWithColor = TeamTag & {
+  color: BadgeColor
+}
 
 // ProjectEvent con relaciones completas
 export type ProjectEventWithRelations = ProjectEvent & {
@@ -35,6 +41,7 @@ export type ProjectEventWithRelations = ProjectEvent & {
       }
     >
   }
+  teamTags: TeamTagWithColor[] // Integrantes asignados al evento
 }
 
 // Input types para crear/actualizar project events
@@ -61,6 +68,7 @@ export type AftersaleEventWithRelations = AftersaleEvent & {
       color: BadgeColor
     }
   }
+  teamTags: TeamTagWithColor[] // Integrantes asignados al evento
 }
 
 // Input types para crear/actualizar aftersale events
@@ -86,6 +94,7 @@ export type VisitEventWithRelations = VisitEvent & {
       color: BadgeColor
     }
   }
+  teamTags: TeamTagWithColor[] // Integrantes asignados al evento
 }
 
 // Input types para crear/actualizar visit events

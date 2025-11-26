@@ -49,9 +49,33 @@ model BadgeColor {
   uninstallTags    UninstallTag[]
   aftersaleStatuses AftersaleStatus[]
   visitStatuses    VisitStatus[]
+  teamTags         TeamTag[]
 
   @@index([order])
   @@index([isActive])
+}
+
+// TeamTag: Integrantes del equipo para asignar a eventos de calendario
+model TeamTag {
+  id           String     @id @default(uuid())
+  name         String     @unique  // Nombre completo del integrante
+  abbreviation String              // Iniciales (ej: "JP" para Juan Pérez)
+  colorId      String
+  order        Int        @default(0)
+  isActive     Boolean    @default(true)
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  color        BadgeColor @relation(fields: [colorId], references: [id], onDelete: Restrict)
+
+  // Relaciones M:N con eventos (Prisma crea tablas pivot automáticamente)
+  projectEvents   ProjectEvent[]
+  aftersaleEvents AftersaleEvent[]
+  visitEvents     VisitEvent[]
+
+  @@index([colorId])
+  @@index([order])
+  @@index([isActive])
+  @@map("team_tags")
 }
 
 model ProjectStatus {
@@ -96,7 +120,7 @@ model Project {
   updatedAt           DateTime            @updatedAt
   currency            String              @default("CLP")
   totalAmount         Decimal?            @db.Decimal(12, 2)
-  uninstallTagIds     String[]
+  uninstallTags       ProjectUninstallTag[]
   paymentAllocations  PaymentAllocation[]
   aftersales          Aftersale[]
   calendarEvents      ProjectEvent[]
@@ -195,10 +219,27 @@ model UninstallTag {
   createdAt    DateTime   @default(now())
   updatedAt    DateTime   @updatedAt
   color        BadgeColor @relation(fields: [colorId], references: [id], onDelete: Restrict)
+  projects     ProjectUninstallTag[]
 
   @@index([colorId])
   @@index([order])
   @@index([isActive])
+}
+
+// Tabla pivot para relación M:M entre Project y UninstallTag
+model ProjectUninstallTag {
+  id             String       @id @default(uuid())
+  projectId      String
+  uninstallTagId String
+  createdAt      DateTime     @default(now())
+
+  project        Project      @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  uninstallTag   UninstallTag @relation(fields: [uninstallTagId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, uninstallTagId])
+  @@index([projectId])
+  @@index([uninstallTagId])
+  @@map("project_uninstall_tags")
 }
 
 model AftersaleStatus {
@@ -296,15 +337,18 @@ model ProjectEvent {
   id            String   @id @default(uuid())
   projectId     String
   scheduledDate DateTime @db.Date
+  order         Int      @default(0) // Orden dentro del día para drag & drop
   tasks         Json     @default("[]")
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
   project       Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  teamTags      TeamTag[] // Integrantes asignados al evento
 
   @@unique([projectId, scheduledDate])
   @@index([projectId])
   @@index([scheduledDate])
+  @@index([scheduledDate, order]) // Índice para ordenar eventos por día
   @@map("project_events")
 }
 
@@ -313,15 +357,18 @@ model AftersaleEvent {
   id            String    @id @default(uuid())
   aftersaleId   String
   scheduledDate DateTime  @db.Date
+  order         Int       @default(0) // Orden dentro del día para drag & drop
   notes         String?   @db.Text
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
   aftersale     Aftersale @relation(fields: [aftersaleId], references: [id], onDelete: Cascade)
+  teamTags      TeamTag[] // Integrantes asignados al evento
 
   @@unique([aftersaleId, scheduledDate])
   @@index([aftersaleId])
   @@index([scheduledDate])
+  @@index([scheduledDate, order]) // Índice para ordenar eventos por día
   @@map("aftersale_events")
 }
 
@@ -330,15 +377,18 @@ model VisitEvent {
   id            String   @id @default(uuid())
   visitId       String
   scheduledDate DateTime @db.Date
+  order         Int      @default(0) // Orden dentro del día para drag & drop
   notes         String?  @db.Text
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
   visit         Visit    @relation(fields: [visitId], references: [id], onDelete: Cascade)
+  teamTags      TeamTag[] // Integrantes asignados al evento
 
   @@unique([visitId, scheduledDate])
   @@index([visitId])
   @@index([scheduledDate])
+  @@index([scheduledDate, order]) // Índice para ordenar eventos por día
   @@map("visit_events")
 }
 
