@@ -58,6 +58,7 @@ export function AftersaleEventCard({ event, onEdit, onDelete }: AftersaleEventCa
           },
         }}
         contactPhone={aftersale.contactPhone}
+        comuna={project.comuna}
         teamTags={event.teamTags?.map((tag) => ({
           id: tag.id,
           name: tag.name,
