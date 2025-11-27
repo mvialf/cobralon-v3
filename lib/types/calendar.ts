@@ -84,6 +84,7 @@ export interface CreateAftersaleEventInput {
 export interface UpdateAftersaleEventInput {
   scheduledDate?: Date
   notes?: string | null
+  teamTagIds?: string[] | null
 }
 
 // ============================================================================
@@ -110,6 +111,7 @@ export interface CreateVisitEventInput {
 export interface UpdateVisitEventInput {
   scheduledDate?: Date
   notes?: string | null
+  teamTagIds?: string[] | null
 }
 
 // ============================================================================

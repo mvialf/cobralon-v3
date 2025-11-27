@@ -33,6 +33,35 @@ interface VisitEventDialogProps {
   onOpenChange?: (open: boolean) => void
 }
 
+/**
+ * Actualiza los campos de la visita (name, phone, observations, status, dirección)
+ * Se usa cuando se edita un evento para mantener sincronizados los datos de la visita
+ */
+async function updateVisitFields(
+  visitId: string,
+  data: VisitEventWithUpdateFormValues
+): Promise<void> {
+  const response = await fetch(`/api/visits/${visitId}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      name: data.name,
+      phone: data.phone,
+      observations: data.observations,
+      visitStatusId: data.visitStatusId,
+      street: data.street,
+      apartment: data.apartment,
+      comuna: data.comuna,
+      region: data.region,
+    }),
+  })
+
+  if (!response.ok) {
+    const error = await response.json()
+    throw new Error(error.error || 'Error al actualizar datos de la visita')
+  }
+}
+
 export function VisitEventDialog({
   mode,
   event,
@@ -68,13 +97,17 @@ export function VisitEventDialog({
           region: data.region,
         })
       } else if (event) {
-        // En modo edit, solo actualizamos la fecha del evento
+        // 1. Actualizar evento (scheduledDate, teamTagIds)
         await updateMutation.mutateAsync({
           id: event.id,
           data: {
             scheduledDate: new Date(data.scheduledDate),
+            teamTagIds: data.teamTagIds,
           },
         })
+
+        // 2. Actualizar visita (name, phone, observations, status, dirección)
+        await updateVisitFields(event.visitId, data)
       }
       onOpenChange?.(false)
     } catch (error) {
@@ -90,7 +123,8 @@ export function VisitEventDialog({
   // Preparar defaultValues según modo
   const getDefaultValues = (): Partial<VisitEventWithUpdateFormValues> => {
     if (mode === 'edit' && event) {
-      // En modo edit solo editamos fecha del evento
+      // En modo edit cargamos visitId y scheduledDate
+      // Los demás campos se cargan desde el API en el form
       return {
         visitId: event.visitId,
         scheduledDate: format(new Date(event.scheduledDate), 'yyyy-MM-dd'),
@@ -121,7 +155,7 @@ export function VisitEventDialog({
               <p className="text-sm text-muted-foreground">
                 {mode === 'create'
                   ? 'Programa una visita de medición en el calendario'
-                  : 'Modifica la fecha del evento de visita'}
+                  : 'Modifica los datos del evento y de la visita'}
               </p>
               <VisitEventForm
                 ref={formRef}

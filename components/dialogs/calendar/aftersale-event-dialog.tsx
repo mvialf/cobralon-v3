@@ -33,6 +33,36 @@ interface AftersaleEventDialogProps {
   onOpenChange?: (open: boolean) => void
 }
 
+/**
+ * Actualiza los campos del aftersale y proyecto (status, contactPhone, description, tasks, dirección)
+ * Se usa cuando se edita un evento para mantener sincronizados los datos
+ */
+async function updateAftersaleFields(
+  aftersaleId: string,
+  data: AftersaleEventWithUpdateFormValues
+): Promise<void> {
+  const response = await fetch(`/api/aftersales/${aftersaleId}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      aftersaleStatusId: data.aftersaleStatusId,
+      contactPhone: data.contactPhone,
+      description: data.description,
+      tasks: data.tasks,
+      // La dirección actualiza el proyecto asociado
+      street: data.street,
+      apartment: data.apartment,
+      comuna: data.comuna,
+      region: data.region,
+    }),
+  })
+
+  if (!response.ok) {
+    const error = await response.json()
+    throw new Error(error.error || 'Error al actualizar datos del aftersale')
+  }
+}
+
 export function AftersaleEventDialog({
   mode,
   event,
@@ -68,13 +98,17 @@ export function AftersaleEventDialog({
           region: data.region,
         })
       } else if (event) {
-        // En modo edit, solo actualizamos la fecha del evento
+        // 1. Actualizar evento (scheduledDate, teamTagIds)
         await updateMutation.mutateAsync({
           id: event.id,
           data: {
             scheduledDate: new Date(data.scheduledDate),
+            teamTagIds: data.teamTagIds,
           },
         })
+
+        // 2. Actualizar aftersale (status, contactPhone, description, tasks, dirección)
+        await updateAftersaleFields(event.aftersaleId, data)
       }
       onOpenChange?.(false)
     } catch (error) {
@@ -90,7 +124,8 @@ export function AftersaleEventDialog({
   // Preparar defaultValues según modo
   const getDefaultValues = (): Partial<AftersaleEventWithUpdateFormValues> => {
     if (mode === 'edit' && event) {
-      // En modo edit solo editamos fecha del evento
+      // En modo edit cargamos aftersaleId y scheduledDate
+      // Los demás campos se cargan desde el API en el form
       return {
         aftersaleId: event.aftersaleId,
         scheduledDate: format(new Date(event.scheduledDate), 'yyyy-MM-dd'),
@@ -121,7 +156,7 @@ export function AftersaleEventDialog({
               <p className="text-sm text-muted-foreground">
                 {mode === 'create'
                   ? 'Programa un evento de postventa en el calendario'
-                  : 'Modifica la fecha del evento de postventa'}
+                  : 'Modifica los datos del evento y del caso de postventa'}
               </p>
               <AftersaleEventForm
                 ref={formRef}
