@@ -24,6 +24,7 @@ import {
   useCreateVisitEventWithUpdate,
   useUpdateVisitEvent,
 } from '@/hooks/queries/use-visit-events'
+import { updateVisitFields } from '@/lib/api/calendar-event-updates'
 
 interface VisitEventDialogProps {
   mode: 'create' | 'edit'
@@ -31,35 +32,6 @@ interface VisitEventDialogProps {
   defaultDate?: string // Formato yyyy-MM-dd (solo fecha, sin timezone)
   open?: boolean
   onOpenChange?: (open: boolean) => void
-}
-
-/**
- * Actualiza los campos de la visita (name, phone, observations, status, dirección)
- * Se usa cuando se edita un evento para mantener sincronizados los datos de la visita
- */
-async function updateVisitFields(
-  visitId: string,
-  data: VisitEventWithUpdateFormValues
-): Promise<void> {
-  const response = await fetch(`/api/visits/${visitId}`, {
-    method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      name: data.name,
-      phone: data.phone,
-      observations: data.observations,
-      visitStatusId: data.visitStatusId,
-      street: data.street,
-      apartment: data.apartment,
-      comuna: data.comuna,
-      region: data.region,
-    }),
-  })
-
-  if (!response.ok) {
-    const error = await response.json()
-    throw new Error(error.error || 'Error al actualizar datos de la visita')
-  }
 }
 
 export function VisitEventDialog({

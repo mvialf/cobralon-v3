@@ -24,6 +24,7 @@ import {
   useCreateAftersaleEventWithUpdate,
   useUpdateAftersaleEvent,
 } from '@/hooks/queries/use-aftersale-events'
+import { updateAftersaleFields } from '@/lib/api/calendar-event-updates'
 
 interface AftersaleEventDialogProps {
   mode: 'create' | 'edit'
@@ -31,36 +32,6 @@ interface AftersaleEventDialogProps {
   defaultDate?: string // Formato yyyy-MM-dd (solo fecha, sin timezone)
   open?: boolean
   onOpenChange?: (open: boolean) => void
-}
-
-/**
- * Actualiza los campos del aftersale y proyecto (status, contactPhone, description, tasks, dirección)
- * Se usa cuando se edita un evento para mantener sincronizados los datos
- */
-async function updateAftersaleFields(
-  aftersaleId: string,
-  data: AftersaleEventWithUpdateFormValues
-): Promise<void> {
-  const response = await fetch(`/api/aftersales/${aftersaleId}`, {
-    method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      aftersaleStatusId: data.aftersaleStatusId,
-      contactPhone: data.contactPhone,
-      description: data.description,
-      tasks: data.tasks,
-      // La dirección actualiza el proyecto asociado
-      street: data.street,
-      apartment: data.apartment,
-      comuna: data.comuna,
-      region: data.region,
-    }),
-  })
-
-  if (!response.ok) {
-    const error = await response.json()
-    throw new Error(error.error || 'Error al actualizar datos del aftersale')
-  }
 }
 
 export function AftersaleEventDialog({
