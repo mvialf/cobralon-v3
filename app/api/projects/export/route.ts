@@ -28,8 +28,10 @@ export async function GET(request: Request) {
   const search = searchParams.get('search') || ''
   const customerId = searchParams.get('customerId') || ''
 
-  // Validar y parsear projectState con Zod
-  const projectStateResult = projectStateSchema.safeParse(searchParams.get('projectState'))
+  // Validar y parsear projectState con Zod (null se trata como undefined para aplicar default)
+  const projectStateResult = projectStateSchema.safeParse(
+    searchParams.get('projectState') ?? undefined
+  )
   if (!projectStateResult.success) {
     return NextResponse.json(
       { error: 'projectState debe ser "Activo", "Finalizado" o "all"' },

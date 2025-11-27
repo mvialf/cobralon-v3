@@ -98,7 +98,7 @@ export default function ExportDataPage() {
     try {
       const params = new URLSearchParams()
       if (projectSearch) params.append('search', projectSearch)
-      if (projectState !== 'all') params.append('projectState', projectState)
+      params.append('projectState', projectState) // Siempre enviar (la API espera este parámetro)
 
       const response = await fetch(`/api/projects/export?${params}`)
       if (!response.ok) {
@@ -119,7 +119,7 @@ export default function ExportDataPage() {
     setIsExporting((prev) => ({ ...prev, payments: true }))
     try {
       const params = new URLSearchParams()
-      if (paymentType !== 'all') params.append('type', paymentType)
+      params.append('type', paymentType) // Siempre enviar type (la API espera este parámetro)
       if (paymentStartDate) params.append('startDate', paymentStartDate)
       if (paymentEndDate) params.append('endDate', paymentEndDate)
 

@@ -31,8 +31,8 @@ export async function GET(request: Request) {
   const startDate = searchParams.get('startDate') || ''
   const endDate = searchParams.get('endDate') || ''
 
-  // Validar y parsear type con Zod
-  const typeResult = paymentTypeSchema.safeParse(searchParams.get('type'))
+  // Validar y parsear type con Zod (null se trata como undefined para aplicar default)
+  const typeResult = paymentTypeSchema.safeParse(searchParams.get('type') ?? undefined)
   if (!typeResult.success) {
     return NextResponse.json(
       { error: 'type debe ser "Project", "Customer" o "all"' },
