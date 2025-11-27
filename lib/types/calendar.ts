@@ -13,6 +13,7 @@ import type {
   VisitStatus,
   TeamTag,
 } from '@prisma/client'
+import type { TodoItem } from '@/hooks/use-todo-list'
 
 // Tipo unificado para eventos en UI
 export type CalendarEventType = 'project' | 'aftersale' | 'visit'
@@ -52,6 +53,8 @@ export interface CreateProjectEventInput {
 
 export interface UpdateProjectEventInput {
   scheduledDate?: Date
+  teamTagIds?: string[] | null
+  tasks?: TodoItem[]
 }
 
 // ============================================================================

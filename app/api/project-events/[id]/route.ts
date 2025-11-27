@@ -111,11 +111,12 @@ export const PUT = withLogging(async (request, logger, context) => {
       )
     }
 
-    const { scheduledDate, teamTagIds } = validationResult.data
+    const { scheduledDate, teamTagIds, tasks } = validationResult.data
 
     // Construir data para update
     const eventData: Record<string, any> = {}
     if (scheduledDate !== undefined) eventData.scheduledDate = scheduledDate
+    if (tasks !== undefined) eventData.tasks = tasks
 
     // Manejar teamTags: usar 'set' para reemplazar todos los teamTags
     if (teamTagIds !== undefined) {

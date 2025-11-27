@@ -33,6 +33,37 @@ interface ProjectEventDialogProps {
   onOpenChange?: (open: boolean) => void
 }
 
+/**
+ * Actualiza los campos del proyecto (uninstallTagIds, phone, dirección, etc.)
+ * Se usa cuando se edita un evento para mantener sincronizados los datos del proyecto
+ */
+async function updateProjectFields(
+  projectId: string,
+  data: ProjectEventWithProjectUpdateFormValues
+): Promise<void> {
+  const response = await fetch(`/api/projects/${projectId}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      uninstallTagIds: data.uninstallTagIds || [],
+      phone: data.phone,
+      street: data.street,
+      apartment: data.apartment,
+      comuna: data.comuna,
+      region: data.region,
+      windowsCount: data.windowsCount,
+      squareMeters: data.squareMeters,
+      description: data.description,
+      projectStatusId: data.projectStatusId,
+    }),
+  })
+
+  if (!response.ok) {
+    const error = await response.json()
+    throw new Error(error.error || 'Error al actualizar datos del proyecto')
+  }
+}
+
 export function ProjectEventDialog({
   mode,
   event,
@@ -68,12 +99,18 @@ export function ProjectEventDialog({
           description: data.description,
         })
       } else if (event) {
+        // 1. Actualizar evento (scheduledDate, teamTagIds, tasks)
         await updateMutation.mutateAsync({
           id: event.id,
           data: {
             scheduledDate: new Date(data.scheduledDate),
+            teamTagIds: data.teamTagIds,
+            tasks: data.tasks,
           },
         })
+
+        // 2. Actualizar proyecto (uninstallTagIds y otros campos)
+        await updateProjectFields(event.projectId, data)
       }
       onOpenChange?.(false)
     } catch (error) {
@@ -89,8 +126,8 @@ export function ProjectEventDialog({
   // Preparar defaultValues según modo
   const getDefaultValues = (): Partial<ProjectEventWithProjectUpdateFormValues> => {
     if (mode === 'edit' && event) {
-      // En modo edit solo editamos fecha del evento
-      // Los campos del proyecto se mostrarán pero no se usan en el submit
+      // En modo edit cargamos projectId y scheduledDate
+      // Los demás campos se cargan desde el API en el form
       return {
         projectId: event.projectId,
         scheduledDate: format(new Date(event.scheduledDate), 'yyyy-MM-dd'),
@@ -121,7 +158,7 @@ export function ProjectEventDialog({
               <p className="text-sm text-muted-foreground">
                 {mode === 'create'
                   ? 'Programa un evento de proyecto en el calendario'
-                  : 'Modifica la fecha del evento'}
+                  : 'Modifica los datos del evento y del proyecto'}
               </p>
               <ProjectEventForm
                 ref={formRef}
