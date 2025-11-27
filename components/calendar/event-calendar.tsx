@@ -1,8 +1,16 @@
 'use client'
 
 import { useState, useEffect, forwardRef, useImperativeHandle } from 'react'
-import { DndContext, DragEndEvent, DragOverlay } from '@dnd-kit/core'
-import { arrayMove } from '@dnd-kit/sortable'
+import {
+  DndContext,
+  DragEndEvent,
+  DragOverlay,
+  PointerSensor,
+  KeyboardSensor,
+  useSensor,
+  useSensors,
+} from '@dnd-kit/core'
+import { arrayMove, sortableKeyboardCoordinates } from '@dnd-kit/sortable'
 import { CalendarHeader } from './calendar-header'
 import { WeekView } from './views/week-view'
 import { MonthView } from './views/month-view'
@@ -98,6 +106,19 @@ export const EventCalendar = forwardRef<EventCalendarHandle>(function EventCalen
 
   // Mutation para reordenar eventos dentro del mismo día
   const reorderMutation = useReorderEvents()
+
+  // Configurar sensors con distance constraint para evitar conflictos con clicks
+  // El drag solo inicia después de mover 8px, permitiendo clicks normales en botones
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8,
+      },
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  )
 
   // Handlers
   const handleNavigate = (direction: 'prev' | 'next' | 'today') => {
@@ -261,7 +282,7 @@ export const EventCalendar = forwardRef<EventCalendarHandle>(function EventCalen
   }
 
   return (
-    <DndContext onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
+    <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
       <div className="h-full flex flex-col">
         {/* Header con navegación y selector de vista */}
         <div className="flex items-center justify-between pb-4">
