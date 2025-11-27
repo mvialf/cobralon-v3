@@ -5,8 +5,6 @@ import { EVENT_TYPE_BORDER_COLORS } from '@/lib/constants/calendar'
 
 interface VisitEventSummaryProps {
   name: string
-  street: string
-  apartment?: string | null
   comuna: string
   phone?: string | null
   observations?: string | null
@@ -44,8 +42,6 @@ interface VisitEventSummaryProps {
  */
 export function VisitEventSummary({
   name,
-  street,
-  apartment,
   comuna,
   phone,
   observations,
@@ -53,9 +49,6 @@ export function VisitEventSummary({
   teamTags,
   className,
 }: VisitEventSummaryProps) {
-  // Construir dirección completa
-  const fullAddress = `${street}${apartment ? ` ${apartment}` : ''}, ${comuna}`
-
   return (
     <div
       className={cn(
@@ -64,27 +57,11 @@ export function VisitEventSummary({
         className
       )}
     >
-      <div className="flex items-start gap-2">
-        {/* Icono distintivo de visita */}
-        <div className="flex-shrink-0 mt-0.5">
-          <div className="p-1.5 rounded bg-orange-100 dark:bg-orange-900/30">
-            <MapPin className="h-3.5 w-3.5 text-orange-600 dark:text-orange-400" />
-          </div>
-        </div>
+      {/* Nombre del prospecto */}
+      <p className="text-sm font-medium truncate">{name}</p>
 
-        {/* Contenido principal */}
-        <div className="flex-1 min-w-0 space-y-1">
-          {/* Nombre del prospecto */}
-          <p className="text-sm font-medium truncate">{name}</p>
-
-          {/* Dirección */}
-          <p className="text-xs text-muted-foreground truncate">{fullAddress}</p>
-        </div>
-      </div>
-
-      {/* Status badge */}
-      {visitStatus && (
-        <div>
+      <div className="flex justify-between">
+        {visitStatus && (
           <Badge
             className={cn(
               'shrink-0 text-xs',
@@ -94,8 +71,14 @@ export function VisitEventSummary({
           >
             {visitStatus.name}
           </Badge>
-        </div>
-      )}
+        )}
+        {comuna && (
+          <div className="flex items-center gap-1.5">
+            <MapPin className="h-3.5 w-3.5 text-muted-foreground" />
+            <span className="text-xs text-muted-foreground">{comuna}</span>
+          </div>
+        )}
+      </div>
 
       {/* Team Tags - Integrantes asignados */}
       {Array.isArray(teamTags) && teamTags.length > 0 && (

@@ -1,4 +1,4 @@
-import { Wrench, Phone, CheckCircle, Users } from 'lucide-react'
+import { MapPin, Phone, CheckCircle, Users } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { ProjectNameSummary } from '@/components/summarys/project-name-summary'
 import { cn } from '@/lib/utils'
@@ -22,6 +22,7 @@ interface AftersaleEventSummaryProps {
     }
   } | null
   contactPhone?: string | null
+  comuna?: string | null
   teamTags?: Array<{
     id: string
     name: string
@@ -56,6 +57,7 @@ export function AftersaleEventSummary({
   description,
   aftersaleStatus,
   contactPhone,
+  comuna,
   teamTags,
   tasks,
   className,
@@ -75,13 +77,6 @@ export function AftersaleEventSummary({
       )}
     >
       <div className="flex items-start gap-2">
-        {/* Icono distintivo de aftersale */}
-        <div className="flex-shrink-0 mt-0.5">
-          <div className="p-1.5 rounded bg-orange-100 dark:bg-orange-900/30">
-            <Wrench className="h-3.5 w-3.5 text-orange-600 dark:text-orange-400" />
-          </div>
-        </div>
-
         {/* Identificación del proyecto */}
         <ProjectNameSummary
           projectId={projectId}
@@ -95,9 +90,8 @@ export function AftersaleEventSummary({
       {/* Descripción del problema */}
       <p className="text-xs text-muted-foreground line-clamp-2">{truncatedDescription}</p>
 
-      {/* Status badge */}
-      {aftersaleStatus && (
-        <div>
+      <div className="flex justify-between">
+        {aftersaleStatus && (
           <Badge
             className={cn(
               'shrink-0 text-xs',
@@ -107,8 +101,14 @@ export function AftersaleEventSummary({
           >
             {aftersaleStatus.name}
           </Badge>
-        </div>
-      )}
+        )}
+        {comuna && (
+          <div className="flex items-center gap-1.5">
+            <MapPin className="h-3.5 w-3.5 text-muted-foreground" />
+            <span className="text-xs text-muted-foreground">{comuna}</span>
+          </div>
+        )}
+      </div>
 
       {/* Team Tags - Integrantes asignados */}
       {Array.isArray(teamTags) && teamTags.length > 0 && (

@@ -46,8 +46,6 @@ export function VisitEventCard({ event, onEdit, onDelete }: VisitEventCardProps)
       {/* Content - VisitEventSummary ES la card completa */}
       <VisitEventSummary
         name={visit.name}
-        street={visit.street}
-        apartment={visit.apartment}
         comuna={visit.comuna}
         phone={visit.phone}
         observations={visit.observations}
