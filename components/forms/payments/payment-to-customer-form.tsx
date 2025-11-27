@@ -1,7 +1,7 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useState } from 'react'
-import { useForm } from 'react-hook-form'
+import React, { useCallback, useEffect, useMemo, useState } from 'react'
+import { useForm, useFieldArray } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useQuery } from '@tanstack/react-query'
 import { Trash2 } from 'lucide-react'
@@ -48,10 +48,47 @@ const EMPTY_PAYMENT_METHODS: Array<{
   maxInstallments: number | null
 }> = []
 
+/**
+ * Componente memoizado para input de asignación de monto
+ * Previene re-renders innecesarios que causan pérdida de estado en NumericFormat
+ */
+const MemoizedAllocationInput = React.memo(function AllocationInput({
+  value,
+  currency,
+  disabled,
+  onChangeAllocation,
+  index,
+}: {
+  value: number
+  currency: string
+  disabled: boolean
+  onChangeAllocation: (index: number, amount: number) => void
+  index: number
+}) {
+  // Handler memoizado específico para este índice
+  const handleChange = useCallback(
+    (amount: number) => {
+      onChangeAllocation(index, amount)
+    },
+    [index, onChangeAllocation]
+  )
+
+  return (
+    <CurrencyInput
+      value={value}
+      onChange={handleChange}
+      currency={currency}
+      className="text-right"
+      disabled={disabled}
+    />
+  )
+})
+
 interface PaymentToCustomerFormProps {
   onSubmit: (data: PaymentToCustomerFormValues, currency: string) => void | Promise<void>
   isSubmitting?: boolean
-  preselectedCustomerId?: string // ← NUEVO: Si viene, el cliente está pre-seleccionado
+  preselectedCustomerId?: string
+  formId?: string // Para submit externo desde DialogFooter
 }
 
 /**
@@ -67,8 +104,9 @@ interface PaymentToCustomerFormProps {
  */
 export function PaymentToCustomerForm({
   onSubmit,
-  isSubmitting = false,
+  isSubmitting: _isSubmitting = false,
   preselectedCustomerId,
+  formId,
 }: PaymentToCustomerFormProps) {
   // State para cliente seleccionado
   const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(null)
@@ -76,18 +114,13 @@ export function PaymentToCustomerForm({
   // State para proyectos del cliente
   const [customerProjects, setCustomerProjects] = useState<ProjectWithBalance[]>([])
 
-  // State para allocations (mantenemos sincronizado con form)
-  const [allocations, setAllocations] = useState<
-    Array<{ projectId: string; allocatedAmount: number }>
-  >([])
-
   // State para modo de distribución
   const [distributionMode, setDistributionMode] = useState<'fifo' | 'manual'>('manual')
 
   // Form setup
   const defaultValues = useMemo(
     () => ({
-      customerId: preselectedCustomerId || '', // Pre-cargar si viene
+      customerId: preselectedCustomerId || '',
       amount: 0,
       date: new Date(),
       paymentMethodId: '',
@@ -102,6 +135,12 @@ export function PaymentToCustomerForm({
     defaultValues,
   })
 
+  // ✅ useFieldArray para manejar allocations - reemplaza useState manual
+  const { fields, replace, update, remove } = useFieldArray({
+    control: form.control,
+    name: 'allocations',
+  })
+
   // Fetch proyectos del cliente seleccionado
   const { data: projectsData, isLoading: loadingProjects } = useQuery({
     queryKey: ['customer-projects', selectedCustomerId],
@@ -110,7 +149,6 @@ export function PaymentToCustomerForm({
       const res = await fetch(`/api/payments/customer-projects?customerId=${selectedCustomerId}`)
       if (!res.ok) throw new Error('Error al cargar proyectos')
       const data = await res.json()
-      // ⚠️ IMPORTANTE: Transformar strings ISO a Date objects
       return parseProjectsWithBalance(data)
     },
     enabled: !!selectedCustomerId,
@@ -139,123 +177,141 @@ export function PaymentToCustomerForm({
   // Watch amount para calcular FIFO
   const watchedAmount = form.watch('amount')
 
-  // Actualizar customerProjects cuando se cargan
+  // Inicializar allocations cuando se cargan proyectos
   useEffect(() => {
     if (projects && projects.length > 0) {
       setCustomerProjects(projects)
-    } else {
-      setCustomerProjects([])
-    }
-  }, [projects])
-
-  // Inicializar allocations automáticamente cuando se cargan proyectos
-  useEffect(() => {
-    if (customerProjects.length > 0) {
-      const initialAllocations = customerProjects.map((project) => ({
+      // Inicializar allocations en el form directamente via useFieldArray
+      const initialAllocations = projects.map((project) => ({
         projectId: project.id,
         allocatedAmount: 0,
       }))
-      setAllocations(initialAllocations)
+      replace(initialAllocations)
+    } else {
+      setCustomerProjects([])
+      replace([])
     }
-  }, [customerProjects])
+  }, [projects, replace])
 
-  // Sincronizar allocations con form
-  // ✅ FIX: Usar opciones para evitar re-renders innecesarios que causan loop infinito
+  // Auto-recalcular FIFO cuando cambia el monto en modo FIFO
   useEffect(() => {
-    form.setValue('allocations', allocations, {
-      shouldValidate: false, // No validar en cada cambio
-      shouldDirty: false, // No marcar como dirty
-      shouldTouch: false, // No marcar como touched
-    })
-  }, [allocations, form])
+    if (
+      distributionMode === 'fifo' &&
+      watchedAmount > 0 &&
+      customerProjects.length > 0 &&
+      fields.length > 0
+    ) {
+      handleCalculateFIFO()
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [watchedAmount, distributionMode])
 
   // Handler: Calcular FIFO
-  const handleCalculateFIFO = () => {
+  const handleCalculateFIFO = useCallback(() => {
     if (!watchedAmount || watchedAmount <= 0) {
       form.setError('amount', { message: 'Ingrese un monto válido antes de calcular FIFO' })
       return
     }
 
     if (customerProjects.length === 0) {
-      alert('No hay proyectos disponibles para distribuir')
       return
     }
 
+    // Calcular distribución FIFO
     const fifoAllocations = calculateFIFO(watchedAmount, customerProjects)
-    setAllocations(fifoAllocations)
-  }
+
+    // Actualizar cada field - mantiene todas las filas visibles
+    fields.forEach((field, index) => {
+      const fifoAllocation = fifoAllocations.find((f) => f.projectId === field.projectId)
+      update(index, {
+        projectId: field.projectId,
+        allocatedAmount: fifoAllocation?.allocatedAmount || 0,
+      })
+    })
+  }, [watchedAmount, customerProjects, form, fields, update])
 
   // Handler: Eliminar allocation
-  const handleRemoveAllocation = (index: number) => {
-    setAllocations(allocations.filter((_, i) => i !== index))
-  }
+  const handleRemoveAllocation = useCallback(
+    (index: number) => {
+      remove(index)
+    },
+    [remove]
+  )
 
   // Handler: Cambiar monto asignado
-  const handleChangeAllocation = (index: number, amount: number) => {
-    const updated = [...allocations]
-    updated[index].allocatedAmount = amount
-    setAllocations(updated)
-  }
+  const handleChangeAllocation = useCallback(
+    (index: number, amount: number) => {
+      const currentValue = fields[index]
+      update(index, {
+        ...currentValue,
+        allocatedAmount: amount,
+      })
+    },
+    [fields, update]
+  )
 
   // Handler: Reset installments cuando cambia método de pago
-  // ⚠️ IMPORTANTE: Memoizado para evitar loop infinito de re-renders
-  // form.setValue es estable (react-hook-form garantiza que no cambia)
   const handlePaymentMethodChange = useCallback(() => {
     form.setValue('selectedInstallments', null)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  }, [form])
 
-  // Handler: Callback para CustomerSearchField cuando cambia el cliente seleccionado
-  // ✅ FIX: Memoizado para evitar loop infinito de re-renders
-  // Este callback se pasa a CustomerSearchField, que lo usa en un useEffect con dependencias
-  const handleCustomerSelect = useCallback((customer: { id: string } | null) => {
-    if (customer) {
-      setSelectedCustomerId(customer.id)
-    } else {
-      setSelectedCustomerId(null)
-    }
-    // Reset allocations y modo cuando cambia cliente
-    setAllocations([])
-    setDistributionMode('manual')
-  }, [])
-
-  // Calcular suma de allocations
-  const totalAllocated = allocations.reduce((sum, a) => sum + a.allocatedAmount, 0)
+  // Calcular suma de allocations desde form fields
+  const totalAllocated = fields.reduce((sum, _, index) => {
+    const amount = form.getValues(`allocations.${index}.allocatedAmount`) || 0
+    return sum + amount
+  }, 0)
   const difference = watchedAmount - totalAllocated
   const isValidSum = Math.abs(difference) < 0.01
 
   // Submit handler
   const handleSubmit = (values: PaymentToCustomerFormValues) => {
-    // Validar que hay allocations
-    if (values.allocations.length === 0) {
-      form.setError('allocations', { message: 'Debe asignar el pago a al menos un proyecto' })
+    // 1. Filtrar allocations con monto > 0
+    const allocationsWithValue = values.allocations.filter((a) => a.allocatedAmount > 0)
+
+    // 2. Validar que hay al menos una allocation con valor
+    if (allocationsWithValue.length === 0) {
+      form.setError('allocations', {
+        message: 'Debe asignar el pago a al menos un proyecto',
+      })
       return
     }
 
-    // Validar suma
-    if (!isValidSum) {
+    // 3. Validar suma (con las allocations filtradas)
+    const totalAllocatedSubmit = allocationsWithValue.reduce((sum, a) => sum + a.allocatedAmount, 0)
+    const differenceSubmit = watchedAmount - totalAllocatedSubmit
+    if (Math.abs(differenceSubmit) >= 0.01) {
       form.setError('allocations', {
         message: 'La suma de allocations debe ser igual al monto total',
       })
       return
     }
 
-    // Derivar currency del primer proyecto
-    const firstAllocation = values.allocations[0]
+    // 4. Derivar currency del primer proyecto
+    const firstAllocation = allocationsWithValue[0]
     const project = customerProjects.find((p) => p.id === firstAllocation.projectId)
     const currency = project?.currency || 'CLP'
 
-    onSubmit(values, currency)
+    // 5. Enviar solo las allocations con valor > 0
+    onSubmit({ ...values, allocations: allocationsWithValue }, currency)
   }
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-3">
+      <form id={formId} onSubmit={form.handleSubmit(handleSubmit)} className="space-y-3">
         {/* 1. Cliente: Búsqueda o Pre-seleccionado */}
         <CustomerSearchField
           control={form.control}
           preselectedCustomerId={preselectedCustomerId}
-          onCustomerSelect={handleCustomerSelect}
+          onCustomerSelect={(customer) => {
+            if (customer) {
+              setSelectedCustomerId(customer.id)
+            } else {
+              setSelectedCustomerId(null)
+            }
+            // Reset allocations y modo cuando cambia cliente
+            replace([])
+            setDistributionMode('manual')
+          }}
         />
 
         {/* 3. Monto y Fecha */}
@@ -286,13 +342,13 @@ export function PaymentToCustomerForm({
             )}
 
             {/* Empty State */}
-            {!loadingProjects && allocations.length === 0 && (
+            {!loadingProjects && fields.length === 0 && (
               <div className="text-center py-8 text-muted-foreground">
                 <p>Este cliente no tiene proyectos con saldo pendiente.</p>
               </div>
             )}
             {/* Validación Visual */}
-            {allocations.length > 0 && (
+            {fields.length > 0 && (
               <div className="flex justify-center gap-4">
                 <Card className="p-2">
                   <CardContent className="flex flex-col">
@@ -349,7 +405,7 @@ export function PaymentToCustomerForm({
             )}
 
             {/* Tabla de Allocations */}
-            {!loadingProjects && allocations.length > 0 && (
+            {!loadingProjects && fields.length > 0 && (
               <div className="border rounded-lg">
                 <Table>
                   <TableHeader>
@@ -361,12 +417,20 @@ export function PaymentToCustomerForm({
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {allocations.map((alloc, index) => {
-                      const project = customerProjects.find((p) => p.id === alloc.projectId)
+                    {fields.map((field, index) => {
+                      const project = customerProjects.find((p) => p.id === field.projectId)
                       if (!project) return null
 
+                      // Visual feedback: proyectos con $0 se ven "apagados" en modo FIFO
+                      const isUnallocated = field.allocatedAmount === 0
+                      const rowClassName = cn(
+                        isUnallocated &&
+                          distributionMode === 'fifo' &&
+                          'text-muted-foreground opacity-60'
+                      )
+
                       return (
-                        <TableRow key={index}>
+                        <TableRow key={field.id} className={rowClassName}>
                           <TableCell>
                             <div>
                               <div className="font-medium">{project.projectNumber}</div>
@@ -381,12 +445,12 @@ export function PaymentToCustomerForm({
                             {formatCurrency(project.balance, project.currency)}
                           </TableCell>
                           <TableCell className="text-right">
-                            <CurrencyInput
-                              value={alloc.allocatedAmount}
-                              onChange={(value) => handleChangeAllocation(index, value)}
+                            <MemoizedAllocationInput
+                              value={field.allocatedAmount}
                               currency={project.currency}
-                              className="text-right"
                               disabled={distributionMode === 'fifo'}
+                              onChangeAllocation={handleChangeAllocation}
+                              index={index}
                             />
                           </TableCell>
                           <TableCell>
@@ -431,21 +495,22 @@ export function PaymentToCustomerForm({
           )}
         />
 
-        {/* Submit button */}
-        <div className="flex justify-end gap-2 pt-4">
-          <Button
-            type="submit"
-            disabled={
-              isSubmitting ||
-              !selectedCustomerId ||
-              customerProjects.length === 0 ||
-              allocations.length === 0 ||
-              !isValidSum
-            }
-          >
-            {isSubmitting ? 'Registrando...' : 'Registrar Pago'}
-          </Button>
-        </div>
+        {/* Submit button - solo si no hay formId externo */}
+        {!formId && (
+          <div className="flex justify-end gap-2 pt-4">
+            <Button
+              type="submit"
+              disabled={
+                !selectedCustomerId ||
+                customerProjects.length === 0 ||
+                fields.length === 0 ||
+                !isValidSum
+              }
+            >
+              Registrar Pago
+            </Button>
+          </div>
+        )}
       </form>
     </Form>
   )
