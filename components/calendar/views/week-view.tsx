@@ -2,8 +2,6 @@
 
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
-import { Plus } from 'lucide-react'
-import { Button } from '@/components/ui/button'
 import { SortableDayContainer } from '../dnd/sortable-day-container'
 import { SortableEventCard } from '../dnd/sortable-event-card'
 import {
@@ -44,7 +42,11 @@ export function WeekView({
           const isToday = format(day, 'yyyy-MM-dd') === format(new Date(), 'yyyy-MM-dd')
 
           return (
-            <div key={day.toISOString()} className="text-center">
+            <div
+              key={day.toISOString()}
+              className="text-center cursor-pointer hover:bg-muted/50 rounded-lg p-1 transition-colors"
+              onClick={() => onCreateEvent?.(day)}
+            >
               <div className="text-xs text-muted-foreground mb-1">{dayHeaders[index]}</div>
               <div
                 className={`text-lg font-semibold ${
@@ -77,17 +79,6 @@ export function WeekView({
               events={sortedDayEvents}
               className="border rounded-lg p-2 bg-muted/20 hover:bg-muted/40 transition-colors min-h-[200px] flex flex-col"
             >
-              {/* Botón para crear evento */}
-              <Button
-                variant="ghost"
-                size="sm"
-                className="mb-2 h-8 text-xs opacity-0 hover:opacity-100 transition-opacity"
-                onClick={() => onCreateEvent?.(day)}
-              >
-                <Plus className="h-3 w-3 mr-1" />
-                Crear evento
-              </Button>
-
               {/* Lista de eventos del día (ordenados) */}
               <div className="space-y-2 flex-1">
                 {sortedDayEvents.map((event) => {
