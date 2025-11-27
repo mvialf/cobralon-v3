@@ -92,7 +92,7 @@ export function ProjectEventSummary({
           className="flex-1 min-w-0"
         />
       </div>
-      <div>
+      <div className="flex justify-between">
         {projectStatus && (
           <Badge
             className={cn(
@@ -104,15 +104,13 @@ export function ProjectEventSummary({
             {projectStatus.name}
           </Badge>
         )}
+        {comuna && (
+          <div className="flex items-center gap-1.5">
+            <MapPin className="h-3.5 w-3.5 text-muted-foreground" />
+            <span className="text-xs text-muted-foreground">{comuna}</span>
+          </div>
+        )}
       </div>
-
-      {comuna && (
-        <div className="flex items-center gap-1.5">
-          <MapPin className="h-3.5 w-3.5 text-muted-foreground" />
-          <span className="text-xs text-muted-foreground">{comuna}</span>
-        </div>
-      )}
-
       {Array.isArray(uninstallTags) &&
         uninstallTags.length > 0 &&
         (() => (
