@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Suspense } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { Calendar, Briefcase, Headphones } from 'lucide-react'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
@@ -35,6 +35,14 @@ const tabConfig = {
 type StatusTab = keyof typeof tabConfig
 
 export default function StatusConfigPage() {
+  return (
+    <Suspense fallback={<div className="p-4">Cargando...</div>}>
+      <StatusConfigContent />
+    </Suspense>
+  )
+}
+
+function StatusConfigContent() {
   const searchParams = useSearchParams()
   const router = useRouter()
   const [activeTab, setActiveTab] = useState<StatusTab>('project')

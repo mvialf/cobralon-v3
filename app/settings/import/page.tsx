@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Suspense } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { FileSpreadsheet, Users, Briefcase, CreditCard } from 'lucide-react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -13,6 +13,14 @@ import { ImportPaymentDialog } from '@/components/dialogs/payments/import-paymen
 type ImportTab = 'customers' | 'projects' | 'payments'
 
 export default function ImportDataPage() {
+  return (
+    <Suspense fallback={<div className="p-4">Cargando...</div>}>
+      <ImportDataContent />
+    </Suspense>
+  )
+}
+
+function ImportDataContent() {
   const searchParams = useSearchParams()
   const router = useRouter()
   const [activeTab, setActiveTab] = useState<ImportTab>('customers')

@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect } from 'vitest'
 import * as XLSX from 'xlsx'
 import { parseCustomerExcel } from '../customer-parser'
 

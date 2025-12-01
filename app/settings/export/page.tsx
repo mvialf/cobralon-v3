@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, Suspense } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { Download, Users, Briefcase, CreditCard, FileSpreadsheet, Loader2 } from 'lucide-react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -20,6 +20,25 @@ import {
 type ExportTab = 'customers' | 'projects' | 'payments'
 
 export default function ExportDataPage() {
+  return (
+    <Suspense fallback={<ExportPageSkeleton />}>
+      <ExportDataContent />
+    </Suspense>
+  )
+}
+
+function ExportPageSkeleton() {
+  return (
+    <div className="space-y-6">
+      <div>
+        <h2 className="text-2xl font-bold tracking-tight">Exportar Datos</h2>
+        <p className="text-muted-foreground">Cargando...</p>
+      </div>
+    </div>
+  )
+}
+
+function ExportDataContent() {
   const searchParams = useSearchParams()
   const router = useRouter()
   const [activeTab, setActiveTab] = useState<ExportTab>('customers')

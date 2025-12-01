@@ -37,7 +37,13 @@ vi.mock('@/lib/db', () => ({
 
 // Mock logger middleware (passthrough)
 vi.mock('@/lib/logger-middleware', () => ({
-  withLogging: (handler: Function) => {
+  withLogging: (
+    handler: (
+      request: NextRequest,
+      logger: Record<string, unknown>,
+      context: { params: Promise<Record<string, string>> }
+    ) => Promise<Response>
+  ) => {
     return async (request: NextRequest, context: { params: Promise<Record<string, string>> }) => {
       // Mock logger con métodos no-op
       const mockLogger = {
@@ -67,7 +73,13 @@ const mockProjects = [
 ]
 
 const mockPaymentMethods = [
-  { id: 'pm-1', name: 'Transferencia', active: true, hasInstallments: false, maxInstallments: null },
+  {
+    id: 'pm-1',
+    name: 'Transferencia',
+    active: true,
+    hasInstallments: false,
+    maxInstallments: null,
+  },
   { id: 'pm-2', name: 'Efectivo', active: true, hasInstallments: false, maxInstallments: null },
   { id: 'pm-3', name: 'Tarjeta Crédito', active: true, hasInstallments: true, maxInstallments: 12 },
   { id: 'pm-4', name: 'Cheque', active: true, hasInstallments: false, maxInstallments: null },
@@ -385,10 +397,7 @@ describe('POST /api/payments/import', () => {
     })
 
     it('continúa procesando otros pagos si uno falla en transacción', async () => {
-      const payments = [
-        validPayment,
-        { ...validPayment, projectNumber: 'PRO-002' },
-      ]
+      const payments = [validPayment, { ...validPayment, projectNumber: 'PRO-002' }]
 
       let callCount = 0
       vi.mocked(prisma.$transaction).mockImplementation(async () => {
@@ -416,9 +425,7 @@ describe('POST /api/payments/import', () => {
         projectNumber: 'PRO-003', // Tiene currency USD
       }
 
-      let capturedTransaction: Function | null = null
-      vi.mocked(prisma.$transaction).mockImplementation(async (fn) => {
-        capturedTransaction = fn as Function
+      vi.mocked(prisma.$transaction).mockImplementation(async () => {
         return { id: 'pay-usd' } as never
       })
 
