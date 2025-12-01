@@ -37,7 +37,7 @@ export function WeekView({
   return (
     <div className="flex flex-col min-h-[14rem]">
       {/* Header con nombres de días */}
-      <div className={`grid gap-2 pb-3 border-b ${showWeekends ? 'grid-cols-7' : 'grid-cols-5'}`}>
+      <div className={`grid gap-2 pb-3 ${showWeekends ? 'grid-cols-7' : 'grid-cols-5'}`}>
         {weekDays.map((day, index) => {
           const isToday = format(day, 'yyyy-MM-dd') === format(new Date(), 'yyyy-MM-dd')
 
@@ -63,7 +63,7 @@ export function WeekView({
       </div>
 
       {/* Grid de días con eventos */}
-      <div className={`grid gap-2 pt-4 ${showWeekends ? 'grid-cols-7' : 'grid-cols-5'}`}>
+      <div className={`grid gap-2 ${showWeekends ? 'grid-cols-7' : 'grid-cols-5'}`}>
         {weekDays.map((day) => {
           const dayEvents = getEventsForDay(events, day)
 
