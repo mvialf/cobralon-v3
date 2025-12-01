@@ -1,6 +1,17 @@
 import * as XLSX from 'xlsx'
 import { normalizePhone } from '@/lib/utils/phone'
 import { normalizeRegionValue } from '@/lib/regiones-chile'
+import {
+  findColumnIndex,
+  parseDate,
+  parseNumber,
+  validateExcelFile as validateExcelFileHelper,
+} from './helpers'
+
+// Re-export validateExcelFile con tamaño máximo de 10MB para proyectos
+export function validateExcelFile(file: File): { valid: boolean; error?: string } {
+  return validateExcelFileHelper(file, 10)
+}
 
 /**
  * Datos parseados de un proyecto individual desde Excel
@@ -77,85 +88,6 @@ const EXPECTED_COLUMNS = {
   windowsCount: ['ventanas', 'elementos', 'windows', 'cantidad'],
   squareMeters: ['m2', 'metros', 'square meters', 'm²', 'metros cuadrados'],
   description: ['descripcion', 'descripción', 'description', 'observaciones', 'notas'],
-}
-
-/**
- * Normaliza el nombre de una columna para matching
- */
-function normalizeColumnName(column: string): string {
-  return column
-    .toLowerCase()
-    .trim()
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '') // Remover acentos
-    .replace(/[^a-z0-9\s]/g, '') // Remover caracteres especiales
-}
-
-/**
- * Encuentra el índice de una columna en el header
- */
-function findColumnIndex(headers: string[], possibleNames: string[]): number | null {
-  for (let i = 0; i < headers.length; i++) {
-    const normalized = normalizeColumnName(headers[i])
-    if (possibleNames.some((name) => normalized.includes(name))) {
-      return i
-    }
-  }
-  return null
-}
-
-/**
- * Parsea una fecha desde varios formatos
- */
-function parseDate(value: unknown): Date | null {
-  if (!value) return null
-
-  // Si es un número (Excel date serial)
-  if (typeof value === 'number') {
-    // Excel dates son días desde 1900-01-01
-    const date = XLSX.SSF.parse_date_code(value)
-    return new Date(date.y, date.m - 1, date.d)
-  }
-
-  // Si es string, intentar parsear
-  if (typeof value === 'string') {
-    const trimmed = value.trim()
-    if (!trimmed) return null
-
-    // Formato DD/MM/YYYY
-    const ddmmyyyy = /^(\d{1,2})[/-](\d{1,2})[/-](\d{4})$/
-    const match = trimmed.match(ddmmyyyy)
-    if (match) {
-      const [, day, month, year] = match
-      return new Date(parseInt(year), parseInt(month) - 1, parseInt(day))
-    }
-
-    // Intentar Date nativo
-    const date = new Date(trimmed)
-    if (!isNaN(date.getTime())) {
-      return date
-    }
-  }
-
-  // Si ya es Date
-  if (value instanceof Date && !isNaN(value.getTime())) {
-    return value
-  }
-
-  return null
-}
-
-/**
- * Parsea un número desde string o número
- */
-function parseNumber(value: unknown, defaultValue = 0): number {
-  if (typeof value === 'number') return value
-  if (typeof value === 'string') {
-    const cleaned = value.replace(/[^\d.-]/g, '') // Remover todo excepto dígitos, punto y signo
-    const num = parseFloat(cleaned)
-    return isNaN(num) ? defaultValue : num
-  }
-  return defaultValue
 }
 
 /**
@@ -380,37 +312,3 @@ export async function parseProjectExcel(file: File): Promise<ProjectParseResult>
   })
 }
 
-/**
- * Valida que un archivo sea un Excel válido
- */
-export function validateExcelFile(file: File): { valid: boolean; error?: string } {
-  const validTypes = [
-    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', // .xlsx
-    'application/vnd.ms-excel', // .xls
-  ]
-
-  const validExtensions = ['.xlsx', '.xls']
-
-  // Validar tipo MIME
-  if (!validTypes.includes(file.type)) {
-    const hasValidExtension = validExtensions.some((ext) => file.name.toLowerCase().endsWith(ext))
-
-    if (!hasValidExtension) {
-      return {
-        valid: false,
-        error: 'El archivo debe ser un Excel (.xlsx o .xls)',
-      }
-    }
-  }
-
-  // Validar tamaño (max 10MB para proyectos, pueden ser más datos)
-  const maxSize = 10 * 1024 * 1024 // 10MB
-  if (file.size > maxSize) {
-    return {
-      valid: false,
-      error: 'El archivo no debe superar 10MB',
-    }
-  }
-
-  return { valid: true }
-}

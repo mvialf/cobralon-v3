@@ -1,5 +1,19 @@
 import * as XLSX from 'xlsx'
 import { customerSchema, type CustomerFormData } from '@/lib/validations/customer-validations'
+import {
+  findColumnIndex as findColumnIndexHelper,
+  validateExcelFile as validateExcelFileHelper,
+} from './helpers'
+
+// Re-export para mantener API pública
+export { validateExcelFileHelper as validateExcelFile }
+
+/**
+ * Wrapper de findColumnIndex que NO remueve caracteres especiales (comportamiento original)
+ */
+function findColumnIndex(headers: string[], possibleNames: string[]): number | null {
+  return findColumnIndexHelper(headers, possibleNames, false)
+}
 
 /**
  * Resultado del parsing de un cliente individual
@@ -28,30 +42,6 @@ const EXPECTED_COLUMNS = {
   name: ['nombre', 'name', 'cliente', 'customer'],
   phone: ['telefono', 'teléfono', 'phone', 'fono', 'celular'],
   email: ['email', 'correo', 'mail', 'e-mail'],
-}
-
-/**
- * Normaliza el nombre de una columna para matching
- */
-function normalizeColumnName(column: string): string {
-  return column
-    .toLowerCase()
-    .trim()
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '') // Remover acentos
-}
-
-/**
- * Encuentra el índice de una columna en el header
- */
-function findColumnIndex(headers: string[], possibleNames: string[]): number | null {
-  for (let i = 0; i < headers.length; i++) {
-    const normalized = normalizeColumnName(headers[i])
-    if (possibleNames.some((name) => normalized.includes(name))) {
-      return i
-    }
-  }
-  return null
 }
 
 /**
@@ -178,37 +168,3 @@ export async function parseCustomerExcel(file: File): Promise<ParseResult> {
   })
 }
 
-/**
- * Valida que un archivo sea un Excel válido
- */
-export function validateExcelFile(file: File): { valid: boolean; error?: string } {
-  const validTypes = [
-    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', // .xlsx
-    'application/vnd.ms-excel', // .xls
-  ]
-
-  const validExtensions = ['.xlsx', '.xls']
-
-  // Validar tipo MIME
-  if (!validTypes.includes(file.type)) {
-    const hasValidExtension = validExtensions.some((ext) => file.name.toLowerCase().endsWith(ext))
-
-    if (!hasValidExtension) {
-      return {
-        valid: false,
-        error: 'El archivo debe ser un Excel (.xlsx o .xls)',
-      }
-    }
-  }
-
-  // Validar tamaño (max 5MB)
-  const maxSize = 5 * 1024 * 1024 // 5MB
-  if (file.size > maxSize) {
-    return {
-      valid: false,
-      error: 'El archivo no debe superar 5MB',
-    }
-  }
-
-  return { valid: true }
-}
