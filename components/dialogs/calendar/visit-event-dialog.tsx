@@ -95,11 +95,12 @@ export function VisitEventDialog({
   // Preparar defaultValues según modo
   const getDefaultValues = (): Partial<VisitEventWithUpdateFormValues> => {
     if (mode === 'edit' && event) {
-      // En modo edit cargamos visitId y scheduledDate
+      // En modo edit cargamos visitId, scheduledDate y teamTagIds del evento
       // Los demás campos se cargan desde el API en el form
       return {
         visitId: event.visitId,
         scheduledDate: format(new Date(event.scheduledDate), 'yyyy-MM-dd'),
+        teamTagIds: event.teamTags?.map((t) => t.id) || [],
       }
     }
 

@@ -126,11 +126,12 @@ export function ProjectEventDialog({
   // Preparar defaultValues según modo
   const getDefaultValues = (): Partial<ProjectEventWithProjectUpdateFormValues> => {
     if (mode === 'edit' && event) {
-      // En modo edit cargamos projectId y scheduledDate
+      // En modo edit cargamos projectId, scheduledDate y teamTagIds del evento
       // Los demás campos se cargan desde el API en el form
       return {
         projectId: event.projectId,
         scheduledDate: format(new Date(event.scheduledDate), 'yyyy-MM-dd'),
+        teamTagIds: event.teamTags?.map((t) => t.id) || [],
       }
     }
 

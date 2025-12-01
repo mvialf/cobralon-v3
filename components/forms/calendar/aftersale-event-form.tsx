@@ -161,6 +161,7 @@ export const AftersaleEventForm = React.forwardRef<
         const regionCodigo = getRegionCodigoByNombre(data.project.region) || data.project.region
 
         // Poblar campos del formulario con datos del aftersale
+        // IMPORTANTE: Preservar teamTagIds existentes (vienen del evento, no del aftersale)
         const formData: AftersaleEventWithUpdateFormValues = {
           aftersaleId: data.id,
           scheduledDate: form.getValues('scheduledDate') || '',
@@ -173,8 +174,7 @@ export const AftersaleEventForm = React.forwardRef<
           apartment: data.project.apartment || null,
           comuna: data.project.comuna,
           region: regionCodigo,
-          // Team tags (inicialmente vacío, se cargarán cuando existan eventos)
-          teamTagIds: [],
+          teamTagIds: form.getValues('teamTagIds') || [], // ← Preservar del evento
         }
 
         console.log('📝 Setting form values:', formData)

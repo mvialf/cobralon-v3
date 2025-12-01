@@ -95,11 +95,12 @@ export function AftersaleEventDialog({
   // Preparar defaultValues según modo
   const getDefaultValues = (): Partial<AftersaleEventWithUpdateFormValues> => {
     if (mode === 'edit' && event) {
-      // En modo edit cargamos aftersaleId y scheduledDate
+      // En modo edit cargamos aftersaleId, scheduledDate y teamTagIds del evento
       // Los demás campos se cargan desde el API en el form
       return {
         aftersaleId: event.aftersaleId,
         scheduledDate: format(new Date(event.scheduledDate), 'yyyy-MM-dd'),
+        teamTagIds: event.teamTags?.map((t) => t.id) || [],
       }
     }
 

@@ -130,6 +130,7 @@ export const VisitEventForm = React.forwardRef<VisitEventFormHandle, VisitEventF
           const regionCodigo = getRegionCodigoByNombre(data.region) || data.region
 
           // Poblar campos del formulario con datos de la visita
+          // IMPORTANTE: Preservar teamTagIds existentes (vienen del evento, no de la visita)
           const formData: VisitEventWithUpdateFormValues = {
             visitId: data.id,
             scheduledDate: form.getValues('scheduledDate') || '',
@@ -141,8 +142,7 @@ export const VisitEventForm = React.forwardRef<VisitEventFormHandle, VisitEventF
             apartment: data.apartment || null,
             comuna: data.comuna,
             region: regionCodigo,
-            // Team tags (inicialmente vacío, se cargarán cuando existan eventos)
-            teamTagIds: [],
+            teamTagIds: form.getValues('teamTagIds') || [], // ← Preservar del evento
           }
 
           console.log('📝 Setting form values:', formData)

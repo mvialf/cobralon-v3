@@ -188,6 +188,7 @@ export const ProjectEventForm = React.forwardRef<ProjectEventFormHandle, Project
           const regionCodigo = getRegionCodigoByNombre(data.region) || data.region
 
           // Poblar campos del formulario con datos del proyecto
+          // IMPORTANTE: Preservar teamTagIds existentes (vienen del evento, no del proyecto)
           const formData = {
             projectId: data.id,
             scheduledDate: form.getValues('scheduledDate') || '',
@@ -202,6 +203,7 @@ export const ProjectEventForm = React.forwardRef<ProjectEventFormHandle, Project
             description: data.description || null,
             uninstallTagIds: tagIds,
             tasks: data.tasks || [],
+            teamTagIds: form.getValues('teamTagIds') || [], // ← Preservar del evento
           }
 
           console.log('📝 Setting form values:', formData)
