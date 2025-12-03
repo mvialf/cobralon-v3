@@ -16,6 +16,7 @@ import { PhoneInput } from '@/components/ui/phone-input'
 import { FormGrid } from '@/components/ui/form-grid'
 import { StatusOptionDisplay } from '@/components/ui/status-option-display'
 import { Combobox } from '@/components/ui/combobox'
+import { NewCustomerDialog } from '@/components/dialogs/customer/new-customer-dialog'
 import { AddressFields } from '@/components/forms/fields/address-fields'
 import { ProjectFinancialFields } from '@/components/forms/fields/project-financial-fields'
 import { ProjectDetailsFields } from '@/components/forms/fields/project-details-fields'
@@ -50,6 +51,9 @@ export const ProjectForm = React.forwardRef<ProjectFormHandle, ProjectFormProps>
     // Fetch customers usando hook centralizado
     const { data: customersData, isLoading: loadingCustomers } = useCustomersList()
     const customers = customersData?.customers || []
+
+    // Estado para dialog de crear cliente inline
+    const [showCreateCustomer, setShowCreateCustomer] = React.useState(false)
 
     // Fetch project statuses usando hook compartido con caché
     const { data: projectStatuses = [], isLoading: loadingStatuses } = useProjectStatuses()
@@ -190,6 +194,8 @@ export const ProjectForm = React.forwardRef<ProjectFormHandle, ProjectFormProps>
                       contentWidth="400px"
                       loading={loadingCustomers}
                       modal
+                      onCreateNew={() => setShowCreateCustomer(true)}
+                      createNewLabel="+ Crear cliente"
                     />
                   </FormControl>
                   <FormMessage />
@@ -314,6 +320,17 @@ export const ProjectForm = React.forwardRef<ProjectFormHandle, ProjectFormProps>
             </div>
           )}
         </FormRoot>
+
+        {/* Dialog para crear cliente inline */}
+        <NewCustomerDialog
+          open={showCreateCustomer}
+          onOpenChange={setShowCreateCustomer}
+          onCustomerCreated={(customer) => {
+            // Auto-seleccionar el cliente recién creado
+            form.setValue('customerId', customer.id)
+            form.setValue('phone', normalizePhone(customer.phone))
+          }}
+        />
       </Form>
     )
   }

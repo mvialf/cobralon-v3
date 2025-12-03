@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo, useCallback } from 'react'
 import { type PaginationState } from '@tanstack/react-table'
-import { useQueryClient, useQuery } from '@tanstack/react-query'
+import { useQueryClient } from '@tanstack/react-query'
 import Link from 'next/link'
 import { Upload, Download } from 'lucide-react'
 import { AppLayout } from '@/components/layout/app-layout'
@@ -26,6 +26,7 @@ import {
   type ProjectsQueryParams,
 } from '@/hooks/queries/use-projects'
 import { useDebounce } from '@/hooks/use-debounce'
+import { useProjectStatuses } from '@/hooks/queries/use-project-statuses'
 
 export default function ProjectsPage() {
   const queryClient = useQueryClient()
@@ -110,16 +111,8 @@ export default function ProjectsPage() {
   // React Query: Fetch projects con cache automático
   const { data, isLoading, isPlaceholderData } = useProjects(queryParams)
 
-  // Cargar statuses para el filtro (metadata)
-  const { data: statusesData } = useQuery({
-    queryKey: ['project-statuses'],
-    queryFn: async () => {
-      const response = await fetch('/api/project-status')
-      if (!response.ok) throw new Error('Error al cargar estados')
-      return response.json()
-    },
-    staleTime: 5 * 60 * 1000, // 5 minutos - statuses cambian raramente
-  })
+  // Cargar statuses para el filtro (metadata) - usando hook compartido
+  const { data: statuses = [] } = useProjectStatuses()
 
   // Mutation hook para actualizar estado de proyecto
   const updateStatusMutation = useUpdateProjectStatus()
@@ -127,7 +120,6 @@ export default function ProjectsPage() {
   // Extraer data del hook (con fallbacks)
   const projects = data?.projects || []
   const pageCount = data?.pagination.totalPages || 0
-  const statuses = statusesData?.projectStatuses || []
 
   // Prefetch página siguiente para mejor UX
   useEffect(() => {
@@ -178,6 +170,7 @@ export default function ProjectsPage() {
     updatingProjectId: updateStatusMutation.isPending
       ? updateStatusMutation.variables?.projectId
       : null,
+    onDataChanged: () => queryClient.invalidateQueries({ queryKey: ['projects'] }),
   })
 
   // Formatear opciones para el filtro de status
