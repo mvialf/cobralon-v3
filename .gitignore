@@ -53,3 +53,4 @@ coverage/
 scripts/backups/
 scripts/logs/
 *.backup
+vercel.json.bak
