@@ -13,9 +13,11 @@ name: Scheduled Cron Jobs
 
 on:
   schedule:
-    # Ejecutar todos los dias a las 00:00 UTC (21:00 Chile, 20:00 Argentina)
+    # Ejecutar todos los dias a las 00:00 hora Chile
+    # Chile verano (UTC-3): 03:00 UTC = 00:00 Chile
+    # Chile invierno (UTC-4): seria 23:00 del dia anterior
     # Sintaxis: minuto hora dia-mes mes dia-semana
-    - cron: '0 0 * * *'
+    - cron: '0 3 * * *'
 
   # Permitir ejecucion manual para testing
   workflow_dispatch:
