@@ -60,10 +60,6 @@ export function ProjectDialog({
   }
 
   const title = mode === 'create' ? 'Crear Proyecto' : 'Editar Proyecto'
-  const description =
-    mode === 'create'
-      ? 'Ingresa los datos del nuevo proyecto'
-      : 'Actualiza la información del proyecto'
 
   return (
     <ScrollableDialog open={open} onOpenChange={onOpenChange}>
@@ -75,7 +71,6 @@ export function ProjectDialog({
         <ScrollableDialogBody>
           <ScrollableDialogDescription asChild>
             <div className="space-y-6">
-              <p className="text-sm text-muted-foreground">{description}</p>
               <ProjectForm
                 ref={formRef}
                 showSubmitButton={false}

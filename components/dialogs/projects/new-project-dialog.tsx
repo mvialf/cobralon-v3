@@ -65,9 +65,6 @@ export function NewProjectDialog({ onProjectCreated }: NewProjectDialogProps) {
         <ScrollableDialogBody>
           <ScrollableDialogDescription asChild>
             <div className="space-y-6">
-              <p className="text-sm text-muted-foreground">
-                Ingresa los datos del nuevo proyecto. Haz clic en guardar cuando termines.
-              </p>
               <ProjectForm
                 ref={formRef}
                 onSubmit={handleSubmit}

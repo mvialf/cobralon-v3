@@ -304,13 +304,13 @@ export const ProjectForm = React.forwardRef<ProjectFormHandle, ProjectFormProps>
             />
           </FormGrid>
 
+          <ProjectFinancialFields control={form.control} currency={form.watch('currency')} />
+
           <AddressFields control={form.control} defaultRegion={configuration.region} />
 
           <ProjectDetailsFields control={form.control} />
 
           <UninstallTagsFields control={form.control} />
-
-          <ProjectFinancialFields control={form.control} currency={form.watch('currency')} />
 
           {showSubmitButton && (
             <div className="flex justify-end gap-2">
