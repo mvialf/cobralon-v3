@@ -1,21 +1,23 @@
 # Plan: Migración a Server-Side Filtering
 
-> **Estado:** ✅ Fase 1-3 completadas para Projects (2025-12-03)
+> **Estado:** ✅ Fase 1-4 completadas para Projects, Payments y evaluación de Aftersales (2025-12-03)
 > **Creado:** 2025-12-03
 > **Prioridad:** Alta (afecta correctitud de datos)
 
 ## ✅ Progreso de Implementación
 
-| Fase | Descripción | Estado |
-|------|-------------|--------|
-| 1.1 | Modificar data-table.tsx - manualFiltering | ✅ Completado |
-| 1.2 | Modificar data-table-faceted-filter.tsx - serverFacets | ✅ Completado |
-| 1.3 | Modificar data-table-toolbar.tsx - propagar filtros | ✅ Completado |
-| 2.1 | Actualizar API /api/projects - filtros + facets | ✅ Completado |
-| 3.1 | Actualizar projects/page.tsx - manualFiltering | ✅ Completado |
-| 3.2 | Actualizar projects/columns.tsx | ✅ Completado |
-| 4 | Migrar payments, customers, aftersales | ⏳ Pendiente |
-| 5 | Optimizaciones (cache, índices) | ⏳ Pendiente |
+| Fase | Descripción                                            | Estado                        |
+| ---- | ------------------------------------------------------ | ----------------------------- |
+| 1.1  | Modificar data-table.tsx - manualFiltering             | ✅ Completado                 |
+| 1.2  | Modificar data-table-faceted-filter.tsx - serverFacets | ✅ Completado                 |
+| 1.3  | Modificar data-table-toolbar.tsx - propagar filtros    | ✅ Completado                 |
+| 2.1  | Actualizar API /api/projects - filtros + facets        | ✅ Completado                 |
+| 3.1  | Actualizar projects/page.tsx - manualFiltering         | ✅ Completado                 |
+| 3.2  | Actualizar projects/columns.tsx                        | ✅ Completado                 |
+| 4.1  | Migrar payments API + page + columns                   | ✅ Completado (2025-12-03)    |
+| 4.2  | Verificar customers page                               | ✅ Ya era server-side         |
+| 4.3  | Evaluar aftersales                                     | ✅ Mantiene client-side (justificado) |
+| 5    | Optimizaciones (cache, índices)                        | ⏳ Pendiente                  |
 
 ---
 
@@ -491,9 +493,55 @@ const handleStatusChange = (values: string[]) => {
 
 ## Historial de Cambios
 
-| Fecha      | Cambio                    |
-| ---------- | ------------------------- |
-| 2025-12-03 | Creación del plan inicial |
+| Fecha      | Cambio                                                 |
+| ---------- | ------------------------------------------------------ |
+| 2025-12-03 | Creación del plan inicial                              |
+| 2025-12-03 | Migración completa de Payments a server-side filtering |
+| 2025-12-03 | Evaluación Aftersales: mantiene client-side (justificado) |
+
+### Detalles de Migración de Payments (2025-12-03)
+
+**Archivos modificados:**
+
+- `app/api/payments/route.ts` - Agregados filtros: search, type, paymentMethodId, projectNumber. Retorna facets.
+- `app/payments/page.tsx` - Agregado manualFiltering, serverFacets, onFilterChange callbacks
+- `app/payments/columns.tsx` - Removidos filterFn de 3 columnas
+- `hooks/queries/use-payments.ts` - Agregados nuevos query params y tipo Facet
+
+**Filtros server-side implementados:**
+
+1. **search** - Búsqueda global por cliente o proyecto
+2. **type** - Filtrar por 'Project' o 'Customer'
+3. **paymentMethodId** - Filtrar por método de pago
+4. **projectNumber** - Filtrar por número de proyecto (via allocations)
+
+**Facets retornados:**
+
+- `type` - Conteo de pagos por tipo
+- `paymentMethod` - Conteo por método de pago
+- `projectNumber` - Conteo por número de proyecto
+
+### Evaluación de Aftersales (2025-12-03)
+
+**Decisión: Mantener client-side filtering** ✅
+
+**Razones:**
+
+1. **Volumen pequeño** - Aftersales representa solo casos de postventa de proyectos finalizados (fracción del total)
+2. **Búsqueda normalizada** - Usa `createNormalizedFilter` que ignora acentos/tildes, más complejo de replicar server-side
+3. **Sin paginación** - API retorna todos los registros sin paginación server-side
+4. **Complejidad no justificada** - El esfuerzo de migrar no aporta beneficio significativo para el volumen actual
+
+**Estado actual:**
+- API GET `/api/aftersales` → retorna TODOS los registros
+- Hook `useAftersales()` → no soporta parámetros de filtrado
+- Página usa `globalFilterFn` con `createNormalizedFilter` (client-side)
+- Status filter desde query separada `/api/aftersale-status`
+
+**Cuándo reconsiderar migración:**
+- Si el volumen de aftersales crece significativamente (>500 registros activos)
+- Si se agregan más filtros facetados
+- Si hay problemas de performance medibles
 
 ---
 

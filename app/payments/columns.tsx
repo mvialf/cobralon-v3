@@ -136,13 +136,7 @@ export const createColumns = ({ onViewDetails }: ColumnsProps = {}): ColumnDef<P
       )
     },
     enableSorting: true,
-    filterFn: (row, _id, filterValue) => {
-      const payment = row.original
-      // Verificar si algún allocation tiene un projectNumber en el filterValue
-      return payment.allocations.some((allocation) =>
-        filterValue.includes(allocation.project.projectNumber)
-      )
-    },
+    // filterFn removido - ahora usa server-side filtering
   },
 
   // Tipo
@@ -160,10 +154,7 @@ export const createColumns = ({ onViewDetails }: ColumnsProps = {}): ColumnDef<P
       )
     },
     enableSorting: true,
-    filterFn: (row, _id, filterValue) => {
-      const type = row.getValue('type') as string
-      return filterValue.includes(type)
-    },
+    // filterFn removido - ahora usa server-side filtering
   },
 
   // Método de Pago
@@ -178,10 +169,7 @@ export const createColumns = ({ onViewDetails }: ColumnsProps = {}): ColumnDef<P
       const methodB = rowB.original.paymentMethod?.name || ''
       return methodA.localeCompare(methodB)
     },
-    filterFn: (row, _id, filterValue) => {
-      const methodName = row.original.paymentMethod?.name
-      return methodName ? filterValue.includes(methodName) : false
-    },
+    // filterFn removido - ahora usa server-side filtering
   },
 
   // Monto

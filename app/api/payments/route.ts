@@ -10,11 +10,15 @@ import { canApplyCredit } from '@/lib/business-logic/credit-management'
 /**
  * GET /api/payments
  *
- * Obtiene lista de pagos con filtros opcionales
+ * Obtiene lista de pagos con filtros opcionales y facets para server-side filtering
  *
  * Query params:
  *   - page: número de página (default: 1)
  *   - limit: registros por página (default: 10, max: 100)
+ *   - search: búsqueda global por cliente o proyecto
+ *   - type: filtrar por tipo ('Project' | 'Customer')
+ *   - paymentMethodId: filtrar por método de pago
+ *   - projectNumber: filtrar por número de proyecto (via allocations)
  *   - customerId: filtrar por cliente específico
  *   - projectId: filtrar por proyecto específico
  *   - startDate: filtrar pagos desde esta fecha (ISO string)
@@ -24,6 +28,14 @@ export const GET = withLogging(async (request, logger) => {
   const { searchParams } = new URL(request.url)
   const page = parseInt(searchParams.get('page') || '1')
   const limit = Math.min(parseInt(searchParams.get('limit') || '10'), 100)
+
+  // Filtros de server-side filtering
+  const search = searchParams.get('search') || ''
+  const type = searchParams.get('type') || ''
+  const paymentMethodId = searchParams.get('paymentMethodId') || ''
+  const projectNumber = searchParams.get('projectNumber') || ''
+
+  // Filtros existentes
   const customerId = searchParams.get('customerId') || ''
   const projectId = searchParams.get('projectId') || ''
   const startDate = searchParams.get('startDate') || ''
@@ -34,6 +46,10 @@ export const GET = withLogging(async (request, logger) => {
       page,
       limit,
       filters: {
+        search: search || undefined,
+        type: type || undefined,
+        paymentMethodId: paymentMethodId || undefined,
+        projectNumber: projectNumber || undefined,
         customerId: customerId || undefined,
         projectId: projectId || undefined,
         dateRange: startDate || endDate ? { startDate, endDate } : undefined,
@@ -46,6 +62,46 @@ export const GET = withLogging(async (request, logger) => {
 
   // Construir filtro dinámico
   const where: PaymentWhereInput = {}
+
+  // Filtro de búsqueda global (por cliente o proyecto)
+  if (search) {
+    where.OR = [
+      { customer: { name: { contains: search, mode: 'insensitive' } } },
+      {
+        allocations: {
+          some: {
+            project: {
+              OR: [
+                { projectNumber: { contains: search, mode: 'insensitive' } },
+                { projectName: { contains: search, mode: 'insensitive' } },
+              ],
+            },
+          },
+        },
+      },
+    ]
+  }
+
+  // Filtro por tipo de pago
+  if (type && (type === 'Project' || type === 'Customer')) {
+    where.type = type
+  }
+
+  // Filtro por método de pago
+  if (paymentMethodId) {
+    where.paymentMethodId = paymentMethodId
+  }
+
+  // Filtro por número de proyecto (via allocations)
+  if (projectNumber) {
+    where.allocations = {
+      some: {
+        project: {
+          projectNumber: projectNumber,
+        },
+      },
+    }
+  }
 
   if (customerId) {
     where.customerId = customerId
@@ -62,8 +118,8 @@ export const GET = withLogging(async (request, logger) => {
     }
   }
 
-  // Filtro por proyecto (via allocations)
-  if (projectId) {
+  // Filtro por proyecto (via allocations) - Si ya hay filtro de projectNumber, combinar
+  if (projectId && !projectNumber) {
     where.allocations = {
       some: {
         projectId,
@@ -72,53 +128,98 @@ export const GET = withLogging(async (request, logger) => {
   }
 
   try {
-    // Obtener pagos y total count
-    const [payments, total] = await Promise.all([
-      prisma.payment.findMany({
-        relationLoadStrategy: 'join', // ← Fix N+1: Force database-level JOINs
-        where,
-        skip,
-        take: limit,
-        orderBy: { date: 'desc' }, // Más recientes primero
-        include: {
-          customer: {
-            select: {
-              id: true,
-              name: true,
-              phone: true,
+    // Obtener pagos, total count y facets en paralelo
+    const [payments, total, typeFacets, paymentMethodFacets, projectNumberFacets] =
+      await Promise.all([
+        // Query principal
+        prisma.payment.findMany({
+          relationLoadStrategy: 'join', // ← Fix N+1: Force database-level JOINs
+          where,
+          skip,
+          take: limit,
+          orderBy: { date: 'desc' }, // Más recientes primero
+          include: {
+            customer: {
+              select: {
+                id: true,
+                name: true,
+                phone: true,
+              },
             },
-          },
-          paymentMethod: {
-            select: {
-              id: true,
-              name: true,
-              icon: true,
+            paymentMethod: {
+              select: {
+                id: true,
+                name: true,
+                icon: true,
+              },
             },
-          },
-          allocations: {
-            select: {
-              id: true,
-              allocatedAmount: true,
-              project: {
-                select: {
-                  id: true,
-                  projectNumber: true,
-                  projectName: true,
-                  totalAmount: true,
-                  currency: true,
+            allocations: {
+              select: {
+                id: true,
+                allocatedAmount: true,
+                project: {
+                  select: {
+                    id: true,
+                    projectNumber: true,
+                    projectName: true,
+                    totalAmount: true,
+                    currency: true,
+                  },
+                },
+              },
+              orderBy: {
+                project: {
+                  createdAt: 'asc', // Ordenar por FIFO
                 },
               },
             },
-            orderBy: {
-              project: {
-                createdAt: 'asc', // Ordenar por FIFO
-              },
-            },
           },
-        },
-      }),
-      prisma.payment.count({ where }),
-    ])
+        }),
+        // Count total
+        prisma.payment.count({ where }),
+        // Facet: tipo de pago
+        prisma.payment.groupBy({
+          by: ['type'],
+          where,
+          _count: true,
+        }),
+        // Facet: método de pago
+        prisma.payment.groupBy({
+          by: ['paymentMethodId'],
+          where,
+          _count: true,
+        }),
+        // Facet: números de proyecto (raw query para aplanar allocations)
+        prisma.$queryRaw<Array<{ projectNumber: string; count: bigint }>>`
+        SELECT p."projectNumber", COUNT(DISTINCT pa.id) as count
+        FROM "PaymentAllocation" pa
+        JOIN "Project" p ON pa."projectId" = p.id
+        JOIN "Payment" pm ON pa."paymentId" = pm.id
+        WHERE 1=1
+          ${search ? Prisma.sql`AND (EXISTS (SELECT 1 FROM "Customer" c WHERE c.id = pm."customerId" AND c.name ILIKE ${`%${search}%`}) OR p."projectNumber" ILIKE ${`%${search}%`} OR p."projectName" ILIKE ${`%${search}%`})` : Prisma.empty}
+          ${type ? Prisma.sql`AND pm.type = ${type}` : Prisma.empty}
+          ${paymentMethodId ? Prisma.sql`AND pm."paymentMethodId" = ${paymentMethodId}::uuid` : Prisma.empty}
+          ${customerId ? Prisma.sql`AND pm."customerId" = ${customerId}::uuid` : Prisma.empty}
+          ${startDate ? Prisma.sql`AND pm.date >= ${new Date(startDate)}` : Prisma.empty}
+          ${endDate ? Prisma.sql`AND pm.date <= ${new Date(endDate)}` : Prisma.empty}
+        GROUP BY p."projectNumber"
+        ORDER BY p."projectNumber"
+      `,
+      ])
+
+    // Obtener nombres de métodos de pago para los facets (filtrar nulls)
+    const validPaymentMethodFacets = paymentMethodFacets.filter((f) => f.paymentMethodId !== null)
+    const paymentMethodIds = validPaymentMethodFacets.map((f) => f.paymentMethodId) as string[]
+
+    const paymentMethods =
+      paymentMethodIds.length > 0
+        ? await prisma.paymentMethod.findMany({
+            where: { id: { in: paymentMethodIds } },
+            select: { id: true, name: true },
+          })
+        : []
+
+    const paymentMethodMap = new Map(paymentMethods.map((pm) => [pm.id, pm.name]))
 
     logger.info(
       {
@@ -136,6 +237,23 @@ export const GET = withLogging(async (request, logger) => {
         limit,
         total,
         totalPages: Math.ceil(total / limit),
+      },
+      facets: {
+        type: typeFacets.map((f) => ({
+          value: f.type,
+          label: f.type === 'Project' ? 'Proyecto' : 'Cliente',
+          count: f._count,
+        })),
+        paymentMethod: validPaymentMethodFacets.map((f) => ({
+          value: f.paymentMethodId as string,
+          label: paymentMethodMap.get(f.paymentMethodId as string) || f.paymentMethodId,
+          count: f._count,
+        })),
+        projectNumber: projectNumberFacets.map((f) => ({
+          value: f.projectNumber,
+          label: f.projectNumber,
+          count: Number(f.count),
+        })),
       },
     })
   } catch (error) {

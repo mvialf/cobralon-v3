@@ -51,6 +51,11 @@ export default function PaymentsPage() {
   const [searchTerm, setSearchTerm] = useState('')
   const debouncedSearch = useDebounce(searchTerm, 500)
 
+  // Estados de filtros server-side
+  const [typeFilter, setTypeFilter] = useState<'Project' | 'Customer' | undefined>(undefined)
+  const [paymentMethodFilter, setPaymentMethodFilter] = useState<string | undefined>(undefined)
+  const [projectNumberFilter, setProjectNumberFilter] = useState<string | undefined>(undefined)
+
   // Handler para exportar pagos a Excel
   const handleExport = useCallback(async (options?: { type?: 'Project' | 'Customer' | 'all' }) => {
     setIsExporting(true)
@@ -89,9 +94,20 @@ export default function PaymentsPage() {
     () => ({
       page: pagination.pageIndex + 1, // API usa 1-based
       limit: pagination.pageSize,
-      // Nota: La API de payments no tiene search directo, usa client-side filtering
+      // Server-side filtering
+      search: debouncedSearch || undefined,
+      type: typeFilter,
+      paymentMethodId: paymentMethodFilter,
+      projectNumber: projectNumberFilter,
     }),
-    [pagination.pageIndex, pagination.pageSize]
+    [
+      pagination.pageIndex,
+      pagination.pageSize,
+      debouncedSearch,
+      typeFilter,
+      paymentMethodFilter,
+      projectNumberFilter,
+    ]
   )
 
   // React Query: Fetch payments con cache automático
@@ -99,56 +115,9 @@ export default function PaymentsPage() {
   const deleteMutation = useDeletePayment()
 
   // Extraer data del hook (con fallbacks) y cast a tipo local
-  const allPayments = useMemo(() => (data?.payments || []) as Payment[], [data?.payments])
+  const payments = useMemo(() => (data?.payments || []) as Payment[], [data?.payments])
   const pageCount = data?.pagination.totalPages || 0
-
-  // Filtrar payments client-side por búsqueda (hasta que API soporte search)
-  const payments = useMemo(() => {
-    if (!debouncedSearch) return allPayments
-
-    const searchLower = debouncedSearch.toLowerCase()
-    return allPayments.filter((p) => {
-      // Buscar en nombre de cliente
-      if (p.customer?.name.toLowerCase().includes(searchLower)) return true
-      // Buscar en nombre de proyecto (via allocations)
-      if (
-        p.allocations.some(
-          (allocation) =>
-            allocation.project.projectName &&
-            allocation.project.projectName.toLowerCase().includes(searchLower)
-        )
-      )
-        return true
-      return false
-    })
-  }, [allPayments, debouncedSearch])
-
-  // Calcular métodos de pago únicos para filtros
-  const uniquePaymentMethods = useMemo(() => {
-    const methods = new Set(
-      allPayments.filter((p) => p.paymentMethod).map((p) => p.paymentMethod!.name)
-    )
-    return Array.from(methods).map((method) => ({
-      label: method,
-      value: method,
-    }))
-  }, [allPayments])
-
-  // Calcular números de proyecto únicos para filtros
-  const uniqueProjectNumbers = useMemo(() => {
-    const projectNumbers = new Set<string>()
-    allPayments.forEach((payment) => {
-      payment.allocations.forEach((allocation) => {
-        projectNumbers.add(allocation.project.projectNumber)
-      })
-    })
-    return Array.from(projectNumbers)
-      .sort()
-      .map((number) => ({
-        label: number,
-        value: number,
-      }))
-  }, [allPayments])
+  const facets = data?.facets
 
   // Prefetch página siguiente para mejor UX
   useEffect(() => {
@@ -193,7 +162,10 @@ export default function PaymentsPage() {
 
   const handleSearchChange = (search: string) => {
     setSearchTerm(search)
-    // Nota: Search es client-side, no resetea paginación
+    // Resetear a página 1 cuando cambia la búsqueda (server-side)
+    if (pagination.pageIndex !== 0) {
+      setPagination({ ...pagination, pageIndex: 0 })
+    }
   }
 
   const handleSuccess = () => {
@@ -267,11 +239,24 @@ export default function PaymentsPage() {
             pagination={pagination}
             onPaginationChange={setPagination}
             onSearchChange={handleSearchChange}
+            // Server-side filtering
+            manualFiltering={true}
+            serverFacets={facets}
             filterableColumns={[
               {
                 id: 'projectNumber',
                 title: 'N° Proyecto',
-                options: uniqueProjectNumbers,
+                options:
+                  facets?.projectNumber?.map((f) => ({
+                    label: f.label,
+                    value: f.value,
+                  })) || [],
+                onFilterChange: (values) => {
+                  setProjectNumberFilter(values[0] || undefined)
+                  if (pagination.pageIndex !== 0) {
+                    setPagination({ ...pagination, pageIndex: 0 })
+                  }
+                },
               },
               {
                 id: 'type',
@@ -280,11 +265,27 @@ export default function PaymentsPage() {
                   { label: 'Proyecto', value: 'Project' },
                   { label: 'Cliente', value: 'Customer' },
                 ],
+                onFilterChange: (values) => {
+                  setTypeFilter(values[0] as 'Project' | 'Customer' | undefined)
+                  if (pagination.pageIndex !== 0) {
+                    setPagination({ ...pagination, pageIndex: 0 })
+                  }
+                },
               },
               {
                 id: 'paymentMethodName',
                 title: 'Método de Pago',
-                options: uniquePaymentMethods,
+                options:
+                  facets?.paymentMethod?.map((f) => ({
+                    label: f.label,
+                    value: f.value,
+                  })) || [],
+                onFilterChange: (values) => {
+                  setPaymentMethodFilter(values[0] || undefined)
+                  if (pagination.pageIndex !== 0) {
+                    setPagination({ ...pagination, pageIndex: 0 })
+                  }
+                },
               },
             ]}
             meta={{

@@ -26,10 +26,23 @@ import type { Payment, CreatePaymentPayload } from '@/lib/validations/payment-va
 export interface PaymentsQueryParams {
   page?: number
   limit?: number
+  // Server-side filtering params
+  search?: string
+  type?: 'Project' | 'Customer'
+  paymentMethodId?: string
+  projectNumber?: string
+  // Filtros existentes
   customerId?: string
   projectId?: string
   startDate?: string
   endDate?: string
+}
+
+/** Facet individual (usado en facets de respuesta) */
+export interface Facet {
+  value: string
+  label: string
+  count: number
 }
 
 /** Respuesta de GET /api/payments */
@@ -40,6 +53,11 @@ export interface PaymentsResponse {
     limit: number
     total: number
     totalPages: number
+  }
+  facets?: {
+    type: Facet[]
+    paymentMethod: Facet[]
+    projectNumber: Facet[]
   }
 }
 
@@ -118,8 +136,17 @@ export function usePayments(params: PaymentsQueryParams = {}) {
     queryFn: async (): Promise<PaymentsResponse> => {
       const searchParams = new URLSearchParams()
 
+      // Paginación
       if (params.page) searchParams.set('page', String(params.page))
       if (params.limit) searchParams.set('limit', String(params.limit))
+
+      // Server-side filtering params
+      if (params.search) searchParams.set('search', params.search)
+      if (params.type) searchParams.set('type', params.type)
+      if (params.paymentMethodId) searchParams.set('paymentMethodId', params.paymentMethodId)
+      if (params.projectNumber) searchParams.set('projectNumber', params.projectNumber)
+
+      // Filtros existentes
       if (params.customerId) searchParams.set('customerId', params.customerId)
       if (params.projectId) searchParams.set('projectId', params.projectId)
       if (params.startDate) searchParams.set('startDate', params.startDate)
