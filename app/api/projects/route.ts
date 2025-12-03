@@ -2,8 +2,9 @@ import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { Decimal } from '@prisma/client/runtime/library'
 import { ProjectWhereInput } from '@/types/api'
-import { matchesProjectState } from '@/lib/business-logic/project-state'
+import { matchesProjectState, ProjectStateFilter } from '@/lib/business-logic/project-state'
 import { withLogging } from '@/lib/logger-middleware'
+import { anyFieldMatchesSearch } from '@/lib/utils/normalize'
 import { z } from 'zod'
 
 /**
@@ -71,14 +72,8 @@ export const GET = withLogging(async (request, logger) => {
       where.customerId = customerId
     }
 
-    if (search) {
-      where.OR = [
-        { projectNumber: { contains: search, mode: 'insensitive' as const } },
-        { projectName: { contains: search, mode: 'insensitive' as const } },
-        { projectStatus: { name: { contains: search, mode: 'insensitive' as const } } },
-        { customer: { name: { contains: search, mode: 'insensitive' as const } } },
-      ]
-    }
+    // NOTA: La búsqueda se aplica en memoria con normalización (ignora acentos/tildes)
+    // para permitir que "jose" encuentre "José". Ver filtro más abajo.
 
     // Pre-filtro server-side por projectStatus.isFinal (solo para "Finalizado")
     // NOTA: Para "Activo" NO aplicamos pre-filtro porque necesitamos verificar
@@ -135,13 +130,32 @@ export const GET = withLogging(async (request, logger) => {
       }
     })
 
-    // PASO 3: Filtro fino - Aplicar filtro de projectState usando helper compartido
+    // PASO 3: Filtro fino - Aplicar filtros de projectState y búsqueda normalizada
     const filteredProjects = projectsWithCalculations.filter((project) => {
-      return matchesProjectState(
+      // Filtro por projectState
+      const matchesState = matchesProjectState(
         project.balance,
         project.projectStatus?.isFinal,
-        projectState as 'Activo' | 'Finalizado' | 'all'
+        projectState as ProjectStateFilter
       )
+
+      if (!matchesState) return false
+
+      // Filtro de búsqueda normalizada (ignora acentos/tildes)
+      // "jose" encontrará "José", "nunoa" encontrará "Ñuñoa"
+      if (search) {
+        return anyFieldMatchesSearch(
+          [
+            project.projectNumber,
+            project.projectName,
+            project.customer?.name,
+            project.projectStatus?.name,
+          ],
+          search
+        )
+      }
+
+      return true
     })
 
     // PASO 4: Calcular paginación DESPUÉS del filtro fino

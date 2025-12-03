@@ -9,6 +9,12 @@
 export type ProjectState = 'Activo' | 'Finalizado'
 
 /**
+ * Filter type for project state queries.
+ * Includes valid ProjectState values plus 'all' for unfiltered queries.
+ */
+export type ProjectStateFilter = ProjectState | 'all'
+
+/**
  * Calculate project state based on balance and status
  *
  * @param balance - Current project balance (total - totalPaid)
@@ -43,14 +49,14 @@ export function calculateProjectState(
  *
  * @param projectBalance - Project balance
  * @param projectIsFinal - Whether project status is final
- * @param filterState - State to filter by
+ * @param filterState - State to filter by (ProjectStateFilter: 'Activo' | 'Finalizado' | 'all')
  *
  * @returns true if project matches the filter
  */
 export function matchesProjectState(
   projectBalance: number,
   projectIsFinal: boolean | undefined | null,
-  filterState: 'Activo' | 'Finalizado' | 'all'
+  filterState: ProjectStateFilter
 ): boolean {
   if (filterState === 'all') return true
 

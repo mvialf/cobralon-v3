@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { ProjectWhereInput } from '@/types/api'
 import { calculateProjectBalance } from '@/lib/business-logic/project-balance'
+import { anyFieldMatchesSearch } from '@/lib/utils/normalize'
 
 /**
  * GET /api/projects-with-metadata
@@ -25,23 +26,14 @@ export async function GET(request: Request) {
     const customerId = searchParams.get('customerId') || ''
     const projectState = searchParams.get('projectState') || 'Activo'
 
-    const skip = (page - 1) * limit
-
-    // Construir filtro de búsqueda
+    // Construir filtro de búsqueda base (solo filtros de DB)
     const where: ProjectWhereInput = {}
 
     if (customerId) {
       where.customerId = customerId
     }
 
-    if (search) {
-      where.OR = [
-        { projectNumber: { contains: search, mode: 'insensitive' as const } },
-        { projectName: { contains: search, mode: 'insensitive' as const } },
-        { projectStatus: { name: { contains: search, mode: 'insensitive' as const } } },
-        { customer: { name: { contains: search, mode: 'insensitive' as const } } },
-      ]
-    }
+    // NOTA: La búsqueda se aplica en memoria con normalización (ignora acentos/tildes)
 
     // Pre-filtro server-side por projectStatus.isFinal
     if (projectState === 'Activo') {
@@ -51,13 +43,11 @@ export async function GET(request: Request) {
     }
 
     // Ejecutar ambas queries en paralelo para máxima eficiencia
-    const [projects, statuses] = await Promise.all([
-      // Query de proyectos
+    const [allProjects, statuses] = await Promise.all([
+      // Query de proyectos (sin paginación, se aplica después del filtro)
       prisma.project.findMany({
         relationLoadStrategy: 'join',
         where,
-        skip,
-        take: limit,
         orderBy: { createdAt: 'desc' },
         include: {
           customer: {
@@ -103,7 +93,7 @@ export async function GET(request: Request) {
     ])
 
     // Calcular balance para cada proyecto
-    const projectsWithCalculations = projects.map((project) => {
+    const projectsWithCalculations = allProjects.map((project) => {
       const { totalPaid, balance } = calculateProjectBalance({
         totalAmount: Number(project.total),
         allocations: project.paymentAllocations.map((alloc) => ({
@@ -121,29 +111,51 @@ export async function GET(request: Request) {
       }
     })
 
-    // Filtro fino client-side por balance
+    // Filtro fino: búsqueda normalizada + balance
     const filteredProjects = projectsWithCalculations.filter((project) => {
       const isFullyPaid = project.balance === 0
       const hasFinaleStatus = project.projectStatus?.isFinal ?? false
 
+      // Filtro por projectState
       if (projectState === 'Activo') {
-        return !hasFinaleStatus || !isFullyPaid
+        if (hasFinaleStatus && isFullyPaid) return false
       } else if (projectState === 'Finalizado') {
-        return hasFinaleStatus && isFullyPaid
+        if (!hasFinaleStatus || !isFullyPaid) return false
       }
+
+      // Filtro de búsqueda normalizada (ignora acentos/tildes)
+      // "jose" encontrará "José", "nunoa" encontrará "Ñuñoa"
+      if (search) {
+        return anyFieldMatchesSearch(
+          [
+            project.projectNumber,
+            project.projectName,
+            project.customer?.name,
+            project.projectStatus?.name,
+          ],
+          search
+        )
+      }
+
       return true
     })
 
+    // Aplicar paginación manualmente DESPUÉS del filtro
+    const total = filteredProjects.length
+    const totalPages = Math.ceil(total / limit)
+    const skip = (page - 1) * limit
+    const paginatedProjects = filteredProjects.slice(skip, skip + limit)
+
     return NextResponse.json({
-      projects: filteredProjects,
+      projects: paginatedProjects,
       metadata: {
         projectStatuses: statuses,
       },
       pagination: {
         page,
         limit,
-        total: filteredProjects.length,
-        totalPages: Math.ceil(filteredProjects.length / limit),
+        total,
+        totalPages,
       },
     })
   } catch (error) {

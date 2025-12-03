@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { generateCustomersExcelBuffer } from '@/lib/excel/customer-exporter'
 import { logger } from '@/lib/logger'
+import { anyFieldMatchesSearch } from '@/lib/utils/normalize'
 
 /**
  * GET /api/customers/export
@@ -20,20 +21,8 @@ export async function GET(request: Request) {
   logger.info({ search: search || undefined }, 'Customer export requested')
 
   try {
-    // Construir filtro de búsqueda (mismo que en GET /api/customers)
-    const where = search
-      ? {
-          OR: [
-            { name: { contains: search, mode: 'insensitive' as const } },
-            { email: { contains: search, mode: 'insensitive' as const } },
-            { phone: { contains: search, mode: 'insensitive' as const } },
-          ],
-        }
-      : {}
-
-    // Obtener TODOS los clientes (sin paginación) con conteo de proyectos
-    const customers = await prisma.customer.findMany({
-      where,
+    // Obtener TODOS los clientes con conteo de proyectos
+    const allCustomers = await prisma.customer.findMany({
       orderBy: { createdAt: 'desc' },
       include: {
         _count: {
@@ -41,6 +30,14 @@ export async function GET(request: Request) {
         },
       },
     })
+
+    // Filtrar con búsqueda normalizada (ignora acentos/tildes)
+    // "jose" encontrará "José", "garcia" encontrará "García"
+    const customers = search
+      ? allCustomers.filter((customer) =>
+          anyFieldMatchesSearch([customer.name, customer.email, customer.phone], search)
+        )
+      : allCustomers
 
     logger.info({ count: customers.length }, 'Customers fetched for export')
 

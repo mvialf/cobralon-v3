@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { withLogging } from '@/lib/logger-middleware'
+import { anyFieldMatchesSearch } from '@/lib/utils/normalize'
 
 /**
  * GET /api/customers
@@ -27,30 +28,24 @@ export const GET = withLogging(async (request, logger) => {
     'Fetching customers with filters'
   )
 
-  const skip = (page - 1) * limit
-
   try {
-    // Construir filtro de búsqueda
-    const where = search
-      ? {
-          OR: [
-            { name: { contains: search, mode: 'insensitive' as const } },
-            { email: { contains: search, mode: 'insensitive' as const } },
-            { phone: { contains: search, mode: 'insensitive' as const } },
-          ],
-        }
-      : {}
+    // Obtener todos los clientes (sin paginación inicial)
+    const allCustomers = await prisma.customer.findMany({
+      orderBy: { createdAt: 'desc' },
+    })
 
-    // Obtener clientes y total count
-    const [customers, total] = await Promise.all([
-      prisma.customer.findMany({
-        where,
-        skip,
-        take: limit,
-        orderBy: { createdAt: 'desc' },
-      }),
-      prisma.customer.count({ where }),
-    ])
+    // Filtrar con búsqueda normalizada (ignora acentos/tildes)
+    // "jose" encontrará "José", "garcia" encontrará "García"
+    const filteredCustomers = search
+      ? allCustomers.filter((customer) =>
+          anyFieldMatchesSearch([customer.name, customer.email, customer.phone], search)
+        )
+      : allCustomers
+
+    // Aplicar paginación manualmente
+    const total = filteredCustomers.length
+    const skip = (page - 1) * limit
+    const customers = filteredCustomers.slice(skip, skip + limit)
 
     logger.info(
       {

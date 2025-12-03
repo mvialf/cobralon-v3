@@ -1,10 +1,11 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { ProjectWhereInput } from '@/types/api'
-import { matchesProjectState } from '@/lib/business-logic/project-state'
+import { matchesProjectState, ProjectStateFilter } from '@/lib/business-logic/project-state'
 import { generateProjectsExcelBuffer } from '@/lib/excel/project-exporter'
 import { logger } from '@/lib/logger'
 import { z } from 'zod'
+import { anyFieldMatchesSearch } from '@/lib/utils/normalize'
 
 /**
  * Zod schema for projectState validation
@@ -50,21 +51,14 @@ export async function GET(request: Request) {
   )
 
   try {
-    // Construir filtro de búsqueda base (misma lógica que GET /api/projects)
+    // Construir filtro de búsqueda base (solo filtros de DB)
     const where: ProjectWhereInput = {}
 
     if (customerId) {
       where.customerId = customerId
     }
 
-    if (search) {
-      where.OR = [
-        { projectNumber: { contains: search, mode: 'insensitive' as const } },
-        { projectName: { contains: search, mode: 'insensitive' as const } },
-        { projectStatus: { name: { contains: search, mode: 'insensitive' as const } } },
-        { customer: { name: { contains: search, mode: 'insensitive' as const } } },
-      ]
-    }
+    // NOTA: La búsqueda se aplica en memoria con normalización (ignora acentos/tildes)
 
     // Pre-filtro server-side por projectStatus.isFinal (solo para "Finalizado")
     if (projectState === 'Finalizado') {
@@ -91,13 +85,32 @@ export async function GET(request: Request) {
       },
     })
 
-    // Aplicar filtro fino de projectState
+    // Aplicar filtros: búsqueda normalizada + projectState
     const filteredProjects = allProjects.filter((project) => {
-      return matchesProjectState(
+      // Filtro por projectState
+      const matchesState = matchesProjectState(
         Number(project.balance),
         project.projectStatus?.isFinal,
-        projectState as 'Activo' | 'Finalizado' | 'all'
+        projectState as ProjectStateFilter
       )
+
+      if (!matchesState) return false
+
+      // Filtro de búsqueda normalizada (ignora acentos/tildes)
+      // "jose" encontrará "José", "nunoa" encontrará "Ñuñoa"
+      if (search) {
+        return anyFieldMatchesSearch(
+          [
+            project.projectNumber,
+            project.projectName,
+            project.customer?.name,
+            project.projectStatus?.name,
+          ],
+          search
+        )
+      }
+
+      return true
     })
 
     logger.info(

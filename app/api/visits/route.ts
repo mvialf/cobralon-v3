@@ -3,6 +3,7 @@ import { prisma } from '@/lib/db'
 import { withLogging } from '@/lib/logger-middleware'
 import { type CreateVisitAPIPayload } from '@/lib/validations/visit-validations'
 import { Prisma } from '@prisma/client'
+import { anyFieldMatchesSearch } from '@/lib/utils/normalize'
 
 /**
  * GET /api/visits
@@ -34,52 +35,52 @@ export const GET = withLogging(async (request, logger) => {
     'Fetching visits with filters'
   )
 
-  const skip = (page - 1) * limit
-
   try {
-    // Construir filtro de búsqueda
+    // Construir filtro de búsqueda base (solo filtros de DB)
     const where: Prisma.VisitWhereInput = {}
 
     if (visitStatusId) {
       where.visitStatusId = visitStatusId
     }
 
-    if (search) {
-      where.OR = [
-        { name: { contains: search, mode: 'insensitive' } },
-        { phone: { contains: search, mode: 'insensitive' } },
-        { street: { contains: search, mode: 'insensitive' } },
-        { comuna: { contains: search, mode: 'insensitive' } },
-      ]
-    }
+    // NOTA: La búsqueda se aplica en memoria con normalización (ignora acentos/tildes)
+    // para permitir que "jose" encuentre "José", "nunoa" encuentre "Ñuñoa"
 
-    // Obtener visitas con paginación
-    const [visits, total] = await Promise.all([
-      prisma.visit.findMany({
-        relationLoadStrategy: 'join', // Fix N+1: Force database-level JOINs
-        where,
-        skip,
-        take: limit,
-        orderBy: { date: 'desc' },
-        include: {
-          visitStatus: {
-            select: {
-              id: true,
-              name: true,
-              isInitial: true,
-              isFinal: true,
-              color: {
-                select: {
-                  bgClass: true,
-                  textClass: true,
-                },
+    // Obtener todas las visitas (sin paginación inicial)
+    const allVisits = await prisma.visit.findMany({
+      relationLoadStrategy: 'join', // Fix N+1: Force database-level JOINs
+      where,
+      orderBy: { date: 'desc' },
+      include: {
+        visitStatus: {
+          select: {
+            id: true,
+            name: true,
+            isInitial: true,
+            isFinal: true,
+            color: {
+              select: {
+                bgClass: true,
+                textClass: true,
               },
             },
           },
         },
-      }),
-      prisma.visit.count({ where }),
-    ])
+      },
+    })
+
+    // Filtrar con búsqueda normalizada (ignora acentos/tildes)
+    // "jose" encontrará "José", "nunoa" encontrará "Ñuñoa"
+    const filteredVisits = search
+      ? allVisits.filter((visit) =>
+          anyFieldMatchesSearch([visit.name, visit.phone, visit.street, visit.comuna], search)
+        )
+      : allVisits
+
+    // Aplicar paginación manualmente
+    const total = filteredVisits.length
+    const skip = (page - 1) * limit
+    const visits = filteredVisits.slice(skip, skip + limit)
 
     logger.info(
       {
