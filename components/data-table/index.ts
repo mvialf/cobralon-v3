@@ -1,4 +1,4 @@
-export { DataTable } from './data-table'
+export { DataTable, type ServerFacet, type ServerFacets } from './data-table'
 export { DataTableColumnHeader } from './data-table-column-header'
 export { DataTableDropdown } from './data-table-dropdown'
 export { DataTableFacetedFilter } from './data-table-faceted-filter'

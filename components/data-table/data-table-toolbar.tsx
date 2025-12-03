@@ -16,6 +16,16 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { DataTableFacetedFilter } from './data-table-faceted-filter'
 
+// Tipo para facets del servidor
+interface ServerFacet {
+  value: string
+  count: number
+}
+
+interface ServerFacets {
+  [columnId: string]: ServerFacet[]
+}
+
 interface DataTableToolbarProps<TData> {
   table: Table<TData>
   searchKey?: string
@@ -25,10 +35,13 @@ interface DataTableToolbarProps<TData> {
   filterableColumns?: {
     id: string
     title: string
-    options: { label: string; value: string }[]
+    options: { label: string; value: string; bgClass?: string }[]
     onFilterChange?: (values: string[]) => void
   }[]
   onSearchChange?: (search: string) => void
+  // Server-side filtering props
+  manualFiltering?: boolean
+  serverFacets?: ServerFacets
 }
 
 export function DataTableToolbar<TData>({
@@ -39,6 +52,8 @@ export function DataTableToolbar<TData>({
   enableGlobalFilter = false,
   filterableColumns = [],
   onSearchChange,
+  manualFiltering = false,
+  serverFacets,
 }: DataTableToolbarProps<TData>) {
   const isFiltered = table.getState().columnFilters.length > 0 || !!table.getState().globalFilter
 
@@ -79,6 +94,8 @@ export function DataTableToolbar<TData>({
         )}
         {filterableColumns.map((column) => {
           const tableColumn = table.getColumn(column.id)
+          // Obtener facets del servidor para esta columna (si existen)
+          const columnServerFacets = serverFacets?.[column.id]
           return (
             tableColumn && (
               <DataTableFacetedFilter
@@ -87,6 +104,7 @@ export function DataTableToolbar<TData>({
                 title={column.title}
                 options={column.options}
                 onFilterChange={column.onFilterChange}
+                serverFacets={columnServerFacets}
               />
             )
           )

@@ -10,6 +10,8 @@ import {
   flexRender,
   getCoreRowModel,
   getFilteredRowModel,
+  getFacetedRowModel,
+  getFacetedUniqueValues,
   getPaginationRowModel,
   getSortedRowModel,
   useReactTable,
@@ -47,6 +49,16 @@ import { DataTablePagination } from './data-table-pagination'
 import { DataTableToolbar } from './data-table-toolbar'
 import { normalizedGlobalFilter, normalizedIncludesString } from './filter-functions'
 
+// Tipo para facets del servidor
+export interface ServerFacet {
+  value: string
+  count: number
+}
+
+export interface ServerFacets {
+  [columnId: string]: ServerFacet[]
+}
+
 interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[]
   data: TData[]
@@ -58,7 +70,7 @@ interface DataTableProps<TData, TValue> {
   filterableColumns?: {
     id: string
     title: string
-    options: { label: string; value: string }[]
+    options: { label: string; value: string; bgClass?: string }[]
     onFilterChange?: (values: string[]) => void
   }[]
   onRowSelectionChange?: (selectedRows: TData[]) => void
@@ -70,6 +82,9 @@ interface DataTableProps<TData, TValue> {
   pagination?: PaginationState
   onPaginationChange?: (pagination: PaginationState) => void
   onSearchChange?: (search: string) => void
+  // Server-side filtering props
+  manualFiltering?: boolean
+  serverFacets?: ServerFacets
 }
 
 export function DataTable<TData, TValue>({
@@ -90,6 +105,9 @@ export function DataTable<TData, TValue>({
   pagination: controlledPagination,
   onPaginationChange,
   onSearchChange,
+  // Server-side filtering
+  manualFiltering = false,
+  serverFacets,
 }: DataTableProps<TData, TValue>) {
   const [sorting, setSorting] = React.useState<SortingState>([])
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([])
@@ -110,16 +128,21 @@ export function DataTable<TData, TValue>({
   const table = useReactTable({
     data,
     columns,
-    // Configuración de paginación
-    ...(manualPagination
-      ? {
-          // Server-side: usar pageCount controlado
-          manualPagination: true,
-          pageCount: controlledPageCount ?? -1,
-        }
+    // Configuración de paginación server-side
+    manualPagination,
+    pageCount: manualPagination ? (controlledPageCount ?? -1) : undefined,
+    // Configuración de filtrado server-side
+    manualFiltering,
+    // Funciones de filtrado: siempre registrar (TanStack las ignora si manualFiltering=true)
+    filterFns: {
+      normalized: normalizedIncludesString,
+    },
+    // defaultColumn solo aplica cuando filtrado es client-side
+    defaultColumn: manualFiltering
+      ? undefined
       : {
-          // Client-side: dejar que TanStack calcule
-        }),
+          filterFn: 'normalized',
+        },
     state: {
       sorting,
       columnFilters,
@@ -130,14 +153,6 @@ export function DataTable<TData, TValue>({
       pagination: manualPagination
         ? (controlledPagination ?? internalPagination)
         : internalPagination,
-    },
-    // Registrar funciones de filtrado normalizadas (ignoran acentos/tildes)
-    filterFns: {
-      normalized: normalizedIncludesString,
-    },
-    // Usar filtrado normalizado por defecto para columnas
-    defaultColumn: {
-      filterFn: 'normalized',
     },
     enableRowSelection,
     onRowSelectionChange: setRowSelection,
@@ -157,10 +172,13 @@ export function DataTable<TData, TValue>({
           }
         }
       : setInternalPagination,
-    // Usar función de filtrado global normalizada (ignora acentos)
-    globalFilterFn: effectiveGlobalFilterFn,
+    // Función de filtrado global normalizada (ignora acentos) - solo client-side
+    globalFilterFn: manualFiltering ? undefined : effectiveGlobalFilterFn,
+    // Row models - siempre incluir todos, TanStack los ignora si es manual
     getCoreRowModel: getCoreRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
+    getFacetedRowModel: getFacetedRowModel(),
+    getFacetedUniqueValues: getFacetedUniqueValues(),
     getPaginationRowModel: getPaginationRowModel(),
     getSortedRowModel: getSortedRowModel(),
     meta,
@@ -184,6 +202,8 @@ export function DataTable<TData, TValue>({
         enableGlobalFilter={enableGlobalFilter}
         filterableColumns={filterableColumns}
         onSearchChange={onSearchChange}
+        manualFiltering={manualFiltering}
+        serverFacets={serverFacets}
       />
       <div className="rounded-md border">
         <Table>

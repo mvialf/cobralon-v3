@@ -20,6 +20,12 @@ import {
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Separator } from '@/components/ui/separator'
 
+// Tipo para facets del servidor
+interface ServerFacet {
+  value: string
+  count: number
+}
+
 interface DataTableFacetedFilterProps<TData, TValue> {
   column?: Column<TData, TValue>
   title?: string
@@ -30,6 +36,8 @@ interface DataTableFacetedFilterProps<TData, TValue> {
     bgClass?: string // Para status badges
   }[]
   onFilterChange?: (values: string[]) => void
+  // Server-side facets: cuando manualFiltering=true, usar estos en lugar de calcular
+  serverFacets?: ServerFacet[]
 }
 
 export function DataTableFacetedFilter<TData, TValue>({
@@ -37,8 +45,18 @@ export function DataTableFacetedFilter<TData, TValue>({
   title,
   options,
   onFilterChange,
+  serverFacets,
 }: DataTableFacetedFilterProps<TData, TValue>) {
-  const facets = column?.getFacetedUniqueValues()
+  // Usar serverFacets si están disponibles (server-side), sino calcular client-side
+  const clientFacets = column?.getFacetedUniqueValues()
+  const facets = React.useMemo(() => {
+    if (serverFacets) {
+      // Convertir serverFacets array a Map para compatibilidad
+      return new Map(serverFacets.map((f) => [f.value, f.count]))
+    }
+    return clientFacets
+  }, [serverFacets, clientFacets])
+
   const selectedValues = new Set(column?.getFilterValue() as string[])
 
   return (
