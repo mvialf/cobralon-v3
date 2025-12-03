@@ -46,7 +46,8 @@ vi.mock('@/lib/logger-middleware', () => ({
   ) => {
     return async (request: NextRequest, context: { params: Promise<Record<string, string>> }) => {
       // Mock logger con métodos no-op
-      const mockLogger = {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const mockLogger: any = {
         info: vi.fn(),
         warn: vi.fn(),
         error: vi.fn(),
