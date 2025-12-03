@@ -111,6 +111,8 @@ export const createColumns = ({
     },
     enableSorting: true,
     filterFn: (row, id, value) => {
+      // Si el filtro incluye 'all', mostrar todas las filas
+      if (value.includes('all')) return true
       return value.includes(row.getValue(id))
     },
     meta: {

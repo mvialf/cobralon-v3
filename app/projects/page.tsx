@@ -241,8 +241,12 @@ export default function ProjectsPage() {
                 title: 'Estado Proyecto',
                 options: projectStateFilterOptions,
                 onFilterChange: (values) => {
-                  const newState = values.length > 0 ? values[0] : 'all'
-                  setProjectState(newState as 'Activo' | 'Finalizado' | 'all')
+                  // Si no hay valores o están ambos seleccionados, mostrar todos
+                  const newState =
+                    values.length === 0 || values.length >= 2
+                      ? 'all'
+                      : (values[0] as 'Activo' | 'Finalizado' | 'all')
+                  setProjectState(newState)
                   // Resetear a página 1 cuando cambia el filtro
                   if (pagination.pageIndex !== 0) {
                     setPagination({ ...pagination, pageIndex: 0 })
