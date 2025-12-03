@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useQuery } from '@tanstack/react-query'
@@ -64,6 +64,7 @@ export function PaymentToProjectForm({
       paymentMethodId: '',
       creditApplied: 0, // ← Nuevo campo
       notes: '',
+      selectedInstallments: 1, // Default: 1 cuota (contado)
     },
   })
 
@@ -101,9 +102,11 @@ export function PaymentToProjectForm({
   })
 
   // Actualizar state de crédito cuando se obtiene la data
-  if (customerCredit && customerCredit.creditBalance !== customerCreditBalance) {
-    setCustomerCreditBalance(Number(customerCredit.creditBalance) || 0)
-  }
+  useEffect(() => {
+    if (customerCredit?.creditBalance !== undefined) {
+      setCustomerCreditBalance(Number(customerCredit.creditBalance) || 0)
+    }
+  }, [customerCredit?.creditBalance])
 
   // Verificar elegibilidad de crédito
   const creditEligibility = selectedProject
@@ -154,7 +157,7 @@ export function PaymentToProjectForm({
         <PaymentMethodFields
           control={form.control}
           paymentMethods={paymentMethods}
-          onPaymentMethodChange={() => form.setValue('selectedInstallments', null)}
+          onPaymentMethodChange={() => form.setValue('selectedInstallments', 1)}
         />
 
         {/* 4. Crédito Disponible (condicional) */}

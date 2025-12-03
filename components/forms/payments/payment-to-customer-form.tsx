@@ -126,6 +126,7 @@ export function PaymentToCustomerForm({
       paymentMethodId: '',
       notes: '',
       allocations: [],
+      selectedInstallments: 1, // Default: 1 cuota (contado)
     }),
     [preselectedCustomerId]
   )
@@ -252,8 +253,23 @@ export function PaymentToCustomerForm({
 
   // Handler: Reset installments cuando cambia método de pago
   const handlePaymentMethodChange = useCallback(() => {
-    form.setValue('selectedInstallments', null)
+    form.setValue('selectedInstallments', 1) // Reset a 1 cuota (contado)
   }, [form])
+
+  // Handler: Cuando se selecciona un cliente (estable para evitar loop infinito en CustomerSearchField)
+  const handleCustomerSelect = useCallback(
+    (customer: { id: string } | null) => {
+      if (customer) {
+        setSelectedCustomerId(customer.id)
+      } else {
+        setSelectedCustomerId(null)
+      }
+      // Reset allocations y modo cuando cambia cliente
+      replace([])
+      setDistributionMode('manual')
+    },
+    [replace]
+  )
 
   // Calcular suma de allocations desde form fields
   const totalAllocated = fields.reduce((sum, _, index) => {
@@ -302,16 +318,7 @@ export function PaymentToCustomerForm({
         <CustomerSearchField
           control={form.control}
           preselectedCustomerId={preselectedCustomerId}
-          onCustomerSelect={(customer) => {
-            if (customer) {
-              setSelectedCustomerId(customer.id)
-            } else {
-              setSelectedCustomerId(null)
-            }
-            // Reset allocations y modo cuando cambia cliente
-            replace([])
-            setDistributionMode('manual')
-          }}
+          onCustomerSelect={handleCustomerSelect}
         />
 
         {/* 3. Monto y Fecha */}

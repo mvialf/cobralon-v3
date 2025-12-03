@@ -97,8 +97,8 @@ export function PaymentMethodFields({
             <FormItem>
               <FormLabel>Número de Cuotas</FormLabel>
               <Select
-                onValueChange={(value) => field.onChange(value === '1' ? null : Number(value))}
-                value={field.value?.toString() || '1'}
+                onValueChange={(value) => field.onChange(Number(value))}
+                value={(field.value ?? 1).toString()}
               >
                 <FormControl>
                   <SelectTrigger>
