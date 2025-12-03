@@ -63,8 +63,9 @@ export function PaymentAmountDateFields({
             <FormControl>
               <Input
                 type="date"
-                value={formatDateValue(field.value)}
-                onChange={(e) => field.onChange(parseDateValue(e.target.value))}
+                defaultValue={formatDateValue(field.value)}
+                onBlur={(e) => field.onChange(parseDateValue(e.target.value))}
+                name={field.name}
                 disabled={disabled}
               />
             </FormControl>

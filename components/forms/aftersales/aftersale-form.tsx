@@ -182,8 +182,9 @@ export const AftersaleForm = React.forwardRef<AftersaleFormHandle, AftersaleForm
                   <FormControl>
                     <Input
                       type="date"
-                      value={formatDateValue(field.value)}
-                      onChange={(e) => field.onChange(parseDateValue(e.target.value))}
+                      defaultValue={formatDateValue(field.value)}
+                      onBlur={(e) => field.onChange(parseDateValue(e.target.value))}
+                      name={field.name}
                     />
                   </FormControl>
                   <FormMessage />
