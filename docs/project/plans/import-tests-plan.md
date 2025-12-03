@@ -7,16 +7,17 @@
 ## Contexto
 
 El módulo de importación/exportación Excel tiene **179 tests unitarios** en `lib/excel/__tests__/`, pero carece de:
+
 1. Tests de API routes (`/api/*/import`)
 2. Tests de UI (dialogs de importación)
 3. Tests E2E (flujo completo)
 
 ## Alcance
 
-| Entidad | API Route | Dialog UI | Tests E2E |
-|---------|-----------|-----------|-----------|
-| Payments | `/api/payments/import` | `import-payment-dialog.tsx` | ✅ Incluido |
-| Projects | `/api/projects/import` | `import-project-dialog.tsx` | ✅ Incluido |
+| Entidad   | API Route               | Dialog UI                    | Tests E2E   |
+| --------- | ----------------------- | ---------------------------- | ----------- |
+| Payments  | `/api/payments/import`  | `import-payment-dialog.tsx`  | ✅ Incluido |
+| Projects  | `/api/projects/import`  | `import-project-dialog.tsx`  | ✅ Incluido |
 | Customers | `/api/customers/import` | `import-customer-dialog.tsx` | ✅ Incluido |
 
 ---
@@ -32,6 +33,7 @@ app/api/payments/import/__tests__/route.test.ts
 ```
 
 **Casos a cubrir:**
+
 - ✅ Importación exitosa (1 pago válido)
 - ✅ Importación de múltiples pagos válidos
 - ✅ Error: array vacío → 400
@@ -46,6 +48,7 @@ app/api/payments/import/__tests__/route.test.ts
 - ✅ Respuesta 207 con errores parciales
 
 **Mocking requerido:**
+
 - `prisma.project.findMany` → Mock de proyectos
 - `prisma.paymentMethod.findMany` → Mock de métodos
 - `prisma.$transaction` → Mock de transacción
@@ -58,6 +61,7 @@ app/api/projects/import/__tests__/route.test.ts
 ```
 
 **Casos a cubrir:**
+
 - ✅ Importación exitosa de proyecto
 - ✅ Múltiples proyectos válidos
 - ✅ Error: cliente no encontrado
@@ -76,6 +80,7 @@ app/api/customers/import/__tests__/route.test.ts
 ```
 
 **Casos a cubrir:**
+
 - ✅ Importación exitosa de cliente
 - ✅ Múltiples clientes válidos
 - ✅ Error: array vacío
@@ -115,23 +120,25 @@ describe('POST /api/payments/import', () => {
   it('importa pagos válidos exitosamente', async () => {
     // Arrange
     vi.mocked(prisma.project.findMany).mockResolvedValue([
-      { id: '1', projectNumber: 'P-001', customerId: 'c1', currency: 'CLP' }
+      { id: '1', projectNumber: 'P-001', customerId: 'c1', currency: 'CLP' },
     ])
     vi.mocked(prisma.paymentMethod.findMany).mockResolvedValue([
-      { id: 'm1', name: 'Transferencia', active: true, hasInstallments: false }
+      { id: 'm1', name: 'Transferencia', active: true, hasInstallments: false },
     ])
     vi.mocked(prisma.$transaction).mockResolvedValue({ id: 'pay-1' })
 
     const request = new Request('http://localhost/api/payments/import', {
       method: 'POST',
       body: JSON.stringify({
-        payments: [{
-          projectNumber: 'P-001',
-          amount: 500000,
-          date: new Date(),
-          paymentMethodName: 'Transferencia'
-        }]
-      })
+        payments: [
+          {
+            projectNumber: 'P-001',
+            amount: 500000,
+            date: new Date(),
+            paymentMethodName: 'Transferencia',
+          },
+        ],
+      }),
     })
 
     // Act
@@ -160,6 +167,7 @@ components/dialogs/payments/__tests__/import-payment-dialog.test.tsx
 **Casos a cubrir:**
 
 **Estado: Upload**
+
 - ✅ Renderiza botón "Importar Pagos"
 - ✅ Click abre Sheet
 - ✅ Muestra dropzone con instrucciones
@@ -169,6 +177,7 @@ components/dialogs/payments/__tests__/import-payment-dialog.test.tsx
 - ✅ Acepta archivo .xlsx válido → pasa a preview
 
 **Estado: Preview**
+
 - ✅ Muestra tabla de preview con datos parseados
 - ✅ Muestra contadores (válidos/errores)
 - ✅ Botón "Volver" regresa a upload
@@ -176,16 +185,19 @@ components/dialogs/payments/__tests__/import-payment-dialog.test.tsx
 - ✅ Botón deshabilitado si validCount = 0
 
 **Estado: Importing**
+
 - ✅ Muestra progress bar
 - ✅ Muestra mensaje "Importando X pagos..."
 
 **Estado: Complete**
+
 - ✅ Muestra ícono de éxito
 - ✅ Muestra contador de importados
 - ✅ Botón "Cerrar" cierra y resetea
 - ✅ Llama onImportComplete callback
 
 **Error Handling**
+
 - ✅ Muestra error de API en estado preview
 
 ### 2.2 ImportProjectDialog (~15 tests)
@@ -280,7 +292,7 @@ test.describe('Importación de Pagos', () => {
 
     const [download] = await Promise.all([
       page.waitForEvent('download'),
-      page.getByRole('button', { name: /descargar template/i }).click()
+      page.getByRole('button', { name: /descargar template/i }).click(),
     ])
 
     expect(download.suggestedFilename()).toContain('pagos')
@@ -295,7 +307,7 @@ test.describe('Importación de Pagos', () => {
     await fileInput.setInputFiles({
       name: 'test.txt',
       mimeType: 'text/plain',
-      buffer: Buffer.from('not an excel file')
+      buffer: Buffer.from('not an excel file'),
     })
 
     await expect(page.getByText(/archivo inválido|excel/i)).toBeVisible()
@@ -412,18 +424,18 @@ function generatePaymentFixture() {
 
 ## Resumen de Entregables
 
-| Fase | Archivo | Tests | Prioridad |
-|------|---------|-------|-----------|
-| 1.1 | `api/payments/import/__tests__/route.test.ts` | ~15 | Alta |
-| 1.2 | `api/projects/import/__tests__/route.test.ts` | ~12 | Media |
-| 1.3 | `api/customers/import/__tests__/route.test.ts` | ~10 | Media |
-| 2.1 | `dialogs/payments/__tests__/import-payment-dialog.test.tsx` | ~18 | Alta |
-| 2.2 | `dialogs/projects/__tests__/import-project-dialog.test.tsx` | ~15 | Media |
-| 2.3 | `dialogs/customers/__tests__/import-customer-dialog.test.tsx` | ~12 | Media |
-| 3.0 | `tests/fixtures/*.xlsx` | - | Alta |
-| 3.1 | `tests/e2e/import-payments.spec.ts` | ~8 | Alta |
-| 3.2 | `tests/e2e/import-projects.spec.ts` | ~6 | Media |
-| 3.3 | `tests/e2e/import-customers.spec.ts` | ~6 | Media |
+| Fase | Archivo                                                       | Tests | Prioridad |
+| ---- | ------------------------------------------------------------- | ----- | --------- |
+| 1.1  | `api/payments/import/__tests__/route.test.ts`                 | ~15   | Alta      |
+| 1.2  | `api/projects/import/__tests__/route.test.ts`                 | ~12   | Media     |
+| 1.3  | `api/customers/import/__tests__/route.test.ts`                | ~10   | Media     |
+| 2.1  | `dialogs/payments/__tests__/import-payment-dialog.test.tsx`   | ~18   | Alta      |
+| 2.2  | `dialogs/projects/__tests__/import-project-dialog.test.tsx`   | ~15   | Media     |
+| 2.3  | `dialogs/customers/__tests__/import-customer-dialog.test.tsx` | ~12   | Media     |
+| 3.0  | `tests/fixtures/*.xlsx`                                       | -     | Alta      |
+| 3.1  | `tests/e2e/import-payments.spec.ts`                           | ~8    | Alta      |
+| 3.2  | `tests/e2e/import-projects.spec.ts`                           | ~6    | Media     |
+| 3.3  | `tests/e2e/import-customers.spec.ts`                          | ~6    | Media     |
 
 **Total nuevos tests:** ~102
 
@@ -432,12 +444,14 @@ function generatePaymentFixture() {
 ## Orden de Implementación Recomendado
 
 ### Sprint 1: Foundation (Payments)
+
 1. ✅ Generar fixtures Excel (`tests/fixtures/pagos-*.xlsx`)
 2. ✅ API tests para payments import
 3. ✅ Dialog tests para ImportPaymentDialog
 4. ✅ E2E tests para importación de pagos
 
 ### Sprint 2: Expand (Projects + Customers)
+
 5. ✅ Generar fixtures para proyectos y clientes
 6. ✅ API tests para projects import
 7. ✅ API tests para customers import
@@ -469,9 +483,9 @@ function generatePaymentFixture() {
 
 ## Riesgos y Mitigaciones
 
-| Riesgo | Probabilidad | Impacto | Mitigación |
-|--------|--------------|---------|------------|
-| Mocks de Prisma complejos | Alta | Medio | Usar patrón establecido en otros tests |
-| Dropzone difícil de mockear | Media | Medio | Mock a nivel de hook, no componente |
-| Fixtures se desactualizan | Baja | Alto | Script de generación + validación en CI |
-| E2E flaky por timing | Media | Medio | waitFor + retries en Playwright config |
+| Riesgo                      | Probabilidad | Impacto | Mitigación                              |
+| --------------------------- | ------------ | ------- | --------------------------------------- |
+| Mocks de Prisma complejos   | Alta         | Medio   | Usar patrón establecido en otros tests  |
+| Dropzone difícil de mockear | Media        | Medio   | Mock a nivel de hook, no componente     |
+| Fixtures se desactualizan   | Baja         | Alto    | Script de generación + validación en CI |
+| E2E flaky por timing        | Media        | Medio   | waitFor + retries en Playwright config  |

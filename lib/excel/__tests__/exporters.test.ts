@@ -1,17 +1,8 @@
 import { describe, it, expect } from 'vitest'
 import * as XLSX from 'xlsx'
-import {
-  generateCustomersExcelBuffer,
-  type CustomerExportData,
-} from '../customer-exporter'
-import {
-  generateProjectsExcelBuffer,
-  type ProjectExportData,
-} from '../project-exporter'
-import {
-  generatePaymentsExcelBuffer,
-  type PaymentExportData,
-} from '../payment-exporter'
+import { generateCustomersExcelBuffer, type CustomerExportData } from '../customer-exporter'
+import { generateProjectsExcelBuffer, type ProjectExportData } from '../project-exporter'
+import { generatePaymentsExcelBuffer, type PaymentExportData } from '../payment-exporter'
 
 // =============================================================================
 // Helper para leer Excel desde buffer

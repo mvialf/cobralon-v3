@@ -25,7 +25,7 @@ test.describe('Diagnóstico TeamTags en Calendario', () => {
 
     page.on('response', async (response) => {
       if (response.url().includes('/api/')) {
-        const entry = apiRequests.find(r => r.url === response.url())
+        const entry = apiRequests.find((r) => r.url === response.url())
         if (entry) {
           try {
             entry.response = await response.json()
@@ -84,7 +84,7 @@ test.describe('Diagnóstico TeamTags en Calendario', () => {
     }
 
     // 7. Verificar API responses de calendar-events
-    const calendarEventsRequests = apiRequests.filter(r => r.url.includes('calendar-events'))
+    const calendarEventsRequests = apiRequests.filter((r) => r.url.includes('calendar-events'))
     console.log('\n📡 API Requests de calendar-events:')
     for (const req of calendarEventsRequests) {
       console.log(`  ${req.method} ${req.url}`)
@@ -108,10 +108,7 @@ test.describe('Diagnóstico TeamTags en Calendario', () => {
 
     // Guardar log completo
     const fs = require('fs')
-    fs.writeFileSync(
-      'capturas/teamtags-api-log.json',
-      JSON.stringify(apiRequests, null, 2)
-    )
+    fs.writeFileSync('capturas/teamtags-api-log.json', JSON.stringify(apiRequests, null, 2))
     console.log('📁 Log guardado en capturas/teamtags-api-log.json')
   })
 })

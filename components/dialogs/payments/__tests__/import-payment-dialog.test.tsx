@@ -30,7 +30,11 @@ vi.mock('@/lib/excel/payment-template', () => ({
 
 // Mock de ImportPreviewTable (para simplificar)
 vi.mock('@/components/forms/payments/import-preview-table', () => ({
-  ImportPreviewTable: ({ payments, validCount, errorCount }: {
+  ImportPreviewTable: ({
+    payments,
+    validCount,
+    errorCount,
+  }: {
     payments: unknown[]
     validCount: number
     errorCount: number

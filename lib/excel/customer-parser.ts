@@ -167,4 +167,3 @@ export async function parseCustomerExcel(file: File): Promise<ParseResult> {
     reader.readAsBinaryString(file)
   })
 }
-

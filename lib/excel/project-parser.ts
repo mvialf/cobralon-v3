@@ -311,4 +311,3 @@ export async function parseProjectExcel(file: File): Promise<ProjectParseResult>
     reader.readAsBinaryString(file)
   })
 }
-

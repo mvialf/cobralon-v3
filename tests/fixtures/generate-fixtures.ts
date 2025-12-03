@@ -14,15 +14,7 @@ const FIXTURES_DIR = __dirname
 
 function generatePagosTest() {
   const data = [
-    [
-      'Numero Proyecto',
-      'Monto',
-      'Fecha',
-      'Metodo de Pago',
-      'Cuotas',
-      'Referencia',
-      'Notas',
-    ],
+    ['Numero Proyecto', 'Monto', 'Fecha', 'Metodo de Pago', 'Cuotas', 'Referencia', 'Notas'],
     ['PRO-001', 500000, '15/06/2024', 'Transferencia', '', 'REF-001', 'Pago inicial'],
     ['PRO-002', 250000, '20/07/2024', 'Efectivo', '', '', 'Segundo pago'],
     ['PRO-003', 750000, '25/08/2024', 'Cheque', '', 'CHQ-123', ''],
@@ -37,15 +29,7 @@ function generatePagosTest() {
 
 function generatePagosMixtos() {
   const data = [
-    [
-      'Numero Proyecto',
-      'Monto',
-      'Fecha',
-      'Metodo de Pago',
-      'Cuotas',
-      'Referencia',
-      'Notas',
-    ],
+    ['Numero Proyecto', 'Monto', 'Fecha', 'Metodo de Pago', 'Cuotas', 'Referencia', 'Notas'],
     // Válidos
     ['PRO-001', 500000, '15/06/2024', 'Transferencia', '', 'REF-001', 'Pago válido 1'],
     ['PRO-002', 250000, '20/07/2024', 'Efectivo', '', '', 'Pago válido 2'],
@@ -65,15 +49,7 @@ function generatePagosMixtos() {
 
 function generatePagosInvalido() {
   const data = [
-    [
-      'Numero Proyecto',
-      'Monto',
-      'Fecha',
-      'Metodo de Pago',
-      'Cuotas',
-      'Referencia',
-      'Notas',
-    ],
+    ['Numero Proyecto', 'Monto', 'Fecha', 'Metodo de Pago', 'Cuotas', 'Referencia', 'Notas'],
     ['', 100000, '25/08/2024', 'Cheque', '', '', 'Sin número proyecto'],
     ['PRO-001', 0, '30/08/2024', 'Transferencia', '', '', 'Monto cero'],
     ['PRO-002', 300000, '', 'Efectivo', '', '', 'Sin fecha'],
