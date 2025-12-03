@@ -12,8 +12,11 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { PaymentToCustomerDialog } from '@/components/dialogs/payments/payment-to-customer-dialog'
 import { RefundCreditDialog } from '@/components/dialogs/customers/refund-credit-dialog'
+import { EditCustomerDialog } from '@/components/dialogs/customer/edit-customer-dialog'
+import { ConfirmDeleteDialog } from '@/components/dialogs/confirm-delete-dialog'
 import { CustomerCreditBadge } from '@/components/ui/customer-credit-badge'
 import { shouldShowRefundOption } from '@/lib/business-logic/credit-eligibility'
+import { useDeleteCustomer } from '@/hooks/queries/use-customers'
 
 export interface Customer {
   id: string
@@ -33,9 +36,26 @@ function CustomerActionsCell({
 }) {
   const [paymentDialogOpen, setPaymentDialogOpen] = useState(false)
   const [refundDialogOpen, setRefundDialogOpen] = useState(false)
+  const [editDialogOpen, setEditDialogOpen] = useState(false)
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+
+  // Hook para eliminar cliente
+  const deleteCustomer = useDeleteCustomer()
 
   // Verificar si se debe mostrar opción de devolución de crédito
   const canRefund = shouldShowRefundOption(customer.creditBalance)
+
+  // Handler para confirmar eliminación
+  const handleConfirmDelete = async () => {
+    try {
+      await deleteCustomer.mutateAsync(customer.id)
+      setDeleteDialogOpen(false)
+      onCustomerUpdated?.()
+    } catch (error) {
+      // Error ya manejado por el hook (toast automático)
+      console.error('Error deleting customer:', error)
+    }
+  }
 
   return (
     <>
@@ -73,11 +93,11 @@ function CustomerActionsCell({
           </>
         )}
 
-        <DropdownMenuItem>
+        <DropdownMenuItem onClick={() => setEditDialogOpen(true)}>
           <Pencil className="mr-2 h-4 w-4" />
           Editar
         </DropdownMenuItem>
-        <DropdownMenuItem className="text-destructive">
+        <DropdownMenuItem onClick={() => setDeleteDialogOpen(true)} className="text-destructive">
           <Trash2 className="mr-2 h-4 w-4" />
           Eliminar
         </DropdownMenuItem>
@@ -101,6 +121,24 @@ function CustomerActionsCell({
           // Refresh tabla cuando se devuelve crédito
           onCustomerUpdated?.()
         }}
+      />
+
+      {/* Dialog para editar cliente */}
+      <EditCustomerDialog
+        customer={customer}
+        open={editDialogOpen}
+        onOpenChange={setEditDialogOpen}
+        onCustomerUpdated={onCustomerUpdated}
+      />
+
+      {/* Dialog para confirmar eliminación */}
+      <ConfirmDeleteDialog
+        open={deleteDialogOpen}
+        onOpenChange={setDeleteDialogOpen}
+        onConfirm={handleConfirmDelete}
+        title="Eliminar cliente"
+        description={`¿Estás seguro de eliminar al cliente "${customer.name}"? Esta acción no se puede deshacer.`}
+        isDeleting={deleteCustomer.isPending}
       />
     </>
   )
