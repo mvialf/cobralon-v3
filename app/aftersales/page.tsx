@@ -2,11 +2,10 @@
 
 import { useState } from 'react'
 import { Plus } from 'lucide-react'
-import { Row } from '@tanstack/react-table'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { AppLayout } from '@/components/layout/app-layout'
 import { Button } from '@/components/ui/button'
-import { DataTable } from '@/components/data-table/data-table'
+import { DataTable, createNormalizedFilter } from '@/components/data-table'
 import { AftersaleDialog } from '@/components/dialogs/aftersales/aftersale-dialog'
 import { createColumns } from './columns'
 import type { Aftersale } from '@/lib/validations/aftersale-validations'
@@ -71,36 +70,14 @@ export default function AftersalesPage() {
       : null,
   })
 
-  // Función de filtrado global: busca en projectNumber, customer.name y description
-  const globalFilterFn = (row: Row<Aftersale>, _columnId: string, filterValue: string) => {
-    const aftersale = row.original
-    const searchValue = filterValue.toLowerCase()
-
-    // Buscar en número de proyecto
-    if (aftersale.project.projectNumber.toLowerCase().includes(searchValue)) {
-      return true
-    }
-
-    // Buscar en nombre del cliente
-    if (aftersale.project.customer.name.toLowerCase().includes(searchValue)) {
-      return true
-    }
-
-    // Buscar en nombre del proyecto (si existe)
-    if (
-      aftersale.project.projectName &&
-      aftersale.project.projectName.toLowerCase().includes(searchValue)
-    ) {
-      return true
-    }
-
-    // Buscar en descripción
-    if (aftersale.description.toLowerCase().includes(searchValue)) {
-      return true
-    }
-
-    return false
-  }
+  // Función de filtrado global normalizada: busca ignorando acentos/tildes
+  // en projectNumber, customer.name, projectName y description
+  const globalFilterFn = createNormalizedFilter<Aftersale>((aftersale) => [
+    aftersale.project.projectNumber,
+    aftersale.project.customer.name,
+    aftersale.project.projectName,
+    aftersale.description,
+  ])
 
   return (
     <AppLayout
@@ -122,6 +99,7 @@ export default function AftersalesPage() {
           <DataTable
             columns={columns}
             data={aftersales}
+            searchKey="search"
             searchPlaceholder="Buscar por proyecto, cliente o descripción..."
             enableGlobalFilter={true}
             globalFilterFn={globalFilterFn}
