@@ -1,7 +1,7 @@
 'use client'
 
 import * as React from 'react'
-import { Check, ChevronsUpDown } from 'lucide-react'
+import { Check, ChevronsUpDown, Plus } from 'lucide-react'
 
 import { cn } from '@/lib/utils'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
@@ -12,6 +12,7 @@ import {
   CommandInput,
   CommandItem,
   CommandList,
+  CommandSeparator,
 } from '@/components/ui/command'
 
 interface ComboboxProps<T> {
@@ -73,6 +74,12 @@ interface ComboboxProps<T> {
   'aria-label'?: string
   /** ARIA describedby */
   'aria-describedby'?: string
+
+  // Create new action
+  /** Callback cuando el usuario clickea "Crear nuevo". Si se provee, muestra opción al INICIO de la lista. */
+  onCreateNew?: () => void
+  /** Texto del botón de crear nuevo (default: "+ Crear nuevo") */
+  createNewLabel?: string
 }
 
 /**
@@ -171,6 +178,8 @@ export function Combobox<T>({
   name,
   'aria-label': ariaLabel,
   'aria-describedby': ariaDescribedBy,
+  onCreateNew,
+  createNewLabel = '+ Crear nuevo',
 }: ComboboxProps<T>) {
   const [open, setOpen] = React.useState(false)
 
@@ -193,6 +202,12 @@ export function Combobox<T>({
   const handleSelect = (optionValue: string) => {
     onValueChange(optionValue === value ? '' : optionValue)
     setOpen(false)
+  }
+
+  // Handler para crear nuevo
+  const handleCreateNew = () => {
+    setOpen(false)
+    onCreateNew?.()
   }
 
   // Label a mostrar en el trigger
@@ -237,6 +252,22 @@ export function Combobox<T>({
           <CommandInput placeholder={searchPlaceholder} onValueChange={onSearchChange} />
           <CommandList id={listboxId}>
             <CommandEmpty>{emptyMessage}</CommandEmpty>
+            {/* Opción de crear nuevo al INICIO del dropdown */}
+            {onCreateNew && (
+              <>
+                <CommandGroup>
+                  <CommandItem
+                    value="__create_new__"
+                    onSelect={handleCreateNew}
+                    className="text-primary"
+                  >
+                    <Plus className="mr-2 h-4 w-4" />
+                    {createNewLabel}
+                  </CommandItem>
+                </CommandGroup>
+                <CommandSeparator />
+              </>
+            )}
             <CommandGroup>
               {safeOptions.map((option) => {
                 const optionValue = getOptionValue(option)
