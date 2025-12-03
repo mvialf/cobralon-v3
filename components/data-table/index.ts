@@ -5,3 +5,10 @@ export { DataTableFacetedFilter } from './data-table-faceted-filter'
 export { DataTablePagination } from './data-table-pagination'
 export { DataTableRowActions } from './data-table-row-actions'
 export { DataTableToolbar } from './data-table-toolbar'
+
+// Funciones de filtrado normalizadas (ignoran acentos/tildes)
+export {
+  normalizedGlobalFilter,
+  normalizedIncludesString,
+  createNormalizedFilter,
+} from './filter-functions'

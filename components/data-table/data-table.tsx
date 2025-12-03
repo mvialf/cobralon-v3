@@ -19,10 +19,17 @@ import {
 } from '@tanstack/react-table'
 
 // Extender ColumnMeta para incluir clases CSS personalizadas
+// y registrar funciones de filtrado personalizadas
 declare module '@tanstack/react-table' {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   interface ColumnMeta<TData extends RowData, TValue> {
     headerClassName?: string
     cellClassName?: string
+  }
+
+  // Registrar 'normalized' como nombre de función de filtrado válido
+  interface FilterFns {
+    normalized: FilterFn<unknown>
   }
 }
 
@@ -38,6 +45,7 @@ import { cn } from '@/lib/utils'
 
 import { DataTablePagination } from './data-table-pagination'
 import { DataTableToolbar } from './data-table-toolbar'
+import { normalizedGlobalFilter, normalizedIncludesString } from './filter-functions'
 
 interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[]
@@ -95,6 +103,10 @@ export function DataTable<TData, TValue>({
     pageSize: 20,
   })
 
+  // Determinar la función de filtrado global a usar
+  // Si se pasa una custom, usarla. Si no, usar normalizedGlobalFilter por defecto.
+  const effectiveGlobalFilterFn = globalFilterFn ?? normalizedGlobalFilter
+
   const table = useReactTable({
     data,
     columns,
@@ -119,6 +131,14 @@ export function DataTable<TData, TValue>({
         ? (controlledPagination ?? internalPagination)
         : internalPagination,
     },
+    // Registrar funciones de filtrado normalizadas (ignoran acentos/tildes)
+    filterFns: {
+      normalized: normalizedIncludesString,
+    },
+    // Usar filtrado normalizado por defecto para columnas
+    defaultColumn: {
+      filterFn: 'normalized',
+    },
     enableRowSelection,
     onRowSelectionChange: setRowSelection,
     onSortingChange: setSorting,
@@ -137,7 +157,8 @@ export function DataTable<TData, TValue>({
           }
         }
       : setInternalPagination,
-    globalFilterFn,
+    // Usar función de filtrado global normalizada (ignora acentos)
+    globalFilterFn: effectiveGlobalFilterFn,
     getCoreRowModel: getCoreRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
