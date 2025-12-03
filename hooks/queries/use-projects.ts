@@ -37,7 +37,14 @@ export interface ProjectsQueryParams {
   limit?: number
   search?: string
   customerId?: string
+  statusIds?: string[] // IDs de status o 'null' para sin estado
   projectState?: 'Activo' | 'Finalizado' | 'all'
+}
+
+/** Facet item para filtros server-side */
+export interface FacetItem {
+  value: string
+  count: number
 }
 
 /** Respuesta de GET /api/projects */
@@ -48,6 +55,10 @@ export interface ProjectsResponse {
     limit: number
     total: number
     totalPages: number
+  }
+  facets?: {
+    projectStatus: FacetItem[]
+    projectState: FacetItem[]
   }
 }
 
@@ -176,6 +187,10 @@ export function useProjects(params: ProjectsQueryParams = {}) {
       if (params.limit) searchParams.set('limit', String(params.limit))
       if (params.search) searchParams.set('search', params.search)
       if (params.customerId) searchParams.set('customerId', params.customerId)
+      // statusIds se envía como string separado por comas
+      if (params.statusIds && params.statusIds.length > 0) {
+        searchParams.set('statusIds', params.statusIds.join(','))
+      }
       if (params.projectState) searchParams.set('projectState', params.projectState)
 
       const response = await fetch(`/api/projects?${searchParams}`)

@@ -46,6 +46,9 @@ export default function ProjectsPage() {
   // Estado de filtro de proyecto (Activo/Finalizado/all)
   const [projectState, setProjectState] = useState<'Activo' | 'Finalizado' | 'all'>('Activo')
 
+  // Estado de filtro de status (IDs seleccionados, incluyendo 'null' para sin estado)
+  const [statusIds, setStatusIds] = useState<string[]>([])
+
   // Handler para exportar proyectos a Excel
   const handleExport = useCallback(
     async (options?: { search?: string; projectState?: 'Activo' | 'Finalizado' | 'all' }) => {
@@ -103,9 +106,10 @@ export default function ProjectsPage() {
       page: pagination.pageIndex + 1, // API usa 1-based
       limit: pagination.pageSize,
       search: debouncedSearch || undefined,
+      statusIds: statusIds.length > 0 ? statusIds : undefined,
       projectState,
     }),
-    [pagination.pageIndex, pagination.pageSize, debouncedSearch, projectState]
+    [pagination.pageIndex, pagination.pageSize, debouncedSearch, statusIds, projectState]
   )
 
   // React Query: Fetch projects con cache automático
@@ -230,11 +234,21 @@ export default function ProjectsPage() {
             pagination={pagination}
             onPaginationChange={setPagination}
             onSearchChange={handleSearchChange}
+            // Server-side filtering
+            manualFiltering={true}
+            serverFacets={data?.facets}
             filterableColumns={[
               {
                 id: 'projectStatus',
                 title: 'Estado',
                 options: statusFilterOptions,
+                onFilterChange: (values) => {
+                  setStatusIds(values)
+                  // Resetear a página 1 cuando cambia el filtro
+                  if (pagination.pageIndex !== 0) {
+                    setPagination({ ...pagination, pageIndex: 0 })
+                  }
+                },
               },
               {
                 id: 'projectState',

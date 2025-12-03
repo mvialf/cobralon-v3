@@ -22,10 +22,16 @@ const projectStateSchema = z.enum(['Activo', 'Finalizado', 'all']).default('Acti
  *   - limit: registros por página (default: 10, max: 100)
  *   - search: buscar por nombre de proyecto, número o cliente
  *   - customerId: filtrar por cliente específico
+ *   - statusIds: IDs de status separados por coma (o "null" para sin estado)
  *   - projectState: "Activo" (default), "Finalizado", "all"
  *       - "Activo": Proyectos no finalizados (status.isFinal = false OR balance > 0)
  *       - "Finalizado": Proyectos finalizados (status.isFinal = true AND balance = 0)
  *       - "all": Todos los proyectos
+ *
+ * Response incluye:
+ *   - projects: array de proyectos paginados
+ *   - pagination: { page, limit, total, totalPages }
+ *   - facets: { projectStatus: [...], projectState: [...] } - Conteos para filtros
  *
  * NOTA: La paginación se aplica DESPUÉS del filtro fino de projectState para
  * garantizar que cada página contenga exactamente 'limit' proyectos.
@@ -36,6 +42,12 @@ export const GET = withLogging(async (request, logger) => {
   const limit = Math.min(parseInt(searchParams.get('limit') || '10'), 100)
   const search = searchParams.get('search') || ''
   const customerId = searchParams.get('customerId') || ''
+
+  // Parsear statusIds (puede ser múltiple, separado por comas)
+  const statusIdsRaw = searchParams.get('statusIds') || ''
+  const statusIds = statusIdsRaw ? statusIdsRaw.split(',').filter(Boolean) : []
+  const filterByNullStatus = statusIds.includes('null')
+  const actualStatusIds = statusIds.filter((id) => id !== 'null')
 
   // Validar y parsear projectState con Zod
   const projectStateResult = projectStateSchema.safeParse(searchParams.get('projectState'))
@@ -58,6 +70,7 @@ export const GET = withLogging(async (request, logger) => {
       filters: {
         search: search || undefined,
         customerId: customerId || undefined,
+        statusIds: statusIds.length > 0 ? statusIds : undefined,
         projectState,
       },
     },
@@ -70,6 +83,20 @@ export const GET = withLogging(async (request, logger) => {
 
     if (customerId) {
       where.customerId = customerId
+    }
+
+    // Filtro por statusIds (multiselect)
+    if (statusIds.length > 0) {
+      if (filterByNullStatus && actualStatusIds.length > 0) {
+        // Filtrar por null O por los IDs seleccionados
+        where.OR = [{ projectStatusId: null }, { projectStatusId: { in: actualStatusIds } }]
+      } else if (filterByNullStatus) {
+        // Solo filtrar por null
+        where.projectStatusId = null
+      } else {
+        // Solo filtrar por IDs
+        where.projectStatusId = { in: actualStatusIds }
+      }
     }
 
     // NOTA: La búsqueda se aplica en memoria con normalización (ignora acentos/tildes)
@@ -166,6 +193,35 @@ export const GET = withLogging(async (request, logger) => {
     // PASO 5: Aplicar paginación manualmente
     const paginatedProjects = filteredProjects.slice(skip, skip + limit)
 
+    // PASO 6: Calcular facets (conteos) para filtros
+    // NOTA: Los facets se calculan sobre los proyectos filtrados (excluyendo el filtro propio)
+    // Para simplicidad, aquí calculamos sobre TODOS los proyectos con filtro fino aplicado
+    const statusFacets = new Map<string, number>()
+    const stateFacets = new Map<string, number>()
+
+    for (const project of filteredProjects) {
+      // Facet de projectStatus
+      const statusId = project.projectStatusId || 'null'
+      statusFacets.set(statusId, (statusFacets.get(statusId) || 0) + 1)
+
+      // Facet de projectState (Activo/Finalizado)
+      const isFinalized = project.projectStatus?.isFinal === true && Number(project.balance) <= 0
+      const stateValue = isFinalized ? 'Finalizado' : 'Activo'
+      stateFacets.set(stateValue, (stateFacets.get(stateValue) || 0) + 1)
+    }
+
+    // Convertir Maps a arrays para la respuesta
+    const facets = {
+      projectStatus: Array.from(statusFacets.entries()).map(([value, count]) => ({
+        value,
+        count,
+      })),
+      projectState: Array.from(stateFacets.entries()).map(([value, count]) => ({
+        value,
+        count,
+      })),
+    }
+
     logger.info(
       {
         totalFetched: allProjects.length,
@@ -175,6 +231,10 @@ export const GET = withLogging(async (request, logger) => {
         totalPages,
         projectState,
         paginatedCount: paginatedProjects.length,
+        facets: {
+          statusCount: facets.projectStatus.length,
+          stateCount: facets.projectState.length,
+        },
       },
       'Projects fetched, filtered, and paginated successfully'
     )
@@ -187,6 +247,7 @@ export const GET = withLogging(async (request, logger) => {
         total: totalFiltered, // ✅ Total correcto de proyectos después del filtro
         totalPages, // ✅ Páginas correctas basadas en total filtrado
       },
+      facets, // ✅ Conteos para filtros facetados
     })
   } catch (error) {
     logger.error({ err: error }, 'Error fetching projects')
