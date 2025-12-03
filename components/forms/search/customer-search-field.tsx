@@ -43,6 +43,10 @@ export function CustomerSearchField({
   // State para cliente seleccionado
   const [selectedCustomer, setSelectedCustomer] = React.useState<Customer | null>(null)
 
+  // Ref para trackear si ya notificamos al padre sobre el cliente preseleccionado
+  // Evita loop infinito cuando onCustomerSelect no es estable
+  const hasNotifiedPreselectedRef = React.useRef(false)
+
   // Fetch cliente pre-seleccionado (si viene el ID) - usando hook centralizado
   const { data: preselectedCustomer, isLoading: loadingPreselected } =
     useCustomer(preselectedCustomerId)
@@ -56,10 +60,11 @@ export function CustomerSearchField({
   // Extraer customers del response (puede ser undefined si query no está enabled)
   const customersData = customersResponse?.customers
 
-  // Cuando cambia el cliente seleccionado o llega el cliente pre-seleccionado
+  // Cuando llega el cliente pre-seleccionado por primera vez
+  // Usamos ref para evitar múltiples notificaciones aunque onCustomerSelect cambie
   React.useEffect(() => {
-    // Si hay cliente pre-seleccionado y ya se cargó
-    if (preselectedCustomerId && preselectedCustomer) {
+    if (preselectedCustomerId && preselectedCustomer && !hasNotifiedPreselectedRef.current) {
+      hasNotifiedPreselectedRef.current = true
       setSelectedCustomer(preselectedCustomer)
       onCustomerSelect?.(preselectedCustomer)
     }

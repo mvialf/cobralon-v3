@@ -76,6 +76,10 @@ export function ProjectSearchField({
   // State para proyecto seleccionado
   const [selectedProject, setSelectedProject] = React.useState<ProjectWithBalance | null>(null)
 
+  // Ref para trackear si ya notificamos al padre sobre el proyecto preseleccionado
+  // Evita loop infinito cuando onProjectSelect no es estable
+  const hasNotifiedPreselectedRef = React.useRef(false)
+
   // Fetch proyecto pre-seleccionado (si viene el ID)
   const { data: preselectedProject, isLoading: loadingPreselected } = useQuery({
     queryKey: ['project-with-balance', preselectedProjectId],
@@ -113,16 +117,14 @@ export function ProjectSearchField({
     enabled: !preselectedProjectId && debouncedSearch.length >= 2,
   })
 
-  // Cuando cambia el proyecto seleccionado o llega el proyecto pre-seleccionado
+  // Cuando llega el proyecto pre-seleccionado por primera vez
+  // Usamos ref para evitar múltiples notificaciones aunque onProjectSelect cambie
   React.useEffect(() => {
-    // Si hay proyecto pre-seleccionado y ya se cargó
-    if (preselectedProjectId && preselectedProject) {
+    if (preselectedProjectId && preselectedProject && !hasNotifiedPreselectedRef.current) {
+      hasNotifiedPreselectedRef.current = true
       setSelectedProject(preselectedProject)
       onProjectSelect?.(preselectedProject)
     }
-
-    // Si no, buscar en los resultados de búsqueda según el projectId del form
-    // Nota: esto se maneja con un watch en el componente padre
   }, [preselectedProjectId, preselectedProject, onProjectSelect])
 
   // Callback cuando se selecciona un proyecto del Combobox
