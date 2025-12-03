@@ -117,6 +117,8 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
     // Calcular total si se actualizaron subtotal o taxRate
     let updatedTotal: Decimal | undefined
     let updatedTotalAmount: Decimal | undefined
+    let updatedBalance: Decimal | undefined
+
     if (body.subtotal !== undefined || body.taxRate !== undefined) {
       const subtotal = body.subtotal ?? existingProject.subtotal.toNumber()
       const taxRate = body.taxRate ?? existingProject.taxRate.toNumber()
@@ -125,6 +127,30 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
       if (body.totalAmount === undefined) {
         updatedTotalAmount = updatedTotal
       }
+    }
+
+    // Si cambia el total/totalAmount, recalcular el balance
+    // Balance = totalAmount - sum(paymentAllocations)
+    const finalTotalAmount =
+      body.totalAmount !== undefined
+        ? new Decimal(body.totalAmount)
+        : (updatedTotalAmount ?? existingProject.totalAmount)
+
+    if (
+      updatedTotal !== undefined ||
+      updatedTotalAmount !== undefined ||
+      body.totalAmount !== undefined
+    ) {
+      // Obtener suma de allocations existentes
+      const allocationsSum = await prisma.paymentAllocation.aggregate({
+        where: { projectId: id },
+        _sum: { allocatedAmount: true },
+      })
+      const totalPaid = allocationsSum._sum.allocatedAmount?.toNumber() || 0
+      const newTotalAmount = finalTotalAmount?.toNumber() || 0
+
+      // Recalcular balance: totalAmount - totalPaid
+      updatedBalance = new Decimal(newTotalAmount - totalPaid)
     }
 
     // Preparar datos para actualizar
@@ -150,6 +176,8 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
     if (body.totalAmount !== undefined)
       updateData.totalAmount = body.totalAmount ? new Decimal(body.totalAmount) : null
     else if (updatedTotalAmount !== undefined) updateData.totalAmount = updatedTotalAmount
+    // Actualizar balance si fue recalculado
+    if (updatedBalance !== undefined) updateData.balance = updatedBalance
     if (body.currency !== undefined) updateData.currency = body.currency
     if (body.windowsCount !== undefined) updateData.windowsCount = body.windowsCount
     if (body.squareMeters !== undefined) updateData.squareMeters = new Decimal(body.squareMeters)

@@ -324,6 +324,8 @@ export const POST = withLogging(async (request, logger) => {
           taxRate: new Decimal(finalTaxRate),
           total: new Decimal(calculatedTotal),
           totalAmount: finalTotalAmount ? new Decimal(finalTotalAmount) : null,
+          // Balance inicial = totalAmount (no hay pagos aún)
+          balance: new Decimal(finalTotalAmount || calculatedTotal),
           currency: currency || 'CLP',
           windowsCount: windowsCount || 0,
           squareMeters: new Decimal(squareMeters || 0),
