@@ -115,39 +115,37 @@ export function ProjectAdjustmentForm({
               </FormItem>
             )}
           />
-
-          {/* Preview del impacto */}
-          {watchedAmount > 0 && (
-            <div className="rounded-lg border p-3 bg-muted/50">
-              <p className="text-sm font-medium mb-2">Impacto del ajuste:</p>
-              <div className="grid grid-cols-2 gap-2 text-sm">
-                <span className="text-muted-foreground">Balance actual:</span>
-                <span className="text-right">{formatCurrency(currentBalance, currency)}</span>
-                <span className="text-muted-foreground">Ajuste:</span>
-                <span className="text-right text-destructive">
-                  -{formatCurrency(watchedAmount, currency)}
-                </span>
-                <span className="text-muted-foreground font-medium">Nuevo balance:</span>
-                <span
-                  className={`text-right font-medium ${newBalance <= 0 ? 'text-green-600' : ''}`}
-                >
-                  {formatCurrency(Math.max(0, newBalance), currency)}
-                </span>
-              </div>
-            </div>
-          )}
-
-          {/* Alerta si excede el balance */}
-          {exceedsBalance && (
-            <Alert variant="destructive">
-              <AlertTriangle className="h-4 w-4" />
-              <AlertDescription>
-                El ajuste excede el balance actual. Máximo permitido:{' '}
-                {formatCurrency(currentBalance, currency)}
-              </AlertDescription>
-            </Alert>
-          )}
         </div>
+
+        {/* Preview del impacto */}
+        {watchedAmount > 0 && (
+          <div className="rounded-lg border p-3 bg-muted/50">
+            <p className="text-sm font-medium mb-2">Impacto del ajuste:</p>
+            <div className="grid grid-cols-2 gap-2 text-sm">
+              <span className="text-muted-foreground">Balance actual:</span>
+              <span className="text-right">{formatCurrency(currentBalance, currency)}</span>
+              <span className="text-muted-foreground">Ajuste:</span>
+              <span className="text-right text-destructive">
+                -{formatCurrency(watchedAmount, currency)}
+              </span>
+              <span className="text-muted-foreground font-medium">Nuevo balance:</span>
+              <span className={`text-right font-medium ${newBalance <= 0 ? 'text-green-600' : ''}`}>
+                {formatCurrency(Math.max(0, newBalance), currency)}
+              </span>
+            </div>
+          </div>
+        )}
+
+        {/* Alerta si excede el balance */}
+        {exceedsBalance && (
+          <Alert variant="destructive">
+            <AlertTriangle className="h-4 w-4" />
+            <AlertDescription>
+              El ajuste excede el balance actual. Máximo permitido:{' '}
+              {formatCurrency(currentBalance, currency)}
+            </AlertDescription>
+          </Alert>
+        )}
 
         {/* Notas adicionales */}
         <FormField
