@@ -9,7 +9,7 @@ import { paymentMethodSchema } from '@/lib/validations/payment-method-validation
 export async function GET() {
   try {
     const paymentMethods = await prisma.paymentMethod.findMany({
-      orderBy: [{ order: 'asc' }, { name: 'asc' }],
+      orderBy: [{ active: 'desc' }, { order: 'asc' }, { name: 'asc' }],
       include: {
         _count: {
           select: { payments: true },
