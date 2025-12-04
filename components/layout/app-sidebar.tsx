@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import {
   Home,
   Settings,
@@ -24,7 +24,9 @@ import {
   Calendar,
   Upload,
   Download,
+  LogOut,
 } from 'lucide-react'
+import { authClient, useSession } from '@/lib/auth-client'
 
 import {
   Sidebar,
@@ -167,9 +169,18 @@ const settingsItems: NavigationItem[] = [
 
 export function AppSidebar() {
   const pathname = usePathname()
+  const router = useRouter()
   const { state, toggleSidebar, setOpen } = useSidebar()
+  const { data: session } = useSession()
   const allItems = [...navigationItems, ...settingsItems]
   const [isHovering, setIsHovering] = useState(false)
+
+  // Handler para logout
+  const handleLogout = async () => {
+    await authClient.signOut()
+    router.push('/login')
+    router.refresh()
+  }
 
   // Helper para determinar si un item está activo
   const isItemActive = (item: NavigationItem): boolean => {
@@ -302,19 +313,20 @@ export function AppSidebar() {
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <SidebarMenuButton className="pb-6">
-                  <User2 /> Usuario
+                  <User2 />
+                  <div className="flex flex-col items-start text-left">
+                    <span className="text-sm font-medium">{session?.user?.name || 'Usuario'}</span>
+                    <span className="text-xs text-muted-foreground">
+                      {session?.user?.email || ''}
+                    </span>
+                  </div>
                   <ChevronUp className="ml-auto" />
                 </SidebarMenuButton>
               </DropdownMenuTrigger>
               <DropdownMenuContent side="top" className="w-(--radix-popper-anchor-width)">
-                <DropdownMenuItem>
-                  <span>Perfil</span>
-                </DropdownMenuItem>
-                <DropdownMenuItem>
-                  <span>Cuenta</span>
-                </DropdownMenuItem>
-                <DropdownMenuItem>
-                  <span>Cerrar sesión</span>
+                <DropdownMenuItem onClick={handleLogout}>
+                  <LogOut className="mr-2 h-4 w-4" />
+                  <span>Cerrar sesion</span>
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
