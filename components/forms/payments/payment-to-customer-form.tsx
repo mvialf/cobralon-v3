@@ -44,6 +44,7 @@ const EMPTY_PROJECTS: ProjectWithBalance[] = []
 const EMPTY_PAYMENT_METHODS: Array<{
   id: string
   name: string
+  active: boolean
   hasInstallments: boolean
   maxInstallments: number | null
 }> = []

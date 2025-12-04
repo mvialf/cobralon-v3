@@ -1,7 +1,7 @@
 'use client'
 
 import * as React from 'react'
-import { Control, useWatch } from 'react-hook-form'
+import { Control, useFormContext, useWatch } from 'react-hook-form'
 
 import { FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form'
 import {
@@ -15,6 +15,7 @@ import {
 interface PaymentMethod {
   id: string
   name: string
+  active?: boolean
   hasInstallments: boolean
   maxInstallments: number | null
 }
@@ -25,6 +26,11 @@ interface PaymentMethodFieldsProps {
   paymentMethods: PaymentMethod[]
   loading?: boolean
   onPaymentMethodChange?: (methodId: string) => void
+  /**
+   * Auto-selecciona el primer método de pago activo cuando se cargan los métodos
+   * @default true
+   */
+  autoSelectFirst?: boolean
 }
 
 /**
@@ -32,6 +38,7 @@ interface PaymentMethodFieldsProps {
  * Incluye: método de pago + número de cuotas (condicional)
  *
  * Maneja automáticamente:
+ * - Auto-selección del primer método activo (configurable via autoSelectFirst)
  * - Mostrar campo de cuotas solo si hasInstallments es true
  * - Callback onPaymentMethodChange para que el padre resetee cuotas
  */
@@ -40,12 +47,30 @@ export function PaymentMethodFields({
   paymentMethods,
   loading = false,
   onPaymentMethodChange,
+  autoSelectFirst = true,
 }: PaymentMethodFieldsProps) {
+  const { setValue } = useFormContext()
+
   // Watch payment method ID para mostrar campo de cuotas
   const watchedPaymentMethodId = useWatch({
     control,
     name: 'paymentMethodId',
   })
+
+  // Auto-seleccionar el primer método de pago activo cuando se cargan
+  React.useEffect(() => {
+    if (!autoSelectFirst) return
+    if (watchedPaymentMethodId) return // Ya hay uno seleccionado
+    if (paymentMethods.length === 0) return
+
+    // Encontrar el primer método activo, o el primero si ninguno tiene active
+    const defaultMethod = paymentMethods.find((m) => m.active !== false) || paymentMethods[0]
+
+    if (defaultMethod) {
+      setValue('paymentMethodId', defaultMethod.id)
+      onPaymentMethodChange?.(defaultMethod.id)
+    }
+  }, [autoSelectFirst, paymentMethods, watchedPaymentMethodId, setValue, onPaymentMethodChange])
 
   const selectedPaymentMethod = React.useMemo(
     () => paymentMethods.find((m) => m.id === watchedPaymentMethodId),

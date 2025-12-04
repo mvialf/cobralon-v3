@@ -73,6 +73,7 @@ export function PaymentToProjectForm({
     Array<{
       id: string
       name: string
+      active: boolean
       hasInstallments: boolean
       maxInstallments: number | null
     }>
