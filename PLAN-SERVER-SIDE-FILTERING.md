@@ -6,18 +6,18 @@
 
 ## ✅ Progreso de Implementación
 
-| Fase | Descripción                                            | Estado                        |
-| ---- | ------------------------------------------------------ | ----------------------------- |
-| 1.1  | Modificar data-table.tsx - manualFiltering             | ✅ Completado                 |
-| 1.2  | Modificar data-table-faceted-filter.tsx - serverFacets | ✅ Completado                 |
-| 1.3  | Modificar data-table-toolbar.tsx - propagar filtros    | ✅ Completado                 |
-| 2.1  | Actualizar API /api/projects - filtros + facets        | ✅ Completado                 |
-| 3.1  | Actualizar projects/page.tsx - manualFiltering         | ✅ Completado                 |
-| 3.2  | Actualizar projects/columns.tsx                        | ✅ Completado                 |
-| 4.1  | Migrar payments API + page + columns                   | ✅ Completado (2025-12-03)    |
-| 4.2  | Verificar customers page                               | ✅ Ya era server-side         |
+| Fase | Descripción                                            | Estado                                |
+| ---- | ------------------------------------------------------ | ------------------------------------- |
+| 1.1  | Modificar data-table.tsx - manualFiltering             | ✅ Completado                         |
+| 1.2  | Modificar data-table-faceted-filter.tsx - serverFacets | ✅ Completado                         |
+| 1.3  | Modificar data-table-toolbar.tsx - propagar filtros    | ✅ Completado                         |
+| 2.1  | Actualizar API /api/projects - filtros + facets        | ✅ Completado                         |
+| 3.1  | Actualizar projects/page.tsx - manualFiltering         | ✅ Completado                         |
+| 3.2  | Actualizar projects/columns.tsx                        | ✅ Completado                         |
+| 4.1  | Migrar payments API + page + columns                   | ✅ Completado (2025-12-03)            |
+| 4.2  | Verificar customers page                               | ✅ Ya era server-side                 |
 | 4.3  | Evaluar aftersales                                     | ✅ Mantiene client-side (justificado) |
-| 5    | Optimizaciones (cache, índices)                        | ⏳ Pendiente                  |
+| 5    | Optimizaciones (cache, índices)                        | ⏳ Pendiente                          |
 
 ---
 
@@ -493,10 +493,10 @@ const handleStatusChange = (values: string[]) => {
 
 ## Historial de Cambios
 
-| Fecha      | Cambio                                                 |
-| ---------- | ------------------------------------------------------ |
-| 2025-12-03 | Creación del plan inicial                              |
-| 2025-12-03 | Migración completa de Payments a server-side filtering |
+| Fecha      | Cambio                                                    |
+| ---------- | --------------------------------------------------------- |
+| 2025-12-03 | Creación del plan inicial                                 |
+| 2025-12-03 | Migración completa de Payments a server-side filtering    |
 | 2025-12-03 | Evaluación Aftersales: mantiene client-side (justificado) |
 
 ### Detalles de Migración de Payments (2025-12-03)
@@ -533,12 +533,14 @@ const handleStatusChange = (values: string[]) => {
 4. **Complejidad no justificada** - El esfuerzo de migrar no aporta beneficio significativo para el volumen actual
 
 **Estado actual:**
+
 - API GET `/api/aftersales` → retorna TODOS los registros
 - Hook `useAftersales()` → no soporta parámetros de filtrado
 - Página usa `globalFilterFn` con `createNormalizedFilter` (client-side)
 - Status filter desde query separada `/api/aftersale-status`
 
 **Cuándo reconsiderar migración:**
+
 - Si el volumen de aftersales crece significativamente (>500 registros activos)
 - Si se agregan más filtros facetados
 - Si hay problemas de performance medibles
