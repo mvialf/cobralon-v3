@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { Pencil, Trash2, Eye, Receipt, DollarSign } from 'lucide-react'
+import { Pencil, Trash2, Eye, Receipt, DollarSign, BadgePercent } from 'lucide-react'
 import { DataTableDropdown } from '@/components/data-table'
 import {
   DropdownMenuItem,
@@ -12,6 +12,7 @@ import { ViewProjectDetailsDialog } from '@/components/dialogs/projects/view-pro
 import { ViewProjectPaymentsDialog } from '@/components/dialogs/projects/view-project-payments-dialog'
 import { EditProjectDialog } from '@/components/dialogs/projects/edit-project-dialog'
 import { PaymentToProjectDialog } from '@/components/dialogs/payments/payment-to-project-dialog'
+import { ProjectAdjustmentDialog } from '@/components/dialogs/projects/project-adjustment-dialog'
 import { ConfirmDeleteDialog } from '@/components/dialogs/confirm-delete-dialog'
 import { toast } from 'sonner'
 import { type Project } from '../types'
@@ -30,6 +31,7 @@ export function ProjectActionsCell({ project, onDataChanged }: ProjectActionsCel
   const [detailsOpen, setDetailsOpen] = useState(false)
   const [paymentsOpen, setPaymentsOpen] = useState(false)
   const [paymentDialogOpen, setPaymentDialogOpen] = useState(false)
+  const [adjustmentDialogOpen, setAdjustmentDialogOpen] = useState(false)
   const [editDialogOpen, setEditDialogOpen] = useState(false)
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
@@ -78,6 +80,12 @@ export function ProjectActionsCell({ project, onDataChanged }: ProjectActionsCel
         <DropdownMenuItem onClick={() => setPaymentDialogOpen(true)}>
           <DollarSign className="mr-2 h-4 w-4" />
           Registrar pago
+        </DropdownMenuItem>
+
+        {/* Aplicar ajuste */}
+        <DropdownMenuItem onClick={() => setAdjustmentDialogOpen(true)}>
+          <BadgePercent className="mr-2 h-4 w-4" />
+          Aplicar ajuste
         </DropdownMenuItem>
 
         <DropdownMenuSeparator />
@@ -141,6 +149,17 @@ export function ProjectActionsCell({ project, onDataChanged }: ProjectActionsCel
         preselectedProjectId={project.id}
         onSuccess={() => {
           // Refetch la tabla cuando se registra un pago exitosamente
+          onDataChanged?.()
+        }}
+      />
+
+      {/* Dialog para aplicar ajuste */}
+      <ProjectAdjustmentDialog
+        projectId={project.id}
+        open={adjustmentDialogOpen}
+        onOpenChange={setAdjustmentDialogOpen}
+        onSuccess={() => {
+          // Refetch la tabla cuando se aplica un ajuste
           onDataChanged?.()
         }}
       />

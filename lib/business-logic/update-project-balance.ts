@@ -6,15 +6,23 @@
  * - Después de editar un pago (cambiar allocations)
  * - Después de eliminar un pago
  * - Después de marcar un installment como pagado
+ * - Después de crear/eliminar un ajuste de proyecto
  *
  * ARQUITECTURA:
- * - App Layer: Llama a este helper después de modificar paymentAllocations
+ * - App Layer: Llama a este helper después de modificar paymentAllocations o adjustments
  * - Job Layer: Job nocturno de reconciliación detecta/corrige inconsistencias
  */
 
 import { prisma } from '@/lib/db'
 import { calculateProjectBalance } from './project-balance'
 import { Decimal } from '@prisma/client/runtime/library'
+import { PrismaClient } from '@prisma/client'
+
+// Type para transacción de Prisma
+type PrismaTransaction = Omit<
+  PrismaClient,
+  '$connect' | '$disconnect' | '$on' | '$transaction' | '$use' | '$extends'
+>
 
 /**
  * Actualiza el balance de un proyecto en la DB basándose en sus allocations
@@ -138,4 +146,75 @@ export async function verifyProjectBalance(projectId: string): Promise<boolean> 
   // Comparar con tolerancia de 0.01 por redondeos decimales
   const dbBalance = Number(project.balance)
   return Math.abs(dbBalance - calculatedBalance) < 0.01
+}
+
+/**
+ * Actualiza el balance de un proyecto incluyendo ajustes
+ *
+ * Fórmula: balance = totalAmount - totalPaid - totalAdjustments
+ *
+ * @param projectId - ID del proyecto a actualizar
+ * @param tx - Transacción de Prisma (opcional, usa prisma global si no se proporciona)
+ * @returns Balance actualizado
+ *
+ * @example
+ * // Después de crear un ajuste
+ * await prisma.$transaction(async (tx) => {
+ *   await tx.projectAdjustment.create({ ... })
+ *   await updateProjectBalanceWithAdjustments(projectId, tx)
+ * })
+ */
+export async function updateProjectBalanceWithAdjustments(
+  projectId: string,
+  tx?: PrismaTransaction
+): Promise<number> {
+  const db = tx || prisma
+
+  // Fetch project con allocations y ajustes
+  const project = await db.project.findUnique({
+    where: { id: projectId },
+    select: {
+      id: true,
+      total: true,
+      totalAmount: true,
+      paymentAllocations: {
+        select: {
+          allocatedAmount: true,
+        },
+      },
+      adjustments: {
+        select: {
+          amount: true,
+        },
+      },
+    },
+  })
+
+  if (!project) {
+    throw new Error(`Project ${projectId} not found`)
+  }
+
+  // Calcular balance base (sin ajustes)
+  const { balance: baseBalance } = calculateProjectBalance({
+    totalAmount: Number(project.totalAmount || project.total),
+    allocations: project.paymentAllocations.map((alloc) => ({
+      allocatedAmount: Number(alloc.allocatedAmount),
+    })),
+  })
+
+  // Sumar todos los ajustes (los ajustes reducen el balance)
+  const totalAdjustments = project.adjustments.reduce((sum, adj) => sum + Number(adj.amount), 0)
+
+  // Calcular balance final: balance base - ajustes
+  const finalBalance = baseBalance - totalAdjustments
+
+  // Actualizar en DB
+  await db.project.update({
+    where: { id: projectId },
+    data: {
+      balance: new Decimal(finalBalance),
+    },
+  })
+
+  return finalBalance
 }

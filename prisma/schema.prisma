@@ -125,6 +125,7 @@ model Project {
   aftersales          Aftersale[]
   calendarEvents      ProjectEvent[]
   creditTransactions  CreditTransaction[]
+  adjustments         ProjectAdjustment[] // Ajustes (descuentos, condonaciones)
   customer            Customer            @relation(fields: [customerId], references: [id], onDelete: Cascade)
   projectStatus       ProjectStatus?      @relation(fields: [projectStatusId], references: [id], onDelete: Restrict)
 
@@ -429,4 +430,22 @@ enum CreditTransactionType {
   REFUND      // Devolución recibida del negocio
   WITHDRAWAL  // Retiro solicitado por cliente
   ADJUSTMENT  // Ajuste manual (admin)
+}
+
+// Ajustes de proyecto (descuentos, condonaciones)
+model ProjectAdjustment {
+  id          String   @id @default(uuid())
+  projectId   String
+  amount      Decimal  @db.Decimal(12, 2) // Monto del ajuste (positivo = reduce balance)
+  reason      String   // Razón predefinida o personalizada
+  description String?  @db.Text // Notas adicionales opcionales
+  appliedAt   DateTime @default(now()) // Fecha en que se aplicó el ajuste
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId])
+  @@index([appliedAt])
+  @@map("project_adjustments")
 }
