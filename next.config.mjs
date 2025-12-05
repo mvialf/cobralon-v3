@@ -3,6 +3,7 @@ import { fileURLToPath } from 'url'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
+// Cache invalidation: 2025-12-05 - Force rebuild after ProjectAdjustment model added
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   // Evita warning de múltiples lockfiles en directorios padre
