@@ -1,5 +1,8 @@
 import { Suspense } from 'react'
 import { Skeleton } from '@/components/ui/skeleton'
+
+// Forzar renderizado dinámico - evita pre-rendering con useSearchParams
+export const dynamic = 'force-dynamic'
 import {
   Card,
   CardContent,
