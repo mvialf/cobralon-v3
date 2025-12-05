@@ -38,7 +38,7 @@ import { normalizeForSearch } from '@/lib/utils/normalize'
 export const normalizedIncludesString: FilterFn<any> = (
   row: Row<any>,
   columnId: string,
-  filterValue: string
+  filterValue: string | string[]
 ): boolean => {
   if (!filterValue) return true
 
@@ -46,14 +46,24 @@ export const normalizedIncludesString: FilterFn<any> = (
 
   if (cellValue == null) return false
 
-  const normalizedCell = normalizeForSearch(String(cellValue))
+  const cellString = String(cellValue)
+
+  // Si filterValue es un array (filtro faceted), verificar si el valor está en el array
+  if (Array.isArray(filterValue)) {
+    if (filterValue.length === 0) return true
+    return filterValue.includes(cellString)
+  }
+
+  // Si es string (búsqueda por texto), usar lógica normalizada
+  const normalizedCell = normalizeForSearch(cellString)
   const normalizedFilter = normalizeForSearch(filterValue)
 
   return normalizedCell.includes(normalizedFilter)
 }
 
 // Marcar la función como auto-removable cuando el filtro está vacío
-normalizedIncludesString.autoRemove = (val: unknown) => !val || val === ''
+normalizedIncludesString.autoRemove = (val: unknown) =>
+  !val || val === '' || (Array.isArray(val) && val.length === 0)
 
 /**
  * Función de filtrado global que busca en TODAS las columnas visibles.
