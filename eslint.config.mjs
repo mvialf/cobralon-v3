@@ -12,6 +12,7 @@ const compat = new FlatCompat({
 const eslintConfig = [
   {
     ignores: [
+      // Build artifacts
       'node_modules/**',
       '.next/**',
       'out/**',
@@ -19,6 +20,14 @@ const eslintConfig = [
       'next-env.d.ts',
       '.playwright-mcp/**',
       'coverage/**',
+
+      // Tests (excluidos del lint de producción)
+      'tests/**',
+      '**/*.spec.ts',
+      '**/*.spec.tsx',
+      '**/*.test.ts',
+      '**/*.test.tsx',
+      '**/__tests__/**',
     ],
   },
   ...compat.config({
