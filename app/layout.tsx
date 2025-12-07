@@ -8,9 +8,8 @@ import { QueryProvider } from '@/components/providers/query-provider'
 import './globals.css'
 
 export const metadata: Metadata = {
-  title: 'v0 App',
-  description: 'Created with v0',
-  generator: 'v0.app',
+  title: 'Cobralon',
+  description: 'Sistema de gestión de cobranza y proyectos',
 }
 
 export default function RootLayout({

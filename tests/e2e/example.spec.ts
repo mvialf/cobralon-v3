@@ -5,8 +5,8 @@ import { test, expect } from '@playwright/test'
  *
  * Este test verifica:
  * - La página principal carga correctamente
- * - El título contiene "SaaS"
- * - El botón "Comenzar" es visible
+ * - El título contiene "Cobralon"
+ * - Los elementos principales son visibles
  *
  * Para ejecutar:
  * - npm run test:e2e
@@ -20,7 +20,7 @@ test.describe('Homepage', () => {
     await page.goto('/')
 
     // Verificar que el título de la página es correcto
-    await expect(page).toHaveTitle(/v0 App/i)
+    await expect(page).toHaveTitle(/Cobralon/i)
 
     // Verificar que el heading principal es visible
     const heading = page.getByRole('heading', { level: 1 })
