@@ -4,7 +4,7 @@ Documentación completa del stack tecnológico del template SaaS Layout.
 
 ## Core Framework
 
-### Next.js 15.5.6
+### Next.js 15.5.7
 
 - **Router**: App Router (RSC habilitado)
 - **Rendering**: Hybrid (Server Components + Client Components)
@@ -222,7 +222,7 @@ npm run lint    # ESLint (pero ignorado en builds)
 
 ### Para Futuros Proyectos Basados en Este Template
 
-- [ ] **Corregir `next.config.mjs`**: Cambiar `ignoreDuringBuilds: false`
+
 - [ ] **Optimizar images**: Remover `unoptimized: true` si se usa CDN
 - [ ] **Testing framework**: No incluido (¿Vitest? ¿Jest? ¿Playwright?)
 - [ ] **E2E testing**: No configurado

@@ -1,4 +1,4 @@
-# CLAUDE.md
+# GEMINI.md
 
 Este archivo proporciona orientación a Claude Code (claude.ai/code) cuando trabaja con código en este repositorio.
 
@@ -48,7 +48,7 @@ npm run dev:webpack # Puerto 3001 (Webpack) - Alternativo
 
 Después de completar una **implementación significativa** (nueva feature, refactor mayor, integración externa):
 
-1. Actualizar [docs/project/implementation.md](docs/project/implementation.md) con entrada nueva
+1. Actualizar [docs/project/implementation/](docs/project/implementation/) con entrada nueva
 2. Referenciar ADRs relevantes si existen
 3. Cuantificar beneficios cuando sea posible
 4. Listar archivos modificados principales
