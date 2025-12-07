@@ -105,7 +105,7 @@ interface PaymentToCustomerFormProps {
  */
 export function PaymentToCustomerForm({
   onSubmit,
-  isSubmitting: _isSubmitting = false,
+  isSubmitting = false,
   preselectedCustomerId,
   formId,
 }: PaymentToCustomerFormProps) {
@@ -509,13 +509,14 @@ export function PaymentToCustomerForm({
             <Button
               type="submit"
               disabled={
+                isSubmitting ||
                 !selectedCustomerId ||
                 customerProjects.length === 0 ||
                 fields.length === 0 ||
                 !isValidSum
               }
             >
-              Registrar Pago
+              {isSubmitting ? 'Registrando...' : 'Registrar Pago'}
             </Button>
           </div>
         )}

@@ -307,17 +307,18 @@ export const paymentToCustomerSchema = z
       .nullable(),
 
     // Asignaciones a proyectos (array de allocations)
+    // Nota: permitimos allocatedAmount >= 0 porque el formulario muestra TODAS las filas
+    // y solo algunas tendrán valor. El filtrado y validación real ocurre en los refines.
     allocations: z
       .array(
         z.object({
           projectId: z.string().uuid('ID de proyecto inválido'),
           allocatedAmount: z.coerce
             .number()
-            .positive('El monto asignado debe ser mayor a 0')
+            .min(0, 'El monto no puede ser negativo')
             .multipleOf(FINANCIAL.DECIMAL_PRECISION, 'El monto debe tener máximo 2 decimales'),
         })
       )
-      .min(1, 'Debe asignar el pago a al menos un proyecto')
       .refine(
         (allocations) => {
           // No duplicados de projectId
@@ -329,8 +330,21 @@ export const paymentToCustomerSchema = z
   })
   .refine(
     (data) => {
-      // Suma de allocations debe ser igual al monto total
-      const totalAllocated = data.allocations.reduce((sum, a) => sum + a.allocatedAmount, 0)
+      // Debe haber al menos una allocation con monto > 0
+      const allocationsWithValue = data.allocations.filter((a) => a.allocatedAmount > 0)
+      return allocationsWithValue.length >= 1
+    },
+    {
+      message: 'Debe asignar el pago a al menos un proyecto',
+      path: ['allocations'],
+    }
+  )
+  .refine(
+    (data) => {
+      // Suma de allocations (solo las con valor > 0) debe ser igual al monto total
+      const totalAllocated = data.allocations
+        .filter((a) => a.allocatedAmount > 0)
+        .reduce((sum, a) => sum + a.allocatedAmount, 0)
       return Math.abs(totalAllocated - data.amount) < FINANCIAL.TOLERANCE
     },
     {
