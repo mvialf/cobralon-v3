@@ -30,9 +30,11 @@ export async function middleware(request: NextRequest) {
   // Rutas publicas que NO requieren autenticacion
   const publicRoutes = ['/login']
 
-  // Permitir acceso a rutas de auth API, archivos estaticos y publicas
+  // Permitir acceso a rutas de auth API, cron jobs, archivos estaticos y publicas
+  // NOTA: /api/cron/* tiene su propia autenticacion via CRON_SECRET
   if (
     pathname.startsWith('/api/auth/') ||
+    pathname.startsWith('/api/cron/') ||
     pathname.startsWith('/_next/') ||
     pathname === '/favicon.ico' ||
     publicRoutes.includes(pathname)
