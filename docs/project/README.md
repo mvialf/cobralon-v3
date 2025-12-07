@@ -1,67 +1,54 @@
-# Documentación del Proyecto
+# Documentación del Proyecto: Cobralon
 
-Esta es la documentación de **este proyecto específico** construido con el SaaS Template.
+Bienvenido a la documentación técnica de **Cobralon**, el sistema de gestión de cobranza y proyectos.
 
-> **Nota:** Esta documentación es un **ejemplo** de cómo documentar tu proyecto usando la metodología del template. Reemplaza este contenido con la documentación de TU proyecto.
+## 🎯 Objetivo del Proyecto
 
-## Archivos
+Cobralon es un sistema diseñado para administrar el ciclo de vida financiero de proyectos de construcción/inmobiliarios, con un fuerte enfoque en:
 
-- [**architecture.md**](architecture.md) - Arquitectura específica de este proyecto
-- [**implementation/**](implementation/) - Timeline de implementaciones (organizado por periodos)
-- [**decisions/**](decisions/) - ADRs específicos del proyecto (no del template)
+1.  **Gestión de Cobranza**: Seguimiento de pagos y deudas.
+2.  **Cuenta Corriente**: Control de saldos por proyecto y cliente.
+3.  **Lógica FIFO**: Aplicación automática de pagos a deudas más antiguas.
+4.  **Sistema de Créditos**: Manejo de saldos a favor (créditos) y su aplicación a nuevas deudas.
 
-## Diferencia: Template vs Project Docs
+## 📚 Estructura de Documentación
 
-### Template Docs ([docs/template/](../template/))
+Esta carpeta `docs/project/` contiene la documentación viva del sistema:
 
-- Documentación del **framework/template** en sí
-- Para **usuarios del template**
-- Decisiones sobre Next.js, Tailwind, shadcn/ui, etc.
-
-### Project Docs ([docs/project/](../project/))
-
-- Documentación de **ESTE proyecto específico**
-- Para **desarrolladores de este proyecto**
-- Decisiones sobre auth, DB, features específicas, etc.
-
-## Ejemplo de Uso
-
-Si este fuera un proyecto de e-commerce real, aquí documentarías:
-
-### ADRs del Proyecto
-
-- `decisions/001-stripe-vs-paypal.md` - Por qué elegimos Stripe
-- `decisions/002-prisma-postgres.md` - Por qué Prisma + PostgreSQL
-- `decisions/003-s3-images.md` - Por qué AWS S3 para imágenes
-
-### Implementation Log
-
-Registrar implementaciones como:
-
-- Setup de autenticación con NextAuth
-- Integración de Stripe checkout
-- Sistema de inventory management
-- etc.
-
-### Architecture
-
-Documentar:
-
-- Arquitectura específica del e-commerce
-- Flujo de checkout
-- Manejo de pagos
-- etc.
+- [**architecture.md**](architecture.md): Arquitectura técnica y lógica de negocio (FIFO, Créditos, Estados).
+- [**implementation/**](implementation/): Registro histórico de features implementadas.
+- [**decisions/**](decisions/): Registro de Decisiones de Arquitectura (ADRs).
 
 ---
 
-## Cómo Usar Esto en Tu Proyecto
+## 🏗️ Dominios de Negocio Principales
 
-1. **Clona el template**
-2. **Borra/modifica este README.md** con info de tu proyecto
-3. **Crea tus ADRs** en `decisions/` según decides arquitectura
-4. **Documenta implementaciones** en carpeta `implementation/`
-5. **Actualiza architecture.md** con tu arquitectura específica
+El núcleo de la lógica de negocio reside en `lib/business-logic/`. Los conceptos clave son:
+
+### 1. Pagos FIFO (`payment-fifo.ts`)
+El sistema aplica estrictamente el principio "First-In, First-Out". Cuando ingresa un pago:
+1. Se ordena la deuda del cliente por antigüedad.
+2. El pago cubre primero la deuda más vieja.
+3. Si sobra dinero, se genera un crédito a favor.
+
+### 2. Gestión de Créditos (`credit-management.ts`)
+Los saldos a favor se manejan como "Créditos".
+- **Invariante**: El saldo de crédito nunca puede ser negativo.
+- **Aplicación**: Los créditos pueden usarse para pagar deudas futuras (total o parcialmente).
+
+### 3. Estados de Proyecto (`project-state.ts`)
+Un proyecto tiene un ciclo de vida definido por su saldo y status administrativo:
+- **Activo**: Proyecto en curso o con deuda pendiente.
+- **Finalizado**: Proyecto cerrado administrativamente Y con deuda cero.
 
 ---
 
-**Ver:** [Template Documentation](../template/) para entender el framework base.
+## 🛠️ Stack Tecnológico
+
+Ver [docs/template/architecture/stack.md](../template/architecture/stack.md) para el detalle técnico base, pero los componentes clave de este proyecto son:
+
+- **Frontend**: Next.js 15 (App Router)
+- **Styling**: Tailwind CSS v4 + shadcn/ui
+- **DB**: PostgreSQL + Prisma ORM
+- **Validación**: Zod (Business Objects & Forms)
+- **Testing**: Vitest (Unit & Integration)
