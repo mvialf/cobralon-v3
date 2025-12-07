@@ -60,6 +60,7 @@ export function EditProjectDialog({
       windowsCount: project.windowsCount,
       squareMeters: Number(project.squareMeters),
       description: project.description || '',
+      uninstallTagIds: project.uninstallTags?.map((pt) => pt.uninstallTagId) || [],
     }
   }, [project])
 

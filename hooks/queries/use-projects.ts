@@ -29,6 +29,20 @@ export interface ProjectDetail extends Project {
   windowsCount: number
   squareMeters: number
   description: string | null
+  uninstallTags: Array<{
+    id: string
+    uninstallTagId: string
+    uninstallTag: {
+      id: string
+      name: string
+      abbreviation: string
+      color: {
+        id: string
+        bgClass: string
+        textClass: string
+      } | null
+    }
+  }>
 }
 
 /** Params para GET /api/projects */
