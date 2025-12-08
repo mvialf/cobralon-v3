@@ -7,6 +7,7 @@
 ## Contexto
 
 En el dominio de cobranza inmobiliaria, es común que ocurran dos situaciones que requieren manejo de "saldos a favor":
+
 1.  **Sobrepago**: Un cliente paga más de lo que debe en un proyecto (ej: error de transferencia o redondeo).
 2.  **Devoluciones**: Se cancela una venta y el dinero pagado queda "a favor" del cliente para futuras compras.
 
@@ -36,7 +37,7 @@ model CreditTransaction {
   description String
   reference   String?  // Link a Payment ID o Nota de Crédito
   createdAt   DateTime @default(now())
-  
+
   customer    Customer @relation(...)
 }
 ```
@@ -47,20 +48,23 @@ El módulo `lib/business-logic/credit-management.ts` enforcea las siguientes reg
 
 - **Invariante 1: No Números Negativos**
   El `creditBalance` de un cliente nunca puede ser menor a 0. No somos un banco que otorga descubiertos.
-  
 - **Invariante 2: Atomicidad**
   Toda operación de consumo o generación de crédito debe ocurrir dentro de una `db.$transaction`.
 
 ### 3. Flujos de Uso
 
 #### A. Generación (Ingreso de dinero)
+
 Cuando se procesa un pago (`Payment`), si el monto excede la deuda del proyecto asignado:
+
 1. Se paga la deuda del proyecto (hasta 0).
 2. El remanente se convierte en una `CreditTransaction` (tipo positivo).
 3. Se actualiza `Customer.creditBalance`.
 
 #### B. Consumo (Pago con billetera)
+
 Al registrar un nuevo pago, el usuario puede seleccionar "Usar Crédito Disponible":
+
 1. Se valida `amount <= customer.creditBalance`.
 2. Se crea una `CreditTransaction` (tipo negativo).
 3. Se actualiza `Customer.creditBalance`.
@@ -69,9 +73,11 @@ Al registrar un nuevo pago, el usuario puede seleccionar "Usar Crédito Disponib
 ## Consecuencias
 
 ### Positivas
+
 - **Auditoría Total**: Ante la pregunta "¿Por qué tengo $500 a favor?", existe un registro exacto (ej: "Sobrante del pago #123").
 - **Seguridad**: Previene la "aparición" mágica de dinero. Todo crédito tiene origen.
 - **Flexibilidad**: Permite usar saldos a favor para pagar cualquier proyecto del mismo cliente.
 
 ### Negativas
+
 - **Complejidad de Escritura**: Requiere transacciones de base de datos para asegurar consistencia entre `Transaction` y `Customer.balance`.

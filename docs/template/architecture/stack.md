@@ -222,7 +222,6 @@ npm run lint    # ESLint (pero ignorado en builds)
 
 ### Para Futuros Proyectos Basados en Este Template
 
-
 - [ ] **Optimizar images**: Remover `unoptimized: true` si se usa CDN
 - [ ] **Testing framework**: No incluido (¿Vitest? ¿Jest? ¿Playwright?)
 - [ ] **E2E testing**: No configurado

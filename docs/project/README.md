@@ -26,18 +26,24 @@ Esta carpeta `docs/project/` contiene la documentación viva del sistema:
 El núcleo de la lógica de negocio reside en `lib/business-logic/`. Los conceptos clave son:
 
 ### 1. Pagos FIFO (`payment-fifo.ts`)
+
 El sistema aplica estrictamente el principio "First-In, First-Out". Cuando ingresa un pago:
+
 1. Se ordena la deuda del cliente por antigüedad.
 2. El pago cubre primero la deuda más vieja.
 3. Si sobra dinero, se genera un crédito a favor.
 
 ### 2. Gestión de Créditos (`credit-management.ts`)
+
 Los saldos a favor se manejan como "Créditos".
+
 - **Invariante**: El saldo de crédito nunca puede ser negativo.
 - **Aplicación**: Los créditos pueden usarse para pagar deudas futuras (total o parcialmente).
 
 ### 3. Estados de Proyecto (`project-state.ts`)
+
 Un proyecto tiene un ciclo de vida definido por su saldo y status administrativo:
+
 - **Activo**: Proyecto en curso o con deuda pendiente.
 - **Finalizado**: Proyecto cerrado administrativamente Y con deuda cero.
 

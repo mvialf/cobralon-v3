@@ -12,10 +12,10 @@ El sistema de pagos sigue un modelo **FIFO (First-In, First-Out)** estricto para
 
 - **Módulo**: `lib/business-logic/payment-fifo.ts`
 - **Lógica**:
-    1.  Toma un monto de pago `P`.
-    2.  Obtiene todos los proyectos del cliente con `balance > 0`.
-    3.  Ordena los proyectos por `createdAt` asc.
-    4.  Itera y asigna fondos hasta que `P = 0`.
+  1.  Toma un monto de pago `P`.
+  2.  Obtiene todos los proyectos del cliente con `balance > 0`.
+  3.  Ordena los proyectos por `createdAt` asc.
+  4.  Itera y asigna fondos hasta que `P = 0`.
 - **Propósito**: Garantizar que las deudas más antiguas se salden primero, simplificando la gestión de mora.
 
 ### 2. Sistema de Créditos (Wallet)
@@ -24,9 +24,9 @@ Los clientes tienen una "billetera" de créditos (saldos a favor) que se genera 
 
 - **Módulo**: `lib/business-logic/credit-management.ts`
 - **Reglas**:
-    - **Generación**: `Pago > Deuda Total` -> El excedente va a Crédito.
-    - **Consumo**: Al pagar un nuevo proyecto, se puede usar Crédito + Efectivo.
-    - **Atocimidad**: Las operaciones de crédito/débito deben ser transaccionales en la DB.
+  - **Generación**: `Pago > Deuda Total` -> El excedente va a Crédito.
+  - **Consumo**: Al pagar un nuevo proyecto, se puede usar Crédito + Efectivo.
+  - **Atocimidad**: Las operaciones de crédito/débito deben ser transaccionales en la DB.
 
 ### 3. Máquina de Estados de Proyecto
 
@@ -34,8 +34,8 @@ El estado de un proyecto es derivado, no solo un campo en la base de datos.
 
 - **Módulo**: `lib/business-logic/project-state.ts`
 - **Definición**:
-    - `Activo`: (Status != Finalizado) O (Balance > 0)
-    - `Finalizado`: (Status == Finalizado) Y (Balance == 0)
+  - `Activo`: (Status != Finalizado) O (Balance > 0)
+  - `Finalizado`: (Status == Finalizado) Y (Balance == 0)
 - **Implicancia**: Un proyecto no puede considerarse "Cerrado" si aún tiene deuda pendiente, independientemente de lo que diga el usuario administrativo.
 
 ### 4. Validación de Integridad Financiera
@@ -59,18 +59,20 @@ El esquema de Prisma (`prisma/schema.prisma`) implementa estas entidades clave:
 ## 🔄 Flujos Críticos
 
 ### Ingreso de Pago
+
 1.  Frontend: Usuario ingresa monto.
 2.  Backend:
-    -   Valida existencia de cliente.
-    -   Ejecuta `calculateFIFO` (in-memory) para previsualizar distribución.
-    -   Confirma transacción.
-    -   **DB Config Transaction**:
-        -   Crea `Payment`.
-        -   Crea `PaymentAllocation`s.
-        -   Actualiza `Customer.creditBalance` (si aplica).
-        -   Crea `CreditTransaction` (si hubo uso/generación).
+    - Valida existencia de cliente.
+    - Ejecuta `calculateFIFO` (in-memory) para previsualizar distribución.
+    - Confirma transacción.
+    - **DB Config Transaction**:
+      - Crea `Payment`.
+      - Crea `PaymentAllocation`s.
+      - Actualiza `Customer.creditBalance` (si aplica).
+      - Crea `CreditTransaction` (si hubo uso/generación).
 
 ### Reporte de Saldos
+
 1.  Calcula balance por proyecto en tiempo real (o cached).
 2.  Agrega saldos para mostrar "Deuda Total Cliente".
 3.  Compara con "Línea de Crédito" (si existiera feature futura).
