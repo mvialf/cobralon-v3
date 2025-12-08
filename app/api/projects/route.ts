@@ -1,11 +1,15 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { Decimal } from '@prisma/client/runtime/library'
-import { ProjectWhereInput } from '@/types/api'
-import { matchesProjectState, ProjectStateFilter } from '@/lib/business-logic/project-state'
 import { withLogging } from '@/lib/logger-middleware'
-import { anyFieldMatchesSearch } from '@/lib/utils/normalize'
 import { z } from 'zod'
+import {
+  queryProjectList,
+  countProjects,
+  getStatusFacets,
+  getStateFacets,
+} from '@/lib/queries/project-list'
+import type { ProjectListFilters } from '@/types/project-list'
 
 /**
  * Zod schema for projectState validation
@@ -15,12 +19,12 @@ const projectStateSchema = z.enum(['Activo', 'Finalizado', 'all']).default('Acti
 /**
  * GET /api/projects
  *
- * Obtiene lista de proyectos con paginación correcta
+ * Obtiene lista de proyectos con paginación en base de datos
  *
  * Query params:
  *   - page: número de página (default: 1)
  *   - limit: registros por página (default: 10, max: 100)
- *   - search: buscar por nombre de proyecto, número o cliente
+ *   - search: buscar por nombre de proyecto, número o cliente (normalizado, sin acentos)
  *   - customerId: filtrar por cliente específico
  *   - statusIds: IDs de status separados por coma (o "null" para sin estado)
  *   - projectState: "Activo" (default), "Finalizado", "all"
@@ -33,8 +37,11 @@ const projectStateSchema = z.enum(['Activo', 'Finalizado', 'all']).default('Acti
  *   - pagination: { page, limit, total, totalPages }
  *   - facets: { projectStatus: [...], projectState: [...] } - Conteos para filtros
  *
- * NOTA: La paginación se aplica DESPUÉS del filtro fino de projectState para
- * garantizar que cada página contenga exactamente 'limit' proyectos.
+ * Optimizaciones:
+ *   - Paginación en base de datos (LIMIT/OFFSET)
+ *   - Búsqueda normalizada con extensión unaccent de PostgreSQL
+ *   - Índices GIN con pg_trgm para búsqueda eficiente
+ *   - Queries paralelas para conteo y facets
  */
 export const GET = withLogging(async (request, logger) => {
   const { searchParams } = new URL(request.url)
@@ -74,180 +81,73 @@ export const GET = withLogging(async (request, logger) => {
         projectState,
       },
     },
-    'Fetching projects with filters'
+    'Fetching projects with DB-level pagination'
   )
 
   try {
-    // Construir filtro de búsqueda base
-    const where: ProjectWhereInput = {}
-
-    if (customerId) {
-      where.customerId = customerId
+    // Construir filtros
+    const filters: ProjectListFilters = {
+      page,
+      limit,
+      search,
+      customerId,
+      statusIds,
+      filterByNullStatus,
+      actualStatusIds,
+      projectState,
     }
 
-    // Filtro por statusIds (multiselect)
-    if (statusIds.length > 0) {
-      if (filterByNullStatus && actualStatusIds.length > 0) {
-        // Filtrar por null O por los IDs seleccionados
-        where.OR = [{ projectStatusId: null }, { projectStatusId: { in: actualStatusIds } }]
-      } else if (filterByNullStatus) {
-        // Solo filtrar por null
-        where.projectStatusId = null
-      } else {
-        // Solo filtrar por IDs
-        where.projectStatusId = { in: actualStatusIds }
-      }
-    }
+    // Ejecutar queries en paralelo para mejor performance
+    const [projects, total, statusFacetsRaw, stateFacetsRaw] = await Promise.all([
+      queryProjectList(filters),
+      countProjects(filters),
+      getStatusFacets({
+        search,
+        customerId,
+        projectState,
+      }),
+      getStateFacets({
+        search,
+        customerId,
+        statusIds,
+        filterByNullStatus,
+        actualStatusIds,
+      }),
+    ])
 
-    // NOTA: La búsqueda se aplica en memoria con normalización (ignora acentos/tildes)
-    // para permitir que "jose" encuentre "José". Ver filtro más abajo.
+    const totalPages = Math.ceil(total / limit)
 
-    // Pre-filtro server-side por projectStatus.isFinal (solo para "Finalizado")
-    // NOTA: Para "Activo" NO aplicamos pre-filtro porque necesitamos verificar
-    // el balance (proyectos con isFinal=true pero balance>0 son "Activos")
-    if (projectState === 'Finalizado') {
-      // Finalizados: Solo traer proyectos en estado final (optimización)
-      // El filtro fino verificará que también tengan balance === 0
-      where.projectStatus = { isFinal: true }
-    }
-    // 'Activo' y 'all' no agregan pre-filtro de status
-
-    // PASO 1: Obtener TODOS los proyectos que cumplen el pre-filtro (sin paginación)
-    // Esto es necesario para calcular el COUNT total correcto después del filtro fino
-    const allProjects = await prisma.project.findMany({
-      relationLoadStrategy: 'join', // Fix N+1: Force database-level JOINs
-      where,
-      orderBy: { createdAt: 'desc' },
-      include: {
-        customer: {
-          select: {
-            id: true,
-            name: true,
-            phone: true,
-          },
-        },
-        projectStatus: {
-          select: {
-            id: true,
-            name: true,
-            isFinal: true,
-            color: {
-              select: {
-                bgClass: true,
-              },
-            },
-          },
-        },
-      },
-    })
-
-    // PASO 2: Calcular totalPaid y percentPaid usando balance de DB
-    const projectsWithCalculations = allProjects.map((project) => {
-      const balance = Number(project.balance) // ✅ Leer desde columna DB
-      const totalAmount = Number(project.total)
-      const totalPaid = totalAmount - balance
-
-      const percentPaid = totalAmount > 0 ? (totalPaid / totalAmount) * 100 : 0
-
-      return {
-        ...project,
-        totalPaid,
-        balance,
-        percentPaid,
-      }
-    })
-
-    // PASO 3: Filtro fino - Aplicar filtros de projectState y búsqueda normalizada
-    const filteredProjects = projectsWithCalculations.filter((project) => {
-      // Filtro por projectState
-      const matchesState = matchesProjectState(
-        project.balance,
-        project.projectStatus?.isFinal,
-        projectState as ProjectStateFilter
-      )
-
-      if (!matchesState) return false
-
-      // Filtro de búsqueda normalizada (ignora acentos/tildes)
-      // "jose" encontrará "José", "nunoa" encontrará "Ñuñoa"
-      if (search) {
-        return anyFieldMatchesSearch(
-          [
-            project.projectNumber,
-            project.projectName,
-            project.customer?.name,
-            project.projectStatus?.name,
-          ],
-          search
-        )
-      }
-
-      return true
-    })
-
-    // PASO 4: Calcular paginación DESPUÉS del filtro fino
-    const totalFiltered = filteredProjects.length
-    const totalPages = Math.ceil(totalFiltered / limit)
-    const skip = (page - 1) * limit
-
-    // PASO 5: Aplicar paginación manualmente
-    const paginatedProjects = filteredProjects.slice(skip, skip + limit)
-
-    // PASO 6: Calcular facets (conteos) para filtros
-    // NOTA: Los facets se calculan sobre los proyectos filtrados (excluyendo el filtro propio)
-    // Para simplicidad, aquí calculamos sobre TODOS los proyectos con filtro fino aplicado
-    const statusFacets = new Map<string, number>()
-    const stateFacets = new Map<string, number>()
-
-    for (const project of filteredProjects) {
-      // Facet de projectStatus
-      const statusId = project.projectStatusId || 'null'
-      statusFacets.set(statusId, (statusFacets.get(statusId) || 0) + 1)
-
-      // Facet de projectState (Activo/Finalizado)
-      const isFinalized = project.projectStatus?.isFinal === true && Number(project.balance) <= 0
-      const stateValue = isFinalized ? 'Finalizado' : 'Activo'
-      stateFacets.set(stateValue, (stateFacets.get(stateValue) || 0) + 1)
-    }
-
-    // Convertir Maps a arrays para la respuesta
+    // Formatear facets para respuesta
     const facets = {
-      projectStatus: Array.from(statusFacets.entries()).map(([value, count]) => ({
-        value,
-        count,
-      })),
-      projectState: Array.from(stateFacets.entries()).map(([value, count]) => ({
-        value,
-        count,
-      })),
+      projectStatus: statusFacetsRaw,
+      projectState: stateFacetsRaw,
     }
 
     logger.info(
       {
-        totalFetched: allProjects.length,
-        totalFiltered,
+        total,
         page,
         limit,
         totalPages,
         projectState,
-        paginatedCount: paginatedProjects.length,
+        returnedCount: projects.length,
         facets: {
           statusCount: facets.projectStatus.length,
           stateCount: facets.projectState.length,
         },
       },
-      'Projects fetched, filtered, and paginated successfully'
+      'Projects fetched with DB-level pagination'
     )
 
     return NextResponse.json({
-      projects: paginatedProjects,
+      projects,
       pagination: {
         page,
         limit,
-        total: totalFiltered, // ✅ Total correcto de proyectos después del filtro
-        totalPages, // ✅ Páginas correctas basadas en total filtrado
+        total,
+        totalPages,
       },
-      facets, // ✅ Conteos para filtros facetados
+      facets,
     })
   } catch (error) {
     logger.error({ err: error }, 'Error fetching projects')
@@ -290,12 +190,12 @@ export const POST = withLogging(async (request, logger) => {
     subtotal,
     taxRate,
     total,
-    totalAmount, // Para sistema de pagos
-    currency, // Para sistema de pagos
+    totalAmount,
+    currency,
     windowsCount,
     squareMeters,
     description,
-    uninstallTagIds, // Materiales de desinstalación
+    uninstallTagIds,
   } = body
 
   // Child logger con contexto de negocio
@@ -309,7 +209,7 @@ export const POST = withLogging(async (request, logger) => {
   projectLogger.info('Project creation requested')
 
   try {
-    // Validaciones b�sicas
+    // Validaciones básicas
     projectLogger.debug('Starting basic validations')
 
     if (!customerId || typeof customerId !== 'string') {
@@ -319,12 +219,12 @@ export const POST = withLogging(async (request, logger) => {
 
     if (!projectNumber || typeof projectNumber !== 'string' || projectNumber.trim().length === 0) {
       projectLogger.warn('Missing or invalid projectNumber')
-      return NextResponse.json({ error: 'El n�mero de proyecto es requerido' }, { status: 400 })
+      return NextResponse.json({ error: 'El número de proyecto es requerido' }, { status: 400 })
     }
 
     if (!phone || typeof phone !== 'string' || phone.trim().length === 0) {
       projectLogger.warn('Missing or invalid phone')
-      return NextResponse.json({ error: 'El tel�fono es requerido' }, { status: 400 })
+      return NextResponse.json({ error: 'El teléfono es requerido' }, { status: 400 })
     }
 
     if (!street || typeof street !== 'string' || street.trim().length === 0) {
