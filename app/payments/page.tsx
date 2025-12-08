@@ -44,7 +44,7 @@ export default function PaymentsPage() {
   // Estado de paginación server-side
   const [pagination, setPagination] = useState<PaginationState>({
     pageIndex: 0, // TanStack usa 0-based
-    pageSize: 20,
+    pageSize: 50,
   })
 
   // Estado de búsqueda con debounce

@@ -72,6 +72,8 @@ interface DataTableProps<TData, TValue> {
     title: string
     options: { label: string; value: string; bgClass?: string }[]
     onFilterChange?: (values: string[]) => void
+    // Server-side filtering: valores actualmente seleccionados
+    selectedValues?: string[]
   }[]
   onRowSelectionChange?: (selectedRows: TData[]) => void
   enableRowSelection?: boolean
@@ -118,7 +120,7 @@ export function DataTable<TData, TValue>({
   // Estado interno de paginación (solo para client-side)
   const [internalPagination, setInternalPagination] = React.useState<PaginationState>({
     pageIndex: 0,
-    pageSize: 20,
+    pageSize: 50,
   })
 
   // Determinar la función de filtrado global a usar

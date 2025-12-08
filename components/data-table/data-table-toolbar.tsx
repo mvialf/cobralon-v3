@@ -37,6 +37,8 @@ interface DataTableToolbarProps<TData> {
     title: string
     options: { label: string; value: string; bgClass?: string }[]
     onFilterChange?: (values: string[]) => void
+    // Server-side filtering: valores actualmente seleccionados
+    selectedValues?: string[]
   }[]
   onSearchChange?: (search: string) => void
   // Server-side filtering props
@@ -105,6 +107,7 @@ export function DataTableToolbar<TData>({
                 options={column.options}
                 onFilterChange={column.onFilterChange}
                 serverFacets={columnServerFacets}
+                controlledSelectedValues={column.selectedValues}
               />
             )
           )

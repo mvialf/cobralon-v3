@@ -38,6 +38,8 @@ interface DataTableFacetedFilterProps<TData, TValue> {
   onFilterChange?: (values: string[]) => void
   // Server-side facets: cuando manualFiltering=true, usar estos en lugar de calcular
   serverFacets?: ServerFacet[]
+  // Server-side filtering: valores seleccionados controlados externamente
+  controlledSelectedValues?: string[]
 }
 
 export function DataTableFacetedFilter<TData, TValue>({
@@ -46,6 +48,7 @@ export function DataTableFacetedFilter<TData, TValue>({
   options,
   onFilterChange,
   serverFacets,
+  controlledSelectedValues,
 }: DataTableFacetedFilterProps<TData, TValue>) {
   // Usar serverFacets si están disponibles (server-side), sino calcular client-side
   const clientFacets = column?.getFacetedUniqueValues()
@@ -57,7 +60,11 @@ export function DataTableFacetedFilter<TData, TValue>({
     return clientFacets
   }, [serverFacets, clientFacets])
 
-  const selectedValues = new Set(column?.getFilterValue() as string[])
+  // Para server-side filtering: usar valores controlados externamente
+  // Para client-side: usar el estado interno de TanStack Table
+  const selectedValues = new Set(
+    controlledSelectedValues ?? (column?.getFilterValue() as string[])
+  )
 
   return (
     <Popover>

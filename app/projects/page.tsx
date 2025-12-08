@@ -36,7 +36,7 @@ export default function ProjectsPage() {
   // Estado de paginación server-side
   const [pagination, setPagination] = useState<PaginationState>({
     pageIndex: 0, // TanStack usa 0-based
-    pageSize: 20,
+    pageSize: 50,
   })
 
   // Estado de búsqueda con debounce
@@ -242,6 +242,7 @@ export default function ProjectsPage() {
                 id: 'projectStatus',
                 title: 'Estado',
                 options: statusFilterOptions,
+                selectedValues: statusIds,
                 onFilterChange: (values) => {
                   setStatusIds(values)
                   // Resetear a página 1 cuando cambia el filtro
@@ -254,6 +255,8 @@ export default function ProjectsPage() {
                 id: 'projectState',
                 title: 'Estado Proyecto',
                 options: projectStateFilterOptions,
+                // Sincronizar estado visual con estado React
+                selectedValues: projectState === 'all' ? [] : [projectState],
                 onFilterChange: (values) => {
                   // Si no hay valores o están ambos seleccionados, mostrar todos
                   const newState =
