@@ -1,4 +1,4 @@
-import { MapPin, Hash, Ruler, CheckCircle, Users } from 'lucide-react'
+import { MapPin, Hash, Ruler, CheckCircle, Users, Hammer } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { ProjectNameSummary } from '@/components/summarys/project-name-summary'
 import { cn } from '@/lib/utils'
@@ -24,6 +24,7 @@ interface ProjectEventSummaryProps {
   uninstallTags?: Array<{
     id: string
     name: string
+    abbreviation?: string
     color: {
       bgClass: string
       textClass?: string
@@ -32,6 +33,7 @@ interface ProjectEventSummaryProps {
   teamTags?: Array<{
     id: string
     name: string
+    abbreviation?: string
     color: {
       bgClass: string
       textClass?: string
@@ -111,21 +113,6 @@ export function ProjectEventSummary({
           </div>
         )}
       </div>
-      {Array.isArray(uninstallTags) &&
-        uninstallTags.length > 0 &&
-        (() => (
-          <div className="flex flex-wrap gap-1">
-            {uninstallTags.map((tag) => (
-              <Badge
-                key={tag.id}
-                variant="outline"
-                className={cn('text-xs font-normal', tag.color.bgClass, tag.color.textClass)}
-              >
-                {tag.name}
-              </Badge>
-            ))}
-          </div>
-        ))()}
 
       {/* Team Tags - Integrantes asignados */}
       {Array.isArray(teamTags) && teamTags.length > 0 && (
@@ -137,8 +124,27 @@ export function ProjectEventSummary({
                 key={tag.id}
                 variant="outline"
                 className={cn('text-xs font-normal', tag.color.bgClass, tag.color.textClass)}
+                title={tag.name}
               >
-                {tag.name}
+                {tag.abbreviation || tag.name}
+              </Badge>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {Array.isArray(uninstallTags) && uninstallTags.length > 0 && (
+        <div className="flex items-center gap-1.5">
+          <Hammer className="h-3.5 w-3.5 text-muted-foreground" />
+          <div className="flex flex-wrap gap-1">
+            {uninstallTags.map((tag) => (
+              <Badge
+                key={tag.id}
+                variant="outline"
+                className={cn('text-xs font-normal', tag.color.bgClass, tag.color.textClass)}
+                title={tag.name}
+              >
+                {tag.abbreviation || tag.name}
               </Badge>
             ))}
           </div>

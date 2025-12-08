@@ -18,6 +18,7 @@ interface VisitEventSummaryProps {
   teamTags?: Array<{
     id: string
     name: string
+    abbreviation?: string
     color: {
       bgClass: string
       textClass?: string
@@ -90,8 +91,9 @@ export function VisitEventSummary({
                 key={tag.id}
                 variant="outline"
                 className={cn('text-xs font-normal', tag.color.bgClass, tag.color.textClass)}
+                title={tag.name}
               >
-                {tag.name}
+                {tag.abbreviation || tag.name}
               </Badge>
             ))}
           </div>

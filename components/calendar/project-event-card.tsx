@@ -63,6 +63,7 @@ export function ProjectEventCard({ event, onEdit, onDelete }: ProjectEventCardPr
         uninstallTags={project.uninstallTags.map((tag) => ({
           id: tag.id,
           name: tag.name,
+          abbreviation: tag.abbreviation,
           color: {
             bgClass: tag.color.bgClass,
             textClass: tag.color.textClass || undefined,
@@ -71,6 +72,7 @@ export function ProjectEventCard({ event, onEdit, onDelete }: ProjectEventCardPr
         teamTags={event.teamTags?.map((tag) => ({
           id: tag.id,
           name: tag.name,
+          abbreviation: tag.abbreviation,
           color: {
             bgClass: tag.color.bgClass,
             textClass: tag.color.textClass || undefined,

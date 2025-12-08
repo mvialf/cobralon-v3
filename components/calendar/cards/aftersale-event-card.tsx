@@ -62,6 +62,7 @@ export function AftersaleEventCard({ event, onEdit, onDelete }: AftersaleEventCa
         teamTags={event.teamTags?.map((tag) => ({
           id: tag.id,
           name: tag.name,
+          abbreviation: tag.abbreviation,
           color: {
             bgClass: tag.color.bgClass,
             textClass: tag.color.textClass || undefined,
