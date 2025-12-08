@@ -130,6 +130,13 @@ export async function POST(request: Request) {
         data: {
           visitId: data.visitId,
           scheduledDate: new Date(data.scheduledDate),
+          // Conectar teamTags si se proporcionan
+          ...(data.teamTagIds &&
+            data.teamTagIds.length > 0 && {
+              teamTags: {
+                connect: data.teamTagIds.map((id) => ({ id })),
+              },
+            }),
         },
         include: {
           visit: {
@@ -144,6 +151,11 @@ export async function POST(request: Request) {
                   },
                 },
               },
+            },
+          },
+          teamTags: {
+            include: {
+              color: true,
             },
           },
         },

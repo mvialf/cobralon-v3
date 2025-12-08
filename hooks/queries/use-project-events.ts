@@ -67,6 +67,7 @@ interface CreateProjectEventWithUpdateInput {
   windowsCount: number
   squareMeters: number
   description: string | null
+  teamTagIds?: string[] | null
 }
 
 interface CreateProjectEventWithUpdateResponse {

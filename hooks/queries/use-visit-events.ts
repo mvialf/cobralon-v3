@@ -67,6 +67,7 @@ interface CreateVisitEventWithUpdateInput {
   apartment?: string | null
   comuna: string
   region: string
+  teamTagIds?: string[] | null
 }
 
 /**

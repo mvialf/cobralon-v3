@@ -154,7 +154,13 @@ export async function POST(request: Request) {
         data: {
           aftersaleId: data.aftersaleId,
           scheduledDate: new Date(data.scheduledDate),
-          // notes no se usa según requerimiento
+          // Conectar teamTags si se proporcionan
+          ...(data.teamTagIds &&
+            data.teamTagIds.length > 0 && {
+              teamTags: {
+                connect: data.teamTagIds.map((id) => ({ id })),
+              },
+            }),
         },
         include: {
           aftersale: {
@@ -179,6 +185,11 @@ export async function POST(request: Request) {
                   },
                 },
               },
+            },
+          },
+          teamTags: {
+            include: {
+              color: true,
             },
           },
         },

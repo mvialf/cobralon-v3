@@ -132,6 +132,13 @@ export const POST = withLogging(async (request, logger) => {
           projectId: data.projectId,
           scheduledDate: new Date(data.scheduledDate),
           tasks: data.tasks || [],
+          // Conectar teamTags si se proporcionan
+          ...(data.teamTagIds &&
+            data.teamTagIds.length > 0 && {
+              teamTags: {
+                connect: data.teamTagIds.map((id) => ({ id })),
+              },
+            }),
         },
         include: {
           project: {
@@ -154,6 +161,11 @@ export const POST = withLogging(async (request, logger) => {
                   },
                 },
               },
+            },
+          },
+          teamTags: {
+            include: {
+              color: true,
             },
           },
         },

@@ -67,6 +67,7 @@ export function VisitEventDialog({
           apartment: data.apartment,
           comuna: data.comuna,
           region: data.region,
+          teamTagIds: data.teamTagIds,
         })
       } else if (event) {
         // 1. Actualizar evento (scheduledDate, teamTagIds)

@@ -97,6 +97,7 @@ export function ProjectEventDialog({
           windowsCount: data.windowsCount,
           squareMeters: data.squareMeters,
           description: data.description,
+          teamTagIds: data.teamTagIds,
         })
       } else if (event) {
         // 1. Actualizar evento (scheduledDate, teamTagIds, tasks)
