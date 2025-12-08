@@ -62,9 +62,7 @@ export function DataTableFacetedFilter<TData, TValue>({
 
   // Para server-side filtering: usar valores controlados externamente
   // Para client-side: usar el estado interno de TanStack Table
-  const selectedValues = new Set(
-    controlledSelectedValues ?? (column?.getFilterValue() as string[])
-  )
+  const selectedValues = new Set(controlledSelectedValues ?? (column?.getFilterValue() as string[]))
 
   return (
     <Popover>
