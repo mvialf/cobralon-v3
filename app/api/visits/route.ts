@@ -128,6 +128,7 @@ export const POST = withLogging(async (request, logger) => {
       region: body.region,
       visitStatusId: body.visitStatusId,
       date: new Date(body.date),
+      scheduledTime: body.scheduledTime || null,
       observations: body.observations || null,
     }
 

@@ -374,6 +374,9 @@ model Visit {
   // Fecha de solicitud
   date          DateTime
 
+  // Hora agendada (formato HH:mm, informativo/referencial)
+  scheduledTime String?       // Ej: "10:30", "14:00"
+
   // Observaciones
   observations  String?       @db.Text
 

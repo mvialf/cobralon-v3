@@ -74,6 +74,7 @@ export const PUT = withLogging(async (request, logger, context) => {
     if (body.region !== undefined) visitData.region = body.region
     if (body.visitStatusId !== undefined) visitData.visitStatusId = body.visitStatusId
     if (body.date !== undefined) visitData.date = new Date(body.date)
+    if (body.scheduledTime !== undefined) visitData.scheduledTime = body.scheduledTime || null
     if (body.observations !== undefined) visitData.observations = body.observations || null
 
     // Actualizar visita

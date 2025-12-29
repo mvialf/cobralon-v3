@@ -30,6 +30,15 @@ const visitBaseSchema = z.object({
     required_error: 'La fecha de solicitud es requerida',
   }),
 
+  // Hora agendada (informativo/referencial, formato HH:mm)
+  scheduledTime: z
+    .string()
+    .optional()
+    .refine(
+      (val) => !val || /^([01]?[0-9]|2[0-3]):[0-5][0-9]$/.test(val),
+      'Formato de hora inválido. Use HH:mm (ej: 10:30)'
+    ),
+
   // Observaciones
   observations: z.string().optional(),
 })
@@ -63,6 +72,7 @@ export type CreateVisitAPIPayload = {
   region: string
   visitStatusId: string
   date: string // ISO string for API
+  scheduledTime?: string // Hora agendada (HH:mm)
   observations?: string
 }
 
@@ -84,6 +94,7 @@ export type Visit = {
   region: string
   visitStatusId: string
   date: Date
+  scheduledTime: string | null // Hora agendada (HH:mm)
   observations: string | null
   createdAt: Date
   updatedAt: Date
@@ -112,6 +123,7 @@ export function formValuesToPayload(values: CreateVisitInput): CreateVisitAPIPay
     region: values.region,
     visitStatusId: values.visitStatusId,
     date: values.date.toISOString(),
+    scheduledTime: values.scheduledTime,
     observations: values.observations,
   }
 }
@@ -129,6 +141,7 @@ export function visitToFormValues(visit: Visit): CreateVisitInput {
     region: visit.region,
     visitStatusId: visit.visitStatusId,
     date: new Date(visit.date),
+    scheduledTime: visit.scheduledTime || undefined,
     observations: visit.observations || undefined,
   }
 }

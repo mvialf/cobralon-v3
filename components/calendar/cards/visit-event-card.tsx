@@ -48,6 +48,7 @@ export function VisitEventCard({ event, onEdit, onDelete }: VisitEventCardProps)
         name={visit.name}
         comuna={visit.comuna}
         phone={visit.phone}
+        scheduledTime={visit.scheduledTime}
         observations={visit.observations}
         visitStatus={{
           name: visitStatus.name,

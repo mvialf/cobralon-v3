@@ -72,6 +72,7 @@ export const VisitForm = React.forwardRef<VisitFormHandle, VisitFormProps>(
         region: configuration.region || '',
         visitStatusId: '',
         date: new Date(),
+        scheduledTime: '',
         observations: '',
         ...defaultValues,
       },
@@ -99,6 +100,7 @@ export const VisitForm = React.forwardRef<VisitFormHandle, VisitFormProps>(
           region: defaultValues.region || configuration.region || '',
           visitStatusId: defaultValues.visitStatusId || '',
           date: defaultValues.date || new Date(),
+          scheduledTime: defaultValues.scheduledTime || '',
           observations: defaultValues.observations || '',
         })
       }
@@ -169,7 +171,7 @@ export const VisitForm = React.forwardRef<VisitFormHandle, VisitFormProps>(
           {/* Dirección */}
           <AddressFields control={form.control} />
 
-          {/* Estado y Fecha */}
+          {/* Estado, Fecha y Hora */}
           <div className="space-y-4">
             <FormGrid columns={2}>
               <FormField
@@ -227,6 +229,25 @@ export const VisitForm = React.forwardRef<VisitFormHandle, VisitFormProps>(
                 )}
               />
             </FormGrid>
+
+            {/* Hora Agendada (informativa) */}
+            <FormField
+              control={form.control}
+              name="scheduledTime"
+              render={({ field }) => (
+                <FormItem className="max-w-[200px]">
+                  <FormLabel>Hora Agendada</FormLabel>
+                  <FormControl>
+                    <Input
+                      type="time"
+                      {...field}
+                      value={field.value || ''}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
           </div>
 
           {/* Observaciones */}

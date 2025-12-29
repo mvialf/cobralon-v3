@@ -1,4 +1,4 @@
-import { MapPin, Phone, Users } from 'lucide-react'
+import { Clock, MapPin, Phone, Users } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { cn } from '@/lib/utils'
 import { EVENT_TYPE_BORDER_COLORS } from '@/lib/constants/calendar'
@@ -7,6 +7,7 @@ interface VisitEventSummaryProps {
   name: string
   comuna: string
   phone?: string | null
+  scheduledTime?: string | null // Hora agendada (HH:mm)
   observations?: string | null
   visitStatus?: {
     name: string
@@ -45,6 +46,7 @@ export function VisitEventSummary({
   name,
   comuna,
   phone,
+  scheduledTime,
   observations,
   visitStatus,
   teamTags,
@@ -58,8 +60,16 @@ export function VisitEventSummary({
         className
       )}
     >
-      {/* Nombre del prospecto */}
-      <p className="text-sm font-medium truncate">{name}</p>
+      {/* Nombre del prospecto y hora */}
+      <div className="flex items-center justify-between gap-2">
+        <p className="text-sm font-medium truncate">{name}</p>
+        {scheduledTime && (
+          <div className="flex items-center gap-1 text-xs text-muted-foreground shrink-0">
+            <Clock className="h-3 w-3" />
+            <span>{scheduledTime}</span>
+          </div>
+        )}
+      </div>
 
       <div className="flex justify-between">
         {visitStatus && (

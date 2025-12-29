@@ -310,6 +310,7 @@ describe('visitToFormValues', () => {
     region: 'Región Metropolitana',
     visitStatusId: '123e4567-e89b-12d3-a456-426614174001',
     date: new Date('2025-12-01T10:00:00Z'),
+    scheduledTime: '10:30',
     observations: 'Cliente prefiere mañana',
     createdAt: new Date('2025-11-01T10:00:00Z'),
     updatedAt: new Date('2025-11-01T10:00:00Z'),
@@ -406,6 +407,7 @@ describe('integración Form → API → Form', () => {
       region: originalFormValues.region,
       visitStatusId: originalFormValues.visitStatusId,
       date: new Date(payload.date), // API devuelve Date
+      scheduledTime: null, // Hora agendada (opcional)
       observations: originalFormValues.observations || null,
       createdAt: new Date(),
       updatedAt: new Date(),
