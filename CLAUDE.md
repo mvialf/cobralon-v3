@@ -6,13 +6,14 @@ Este archivo proporciona orientación a Claude Code (claude.ai/code) cuando trab
 
 - gemini.md
 - .gemini/
-- docs/template/decisions/.archive/
 
 ## Proyecto
 
-Template de layout SaaS construido con Next.js 15, React 19, TypeScript y Tailwind CSS v4. Utiliza shadcn/ui (estilo "new-york") como sistema de componentes y el gestor de paquetes npm.
+**Cobralon** - Sistema de gestión de cobranza y proyectos construido con Next.js 15, React 19, TypeScript y Tailwind CSS v4. Utiliza shadcn/ui (estilo "new-york") como sistema de componentes y el gestor de paquetes npm.
 
-**📚 Documentación completa:** Ver [docs/template/](docs/template/) y [docs/project/](docs/project/)
+**📚 Documentación:** Ver [docs/project/](docs/project/) para arquitectura y lógica de negocio.
+
+**⚠️ Datos legacy:** Los proyectos actuales fueron importados de un sistema anterior. Ver [docs/analysis/imported-projects-analysis.md](docs/analysis/imported-projects-analysis.md) para entender sus características (projectName NULL, timestamps idénticos, etc.).
 
 ## Modo de actuar
 
@@ -139,34 +140,20 @@ Usa agentes cuando la búsqueda requiere **múltiples pasos** o **análisis cont
 
 **Beneficio:** Los agentes ya se invocan automáticamente cuando detectan palabras clave apropiadas. Esta guía es para que entiendas cuándo es más eficiente delegar vs hacer búsqueda directa.
 
-## 📚 Importaciones de Documentación
+## 📚 Documentación Clave
 
-### 📦 Template Framework (Para Entender el Template)
+### 🚧 Proyecto Cobralon
 
-@docs/template/README.md # Introducción rápida al template
-@docs/template/architecture/overview.md # Visión arquitectural general
-@docs/template/architecture/stack.md # Stack tecnológico, versiones y configuración
-@docs/template/guides/building-features/ # ⭐ Guía práctica modular: cómo implementar features paso a paso
-@docs/template/components/app-layout.md # API del AppLayout
-@docs/template/components/app-sidebar.md # Configurar sidebar navegación
-@docs/template/methodology/workflow.md # Proceso de desarrollo recomendado
-@docs/template/methodology/testing.md # Estrategia de testing recomendada
-@docs/template/methodology/patterns/README.md # Patrones de código y anti-patrones
-@docs/template/methodology/documentation.md # Cómo usar ADRs + Implementation Log
-
-### 📘 Decisiones Arquitecturales del Template (ADRs)
-
-@docs/template/decisions/001-nextjs-15-app-router.md # Por qué Next.js 15 + App Router
-@docs/template/decisions/002-tailwind-css-v4.md # Por qué Tailwind CSS v4
-@docs/template/decisions/003-shadcn-ui-new-york.md # Por qué shadcn/ui estilo New York
-@docs/template/decisions/004-layout-system-dos-capas.md # Por qué sistema de layout 2 capas
-
-### 🚧 Proyecto Específico (Para Trabajar en Este Código)
-
-@docs/project/README.md # Documentación del proyecto específico
-@docs/project/architecture.md # Arquitectura específica de este proyecto
-@docs/project/implementation/ # Timeline de implementaciones del proyecto
+@docs/project/architecture.md # Arquitectura, FIFO, Créditos y Estados
+@docs/project/implementation/ # Timeline de implementaciones
 @docs/project/decisions/ # ADRs específicos del proyecto
+@docs/analysis/imported-projects-analysis.md # Datos legacy importados
+
+### 📦 Template (Guías de Desarrollo)
+
+@docs/template/guides/building-features/ # ⭐ Guía práctica: cómo implementar features
+@docs/template/methodology/patterns/README.md # Patrones de código y anti-patrones
+@docs/template/skills/crud-feature-generator/ # Skill para generar CRUDs
 
 ---
 
@@ -250,25 +237,10 @@ npm run db:seed      # Pobla data inicial
 npm run db:studio    # Prisma Studio (GUI)
 ```
 
-**Setup inicial:** [docs/template/guides/database-setup.md](docs/template/guides/database-setup.md)
-
-**Neon MCP (opcional):** Si configuraste Neon MCP, puedes usar comandos de lenguaje natural para migraciones seguras con database branching. Ver [docs/template/guides/neon-mcp-optional.md](docs/template/guides/neon-mcp-optional.md)
-
-**Decisión:** [ADR-008: Prisma + Neon](docs/template/decisions/008-prisma-neon.md)
+**Setup:** [docs/template/guides/database-setup.md](docs/template/guides/database-setup.md)
 
 ## 🔐 Autenticación (Opcional)
 
-El template **NO incluye autenticación** por defecto. Cada proyecto tiene requisitos diferentes.
+El template **NO incluye autenticación** por defecto.
 
-**Opciones:** Stack Auth (15-30 min) | NextAuth (2-3 hrs) | Clerk (10-15 min)
-
-**Guía completa:** [docs/template/guides/authentication-setup.md](docs/template/guides/authentication-setup.md)
-
-**Decisión:** [ADR-009: Authentication Options](docs/template/decisions/009-authentication-options.md)
-
----
-
-**📖 Documentación Completa:** [docs/template/](docs/template/)
-**🚀 Quick Start:** [docs/template/getting-started/installation.md](docs/template/getting-started/installation.md)
-**🎨 Componentes:** [docs/template/components/](docs/template/components/)
-**📘 ADRs:** [docs/template/decisions/](docs/template/decisions/)
+**Guía:** [docs/template/guides/authentication-setup.md](docs/template/guides/authentication-setup.md)

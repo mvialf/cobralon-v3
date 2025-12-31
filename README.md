@@ -1,266 +1,84 @@
-# SaaS Layout Template
+# Cobralon
 
-Template de layout SaaS profesional construido con **Next.js 15**, **React 19**, **TypeScript** y **Tailwind CSS v4**.
+Sistema de gestión de cobranza y proyectos construido con **Next.js 15**, **React 19**, **TypeScript** y **Tailwind CSS v4**.
 
-## 🚀 Quick Start
+## Stack Tecnológico
+
+- **Next.js 15** - App Router + React Server Components
+- **React 19** - Con React Query para state management
+- **Tailwind CSS v4** - Estilos con CSS variables
+- **shadcn/ui** - Componentes UI (estilo New York)
+- **Prisma 6.7** + **Neon PostgreSQL** - Base de datos
+- **Vitest** + **Playwright** - Testing
+
+## Quick Start
 
 ```bash
-# 1. Instalar dependencias
+# Instalar dependencias
 npm install
 
-# 2. Iniciar servidor de desarrollo
-npm run dev
-
-# 3. Abrir en navegador
-http://localhost:3000
-```
-
-## ✨ Características
-
-### Sistema de Layout Completo
-
-- **AppLayout** - Orchestrator de 3 capas (Header + Sidebar + Content)
-- **HeaderNav** - Header sticky con theme toggle, notificaciones, user menu
-- **AppSidebar** - Sidebar colapsible con navegación configurable
-- **Responsive** - Mobile-friendly (sidebar → drawer en mobile)
-
-### 50+ Componentes UI
-
-- Forms, Data Display, Feedback, Navigation
-- **DataTable** - Sistema avanzado con TanStack Table
-- **Combobox** - Componente de selección con búsqueda y debounce (DiceUI)
-- Ver lista completa: [docs/template/components/ui-components.md](docs/template/components/ui-components.md)
-
-### Stack Tecnológico
-
-- **Next.js 15** con App Router y React Server Components
-- **React 19** con mejoras de performance e hidratación
-- **Tailwind CSS v4** con CSS variables para theming
-- **TypeScript 5** en modo strict
-- **shadcn/ui** estilo "New York" (profesional)
-- **Prisma 6.7** + **Neon PostgreSQL** (database layer opcional)
-
-### Testing & Code Quality
-
-- **Vitest 3.2.4** - Test runner moderno (2-3x más rápido que Jest)
-- **React Testing Library 16.3.0** - Testing centrado en el usuario
-- **ESLint 8.57.1** - Linting con reglas estrictas
-- **Prettier 3.4.2** - Formateo automático de código
-- **Playwright MCP** - E2E testing con IA (genera tests persistentes)
-
-### Documentación Completa
-
-- **ADRs** (Architecture Decision Records) - 10 decisiones documentadas (9 activas + 1 deprecada)
-- **Implementation Log** - Timeline de cambios significativos
-- **Testing Guides** - Estrategia completa de testing
-- **Component Guides** - Documentación de cada componente
-
-## 📚 Documentación
-
-- **[Getting Started](docs/template/README.md)** - Introducción al template
-- **[Architecture](docs/template/architecture/overview.md)** - Arquitectura del sistema
-- **[Components](docs/template/components/)** - Guías de componentes
-- **[Testing](docs/template/methodology/testing.md)** - Estrategia de testing
-- **[ADRs](docs/template/decisions/)** - Decisiones arquitecturales
-
-## 🧪 Testing
-
-```bash
-# Ejecutar tests
-npm test
-
-# Ejecutar tests una vez (CI)
-npm test -- --run
-
-# UI interactiva de Vitest
-npm test -- --ui
-
-# Ejecutar linting
-npm run lint
-
-# Auto-fix de linting
-npm run lint --fix
-```
-
-**Tests Disponibles:**
-
-- ✅ 57 tests pasando (utils, button, card, use-mobile)
-- ✅ Cobertura de componentes UI básicos
-- ✅ Mocks completos para Radix UI
-
-## 🏗️ Estructura del Proyecto
-
-```
-saas-layout/
-├── app/                    # App Router de Next.js
-│   ├── layout.tsx         # Root layout con ThemeProvider
-│   └── page.tsx           # Homepage
-│
-├── components/
-│   ├── layout/            # Sistema de layout (AppLayout, Header, Sidebar)
-│   ├── ui/                # 50+ componentes shadcn/ui
-│   └── data-table/        # Sistema DataTable con TanStack
-│
-├── lib/                   # Utilidades (cn, utils)
-├── hooks/                 # Custom hooks (use-mobile, use-toast)
-│
-├── docs/
-│   ├── template/          # Documentación del framework
-│   └── project/           # Documentación del proyecto específico
-│
-└── tests/                 # Tests de Vitest
-```
-
-## 📦 Scripts Principales
-
-```bash
-npm run dev       # Desarrollo en localhost:3000
-npm run build     # Build de producción
-npm start         # Servidor de producción
-npm run lint      # ESLint
-npm run lint --fix # Auto-fix ESLint
-npm test          # Tests con Vitest
-```
-
-## 🎯 Crear Nueva Página
-
-```tsx
-// app/dashboard/page.tsx
-import { AppLayout } from '@/components/layout/app-layout'
-
-export default function DashboardPage() {
-  return (
-    <AppLayout
-      pageTitle="Dashboard"
-      pageDescription="Vista general"
-      breadcrumbs={[{ label: 'Inicio', href: '/' }, { label: 'Dashboard' }]}
-    >
-      <div>Tu contenido aquí</div>
-    </AppLayout>
-  )
-}
-```
-
-## 🎨 Agregar Componente shadcn/ui
-
-```bash
-npx shadcn@latest add [component-name]
-
-# Ejemplo:
-npx shadcn@latest add calendar
-npx shadcn@latest add form
-```
-
-## 🗄️ Database Setup (Opcional)
-
-Este template incluye configuración lista para **Prisma ORM** + **Neon PostgreSQL**:
-
-### Quick Start
-
-```bash
-# 1. Copiar variables de entorno
+# Configurar base de datos
 cp .env.example .env.local
+# Editar .env.local con credenciales de Neon
 
-# 2. Crear proyecto Neon (gratis): https://neon.tech
-# 3. Copiar connection strings a .env.local
-
-# 4. Generar Prisma Client
+# Generar Prisma Client y aplicar schema
 npm run db:generate
-
-# 5. Aplicar schema a DB
 npm run db:push
 
-# 6. (Opcional) Seed data de ejemplo
-npm run db:seed
-
-# 7. (Opcional) Abrir Prisma Studio
-npm run db:studio
+# Iniciar desarrollo
+npm run dev
 ```
 
-### Características
-
-- ✅ **Type-safe queries** - IntelliSense completo para DB
-- ✅ **Database branching** - Como Git pero para tu DB
-- ✅ **Prisma Studio** - GUI para ver/editar datos
-- ✅ **Free tier** - 512MB storage + branches ilimitados
-- ✅ **Zero vendor lock-in** - PostgreSQL estándar
-
-### Scripts Disponibles
+## Scripts
 
 ```bash
-npm run db:generate         # Genera Prisma Client
-npm run db:push            # Aplica schema a DB (dev)
-npm run db:migrate         # Crea migración (prod)
-npm run db:studio          # Abre GUI de Prisma
-npm run db:seed            # Ejecuta seed script
+npm run dev          # Desarrollo (localhost:3000)
+npm run build        # Build producción
+npm run lint         # ESLint
+npm run typecheck    # TypeScript check
+npm test             # Tests unitarios
+npm run db:studio    # Prisma Studio (GUI)
 ```
 
-### Documentación Completa
+## Estructura
 
-- **[Guía de Setup](docs/template/guides/database-setup.md)** - Paso a paso completo
-- **[ADR-008: Prisma + Neon](docs/template/decisions/008-prisma-neon.md)** - Decisión técnica
-- **Ejemplo API**: Ver `/app/api/users/route.ts`
+```
+app/
+├── api/              # API Routes
+├── calendar/         # Sistema de calendario
+├── customers/        # Gestión de clientes
+├── payments/         # Sistema de pagos
+├── projects/         # Gestión de proyectos
+└── settings/         # Configuración
 
-## 🔧 Configuración
+components/
+├── forms/            # Formularios por entidad
+├── dialogs/          # Diálogos modales
+├── tables/           # Tablas de datos
+└── ui/               # Componentes shadcn/ui
 
-### Path Aliases
+lib/
+├── business-logic/   # Lógica financiera (FIFO, créditos)
+├── validations/      # Schemas Zod
+└── db/               # Prisma client
 
-- `@/components` → componentes
-- `@/lib` → utilidades y helpers
-- `@/hooks` → custom hooks
-- `@/app` → App Router de Next.js
+docs/
+└── project/          # Documentación del proyecto
+```
 
-### Theming
+## Documentación
 
-Configurado con CSS variables en `app/globals.css`:
+- **[Arquitectura](docs/project/architecture.md)** - FIFO, créditos, estados
+- **[Backlog](docs/project/backlog.md)** - Mejoras pendientes
+- **[Sistema de Pagos](docs/project/payment-system.md)** - Análisis detallado
 
-- Light/Dark mode automático
-- Sistema de colores personalizable
-- Compatible con next-themes
+## Lógica de Negocio
 
-## 📖 Decisiones Arquitecturales (ADRs)
+El sistema implementa:
 
-1. **[ADR-001: Next.js 15 + App Router](docs/template/decisions/001-nextjs-14-app-router.md)**
-2. **[ADR-002: Tailwind CSS v4](docs/template/decisions/002-tailwind-css-v4.md)**
-3. **[ADR-003: shadcn/ui New York Style](docs/template/decisions/003-shadcn-ui-new-york.md)**
-4. **[ADR-004: Sistema de Layout 2 Capas](docs/template/decisions/004-layout-system-dos-capas.md)**
-5. **[ADR-005: Vitest + Testing Library](docs/template/decisions/005-vitest-testing-library.md)**
-6. **[ADR-007: ESLint + Prettier](docs/template/decisions/007-eslint-prettier.md)**
-7. **[ADR-008: Prisma + Neon PostgreSQL](docs/template/decisions/008-prisma-neon.md)**
-8. **[ADR-009: No Incluir Autenticación por Defecto](docs/template/decisions/009-authentication-options.md)**
-9. **[ADR-010: Playwright MCP + @playwright/test](docs/template/decisions/010-playwright-mcp.md)**
-10. **[ADR-006: Chrome DevTools MCP (❌ Deprecado)](docs/template/decisions/006-chrome-devtools-mcp-experimental.md)**
+1. **FIFO** - Distribución de pagos a deudas más antiguas primero
+2. **Créditos** - Wallet de saldos a favor por sobrepago
+3. **Estados derivados** - Proyecto activo/finalizado según balance
+4. **Multi-país** - Configuración regional (Chile/Colombia)
 
-## ⚠️ Notas Importantes
-
-### Testing
-
-- Tests dinámicos de MediaQueryList no funcionan en jsdom (documentado)
-- 11 warnings de ESLint son intencionales (no bloquean build)
-
-### Production Ready
-
-El template tiene configuración **segura para producción**:
-
-- ✅ `ignoreDuringBuilds: false` (corregido)
-- ✅ `ignoreBuildErrors: false` (corregido)
-- ⚠️ `images: { unoptimized: true }` - Cambiar si usas CDN
-
-## 🚧 Próximos Pasos Recomendados
-
-1. **Setup Database** (Opcional) - Seguir guía en sección "Database Setup" arriba
-2. **Agregar Autenticación** - NextAuth.js, Clerk, o Supabase Auth
-3. **Implementar Features** - CRUD operations, forms con validación
-4. **Deploy** - Vercel (recomendado para Next.js)
-
-## 📄 Licencia
-
-Este template es opensource. Ver [LICENSE](LICENSE).
-
-## 🤝 Contribuir
-
-Si encuentras bugs o quieres contribuir mejoras, crea un issue o PR.
-
----
-
-**Built with ❤️ usando Next.js 15 + React 19 + shadcn/ui + Tailwind CSS v4**
+Ver [docs/project/architecture.md](docs/project/architecture.md) para detalles.
