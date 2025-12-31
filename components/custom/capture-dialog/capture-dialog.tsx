@@ -115,6 +115,7 @@ export function CaptureDialog({
                 onClick={handleCopy}
                 disabled={isCopyDisabled}
                 title="Copiar al portapapeles"
+                className="text-capture-foreground hover:bg-capture-border/50"
               >
                 {isCopying ? (
                   <Loader2 className="h-5 w-5 animate-spin" />
@@ -125,7 +126,12 @@ export function CaptureDialog({
 
               {/* Botón Cerrar */}
               <DialogClose asChild>
-                <Button variant="ghost" size="icon" title="Cerrar" className="hover:bg-gray-100">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  title="Cerrar"
+                  className="text-capture-foreground hover:bg-capture-border/50"
+                >
                   <X className="h-5 w-5" />
                 </Button>
               </DialogClose>
