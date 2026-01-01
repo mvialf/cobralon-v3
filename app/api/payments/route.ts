@@ -198,8 +198,8 @@ export const GET = withLogging(async (request, logger) => {
         WHERE 1=1
           ${search ? Prisma.sql`AND (EXISTS (SELECT 1 FROM "Customer" c WHERE c.id = pm."customerId" AND c.name ILIKE ${`%${search}%`}) OR p."projectNumber" ILIKE ${`%${search}%`} OR p."projectName" ILIKE ${`%${search}%`})` : Prisma.empty}
           ${type ? Prisma.sql`AND pm.type = ${type}` : Prisma.empty}
-          ${paymentMethodId ? Prisma.sql`AND pm."paymentMethodId" = ${paymentMethodId}::uuid` : Prisma.empty}
-          ${customerId ? Prisma.sql`AND pm."customerId" = ${customerId}::uuid` : Prisma.empty}
+          ${paymentMethodId ? Prisma.sql`AND pm."paymentMethodId"::text = ${paymentMethodId}` : Prisma.empty}
+          ${customerId ? Prisma.sql`AND pm."customerId"::text = ${customerId}` : Prisma.empty}
           ${startDate ? Prisma.sql`AND pm.date >= ${new Date(startDate)}` : Prisma.empty}
           ${endDate ? Prisma.sql`AND pm.date <= ${new Date(endDate)}` : Prisma.empty}
         GROUP BY p."projectNumber"
