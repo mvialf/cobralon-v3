@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { type ColumnDef } from '@tanstack/react-table'
-import { Pencil, Trash2, DollarSign, ArrowLeftRight } from 'lucide-react'
+import { Pencil, Trash2, DollarSign, ArrowLeftRight, FileText } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { DataTableDropdown, DataTableColumnHeader } from '@/components/data-table'
 import {
@@ -14,6 +14,7 @@ import { PaymentToCustomerDialog } from '@/components/dialogs/payments/payment-t
 import { RefundCreditDialog } from '@/components/dialogs/customers/refund-credit-dialog'
 import { EditCustomerDialog } from '@/components/dialogs/customer/edit-customer-dialog'
 import { ConfirmDeleteDialog } from '@/components/dialogs/confirm-delete-dialog'
+import { ViewCustomerAccountDialog } from '@/components/dialogs/customers/view-customer-account-dialog'
 import { CustomerCreditBadge } from '@/components/ui/customer-credit-badge'
 import { shouldShowRefundOption } from '@/lib/business-logic/credit-eligibility'
 import { useDeleteCustomer } from '@/hooks/queries/use-customers'
@@ -36,6 +37,7 @@ function CustomerActionsCell({
 }) {
   const [paymentDialogOpen, setPaymentDialogOpen] = useState(false)
   const [refundDialogOpen, setRefundDialogOpen] = useState(false)
+  const [accountDialogOpen, setAccountDialogOpen] = useState(false)
   const [editDialogOpen, setEditDialogOpen] = useState(false)
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
 
@@ -72,6 +74,12 @@ function CustomerActionsCell({
         <DropdownMenuItem onClick={() => setPaymentDialogOpen(true)}>
           <DollarSign className="mr-2 h-4 w-4" />
           Registrar pago
+        </DropdownMenuItem>
+
+        {/* Estado de cuenta */}
+        <DropdownMenuItem onClick={() => setAccountDialogOpen(true)}>
+          <FileText className="mr-2 h-4 w-4" />
+          Estado de cuenta
         </DropdownMenuItem>
 
         <DropdownMenuSeparator />
@@ -139,6 +147,14 @@ function CustomerActionsCell({
         title="Eliminar cliente"
         description={`¿Estás seguro de eliminar al cliente "${customer.name}"? Esta acción no se puede deshacer.`}
         isDeleting={deleteCustomer.isPending}
+      />
+
+      {/* Dialog para estado de cuenta */}
+      <ViewCustomerAccountDialog
+        customerId={customer.id}
+        customerName={customer.name}
+        open={accountDialogOpen}
+        onOpenChange={setAccountDialogOpen}
       />
     </>
   )
