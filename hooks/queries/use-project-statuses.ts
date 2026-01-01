@@ -48,8 +48,15 @@ export function useProjectStatuses() {
       const data: ProjectStatusResponse = await response.json()
       return data.projectStatuses || []
     },
-    staleTime: 5 * 60 * 1000, // 5 minutos - statuses cambian raramente
-    gcTime: 10 * 60 * 1000, // 10 minutos en cache (antes cacheTime)
+    // Configuración robusta para formularios:
+    // - staleTime corto: garantiza datos frescos al abrir formularios
+    // - refetchOnMount: siempre intenta refetch si datos están stale
+    // - retry: reintenta en caso de errores transitorios de red
+    staleTime: 30 * 1000, // 30 segundos - refetch frecuente en formularios
+    gcTime: 10 * 60 * 1000, // 10 minutos en cache (mantener entre navegaciones)
+    refetchOnMount: true, // Refetch si datos están stale al montar
+    retry: 3, // Reintentar 3 veces en caso de error
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 10000), // Backoff exponencial
   })
 }
 
