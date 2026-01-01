@@ -39,7 +39,7 @@ export function CustomerAccountPaymentsTable({
     return (
       <div className="bg-transparent">
         <div className="text-capture-foreground text-md font-normal pb-2">Historial de pagos</div>
-        <div className="flex flex-col items-center justify-center py-8 text-center border border-capture-border rounded-md">
+        <div className="flex flex-col items-center justify-center py-8 text-center rounded-md">
           <p className="text-capture-foreground text-sm font-normal">
             No hay pagos registrados para los proyectos seleccionados
           </p>
@@ -52,10 +52,10 @@ export function CustomerAccountPaymentsTable({
     <div className="bg-transparent">
       <div className="text-capture-foreground text-md font-normal pb-2">Historial de pagos</div>
 
-      <div className="overflow-hidden">
-        <table className="w-full border border-capture-border shadow-capture rounded-md">
+      <div className="overflow-hidden rounded-xl shadow-capture">
+        <table className="w-full">
           <thead className="bg-capture-border">
-            <tr className="border-b">
+            <tr>
               <th className="w-20 py-2 px-4 text-capture-foreground bg-transparent text-end text-sm">
                 Abono
               </th>
@@ -67,9 +67,9 @@ export function CustomerAccountPaymentsTable({
               </th>
             </tr>
           </thead>
-          <tbody className="bg-pay-card">
+          <tbody className="bg-capture-card">
             {payments.map((payment, index) => (
-              <tr key={payment.id} className="border-b last:border-b-0">
+              <tr key={payment.id}>
                 <td className="py-2 px-4 font-medium text-capture-foreground text-end text-sm">
                   {payment.isPartial ? '(*) ' : ''}
                   {index + 1}

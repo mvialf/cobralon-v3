@@ -39,10 +39,10 @@ export function CustomerAccountProjectsTable({
     <div className="bg-transparent">
       <div className="text-capture-foreground text-md font-normal pb-2">Proyectos</div>
 
-      <div className="overflow-hidden">
-        <table className="w-full border border-capture-border shadow-capture rounded-md">
+      <div className="overflow-hidden rounded-xl shadow-capture">
+        <table className="w-full">
           <thead className="bg-capture-border">
-            <tr className="border-b">
+            <tr>
               <th className="py-2 px-4 text-capture-foreground bg-transparent text-left text-sm">
                 Proyecto
               </th>
@@ -51,9 +51,9 @@ export function CustomerAccountProjectsTable({
               </th>
             </tr>
           </thead>
-          <tbody className="bg-pay-card">
+          <tbody className="bg-capture-card">
             {projects.map((project) => (
-              <tr key={project.projectNumber} className="border-b last:border-b-0">
+              <tr key={project.projectNumber}>
                 <td className="py-2 px-4 text-capture-foreground text-sm">
                   <span className="font-medium">P-{project.projectNumber}</span>
                   {project.projectName && (

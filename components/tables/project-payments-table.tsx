@@ -102,10 +102,10 @@ export function ProjectPaymentsTable({
     <div className="bg-transparent">
       <div className="text-capture-foreground text-md font-normal pb-2">Historial de pagos</div>
 
-      <div className="overflow-hidden">
-        <table className="w-full border border-capture-border shadow-capture-shadow rounded-md">
+      <div className="overflow-hidden rounded-xl shadow-capture">
+        <table className="w-full">
           <thead className="bg-capture-border">
-            <tr className="border-b">
+            <tr>
               <th className="w-20 py-2 px-4 text-capture-foreground text-md bg-transparent text-end text-sm">
                 Abono
               </th>
@@ -120,9 +120,9 @@ export function ProjectPaymentsTable({
               </th>
             </tr>
           </thead>
-          <tbody className="bg-pay-card">
+          <tbody className="bg-capture-card">
             {allocations.map((allocation, index) => (
-              <tr key={allocation.id} className="border-b">
+              <tr key={allocation.id}>
                 <td className="py-2 px-4 font-medium text-capture-foreground text-end text-sm">
                   {allocation.payment.type === 'Customer' ? '(*) ' : ''}
                   {index + 1}
