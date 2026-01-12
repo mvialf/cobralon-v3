@@ -1,5 +1,6 @@
 import { dehydrate, HydrationBoundary, QueryClient } from '@tanstack/react-query'
 import { prisma } from '@/lib/db'
+import { serialize } from '@/lib/utils/serialize'
 import { PaymentsPageClient } from './page-client'
 
 /**
@@ -58,7 +59,7 @@ async function getInitialPayments() {
     prisma.payment.count(),
   ])
 
-  return {
+  return serialize({
     payments,
     pagination: {
       page,
@@ -67,7 +68,7 @@ async function getInitialPayments() {
       totalPages: Math.ceil(total / limit),
     },
     // facets se cargan en cliente cuando se usan filtros
-  }
+  })
 }
 
 /**

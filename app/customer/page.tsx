@@ -1,5 +1,6 @@
 import { dehydrate, HydrationBoundary, QueryClient } from '@tanstack/react-query'
 import { prisma } from '@/lib/db'
+import { serialize } from '@/lib/utils/serialize'
 import { CustomersPageClient } from './page-client'
 
 /**
@@ -28,7 +29,7 @@ async function getInitialCustomers() {
     prisma.customer.count(),
   ])
 
-  return {
+  return serialize({
     customers,
     pagination: {
       page,
@@ -36,7 +37,7 @@ async function getInitialCustomers() {
       total,
       totalPages: Math.ceil(total / limit),
     },
-  }
+  })
 }
 
 /**

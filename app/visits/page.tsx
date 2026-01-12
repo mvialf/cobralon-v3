@@ -1,5 +1,6 @@
 import { dehydrate, HydrationBoundary, QueryClient } from '@tanstack/react-query'
 import { prisma } from '@/lib/db'
+import { serialize } from '@/lib/utils/serialize'
 import { VisitsPageClient } from './page-client'
 
 /**
@@ -16,13 +17,26 @@ async function getInitialVisits() {
       skip: 0,
       orderBy: { date: 'desc' },
       include: {
-        visitStatus: true,
+        visitStatus: {
+          select: {
+            id: true,
+            name: true,
+            isInitial: true,
+            isFinal: true,
+            color: {
+              select: {
+                bgClass: true,
+                textClass: true,
+              },
+            },
+          },
+        },
       },
     }),
     prisma.visit.count(),
   ])
 
-  return {
+  return serialize({
     data: visits,
     pagination: {
       page,
@@ -30,7 +44,7 @@ async function getInitialVisits() {
       total,
       totalPages: Math.ceil(total / limit),
     },
-  }
+  })
 }
 
 /**
@@ -40,8 +54,16 @@ async function getInitialVisits() {
 async function getVisitStatuses() {
   const statuses = await prisma.visitStatus.findMany({
     orderBy: { name: 'asc' },
+    include: {
+      color: {
+        select: {
+          bgClass: true,
+          textClass: true,
+        },
+      },
+    },
   })
-  return statuses
+  return serialize(statuses)
 }
 
 /**

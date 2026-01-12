@@ -1,5 +1,6 @@
 import { dehydrate, HydrationBoundary, QueryClient } from '@tanstack/react-query'
 import { prisma } from '@/lib/db'
+import { serialize } from '@/lib/utils/serialize'
 import { ProjectsPageClient } from './page-client'
 
 /**
@@ -62,7 +63,7 @@ async function getInitialProjects() {
     }),
   ])
 
-  return {
+  return serialize({
     projects,
     pagination: {
       page,
@@ -70,7 +71,7 @@ async function getInitialProjects() {
       total,
       totalPages: Math.ceil(total / limit),
     },
-  }
+  })
 }
 
 /**
@@ -90,7 +91,7 @@ async function getProjectStatuses() {
       },
     },
   })
-  return statuses
+  return serialize(statuses)
 }
 
 /**
