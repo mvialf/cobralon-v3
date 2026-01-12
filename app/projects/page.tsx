@@ -18,7 +18,7 @@ async function getInitialProjects() {
   // Un proyecto está "Activo" si:
   // - projectStatus.isFinal = false, O
   // - balance > 0 (tiene deuda pendiente)
-  const [projects, total] = await Promise.all([
+  const [rawProjects, total] = await Promise.all([
     prisma.project.findMany({
       take: limit,
       skip: 0,
@@ -42,6 +42,7 @@ async function getInitialProjects() {
           select: {
             id: true,
             name: true,
+            isFinal: true,
             color: {
               select: {
                 id: true,
@@ -62,6 +63,19 @@ async function getInitialProjects() {
       },
     }),
   ])
+
+  // Agregar campos calculados (igual que transformRawToProjectListItem)
+  const projects = rawProjects.map((p) => {
+    const totalNum = Number(p.total)
+    const balanceNum = Number(p.balance)
+    const totalPaid = totalNum - balanceNum
+    const percentPaid = totalNum > 0 ? (totalPaid / totalNum) * 100 : 0
+    return {
+      ...p,
+      totalPaid,
+      percentPaid,
+    }
+  })
 
   return serialize({
     projects,
