@@ -1,5 +1,3 @@
-'use client'
-
 import { formatCurrency } from '@/lib/format'
 
 interface ProjectRow {

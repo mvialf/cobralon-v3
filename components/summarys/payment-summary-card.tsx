@@ -1,5 +1,3 @@
-'use client'
-
 import { CircleDollarSign, Wallet, FileText } from 'lucide-react'
 import CircularProgressChart from '@/components/ui/circular-progress-chart'
 

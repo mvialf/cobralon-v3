@@ -1,5 +1,3 @@
-'use client'
-
 import { CircleDollarSign, Wallet, FileText } from 'lucide-react'
 
 interface CustomerAccountSummaryCardProps {
