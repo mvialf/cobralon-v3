@@ -7,6 +7,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { projectFormSchema, type ProjectFormData } from '@/lib/validations/project-validations'
 import { normalizePhone } from '@/lib/utils/phone'
 import { formatDateValue, parseDateValue } from '@/lib/utils'
+import { calculateProjectTotal } from '@/lib/business-logic/totals'
 import { useCustomersList } from '@/hooks/queries/use-customers'
 import { useProjectStatuses, getInitialStatus } from '@/hooks/queries/use-project-statuses'
 
@@ -85,8 +86,9 @@ export const ProjectForm = React.forwardRef<ProjectFormHandle, ProjectFormProps>
     // Wrapper del onSubmit para calcular totalAmount automáticamente
     const handleFormSubmit = React.useCallback(
       (data: ProjectFormData) => {
-        // Calcular totalAmount basado en subtotal y taxRate
-        const calculatedTotal = data.subtotal + data.subtotal * ((data.taxRate || 0) / 100)
+        // Calcular totalAmount usando función centralizada (lib/business-logic/totals.ts)
+        // Nota: El backend también valida/recalcula esto por seguridad
+        const calculatedTotal = calculateProjectTotal(data.subtotal, data.taxRate || 0)
 
         // Agregar totalAmount calculado al data
         const dataWithTotal = {

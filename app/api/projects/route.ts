@@ -9,6 +9,7 @@ import {
   getStatusFacets,
   getStateFacets,
 } from '@/lib/queries/project-list'
+import { calculateProjectTotal } from '@/lib/business-logic/totals'
 import type { ProjectListFilters } from '@/types/project-list'
 
 /**
@@ -189,7 +190,7 @@ export const POST = withLogging(async (request, logger) => {
     date,
     subtotal,
     taxRate,
-    total,
+    total: _clientTotal, // Ignorado: siempre calculamos en servidor por seguridad
     totalAmount,
     currency,
     windowsCount,
@@ -265,12 +266,26 @@ export const POST = withLogging(async (request, logger) => {
       return NextResponse.json({ error: 'El cliente no existe' }, { status: 404 })
     }
 
-    // Calcular total si no viene en el body
+    // SEGURIDAD: Siempre calcular totalAmount en el servidor
+    // Ignoramos cualquier totalAmount enviado por el cliente para prevenir manipulación
+    // Ver: lib/business-logic/totals.ts para la lógica canónica
     const finalTaxRate = taxRate ?? 19
-    const calculatedTotal = total ?? subtotal + subtotal * (finalTaxRate / 100)
+    const calculatedTotal = calculateProjectTotal(subtotal, finalTaxRate)
 
-    // totalAmount es el mismo que calculatedTotal si no viene en el body
-    const finalTotalAmount = totalAmount ?? calculatedTotal
+    // totalAmount siempre es el calculado (ignoramos el valor del cliente)
+    const finalTotalAmount = calculatedTotal
+
+    // Auditoría: Loggear si el cliente envió un totalAmount diferente
+    if (totalAmount !== undefined && Math.abs(totalAmount - calculatedTotal) > 0.01) {
+      projectLogger.warn(
+        {
+          clientTotalAmount: totalAmount,
+          serverCalculatedTotal: calculatedTotal,
+          difference: totalAmount - calculatedTotal,
+        },
+        'Client sent different totalAmount than server calculated - using server value'
+      )
+    }
 
     projectLogger.info(
       {

@@ -1,6 +1,7 @@
 import { dehydrate, HydrationBoundary, QueryClient } from '@tanstack/react-query'
 import { prisma } from '@/lib/db'
 import { serialize } from '@/lib/utils/serialize'
+import { getActiveProjectsWhere } from '@/lib/business-logic/project-state'
 import { ProjectsPageClient } from './page-client'
 
 /**
@@ -14,22 +15,16 @@ async function getInitialProjects() {
   const limit = 50
   const page = 1
 
-  // Filtrar proyectos activos (mismo criterio que el cliente)
-  // Un proyecto está "Activo" si:
-  // - projectStatus.isFinal = false, O
-  // - balance > 0 (tiene deuda pendiente)
+  // Filtrar proyectos activos usando función centralizada (lib/business-logic/project-state.ts)
+  // Definición canónica: isFinal=false OR projectStatus=null OR balance>0
+  const activeWhere = getActiveProjectsWhere()
+
   const [rawProjects, total] = await Promise.all([
     prisma.project.findMany({
       take: limit,
       skip: 0,
       orderBy: { createdAt: 'desc' },
-      where: {
-        OR: [
-          { projectStatus: { isFinal: false } },
-          { projectStatus: null },
-          { balance: { gt: 0 } },
-        ],
-      },
+      where: activeWhere,
       include: {
         customer: {
           select: {
@@ -54,13 +49,7 @@ async function getInitialProjects() {
       },
     }),
     prisma.project.count({
-      where: {
-        OR: [
-          { projectStatus: { isFinal: false } },
-          { projectStatus: null },
-          { balance: { gt: 0 } },
-        ],
-      },
+      where: activeWhere,
     }),
   ])
 

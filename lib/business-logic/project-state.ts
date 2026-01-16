@@ -63,3 +63,94 @@ export function matchesProjectState(
   const projectState = calculateProjectState(projectBalance, projectIsFinal)
   return projectState === filterState
 }
+
+// ============================================================================
+// Prisma Where Clause Helpers
+// ============================================================================
+// Estos helpers generan condiciones Prisma `where` reutilizables para filtrar
+// proyectos por estado, garantizando consistencia en toda la aplicación.
+
+/**
+ * Tipo para las condiciones where de Prisma para proyectos
+ * Compatible con ProjectWhereInput de Prisma
+ */
+export type ProjectStateWhereClause = {
+  OR?: Array<{
+    projectStatus?: { isFinal: boolean } | null
+    balance?: { gt: number }
+  }>
+  AND?: Array<{
+    projectStatus?: { isFinal: boolean }
+    balance?: { equals: number }
+  }>
+}
+
+/**
+ * Genera condición Prisma `where` para proyectos ACTIVOS
+ *
+ * Un proyecto está "Activo" si:
+ * - projectStatus.isFinal = false, O
+ * - projectStatus = null (sin estado asignado), O
+ * - balance > 0 (tiene deuda pendiente, independiente del status)
+ *
+ * @returns Objeto where compatible con Prisma
+ *
+ * @example
+ * ```ts
+ * const activeProjects = await prisma.project.findMany({
+ *   where: getActiveProjectsWhere(),
+ * })
+ * ```
+ */
+export function getActiveProjectsWhere(): ProjectStateWhereClause {
+  return {
+    OR: [{ projectStatus: { isFinal: false } }, { projectStatus: null }, { balance: { gt: 0 } }],
+  }
+}
+
+/**
+ * Genera condición Prisma `where` para proyectos FINALIZADOS
+ *
+ * Un proyecto está "Finalizado" si AMBAS condiciones se cumplen:
+ * - projectStatus.isFinal = true, Y
+ * - balance = 0 (sin deuda pendiente)
+ *
+ * @returns Objeto where compatible con Prisma
+ *
+ * @example
+ * ```ts
+ * const finishedProjects = await prisma.project.findMany({
+ *   where: getFinishedProjectsWhere(),
+ * })
+ * ```
+ */
+export function getFinishedProjectsWhere(): ProjectStateWhereClause {
+  return {
+    AND: [{ projectStatus: { isFinal: true } }, { balance: { equals: 0 } }],
+  }
+}
+
+/**
+ * Genera condición Prisma `where` según el filtro de estado solicitado
+ *
+ * @param filterState - Estado a filtrar: 'Activo', 'Finalizado', o 'all'
+ * @returns Objeto where compatible con Prisma, o undefined si filterState es 'all'
+ *
+ * @example
+ * ```ts
+ * const where = getProjectStateWhere('Activo')
+ * const projects = await prisma.project.findMany({ where })
+ * ```
+ */
+export function getProjectStateWhere(
+  filterState: ProjectStateFilter
+): ProjectStateWhereClause | undefined {
+  switch (filterState) {
+    case 'Activo':
+      return getActiveProjectsWhere()
+    case 'Finalizado':
+      return getFinishedProjectsWhere()
+    case 'all':
+      return undefined
+  }
+}

@@ -1,5 +1,11 @@
 import { describe, it, expect } from 'vitest'
-import { calculateProjectState, matchesProjectState } from '../project-state'
+import {
+  calculateProjectState,
+  matchesProjectState,
+  getActiveProjectsWhere,
+  getFinishedProjectsWhere,
+  getProjectStateWhere,
+} from '../project-state'
 
 describe('calculateProjectState', () => {
   describe('estado "Finalizado"', () => {
@@ -220,5 +226,77 @@ describe('matchesProjectState', () => {
 
       expect(todos).toHaveLength(4)
     })
+  })
+})
+
+// ============================================================================
+// Prisma Where Clause Helpers Tests
+// ============================================================================
+
+describe('getActiveProjectsWhere', () => {
+  it('debe retornar estructura OR con 3 condiciones', () => {
+    const where = getActiveProjectsWhere()
+
+    expect(where.OR).toBeDefined()
+    expect(where.OR).toHaveLength(3)
+  })
+
+  it('debe incluir condición isFinal=false', () => {
+    const where = getActiveProjectsWhere()
+
+    expect(where.OR).toContainEqual({ projectStatus: { isFinal: false } })
+  })
+
+  it('debe incluir condición projectStatus=null', () => {
+    const where = getActiveProjectsWhere()
+
+    expect(where.OR).toContainEqual({ projectStatus: null })
+  })
+
+  it('debe incluir condición balance > 0', () => {
+    const where = getActiveProjectsWhere()
+
+    expect(where.OR).toContainEqual({ balance: { gt: 0 } })
+  })
+})
+
+describe('getFinishedProjectsWhere', () => {
+  it('debe retornar estructura AND con 2 condiciones', () => {
+    const where = getFinishedProjectsWhere()
+
+    expect(where.AND).toBeDefined()
+    expect(where.AND).toHaveLength(2)
+  })
+
+  it('debe requerir isFinal=true', () => {
+    const where = getFinishedProjectsWhere()
+
+    expect(where.AND).toContainEqual({ projectStatus: { isFinal: true } })
+  })
+
+  it('debe requerir balance=0', () => {
+    const where = getFinishedProjectsWhere()
+
+    expect(where.AND).toContainEqual({ balance: { equals: 0 } })
+  })
+})
+
+describe('getProjectStateWhere', () => {
+  it('debe retornar condición Activo cuando filterState="Activo"', () => {
+    const where = getProjectStateWhere('Activo')
+
+    expect(where).toEqual(getActiveProjectsWhere())
+  })
+
+  it('debe retornar condición Finalizado cuando filterState="Finalizado"', () => {
+    const where = getProjectStateWhere('Finalizado')
+
+    expect(where).toEqual(getFinishedProjectsWhere())
+  })
+
+  it('debe retornar undefined cuando filterState="all"', () => {
+    const where = getProjectStateWhere('all')
+
+    expect(where).toBeUndefined()
   })
 })

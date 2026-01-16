@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { ProjectWhereInput } from '@/types/api'
 import { calculateProjectBalance } from '@/lib/business-logic/project-balance'
+import { getProjectStateWhere, type ProjectStateFilter } from '@/lib/business-logic/project-state'
 import { anyFieldMatchesSearch } from '@/lib/utils/normalize'
 
 /**
@@ -35,11 +36,12 @@ export async function GET(request: Request) {
 
     // NOTA: La búsqueda se aplica en memoria con normalización (ignora acentos/tildes)
 
-    // Pre-filtro server-side por projectStatus.isFinal
-    if (projectState === 'Activo') {
-      where.projectStatus = { isFinal: false }
-    } else if (projectState === 'Finalizado') {
-      where.projectStatus = { isFinal: true }
+    // Pre-filtro server-side por estado de proyecto (función centralizada)
+    // Usa la definición canónica de "Activo" y "Finalizado" que considera tanto
+    // isFinal como balance, evitando omitir proyectos con isFinal=true pero balance>0
+    const stateWhere = getProjectStateWhere(projectState as ProjectStateFilter)
+    if (stateWhere) {
+      Object.assign(where, stateWhere)
     }
 
     // Ejecutar ambas queries en paralelo para máxima eficiencia

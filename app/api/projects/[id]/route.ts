@@ -3,6 +3,7 @@ import { prisma } from '@/lib/db'
 import { Decimal } from '@prisma/client/runtime/library'
 import { ProjectUpdateInput } from '@/types/api'
 import { calculateProjectBalance } from '@/lib/business-logic/project-balance'
+import { calculateProjectTotal } from '@/lib/business-logic/totals'
 
 /**
  * GET /api/projects/[id]
@@ -114,7 +115,8 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
       }
     }
 
-    // Calcular total si se actualizaron subtotal o taxRate
+    // SEGURIDAD: Siempre recalcular total en el servidor cuando cambian subtotal/taxRate
+    // Ignoramos totalAmount del cliente para prevenir manipulación
     let updatedTotal: Decimal | undefined
     let updatedTotalAmount: Decimal | undefined
     let updatedBalance: Decimal | undefined
@@ -122,25 +124,29 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
     if (body.subtotal !== undefined || body.taxRate !== undefined) {
       const subtotal = body.subtotal ?? existingProject.subtotal.toNumber()
       const taxRate = body.taxRate ?? existingProject.taxRate.toNumber()
-      updatedTotal = new Decimal(subtotal + subtotal * (taxRate / 100))
-      // También actualizar totalAmount si no viene en el body
-      if (body.totalAmount === undefined) {
-        updatedTotalAmount = updatedTotal
+
+      // Usar función centralizada para cálculo (lib/business-logic/totals.ts)
+      const calculatedTotal = calculateProjectTotal(subtotal, taxRate)
+      updatedTotal = new Decimal(calculatedTotal)
+
+      // SEGURIDAD: totalAmount siempre es el calculado por el servidor
+      // Ignoramos body.totalAmount cuando cambian subtotal/taxRate
+      updatedTotalAmount = updatedTotal
+
+      // Auditoría: Loggear si el cliente envió un totalAmount diferente
+      if (body.totalAmount !== undefined && Math.abs(body.totalAmount - calculatedTotal) > 0.01) {
+        console.warn(
+          `[AUDIT] Client sent different totalAmount (${body.totalAmount}) than server calculated (${calculatedTotal}) for project ${id}`
+        )
       }
     }
 
     // Si cambia el total/totalAmount, recalcular el balance
     // Balance = totalAmount - sum(paymentAllocations)
-    const finalTotalAmount =
-      body.totalAmount !== undefined
-        ? new Decimal(body.totalAmount)
-        : (updatedTotalAmount ?? existingProject.totalAmount)
+    // SEGURIDAD: No usar body.totalAmount directamente, siempre recalcular o usar existente
+    const finalTotalAmount = updatedTotalAmount ?? existingProject.totalAmount
 
-    if (
-      updatedTotal !== undefined ||
-      updatedTotalAmount !== undefined ||
-      body.totalAmount !== undefined
-    ) {
+    if (updatedTotal !== undefined || updatedTotalAmount !== undefined) {
       // Obtener suma de allocations existentes
       const allocationsSum = await prisma.paymentAllocation.aggregate({
         where: { projectId: id },
@@ -173,9 +179,9 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
     if (body.subtotal !== undefined) updateData.subtotal = new Decimal(body.subtotal)
     if (body.taxRate !== undefined) updateData.taxRate = new Decimal(body.taxRate)
     if (updatedTotal !== undefined) updateData.total = updatedTotal
-    if (body.totalAmount !== undefined)
-      updateData.totalAmount = body.totalAmount ? new Decimal(body.totalAmount) : null
-    else if (updatedTotalAmount !== undefined) updateData.totalAmount = updatedTotalAmount
+    // SEGURIDAD: Solo actualizar totalAmount si fue recalculado por el servidor
+    // Nunca permitir que el cliente envíe totalAmount directamente
+    if (updatedTotalAmount !== undefined) updateData.totalAmount = updatedTotalAmount
     // Actualizar balance si fue recalculado
     if (updatedBalance !== undefined) updateData.balance = updatedBalance
     if (body.currency !== undefined) updateData.currency = body.currency
