@@ -1,7 +1,7 @@
 import { z } from 'zod'
-import { normalizePhone } from '@/lib/utils/phone'
 import { todoListOptionalSchema } from '@/lib/validations/todo-validations'
 import type { TodoItem } from '@/hooks/use-todo-list'
+import { chilePhoneSchema, addressWithNullableOnlyApartmentSchema } from './common'
 
 // Schema para teamTagIds (integrantes asignados al evento)
 const teamTagIdsSchema = z.array(z.string().uuid()).optional().nullable().default([])
@@ -77,18 +77,8 @@ export const createProjectEventWithProjectUpdateSchema = z.object({
 
   // Datos del proyecto (validación consistente con project-validations.ts)
   projectStatusId: z.string().uuid('ID de estado inválido').optional(),
-  phone: z
-    .string()
-    .min(1, 'El teléfono es requerido')
-    .transform((val) => normalizePhone(val))
-    .refine(
-      (val) => /^\+56[2-9]\d{8}$/.test(val),
-      'Formato inválido. Debe ser un teléfono chileno válido (+56...)'
-    ),
-  street: z.string().min(1, 'La calle es obligatoria'),
-  apartment: z.string().nullable(),
-  comuna: z.string().min(1, 'La comuna es obligatoria'),
-  region: z.string().min(1, 'La región es obligatoria'),
+  phone: chilePhoneSchema,
+  ...addressWithNullableOnlyApartmentSchema,
   windowsCount: z
     .number({ invalid_type_error: 'Los elementos deben ser un número' })
     .int('Los elementos deben ser un número entero')

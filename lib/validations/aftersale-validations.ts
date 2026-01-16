@@ -1,5 +1,6 @@
 import { z } from 'zod'
 import { todoListOptionalSchema, type TodoItemFormData } from './todo-validations'
+import { chilePhoneSchema, addressWithNullableApartmentSchema } from './common'
 import { normalizePhone } from '@/lib/utils/phone'
 
 /**
@@ -9,14 +10,7 @@ import { normalizePhone } from '@/lib/utils/phone'
 export const aftersaleSchema = z.object({
   projectId: z.string().uuid('Debe seleccionar un proyecto válido'),
   aftersaleStatusId: z.string().uuid('Debe seleccionar un estado válido'),
-  contactPhone: z
-    .string()
-    .min(1, 'El teléfono de contacto es obligatorio')
-    .transform((val) => normalizePhone(val)) // Normaliza a formato E.164 automáticamente
-    .refine(
-      (val) => /^\+56[2-9]\d{8}$/.test(val),
-      'Formato inválido. Debe ser un teléfono chileno válido (+56...)'
-    ),
+  contactPhone: chilePhoneSchema,
   description: z
     .string()
     .max(1000, 'La descripción no puede exceder 1000 caracteres')
@@ -29,10 +23,7 @@ export const aftersaleSchema = z.object({
   }),
   tasks: todoListOptionalSchema, // Lista de tareas para resolver el caso de postventa
   // Campos de dirección del proyecto (editables desde aftersale)
-  street: z.string().min(1, 'La calle es obligatoria'),
-  apartment: z.string().nullable().optional(),
-  comuna: z.string().min(1, 'La comuna es obligatoria'),
-  region: z.string().min(1, 'La región es obligatoria'),
+  ...addressWithNullableApartmentSchema,
 })
 
 /**

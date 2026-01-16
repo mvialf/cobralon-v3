@@ -1,7 +1,7 @@
 import { z } from 'zod'
-import { normalizePhone } from '@/lib/utils/phone'
 import { todoListOptionalSchema } from '@/lib/validations/todo-validations'
 import type { TodoItem } from '@/hooks/use-todo-list'
+import { chilePhoneSchema, addressWithNullableOnlyApartmentSchema } from './common'
 
 /**
  * Schema extendido para crear AftersaleEvent Y actualizar datos del Aftersale + Project
@@ -20,14 +20,7 @@ export const createAftersaleEventWithUpdateSchema = z.object({
 
   // Datos del Aftersale (editables)
   aftersaleStatusId: z.string().uuid('ID de estado inválido'),
-  contactPhone: z
-    .string()
-    .min(1, 'El teléfono es requerido')
-    .transform((val) => normalizePhone(val))
-    .refine(
-      (val) => /^\+56[2-9]\d{8}$/.test(val),
-      'Formato inválido. Debe ser un teléfono chileno válido (+56...)'
-    ),
+  contactPhone: chilePhoneSchema,
   description: z
     .string()
     .max(1000, 'La descripción no puede exceder 1000 caracteres')
@@ -36,10 +29,7 @@ export const createAftersaleEventWithUpdateSchema = z.object({
   tasks: todoListOptionalSchema.optional(),
 
   // Datos de dirección del Project (editables desde aftersale)
-  street: z.string().min(1, 'La calle es obligatoria'),
-  apartment: z.string().nullable(),
-  comuna: z.string().min(1, 'La comuna es obligatoria'),
-  region: z.string().min(1, 'La región es obligatoria'),
+  ...addressWithNullableOnlyApartmentSchema,
 
   // Team tags (integrantes asignados al evento)
   teamTagIds: z.array(z.string().uuid()).optional().nullable().default([]),

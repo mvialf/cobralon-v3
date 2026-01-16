@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { normalizePhone } from '@/lib/utils/phone'
+import { chilePhoneSchema, addressWithOptionalApartmentSchema } from './common'
 
 /**
  * Schema base compartido (campos de entrada del usuario)
@@ -13,20 +13,10 @@ const projectBaseSchema = z.object({
   projectName: z.string().optional(), // Glosa opcional
 
   // Contacto
-  phone: z
-    .string()
-    .min(1, 'El teléfono es requerido')
-    .transform((val) => normalizePhone(val)) // Normaliza a formato E.164 automáticamente
-    .refine(
-      (val) => /^\+56[2-9]\d{8}$/.test(val),
-      'Formato inválido. Debe ser un teléfono chileno válido (+56...)'
-    ),
+  phone: chilePhoneSchema,
 
   // Dirección del proyecto
-  street: z.string().min(1, 'La calle es obligatoria'),
-  apartment: z.string().optional(),
-  comuna: z.string().min(1, 'La comuna es obligatoria'),
-  region: z.string().min(1, 'La región es obligatoria'),
+  ...addressWithOptionalApartmentSchema,
 
   // Estado y fecha
   projectStatusId: z.string().min(1, 'El estado del proyecto es requerido'), // FK a ProjectStatus (obligatorio)

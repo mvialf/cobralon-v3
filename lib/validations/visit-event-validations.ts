@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { normalizePhone } from '@/lib/utils/phone'
+import { optionalChilePhoneSchema, addressWithNullableApartmentSchema } from './common'
 
 /**
  * Schema extendido para crear VisitEvent Y actualizar datos de la Visit
@@ -19,14 +19,7 @@ export const createVisitEventWithUpdateSchema = z.object({
   // Datos de la Visit (editables)
   visitStatusId: z.string().uuid('ID de estado inválido'),
   name: z.string().min(3, 'El nombre debe tener al menos 3 caracteres'),
-  phone: z
-    .string()
-    .optional()
-    .transform((val) => (val ? normalizePhone(val) : undefined))
-    .refine(
-      (val) => !val || /^\+56[2-9]\d{8}$/.test(val),
-      'Formato inválido. Debe ser un teléfono chileno válido (+56...)'
-    ),
+  phone: optionalChilePhoneSchema,
   observations: z
     .string()
     .max(1000, 'Las observaciones no pueden exceder 1000 caracteres')
@@ -35,10 +28,7 @@ export const createVisitEventWithUpdateSchema = z.object({
     .default(''),
 
   // Datos de dirección (editables)
-  street: z.string().min(1, 'La calle es obligatoria'),
-  apartment: z.string().nullable().optional(),
-  comuna: z.string().min(1, 'La comuna es obligatoria'),
-  region: z.string().min(1, 'La región es obligatoria'),
+  ...addressWithNullableApartmentSchema,
 
   // Team tags (integrantes asignados al evento)
   teamTagIds: z.array(z.string().uuid()).optional().nullable().default([]),

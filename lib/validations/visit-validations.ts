@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { normalizePhone } from '@/lib/utils/phone'
+import { optionalChilePhoneSchema, addressWithOptionalApartmentSchema } from './common'
 
 /**
  * Schema base compartido (campos de entrada del usuario)
@@ -9,20 +9,10 @@ const visitBaseSchema = z.object({
   name: z.string().min(3, 'El nombre debe tener al menos 3 caracteres'),
 
   // Contacto (opcional)
-  phone: z
-    .string()
-    .optional()
-    .transform((val) => (val ? normalizePhone(val) : undefined))
-    .refine(
-      (val) => !val || /^\+56[2-9]\d{8}$/.test(val),
-      'Formato inválido. Debe ser un teléfono chileno válido (+56...)'
-    ),
+  phone: optionalChilePhoneSchema,
 
   // Dirección de la visita (igual que Project)
-  street: z.string().min(1, 'La calle es obligatoria'),
-  apartment: z.string().optional(),
-  comuna: z.string().min(1, 'La comuna es obligatoria'),
-  region: z.string().min(1, 'La región es obligatoria'),
+  ...addressWithOptionalApartmentSchema,
 
   // Estado y fecha
   visitStatusId: z.string().min(1, 'El estado de la visita es requerido'), // FK a VisitStatus (obligatorio)
