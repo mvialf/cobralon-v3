@@ -83,6 +83,104 @@ describe('calculateProjectBalance', () => {
     expect(result.percentPaid).toBe(0) // División por 0 → 0
     expect(result.isFullyPaid).toBe(true) // balance negativo → fully paid
   })
+
+  it('debe manejar totalAmount null sin allocations', () => {
+    const project = {
+      totalAmount: null,
+      allocations: [],
+    }
+
+    const result = calculateProjectBalance(project)
+
+    expect(result.totalPaid).toBe(0)
+    expect(result.balance).toBe(0) // null → 0
+    expect(result.percentPaid).toBe(0)
+    expect(result.isFullyPaid).toBe(true) // balance 0 → fully paid
+  })
+
+  it('debe manejar allocations con montos decimales', () => {
+    const project = {
+      totalAmount: 1000.00,
+      allocations: [
+        { allocatedAmount: 333.33 },
+        { allocatedAmount: 333.33 },
+        { allocatedAmount: 333.34 },
+      ],
+    }
+
+    const result = calculateProjectBalance(project)
+
+    expect(result.totalPaid).toBe(1000)
+    expect(result.balance).toBeCloseTo(0, 2)
+    expect(result.isFullyPaid).toBe(true)
+  })
+
+  it('debe calcular percentPaid mayor a 100 en sobrepago', () => {
+    const project = {
+      totalAmount: 100000,
+      allocations: [{ allocatedAmount: 150000 }],
+    }
+
+    const result = calculateProjectBalance(project)
+
+    expect(result.percentPaid).toBe(150)
+    expect(result.isFullyPaid).toBe(true)
+  })
+
+  it('debe manejar totalAmount 0', () => {
+    const project = {
+      totalAmount: 0,
+      allocations: [{ allocatedAmount: 100 }],
+    }
+
+    const result = calculateProjectBalance(project)
+
+    expect(result.totalPaid).toBe(100)
+    expect(result.balance).toBe(-100)
+    expect(result.percentPaid).toBe(0) // División por 0 evitada
+    expect(result.isFullyPaid).toBe(true)
+  })
+
+  it('debe manejar muchas allocations', () => {
+    const project = {
+      totalAmount: 1000000,
+      allocations: Array(100).fill({ allocatedAmount: 10000 }),
+    }
+
+    const result = calculateProjectBalance(project)
+
+    expect(result.totalPaid).toBe(1000000)
+    expect(result.balance).toBe(0)
+    expect(result.isFullyPaid).toBe(true)
+  })
+
+  it('debe manejar montos muy grandes', () => {
+    const project = {
+      totalAmount: 999999999999,
+      allocations: [{ allocatedAmount: 500000000000 }],
+    }
+
+    const result = calculateProjectBalance(project)
+
+    expect(result.totalPaid).toBe(500000000000)
+    expect(result.balance).toBe(499999999999)
+    expect(result.percentPaid).toBeCloseTo(50, 0)
+    expect(result.isFullyPaid).toBe(false)
+  })
+
+  it('debe manejar montos muy pequeños', () => {
+    const project = {
+      totalAmount: 0.01,
+      allocations: [{ allocatedAmount: 0.005 }],
+    }
+
+    const result = calculateProjectBalance(project)
+
+    expect(result.totalPaid).toBe(0.005)
+    expect(result.balance).toBeCloseTo(0.005, 5)
+    expect(result.percentPaid).toBe(50)
+    expect(result.isFullyPaid).toBe(false)
+  })
 })
 
 describe('getTotalPendingBalance', () => {

@@ -103,6 +103,73 @@ describe('calculateInstallments', () => {
       calculateInstallments(-100, 3, new Date())
     }).toThrow('El monto debe ser mayor a 0')
   })
+
+  // Edge cases adicionales P2
+  it('debe manejar 1 cuota (pago único)', () => {
+    const result = calculateInstallments(1000, 1, new Date('2025-01-15'))
+
+    expect(result).toHaveLength(1)
+    expect(result[0].installmentNumber).toBe(1)
+    expect(result[0].amount).toBe(1000) // Todo el monto en una cuota
+    expect(result[0].dueDate).toEqual(new Date('2025-01-15'))
+  })
+
+  it('debe manejar 12 cuotas (máximo permitido)', () => {
+    const result = calculateInstallments(1200, 12, new Date('2025-01-01'))
+
+    expect(result).toHaveLength(12)
+
+    // Cuota base: 1200 / 12 = 100 exacto
+    result.forEach((inst, i) => {
+      expect(inst.installmentNumber).toBe(i + 1)
+      expect(inst.amount).toBe(100)
+    })
+
+    // Suma exacta
+    const sum = result.reduce((acc, inst) => acc + inst.amount, 0)
+    expect(sum).toBe(1200)
+  })
+
+  it('debe manejar montos muy grandes', () => {
+    const largeAmount = 100000000 // $100 millones
+    const result = calculateInstallments(largeAmount, 3, new Date('2025-01-01'))
+
+    expect(result).toHaveLength(3)
+
+    // Cuota base: Math.floor((100000000 / 3) * 100) / 100 = 33333333.33
+    expect(result[0].amount).toBe(33333333.33)
+    expect(result[1].amount).toBe(33333333.33)
+    expect(result[2].amount).toBeCloseTo(33333333.34, 2) // Absorbe centavo
+
+    // Suma exacta
+    const sum = result.reduce((acc, inst) => acc + inst.amount, 0)
+    expect(sum).toBe(largeAmount)
+  })
+
+  it('debe manejar montos muy pequeños', () => {
+    const result = calculateInstallments(0.1, 3, new Date('2025-01-01'))
+
+    expect(result).toHaveLength(3)
+
+    // Cuota base: Math.floor((0.1 / 3) * 100) / 100 = 0.03
+    expect(result[0].amount).toBe(0.03)
+    expect(result[1].amount).toBe(0.03)
+    expect(result[2].amount).toBeCloseTo(0.04, 2) // Absorbe centavo
+
+    // Suma exacta
+    const sum = result.reduce((acc, inst) => acc + inst.amount, 0)
+    expect(sum).toBeCloseTo(0.1, 2)
+  })
+
+  it('debe calcular fechas correctas para 12 cuotas (casi 1 año)', () => {
+    const result = calculateInstallments(1200, 12, new Date('2025-01-01'))
+
+    // Primera cuota: día del pago
+    expect(result[0].dueDate).toEqual(new Date('2025-01-01'))
+
+    // Última cuota: +330 días (11 * 30)
+    expect(result[11].dueDate).toEqual(new Date('2025-11-27'))
+  })
 })
 
 describe('validateInstallmentsSum', () => {

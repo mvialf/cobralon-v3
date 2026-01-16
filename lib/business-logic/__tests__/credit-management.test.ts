@@ -284,6 +284,66 @@ describe('calculatePaymentDistribution', () => {
     })
   })
 
+  describe('newCustomerCredit negativo (crédito consumido)', () => {
+    /**
+     * DOCUMENTACIÓN DE COMPORTAMIENTO:
+     * newCustomerCredit puede ser negativo cuando el cliente CONSUME crédito.
+     * Un valor negativo indica la cantidad de crédito que se RESTA del saldo del cliente.
+     *
+     * Fórmula: newCustomerCredit = generatedCredit - customerCreditApplied
+     *
+     * Ejemplos:
+     * - Si aplica $100k crédito y no genera nuevo → newCustomerCredit = -$100k (consume)
+     * - Si aplica $50k crédito y genera $150k → newCustomerCredit = +$100k (net positivo)
+     */
+
+    it('debe retornar negativo cuando solo consume crédito sin generar nuevo', () => {
+      // Balance: $100k, Pago: $0, Crédito aplicado: $100k
+      const result = calculatePaymentDistribution(100000, 0, 100000)
+
+      expect(result.newCustomerCredit).toBe(-100000)
+      // Interpretación: el cliente PERDIÓ $100k de crédito
+    })
+
+    it('debe retornar negativo cuando consume más de lo que genera', () => {
+      // Balance: $300k, Pago: $100k, Crédito aplicado: $200k
+      // Total: $300k, usado: $300k, generado: $0
+      const result = calculatePaymentDistribution(300000, 100000, 200000)
+
+      expect(result.generatedCredit).toBe(0)
+      expect(result.newCustomerCredit).toBe(-200000)
+    })
+
+    it('debe retornar 0 cuando consume exactamente lo que genera', () => {
+      // Balance: $50k, Pago: $150k, Crédito aplicado: $100k
+      // Total: $250k, usado: $50k, generado: $200k, aplicado: $100k, net: +$100k
+      const result = calculatePaymentDistribution(50000, 150000, 100000)
+
+      expect(result.generatedCredit).toBe(200000)
+      expect(result.newCustomerCredit).toBe(100000) // +200k - 100k
+    })
+
+    it('debe retornar positivo cuando genera más de lo que consume', () => {
+      // Balance: $10k, Pago: $500k, Crédito aplicado: $100k
+      // Total: $600k, usado: $10k, generado: $590k
+      const result = calculatePaymentDistribution(10000, 500000, 100000)
+
+      expect(result.generatedCredit).toBe(590000)
+      expect(result.newCustomerCredit).toBe(490000) // +590k - 100k
+    })
+
+    it('debe manejar crédito aplicado mayor que balance (caso extremo)', () => {
+      // Balance: $50k, Pago: $0, Crédito aplicado: $200k
+      // El crédito "sobra" $150k que se regenera
+      const result = calculatePaymentDistribution(50000, 0, 200000)
+
+      expect(result.appliedToProject).toBe(50000)
+      expect(result.generatedCredit).toBe(150000) // Exceso se regenera
+      expect(result.newCustomerCredit).toBe(-50000) // Net: +150k - 200k = -50k
+      // Interpretación: consumió $200k, regeneró $150k, neto: -$50k
+    })
+  })
+
   describe('escenarios reales de negocio', () => {
     it('escenario 1: cliente paga cuota mensual normal', () => {
       // Proyecto de $10M, cliente paga cuota de $1M

@@ -138,6 +138,48 @@ describe('validateProjectTotal', () => {
   })
 })
 
+describe('validateProjectTotal - edge cases de tolerancia', () => {
+  it('debe aceptar diferencia exactamente en el límite (< 0.01)', () => {
+    const subtotal = 1000
+    const taxRate = 19
+    const expectedTotal = subtotal * (1 + taxRate / 100) // 1190
+
+    // Diferencia de 0.009 (dentro de tolerancia)
+    expect(validateProjectTotal(subtotal, taxRate, expectedTotal + 0.009)).toBe(true)
+    expect(validateProjectTotal(subtotal, taxRate, expectedTotal - 0.009)).toBe(true)
+  })
+
+  it('debe rechazar diferencia claramente >= 0.01', () => {
+    const subtotal = 1000
+    const taxRate = 19
+    const expectedTotal = subtotal * (1 + taxRate / 100) // 1190
+
+    // Diferencia de 0.02 (claramente fuera de tolerancia)
+    // Nota: 0.01 exacto puede tener problemas de punto flotante
+    expect(validateProjectTotal(subtotal, taxRate, expectedTotal + 0.02)).toBe(false)
+    expect(validateProjectTotal(subtotal, taxRate, expectedTotal - 0.02)).toBe(false)
+  })
+
+  it('debe validar con diferentes tasas de impuesto', () => {
+    // IVA Argentina 21%
+    expect(validateProjectTotal(1000, 21, 1210)).toBe(true)
+
+    // IVA Chile reducido 9.5%
+    expect(validateProjectTotal(1000, 9.5, 1095)).toBe(true)
+
+    // Sin IVA 0%
+    expect(validateProjectTotal(1000, 0, 1000)).toBe(true)
+  })
+
+  it('debe rechazar manipulación de total por el cliente', () => {
+    // Cliente intenta pagar menos
+    expect(validateProjectTotal(1000000, 19, 1000000)).toBe(false) // Falta el IVA
+
+    // Cliente intenta pagar de más (sospechoso)
+    expect(validateProjectTotal(1000, 19, 1500)).toBe(false)
+  })
+})
+
 describe('calculateSubtotalFromTotal', () => {
   it('debe calcular subtotal desde total con IVA 19%', () => {
     const total = 1190000
