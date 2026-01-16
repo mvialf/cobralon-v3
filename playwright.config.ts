@@ -6,6 +6,10 @@ import { defineConfig, devices } from '@playwright/test'
  * @see https://playwright.dev/docs/test-configuration
  * @see docs/template/decisions/010-playwright-mcp.md
  */
+
+// Archivo donde se guarda el estado de autenticación
+const authFile = '.playwright/.auth/user.json'
+
 export default defineConfig({
   // Directorio donde están los tests E2E
   testDir: './tests/e2e',
@@ -45,22 +49,45 @@ export default defineConfig({
     video: 'retain-on-failure',
   },
 
-  // Proyectos = diferentes navegadores
+  // Proyectos = diferentes navegadores + setup de auth
   projects: [
+    // Setup: Ejecutar autenticación primero (sin dependencias)
     {
-      name: 'chromium',
-      use: { ...devices['Desktop Chrome'] },
+      name: 'setup',
+      testMatch: /auth\.setup\.ts/,
     },
 
+    // Chromium: Depende del setup, usa sesión guardada
+    {
+      name: 'chromium',
+      use: {
+        ...devices['Desktop Chrome'],
+        storageState: authFile,
+      },
+      dependencies: ['setup'],
+      testIgnore: /auth\.setup\.ts/,
+    },
+
+    // Firefox: Depende del setup, usa sesión guardada
     {
       name: 'firefox',
-      use: { ...devices['Desktop Firefox'] },
+      use: {
+        ...devices['Desktop Firefox'],
+        storageState: authFile,
+      },
+      dependencies: ['setup'],
+      testIgnore: /auth\.setup\.ts/,
     },
 
     // Webkit deshabilitado - requiere librerías adicionales en WSL
     // {
     //   name: 'webkit',
-    //   use: { ...devices['Desktop Safari'] },
+    //   use: {
+    //     ...devices['Desktop Safari'],
+    //     storageState: authFile,
+    //   },
+    //   dependencies: ['setup'],
+    //   testIgnore: /auth\.setup\.ts/,
     // },
 
     /* Test against mobile viewports. */

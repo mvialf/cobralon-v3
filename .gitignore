@@ -55,3 +55,6 @@ scripts/logs/
 *.backup
 vercel.json.bak
 .env.vercel
+
+# Playwright auth state
+.playwright/.auth/
