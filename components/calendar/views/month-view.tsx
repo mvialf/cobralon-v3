@@ -13,7 +13,7 @@ import {
   isWeekend,
 } from '@/lib/utils/calendar-utils'
 import type { CalendarEvent } from '@/lib/types/calendar'
-import { EVENT_TYPE_REGISTRY } from '@/lib/config/event-types-config'
+import { DynamicEventCard } from '../dynamic-event-card'
 
 interface MonthViewProps {
   currentDate: Date
@@ -99,20 +99,15 @@ export function MonthView({
 
               {/* Lista de eventos del día (ordenados) */}
               <div className="space-y-1 flex-1 overflow-auto">
-                {sortedDayEvents.map((event) => {
-                  // Renderizar card dinámicamente según el tipo
-                  const EventCard = EVENT_TYPE_REGISTRY[event.type].Card
-
-                  return (
-                    <SortableEventCard key={event.data.id} calendarEvent={event}>
-                      <EventCard
-                        event={event.data as any}
-                        onEdit={() => onEditEvent?.(event)}
-                        onDelete={() => onDeleteEvent?.(event)}
-                      />
-                    </SortableEventCard>
-                  )
-                })}
+                {sortedDayEvents.map((event) => (
+                  <SortableEventCard key={event.data.id} calendarEvent={event}>
+                    <DynamicEventCard
+                      event={event}
+                      onEdit={() => onEditEvent?.(event)}
+                      onDelete={() => onDeleteEvent?.(event)}
+                    />
+                  </SortableEventCard>
+                ))}
               </div>
             </SortableDayContainer>
           )

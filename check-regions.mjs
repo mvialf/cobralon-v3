@@ -21,7 +21,6 @@ async function checkRegions() {
     console.log('='.repeat(80))
 
     const regionStats = {}
-    const comunaStats = {}
 
     projects.forEach((project, index) => {
       console.log(`\n${index + 1}. Proyecto #${project.projectNumber}`)

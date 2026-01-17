@@ -1,10 +1,11 @@
-import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { useMutation, useQueryClient, type QueryKey } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { handleMutationError } from '@/lib/errors'
 import type {
   VisitEventWithRelations,
   CreateVisitEventInput,
   UpdateVisitEventInput,
+  CalendarEventsQueryData,
 } from '@/lib/types/calendar'
 
 /**
@@ -207,31 +208,35 @@ export function useUpdateVisitEventDate() {
 
       // Snapshot del estado anterior (para rollback)
       // IMPORTANTE: Usar getQueriesData con partial match porque el queryKey incluye fechas
-      const previousQueries = queryClient.getQueriesData<any>({
+      const previousQueries = queryClient.getQueriesData<CalendarEventsQueryData>({
         queryKey: ['calendar-events'],
       })
 
       // Actualizar optimísticamente TODAS las queries que coincidan
       // IMPORTANTE: setQueriesData hace partial match, setQueryData requiere key exacto
-      queryClient.setQueriesData<any>({ queryKey: ['calendar-events'] }, (old: any) => {
-        if (!old?.events) return old
+      // Nota: usamos unknown porque el optimistic update convierte Date a string temporalmente
+      queryClient.setQueriesData<CalendarEventsQueryData>(
+        { queryKey: ['calendar-events'] },
+        (old) => {
+          if (!old?.events) return old
 
-        return {
-          ...old,
-          events: old.events.map((event: any) => {
-            if (event.type === 'visit' && event.data.id === id) {
-              return {
-                ...event,
-                data: {
-                  ...event.data,
-                  scheduledDate: scheduledDate.toISOString(),
-                },
+          return {
+            ...old,
+            events: old.events.map((event) => {
+              if (event.type === 'visit' && event.data.id === id) {
+                return {
+                  ...event,
+                  data: {
+                    ...event.data,
+                    scheduledDate: scheduledDate.toISOString(),
+                  },
+                } as unknown as typeof event
               }
-            }
-            return event
-          }),
+              return event
+            }),
+          }
         }
-      })
+      )
 
       // Retornar snapshot para rollback
       return { previousQueries }
@@ -240,9 +245,11 @@ export function useUpdateVisitEventDate() {
     onError: (error, _variables, context) => {
       // Restaurar todas las queries al estado anterior
       if (context?.previousQueries) {
-        context.previousQueries.forEach(([queryKey, data]: [any, any]) => {
-          queryClient.setQueryData(queryKey, data)
-        })
+        context.previousQueries.forEach(
+          ([queryKey, data]: [QueryKey, CalendarEventsQueryData | undefined]) => {
+            queryClient.setQueryData(queryKey, data)
+          }
+        )
       }
       handleMutationError(error)
     },

@@ -31,12 +31,20 @@ export default defineConfig({
     coverage: {
       provider: 'v8',
       reporter: ['text', 'json', 'html'],
+      // Solo medir cobertura de código crítico (APIs y lógica de negocio)
+      include: [
+        'app/api/**/*.ts',
+        'lib/business-logic/**/*.ts',
+        'lib/queries/**/*.ts',
+        'lib/validations/**/*.ts',
+      ],
       exclude: [
         'node_modules/',
         'vitest.setup.ts',
         '**/*.config.{ts,js}',
         '**/types/**',
         '**/*.d.ts',
+        '**/__tests__/**', // Excluir archivos de test del reporte
       ],
     },
   },

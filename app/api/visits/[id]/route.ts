@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { withLogging } from '@/lib/logger-middleware'
 import { type UpdateVisitAPIPayload } from '@/lib/validations/visit-validations'
+import { Prisma } from '@prisma/client'
+import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library'
 
 /**
  * GET /api/visits/[id]
@@ -64,7 +66,7 @@ export const PUT = withLogging(async (request, logger, context) => {
     logger.debug({ visitId: id, body }, 'Updating visit')
 
     // Transformar payload: date string → Date (si existe)
-    const visitData: Record<string, any> = {}
+    const visitData: Prisma.VisitUpdateInput = {}
 
     if (body.name !== undefined) visitData.name = body.name
     if (body.phone !== undefined) visitData.phone = body.phone || null
@@ -72,7 +74,9 @@ export const PUT = withLogging(async (request, logger, context) => {
     if (body.apartment !== undefined) visitData.apartment = body.apartment || null
     if (body.comuna !== undefined) visitData.comuna = body.comuna
     if (body.region !== undefined) visitData.region = body.region
-    if (body.visitStatusId !== undefined) visitData.visitStatusId = body.visitStatusId
+    if (body.visitStatusId !== undefined) {
+      visitData.visitStatus = { connect: { id: body.visitStatusId } }
+    }
     if (body.date !== undefined) visitData.date = new Date(body.date)
     if (body.scheduledTime !== undefined) visitData.scheduledTime = body.scheduledTime || null
     if (body.observations !== undefined) visitData.observations = body.observations || null
@@ -103,7 +107,7 @@ export const PUT = withLogging(async (request, logger, context) => {
 
     return NextResponse.json(visit)
   } catch (error) {
-    if ((error as any).code === 'P2025') {
+    if (error instanceof PrismaClientKnownRequestError && error.code === 'P2025') {
       logger.warn({ visitId: id }, 'Visit not found')
       return NextResponse.json({ error: 'Visita no encontrada' }, { status: 404 })
     }
@@ -133,7 +137,7 @@ export const DELETE = withLogging(async (request, logger, context) => {
 
     return NextResponse.json({ message: 'Visita eliminada exitosamente' })
   } catch (error) {
-    if ((error as any).code === 'P2025') {
+    if (error instanceof PrismaClientKnownRequestError && error.code === 'P2025') {
       logger.warn({ visitId: id }, 'Visit not found')
       return NextResponse.json({ error: 'Visita no encontrada' }, { status: 404 })
     }

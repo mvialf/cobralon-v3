@@ -25,33 +25,13 @@ import type { CalendarEventType } from '@/lib/types/calendar'
 // ============================================================================
 
 /**
- * Props genéricas para Event Dialogs
- */
-interface BaseEventDialogProps<TEvent> {
-  mode: 'create' | 'edit'
-  event?: TEvent
-  defaultDate?: Date
-  open?: boolean
-  onOpenChange?: (open: boolean) => void
-}
-
-/**
- * Props genéricas para Event Cards
- */
-interface BaseEventCardProps<TEvent> {
-  event: TEvent
-  onEdit?: () => void
-  onDelete?: () => void
-}
-
-/**
  * Configuración para cada tipo de evento
  *
  * NOTA: Usamos `any` para los componentes para evitar TypeScript gymnastics
  * con discriminated unions. En runtime, TypeScript garantiza type-safety
  * porque obtenemos el componente correcto basado en event.type.
  */
-interface EventTypeConfig<T extends CalendarEventType> {
+interface EventTypeConfig {
   Dialog: ComponentType<any>
   Card: ComponentType<any>
 
@@ -93,49 +73,6 @@ import { VisitEventDialog } from '@/components/dialogs/calendar/visit-event-dial
 import { useDeleteVisitEvent, useUpdateVisitEventDate } from '@/hooks/queries/use-visit-events'
 
 // ============================================================================
-// STUB COMPONENTS (Reemplazar cuando existan los reales)
-// ============================================================================
-
-// Stub Dialog genérico
-function StubEventDialog<T>({ mode, event }: BaseEventDialogProps<T>) {
-  return (
-    <div className="p-4 border rounded bg-muted">
-      <p className="text-sm text-muted-foreground">
-        Dialog no implementado para este tipo de evento (modo: {mode})
-      </p>
-    </div>
-  )
-}
-
-// Stub Card genérico
-function StubEventCard<T>({ event }: BaseEventCardProps<T>) {
-  return (
-    <div className="p-2 border rounded bg-muted/50">
-      <p className="text-xs text-muted-foreground">Card no implementado</p>
-    </div>
-  )
-}
-
-// Stub hooks (retornan mutation que falla con mensaje)
-function useStubDeleteMutation() {
-  return {
-    mutate: () => {
-      console.error('Delete mutation no implementada')
-    },
-    isPending: false,
-  } as any
-}
-
-function useStubUpdateDateMutation() {
-  return {
-    mutate: () => {
-      console.error('Update date mutation no implementada')
-    },
-    isPending: false,
-  } as any
-}
-
-// ============================================================================
 // EVENT TYPE REGISTRY (Configuración Centralizada)
 // ============================================================================
 
@@ -166,7 +103,7 @@ export const EVENT_TYPE_REGISTRY = {
     useDeleteMutation: useDeleteVisitEvent,
     useUpdateDateMutation: useUpdateVisitEventDate,
   },
-} as const satisfies Record<CalendarEventType, EventTypeConfig<any>>
+} as const satisfies Record<CalendarEventType, EventTypeConfig>
 
 // ============================================================================
 // HELPER FUNCTIONS (Type-safe getters)
@@ -176,7 +113,7 @@ export const EVENT_TYPE_REGISTRY = {
  * Obtiene la configuración para un tipo de evento
  * Type-safe con exhaustiveness checking
  */
-export function getEventConfig(type: CalendarEventType): EventTypeConfig<any> {
+export function getEventConfig(type: CalendarEventType): EventTypeConfig {
   return EVENT_TYPE_REGISTRY[type]
 }
 

@@ -8,8 +8,9 @@ import { DataTableColumnHeader } from '@/components/data-table'
 import { EditableBadge } from '@/components/ui/editable-badge'
 import { ProjectNameSummary } from '@/components/summarys/project-name-summary'
 import { PaymentProgressSummary } from '@/components/summarys/payment-progress-summary'
-import { formatDate, formatCurrency } from '@/lib/format'
+import { formatCurrency } from '@/lib/format'
 import { calculateProjectState } from '@/lib/business-logic/project-state'
+import { EditableDate } from '@/components/ui/editable-date'
 import { ProjectActionsCell } from './components/project-actions-cell'
 import {
   transformStatusToOption,
@@ -38,6 +39,7 @@ export const createColumns = ({
   onDataChanged,
   statuses = [],
   updatingProjectId = null,
+  updatingDateProjectId = null,
 }: ColumnsProps = {}): ColumnDef<Project>[] => [
   {
     accessorKey: 'projectNumber',
@@ -135,8 +137,20 @@ export const createColumns = ({
   {
     accessorKey: 'date',
     header: ({ column }) => <DataTableColumnHeader column={column} title="Fecha Ingreso" />,
-    cell: ({ row }) => {
-      return formatDate(row.original.date, 'short', 'es-CL')
+    cell: ({ row, table }) => {
+      const project = row.original
+      const { handleDateChange } = getProjectsTableMeta(table)
+      const isPending = updatingDateProjectId === project.id
+
+      return (
+        <EditableDate
+          date={project.date}
+          onChange={
+            handleDateChange ? (newDate: Date) => handleDateChange(project.id, newDate) : undefined
+          }
+          isPending={isPending}
+        />
+      )
     },
     enableSorting: true,
     meta: {

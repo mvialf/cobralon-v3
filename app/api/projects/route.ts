@@ -10,6 +10,7 @@ import {
   getStateFacets,
 } from '@/lib/queries/project-list'
 import { calculateProjectTotal } from '@/lib/business-logic/totals'
+import { FINANCIAL } from '@/lib/constants/financial-constants'
 import type { ProjectListFilters } from '@/types/project-list'
 
 /**
@@ -276,7 +277,10 @@ export const POST = withLogging(async (request, logger) => {
     const finalTotalAmount = calculatedTotal
 
     // Auditoría: Loggear si el cliente envió un totalAmount diferente
-    if (totalAmount !== undefined && Math.abs(totalAmount - calculatedTotal) > 0.01) {
+    if (
+      totalAmount !== undefined &&
+      Math.abs(totalAmount - calculatedTotal) > FINANCIAL.TOLERANCE
+    ) {
       projectLogger.warn(
         {
           clientTotalAmount: totalAmount,

@@ -39,8 +39,10 @@ export interface ColumnsProps {
   onDataChanged?: () => void
   /** Lista de estados disponibles para el EditableBadge */
   statuses?: EditableBadgeOption[]
-  /** Estado de actualización (projectId actual siendo actualizado) */
+  /** Estado de actualización (projectId actual siendo actualizado para estado) */
   updatingProjectId?: string | null
+  /** Estado de actualización (projectId actual siendo actualizado para fecha) */
+  updatingDateProjectId?: string | null
 }
 
 /**
@@ -50,4 +52,6 @@ export interface ColumnsProps {
 export interface ProjectsTableMeta {
   /** Callback to handle project status change */
   handleStatusChange?: (projectId: string, newStatusId: string) => Promise<void>
+  /** Callback to handle project date change */
+  handleDateChange?: (projectId: string, newDate: Date) => Promise<void>
 }

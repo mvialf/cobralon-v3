@@ -13,6 +13,8 @@
  * - Job Layer: Job nocturno de reconciliación detecta/corrige inconsistencias
  */
 
+import { FINANCIAL } from '../constants/financial-constants'
+
 import { prisma } from '@/lib/db'
 import { calculateProjectBalance } from './project-balance'
 import { Decimal } from '@prisma/client/runtime/library'
@@ -143,9 +145,9 @@ export async function verifyProjectBalance(projectId: string): Promise<boolean> 
     })),
   })
 
-  // Comparar con tolerancia de 0.01 por redondeos decimales
+  // Comparar con tolerancia por redondeos decimales
   const dbBalance = Number(project.balance)
-  return Math.abs(dbBalance - calculatedBalance) < 0.01
+  return Math.abs(dbBalance - calculatedBalance) < FINANCIAL.TOLERANCE
 }
 
 /**

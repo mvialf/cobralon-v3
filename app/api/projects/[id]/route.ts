@@ -4,6 +4,7 @@ import { Decimal } from '@prisma/client/runtime/library'
 import { ProjectUpdateInput } from '@/types/api'
 import { calculateProjectBalance } from '@/lib/business-logic/project-balance'
 import { calculateProjectTotal } from '@/lib/business-logic/totals'
+import { FINANCIAL } from '@/lib/constants/financial-constants'
 
 /**
  * GET /api/projects/[id]
@@ -134,7 +135,10 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
       updatedTotalAmount = updatedTotal
 
       // Auditoría: Loggear si el cliente envió un totalAmount diferente
-      if (body.totalAmount !== undefined && Math.abs(body.totalAmount - calculatedTotal) > 0.01) {
+      if (
+        body.totalAmount !== undefined &&
+        Math.abs(body.totalAmount - calculatedTotal) > FINANCIAL.TOLERANCE
+      ) {
         console.warn(
           `[AUDIT] Client sent different totalAmount (${body.totalAmount}) than server calculated (${calculatedTotal}) for project ${id}`
         )
