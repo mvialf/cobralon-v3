@@ -58,3 +58,4 @@ vercel.json.bak
 
 # Playwright auth state
 .playwright/.auth/
+.agent/
