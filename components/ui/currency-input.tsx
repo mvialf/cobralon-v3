@@ -19,6 +19,10 @@ interface CurrencyInputProps {
   min?: number
   /** Valor máximo permitido */
   max?: number
+  /** Precision de decimales (si se omite, se usa la de la moneda) */
+  decimalScale?: number
+  /** Permitir números negativos */
+  allowNegative?: boolean
   /** Placeholder del input */
   placeholder?: string
   /** Si el input está deshabilitado */
@@ -43,23 +47,14 @@ interface CurrencyInputProps {
  * - Separadores de miles automáticos
  * - Símbolo de moneda basado en configuración global
  * - Soporte para monedas sin decimales (CLP, JPY, KRW)
- * - Validación min/max
+ * - Validación min/max (reforzada al salir del foco)
+ * - Selección automática al enfocar
  *
  * @example Uso básico
  * ```tsx
  * <CurrencyInput
  *   value={amount}
  *   onChange={setAmount}
- * />
- * ```
- *
- * @example Con moneda específica
- * ```tsx
- * <CurrencyInput
- *   value={amount}
- *   onChange={setAmount}
- *   currency="USD"
- *   locale="en-US"
  * />
  * ```
  */
@@ -73,6 +68,8 @@ function CurrencyInput({
   placeholder,
   min,
   max,
+  decimalScale: decimalScaleProp,
+  allowNegative: allowNegativeProp,
   id,
   name,
   onFocus,
@@ -87,7 +84,8 @@ function CurrencyInput({
 
   // Monedas sin decimales (centavos eliminados)
   const currenciesWithoutDecimals = ['CLP', 'JPY', 'KRW']
-  const useDecimals = !currenciesWithoutDecimals.includes(currency)
+  const defaultDecimalScale = currenciesWithoutDecimals.includes(currency) ? 0 : 2
+  const decimalScale = decimalScaleProp ?? defaultDecimalScale
 
   // Obtener símbolo de moneda y separadores según locale
   const formatConfig = React.useMemo(() => {
@@ -104,14 +102,12 @@ function CurrencyInput({
     const currencySymbol = currencyParts.find((p) => p.type === 'currency')?.value || currency
 
     // Detectar separadores usando formatToParts (método confiable)
-    // Usar número grande (12345.67) para garantizar que siempre aparezca separador de miles
     const numberFormatter = new Intl.NumberFormat(locale, {
       minimumFractionDigits: 2,
       maximumFractionDigits: 2,
     })
     const parts = numberFormatter.formatToParts(12345.67)
 
-    // Buscar separadores específicos por tipo
     const thousandSeparator = parts.find((p) => p.type === 'group')?.value || ','
     const decimalSeparator = parts.find((p) => p.type === 'decimal')?.value || '.'
 
@@ -122,44 +118,52 @@ function CurrencyInput({
     }
   }, [locale, currency])
 
-  // Handler para seleccionar todo el contenido al hacer doble click
-  const handleDoubleClick = (e: React.MouseEvent<HTMLInputElement>) => {
+  // Handler para seleccionar todo al hacer focus
+  const handleFocus = (e: React.FocusEvent<HTMLInputElement>) => {
     e.currentTarget.select()
+    onFocus?.(e)
+  }
+
+  // Handler para clamping estricto al salir del foco
+  const handleBlur = (e: React.FocusEvent<HTMLInputElement>) => {
+    if (value !== undefined) {
+      let numValue = value
+      if (min !== undefined && numValue < min) numValue = min
+      if (max !== undefined && numValue > max) numValue = max
+
+      if (numValue !== value) {
+        onChange(numValue)
+      }
+    }
+    onBlur?.(e)
   }
 
   return (
     <NumericFormat
       value={value}
       onValueChange={(values) => {
-        let numValue = values.floatValue || 0
-
-        // Validar min/max
-        if (min !== undefined && numValue < min) {
-          numValue = min
-        }
-        if (max !== undefined && numValue > max) {
-          numValue = max
-        }
-
+        const numValue = values.floatValue ?? 0
+        // Nota: El clamping estricto se movió a handleBlur para mejorar la UX
+        // permitiendo que el usuario borre y edite libremente.
         onChange(numValue)
       }}
       // Configuración de formato
       thousandSeparator={formatConfig.thousandSeparator}
       decimalSeparator={formatConfig.decimalSeparator}
-      decimalScale={useDecimals ? 2 : 0}
-      fixedDecimalScale={useDecimals}
+      decimalScale={decimalScale}
+      fixedDecimalScale={decimalScale > 0}
       prefix={formatConfig.currencySymbol + ' '}
-      allowNegative={min === undefined || min < 0}
+      allowNegative={allowNegativeProp ?? (min === undefined || min < 0)}
       // Props del input
       id={id}
       name={name}
       disabled={disabled}
-      placeholder={placeholder || `${formatConfig.currencySymbol} 0`}
-      onFocus={onFocus}
-      onBlur={onBlur}
-      onDoubleClick={handleDoubleClick}
+      placeholder={placeholder || ''}
+      onFocus={handleFocus}
+      onBlur={handleBlur}
+      onDoubleClick={(e) => e.currentTarget.select()}
       className={cn(
-        'file:text-foreground placeholder:text-muted-foreground  selection:text-primary-foreground border-input flex h-9 w-full min-w-0 rounded-md border bg-transparent px-3 py-1 text-base  transition-[color,box-shadow] outline-none file:inline-flex file:h-7 file:border-0 file:bg-transparent file:text-sm file:font-medium disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 md:text-sm',
+        'file:text-foreground placeholder:text-muted-foreground selection:text-primary-foreground border-input flex h-9 w-full min-w-0 rounded-md border bg-transparent px-3 py-1 text-base transition-[color,box-shadow] outline-none file:inline-flex file:h-7 file:border-0 file:bg-transparent file:text-sm file:font-medium disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 md:text-sm',
         'focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px]',
         'tabular-nums',
         className
