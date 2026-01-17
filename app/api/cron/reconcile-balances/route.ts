@@ -25,6 +25,7 @@ import { prisma } from '@/lib/db'
 import { calculateProjectBalance } from '@/lib/business-logic/project-balance'
 import { Decimal } from '@prisma/client/runtime/library'
 import { withLogging } from '@/lib/logger-middleware'
+import { FINANCIAL } from '@/lib/constants/financial-constants'
 
 interface ReconciliationResult {
   totalProjects: number
@@ -107,8 +108,8 @@ export const GET = withLogging(async (request, logger) => {
         const dbBalance = Number(project.balance)
         const difference = Math.abs(dbBalance - calculatedBalance)
 
-        // Tolerancia de 0.01 por redondeos decimales
-        if (difference >= 0.01) {
+        // Tolerancia por redondeos decimales
+        if (difference >= FINANCIAL.TOLERANCE) {
           result.inconsistentProjects++
 
           logger.warn(

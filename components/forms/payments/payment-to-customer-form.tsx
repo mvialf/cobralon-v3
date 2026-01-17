@@ -12,6 +12,7 @@ import {
   parseProjectsWithBalance,
 } from '@/lib/validations/payment-validations'
 import { calculateFIFO } from '@/lib/business-logic/payment-fifo'
+import { FINANCIAL } from '@/lib/constants/financial-constants'
 import { formatCurrency } from '@/lib/format'
 import { cn } from '@/lib/utils'
 
@@ -278,7 +279,7 @@ export function PaymentToCustomerForm({
     return sum + amount
   }, 0)
   const difference = watchedAmount - totalAllocated
-  const isValidSum = Math.abs(difference) < 0.01
+  const isValidSum = Math.abs(difference) < FINANCIAL.TOLERANCE
 
   // Submit handler
   const handleSubmit = (values: PaymentToCustomerFormValues) => {
@@ -296,7 +297,7 @@ export function PaymentToCustomerForm({
     // 3. Validar suma (con las allocations filtradas)
     const totalAllocatedSubmit = allocationsWithValue.reduce((sum, a) => sum + a.allocatedAmount, 0)
     const differenceSubmit = watchedAmount - totalAllocatedSubmit
-    if (Math.abs(differenceSubmit) >= 0.01) {
+    if (Math.abs(differenceSubmit) >= FINANCIAL.TOLERANCE) {
       form.setError('allocations', {
         message: 'La suma de allocations debe ser igual al monto total',
       })

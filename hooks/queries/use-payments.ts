@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { createApiError, handleMutationError } from '@/lib/errors'
+import { FINANCIAL } from '@/lib/constants/financial-constants'
 import type { Payment, CreatePaymentPayload } from '@/lib/validations/payment-validations'
 
 /**
@@ -313,12 +314,12 @@ export function useCreatePayment() {
       }
 
       // ========================================================================
-      // VALIDACIÓN 2: Sum de allocations === amount (tolerancia 0.01)
+      // VALIDACIÓN 2: Sum de allocations === amount (tolerancia FINANCIAL.TOLERANCE)
       // ========================================================================
       const totalAllocated = data.allocations.reduce((sum, a) => sum + a.allocatedAmount, 0)
       const difference = Math.abs(totalAllocated - data.amount)
 
-      if (difference > 0.01) {
+      if (difference > FINANCIAL.TOLERANCE) {
         throw new Error(
           `Las asignaciones ($${totalAllocated.toFixed(2)}) no suman el monto total ($${data.amount.toFixed(2)})`
         )
