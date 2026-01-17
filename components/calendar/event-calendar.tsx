@@ -3,6 +3,7 @@
 import { useState, useEffect, forwardRef, useImperativeHandle } from 'react'
 import {
   DndContext,
+  DragStartEvent,
   DragEndEvent,
   DragOverlay,
   PointerSensor,
@@ -33,6 +34,8 @@ import { getVisibleDateRange, navigateDate } from '@/lib/utils/calendar-utils'
 import type { CalendarEvent, CalendarEventType } from '@/lib/types/calendar'
 import { Skeleton } from '@/components/ui/skeleton'
 import { EVENT_TYPE_REGISTRY, getEventDialog } from '@/lib/config/event-types-config'
+import { DynamicEventCardPreview } from './dynamic-event-card'
+import { DynamicEventDialog } from './dynamic-event-dialog'
 
 // Helper para convertir Date a string yyyy-MM-dd sin problemas de timezone
 // Usa métodos locales (getFullYear, getMonth, getDate) que respetan la zona horaria local
@@ -181,7 +184,7 @@ export const EventCalendar = forwardRef<EventCalendarHandle>(function EventCalen
   }
 
   // Handlers de drag & drop
-  const handleDragStart = (event: any) => {
+  const handleDragStart = (event: DragStartEvent) => {
     const draggedEvent = event.active.data.current?.calendarEvent as CalendarEvent | undefined
     if (draggedEvent) {
       setActiveEvent(draggedEvent)
@@ -340,16 +343,11 @@ export const EventCalendar = forwardRef<EventCalendarHandle>(function EventCalen
 
         {/* DragOverlay para mostrar el evento siendo arrastrado */}
         <DragOverlay>
-          {activeEvent &&
-            (() => {
-              // Renderizar card dinámicamente según el tipo
-              const EventCard = EVENT_TYPE_REGISTRY[activeEvent.type].Card
-              return (
-                <div className="opacity-80">
-                  <EventCard event={activeEvent.data as any} />
-                </div>
-              )
-            })()}
+          {activeEvent && (
+            <div className="opacity-80">
+              <DynamicEventCardPreview event={activeEvent} />
+            </div>
+          )}
         </DragOverlay>
       </div>
 
@@ -377,18 +375,14 @@ export const EventCalendar = forwardRef<EventCalendarHandle>(function EventCalen
         })()}
 
       {/* Dialog de edición - Dinámico según tipo de evento */}
-      {selectedEvent &&
-        (() => {
-          const EventDialog = getEventDialog(selectedEvent.type)
-          return (
-            <EventDialog
-              mode="edit"
-              event={selectedEvent.data as any}
-              open={editDialogOpen}
-              onOpenChange={setEditDialogOpen}
-            />
-          )
-        })()}
+      {selectedEvent && (
+        <DynamicEventDialog
+          event={selectedEvent}
+          mode="edit"
+          open={editDialogOpen}
+          onOpenChange={setEditDialogOpen}
+        />
+      )}
 
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent>

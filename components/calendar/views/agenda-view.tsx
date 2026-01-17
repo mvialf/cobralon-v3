@@ -5,7 +5,7 @@ import { es } from 'date-fns/locale'
 import { Calendar } from 'lucide-react'
 import { Card } from '@/components/ui/card'
 import type { CalendarEvent } from '@/lib/types/calendar'
-import { EVENT_TYPE_REGISTRY } from '@/lib/config/event-types-config'
+import { DynamicEventCard } from '../dynamic-event-card'
 
 interface AgendaViewProps {
   currentDate: Date
@@ -81,20 +81,15 @@ export function AgendaView({ events, onEditEvent, onDeleteEvent }: AgendaViewPro
 
               {/* Lista de eventos del día */}
               <div className="space-y-2 pl-6">
-                {dayEvents.map((event) => {
-                  // Renderizar card dinámicamente según el tipo
-                  const EventCard = EVENT_TYPE_REGISTRY[event.type].Card
-
-                  return (
-                    <Card key={event.data.id} className="p-3">
-                      <EventCard
-                        event={event.data as any}
-                        onEdit={() => onEditEvent?.(event)}
-                        onDelete={() => onDeleteEvent?.(event)}
-                      />
-                    </Card>
-                  )
-                })}
+                {dayEvents.map((event) => (
+                  <Card key={event.data.id} className="p-3">
+                    <DynamicEventCard
+                      event={event}
+                      onEdit={() => onEditEvent?.(event)}
+                      onDelete={() => onDeleteEvent?.(event)}
+                    />
+                  </Card>
+                ))}
               </div>
             </div>
           )
