@@ -201,6 +201,7 @@ npx shadcn@latest add [component-name]
 
 ### Convenciones
 
+- **Prohibido el uso de `any`**: Utilizar interfaces, tipos específicos o `unknown` para mantener la integridad del sistema de tipos y evitar advertencias de ESLint.
 - Layouts son client components (`"use client"`)
 - Iconos desde `lucide-react`
 - Path imports con alias `@/`
