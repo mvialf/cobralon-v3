@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { withLogging } from '@/lib/logger-middleware'
 import { updateProjectEventSchema } from '@/lib/validations/calendar-validations'
+import { Prisma } from '@prisma/client'
+import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library'
 import { z } from 'zod'
 
 /**
@@ -77,7 +79,7 @@ export const PATCH = withLogging(async (request, logger, context) => {
       scheduledDate,
     })
   } catch (error) {
-    if ((error as any).code === 'P2025') {
+    if (error instanceof PrismaClientKnownRequestError && error.code === 'P2025') {
       logger.warn({ eventId: id }, 'Project event not found')
       return NextResponse.json({ error: 'Evento no encontrado' }, { status: 404 })
     }
@@ -114,7 +116,7 @@ export const PUT = withLogging(async (request, logger, context) => {
     const { scheduledDate, teamTagIds, tasks } = validationResult.data
 
     // Construir data para update
-    const eventData: Record<string, any> = {}
+    const eventData: Prisma.ProjectEventUpdateInput = {}
     if (scheduledDate !== undefined) eventData.scheduledDate = scheduledDate
     if (tasks !== undefined) eventData.tasks = tasks
 
@@ -148,7 +150,7 @@ export const PUT = withLogging(async (request, logger, context) => {
 
     return NextResponse.json(serializeProjectEvent(event))
   } catch (error) {
-    if ((error as any).code === 'P2025') {
+    if (error instanceof PrismaClientKnownRequestError && error.code === 'P2025') {
       logger.warn({ eventId: id }, 'Project event not found')
       return NextResponse.json({ error: 'Evento no encontrado' }, { status: 404 })
     }
@@ -178,7 +180,7 @@ export const DELETE = withLogging(async (request, logger, context) => {
 
     return NextResponse.json({ message: 'Evento eliminado exitosamente' })
   } catch (error) {
-    if ((error as any).code === 'P2025') {
+    if (error instanceof PrismaClientKnownRequestError && error.code === 'P2025') {
       logger.warn({ eventId: id }, 'Project event not found')
       return NextResponse.json({ error: 'Evento no encontrado' }, { status: 404 })
     }

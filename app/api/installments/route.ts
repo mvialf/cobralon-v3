@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
+import { Prisma } from '@prisma/client'
 
 /**
  * GET /api/installments
@@ -33,7 +34,7 @@ export async function GET(request: Request) {
     const skip = (page - 1) * limit
 
     // Construir filtro dinámico
-    const where: any = {}
+    const where: Prisma.InstallmentWhereInput = {}
 
     if (status) {
       where.status = status

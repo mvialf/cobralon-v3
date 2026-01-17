@@ -5,6 +5,7 @@ import {
   generateAbbreviation,
 } from '@/lib/validations/uninstall-tag-validations'
 import { z } from 'zod'
+import { Prisma } from '@prisma/client'
 
 /**
  * GET /api/uninstall-tags
@@ -39,7 +40,7 @@ export async function GET(request: Request) {
     const includeColor = searchParams.get('includeColor') !== 'false' // default true
 
     // Build query options
-    const queryOptions: any = {
+    const queryOptions: Prisma.UninstallTagFindManyArgs = {
       where: includeInactive ? undefined : { isActive: true },
       orderBy: { order: 'asc' },
     }

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { updateVisitEventSchema } from '@/lib/validations/calendar-validations'
+import { Prisma } from '@prisma/client'
 
 /**
  * GET /api/visit-events/[id]
@@ -90,7 +91,7 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
     }
 
     // Construir data para update
-    const updateData: Record<string, any> = {
+    const updateData: Prisma.VisitEventUpdateInput = {
       scheduledDate: data.scheduledDate,
       notes: data.notes,
     }
