@@ -142,3 +142,15 @@ export interface CalendarQueryParams {
   start: Date
   end: Date
 }
+
+// ============================================================================
+// REACT QUERY TYPES (para optimistic updates)
+// ============================================================================
+
+/**
+ * Estructura de datos retornada por calendar-events queries
+ * Usado para tipar getQueriesData y setQueriesData
+ */
+export interface CalendarEventsQueryData {
+  events: CalendarEvent[]
+}
