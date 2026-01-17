@@ -59,7 +59,7 @@ async function populateBalances(): Promise<Stats> {
     for (const project of projects) {
       try {
         // Calcular balance
-        const { totalPaid, balance } = calculateProjectBalance({
+        const { balance } = calculateProjectBalance({
           totalAmount: Number(project.total),
           allocations: project.paymentAllocations.map((alloc) => ({
             allocatedAmount: Number(alloc.allocatedAmount),

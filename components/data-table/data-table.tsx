@@ -23,6 +23,9 @@ import {
 // Extender ColumnMeta para incluir clases CSS personalizadas
 // y registrar funciones de filtrado personalizadas
 declare module '@tanstack/react-table' {
+  // Los genéricos TData y TValue son requeridos para module augmentation
+  // pero no se usan en esta extensión particular
+  // eslint-disable-next-line unused-imports/no-unused-vars
   interface ColumnMeta<TData extends RowData, TValue> {
     headerClassName?: string
     cellClassName?: string

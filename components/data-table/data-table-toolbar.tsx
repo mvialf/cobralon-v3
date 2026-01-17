@@ -54,7 +54,7 @@ export function DataTableToolbar<TData>({
   enableGlobalFilter = false,
   filterableColumns = [],
   onSearchChange,
-  manualFiltering = false,
+  manualFiltering: _manualFiltering = false,
   serverFacets,
 }: DataTableToolbarProps<TData>) {
   const isFiltered = table.getState().columnFilters.length > 0 || !!table.getState().globalFilter
