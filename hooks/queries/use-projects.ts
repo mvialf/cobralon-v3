@@ -502,3 +502,58 @@ export function useUpdateProjectStatus() {
     },
   })
 }
+
+/**
+ * Hook especializado para actualizar solo la fecha de un proyecto
+ * Usado por EditableDate en DataTable
+ */
+export function useUpdateProjectDate() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async ({
+      projectId,
+      date,
+    }: {
+      projectId: string
+      date: Date | string
+    }): Promise<Project> => {
+      const response = await fetch(`/api/projects/${projectId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ date }),
+      })
+
+      if (!response.ok) {
+        throw await createApiError(response, 'Error al actualizar fecha')
+      }
+
+      return response.json()
+    },
+    onSuccess: (updatedProject) => {
+      // Invalidar queries con predicate (batch invalidation eficiente)
+      queryClient.invalidateQueries({
+        predicate: (query) => {
+          const key = query.queryKey[0]
+
+          // Invalidar todas las queries de projects
+          if (key === 'projects') return true
+
+          // Invalidar projects-with-metadata
+          if (key === 'projects-with-metadata') return true
+
+          // Invalidar el proyecto específico
+          if (key === 'projects' && query.queryKey[1] === updatedProject.id) return true
+
+          return false
+        },
+      })
+
+      toast.success('Fecha actualizada exitosamente')
+    },
+    onError: (error) => {
+      handleMutationError(error)
+      console.error('Error updating project date:', error)
+    },
+  })
+}
