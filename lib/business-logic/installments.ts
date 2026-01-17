@@ -185,3 +185,72 @@ export function getTotalPendingInstallments(
     .filter((inst) => inst.status === 'pending')
     .reduce((sum, inst) => sum + inst.amount, 0)
 }
+
+/**
+ * Type para datos de cuota en formato Prisma create
+ */
+export interface PrismaInstallmentData {
+  installmentNumber: number
+  amount: { d: number[]; e: number; s: number } | number // Decimal-compatible
+  dueDate: Date
+  status: string
+}
+
+/**
+ * Genera datos de cuotas en formato para Prisma create nested
+ *
+ * Wrapper de `calculateInstallments()` que devuelve el formato
+ * requerido por Prisma para crear installments como nested write.
+ *
+ * @param amount - Monto total a dividir
+ * @param selectedInstallments - Número de cuotas (1-12)
+ * @param paymentDate - Fecha base para calcular vencimientos
+ * @param DecimalClass - Clase Decimal de Prisma (para evitar import circular)
+ * @returns Objeto para usar en `installments: { create: ... }` o undefined si <= 1 cuota
+ *
+ * @example
+ * ```ts
+ * import { Decimal } from '@prisma/client/runtime/library'
+ *
+ * const installmentsData = generatePrismaInstallmentsCreate(1000, 3, new Date(), Decimal)
+ * // Retorna: { create: [...] } o undefined
+ *
+ * await prisma.payment.create({
+ *   data: {
+ *     ...paymentData,
+ *     installments: installmentsData, // undefined si no hay cuotas
+ *   }
+ * })
+ * ```
+ */
+export function generatePrismaInstallmentsCreate<T extends new (value: number | string) => unknown>(
+  amount: number,
+  selectedInstallments: number | null | undefined,
+  paymentDate: Date,
+  DecimalClass: T
+):
+  | {
+      create: Array<{
+        installmentNumber: number
+        amount: InstanceType<T>
+        dueDate: Date
+        status: string
+      }>
+    }
+  | undefined {
+  // Sin cuotas o solo 1 cuota: no crear installments
+  if (!selectedInstallments || selectedInstallments <= 1) {
+    return undefined
+  }
+
+  const installments = calculateInstallments(amount, selectedInstallments, paymentDate)
+
+  return {
+    create: installments.map((inst) => ({
+      installmentNumber: inst.installmentNumber,
+      amount: new DecimalClass(inst.amount) as InstanceType<T>,
+      dueDate: inst.dueDate,
+      status: 'pending',
+    })),
+  }
+}

@@ -6,6 +6,8 @@ import { AllocationInput, PaymentWhereInput } from '@/types/api'
 import { withLogging } from '@/lib/logger-middleware'
 import { updateMultipleProjectBalances } from '@/lib/business-logic/update-project-balance'
 import { canApplyCredit } from '@/lib/business-logic/credit-management'
+import { generatePrismaInstallmentsCreate } from '@/lib/business-logic/installments'
+import { FINANCIAL } from '@/lib/constants/financial-constants'
 
 /**
  * GET /api/payments
@@ -459,7 +461,7 @@ export const POST = withLogging(async (request, logger) => {
       0
     )
     const diff = Math.abs(totalAllocated - amount)
-    if (diff >= 0.01) {
+    if (diff >= FINANCIAL.TOLERANCE) {
       paymentLogger.warn(
         { expected: amount, actual: totalAllocated, diff },
         'Allocation sum mismatch'
@@ -576,30 +578,12 @@ export const POST = withLogging(async (request, logger) => {
                 allocatedAmount: new Decimal(a.allocatedAmount),
               })),
             },
-            installments:
-              selectedInstallments && selectedInstallments > 1
-                ? {
-                    create: Array.from({ length: selectedInstallments }, (_, i) => {
-                      const installmentNumber = i + 1
-                      const isLastInstallment = installmentNumber === selectedInstallments
-                      const baseInstallmentAmount =
-                        Math.floor((amount / selectedInstallments) * 100) / 100
-                      const totalBase = baseInstallmentAmount * (selectedInstallments - 1)
-                      const lastInstallmentAmount = amount - totalBase
-                      const dueDate = new Date(paymentDate)
-                      dueDate.setDate(dueDate.getDate() + (installmentNumber - 1) * 30)
-
-                      return {
-                        installmentNumber,
-                        amount: new Decimal(
-                          isLastInstallment ? lastInstallmentAmount : baseInstallmentAmount
-                        ),
-                        dueDate,
-                        status: 'pending',
-                      }
-                    }),
-                  }
-                : undefined,
+            installments: generatePrismaInstallmentsCreate(
+              amount,
+              selectedInstallments,
+              paymentDate,
+              Decimal
+            ),
           },
           include: {
             customer: { select: { id: true, name: true, phone: true } },
@@ -688,30 +672,12 @@ export const POST = withLogging(async (request, logger) => {
               allocatedAmount: new Decimal(a.allocatedAmount),
             })),
           },
-          installments:
-            selectedInstallments && selectedInstallments > 1
-              ? {
-                  create: Array.from({ length: selectedInstallments }, (_, i) => {
-                    const installmentNumber = i + 1
-                    const isLastInstallment = installmentNumber === selectedInstallments
-                    const baseInstallmentAmount =
-                      Math.floor((amount / selectedInstallments) * 100) / 100
-                    const totalBase = baseInstallmentAmount * (selectedInstallments - 1)
-                    const lastInstallmentAmount = amount - totalBase
-                    const dueDate = new Date(paymentDate)
-                    dueDate.setDate(dueDate.getDate() + (installmentNumber - 1) * 30)
-
-                    return {
-                      installmentNumber,
-                      amount: new Decimal(
-                        isLastInstallment ? lastInstallmentAmount : baseInstallmentAmount
-                      ),
-                      dueDate,
-                      status: 'pending',
-                    }
-                  }),
-                }
-              : undefined,
+          installments: generatePrismaInstallmentsCreate(
+            amount,
+            selectedInstallments,
+            paymentDate,
+            Decimal
+          ),
         },
         include: {
           customer: {
