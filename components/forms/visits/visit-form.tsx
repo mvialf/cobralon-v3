@@ -238,11 +238,7 @@ export const VisitForm = React.forwardRef<VisitFormHandle, VisitFormProps>(
                 <FormItem className="max-w-[200px]">
                   <FormLabel>Hora Agendada</FormLabel>
                   <FormControl>
-                    <Input
-                      type="time"
-                      {...field}
-                      value={field.value || ''}
-                    />
+                    <Input type="time" {...field} value={field.value || ''} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
