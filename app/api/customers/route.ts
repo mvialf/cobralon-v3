@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { withLogging } from '@/lib/logger-middleware'
-import { anyFieldMatchesSearch } from '@/lib/utils/normalize'
 
 /**
  * GET /api/customers
@@ -29,23 +28,30 @@ export const GET = withLogging(async (request, logger) => {
   )
 
   try {
-    // Obtener todos los clientes (sin paginación inicial)
-    const allCustomers = await prisma.customer.findMany({
-      orderBy: { createdAt: 'desc' },
-    })
-
-    // Filtrar con búsqueda normalizada (ignora acentos/tildes)
-    // "jose" encontrará "José", "garcia" encontrará "García"
-    const filteredCustomers = search
-      ? allCustomers.filter((customer) =>
-          anyFieldMatchesSearch([customer.name, customer.email, customer.phone], search)
-        )
-      : allCustomers
-
-    // Aplicar paginación manualmente
-    const total = filteredCustomers.length
     const skip = (page - 1) * limit
-    const customers = filteredCustomers.slice(skip, skip + limit)
+
+    // Construir condición WHERE para búsqueda SQL
+    // Usa `mode: insensitive` para búsqueda case-insensitive en PostgreSQL
+    const whereCondition = search
+      ? {
+          OR: [
+            { name: { contains: search, mode: 'insensitive' as const } },
+            { email: { contains: search, mode: 'insensitive' as const } },
+            { phone: { contains: search, mode: 'insensitive' as const } },
+          ],
+        }
+      : {}
+
+    // Ejecutar queries en paralelo: total y datos paginados
+    const [total, customers] = await Promise.all([
+      prisma.customer.count({ where: whereCondition }),
+      prisma.customer.findMany({
+        where: whereCondition,
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take: limit,
+      }),
+    ])
 
     logger.info(
       {
