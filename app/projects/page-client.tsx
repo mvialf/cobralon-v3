@@ -23,6 +23,7 @@ import { createColumns } from './columns'
 import {
   useProjects,
   useUpdateProjectStatus,
+  useUpdateProjectDate,
   type ProjectsQueryParams,
 } from '@/hooks/queries/use-projects'
 import { useDebounce } from '@/hooks/use-debounce'
@@ -120,8 +121,9 @@ export function ProjectsPageClient() {
   // NOTA: También pre-cargado por HydrationBoundary
   const { data: statuses = [] } = useProjectStatuses()
 
-  // Mutation hook para actualizar estado de proyecto
+  // Mutation hooks para actualizar datos de proyecto
   const updateStatusMutation = useUpdateProjectStatus()
+  const updateDateMutation = useUpdateProjectDate()
 
   // Extraer data del hook (con fallbacks)
   const projects = data?.projects || []
@@ -154,9 +156,13 @@ export function ProjectsPageClient() {
     }
   }, [data, isPlaceholderData, queryClient, queryParams])
 
-  // Mutation hook maneja loading state, errores y auto-invalidación
+  // Handlers para cambios inline
   const handleStatusChange = async (projectId: string, newStatusId: string) => {
     await updateStatusMutation.mutateAsync({ projectId, statusId: newStatusId })
+  }
+
+  const handleDateChange = async (projectId: string, newDate: Date) => {
+    await updateDateMutation.mutateAsync({ projectId, date: newDate.toISOString() })
   }
 
   const handleSearchChange = (search: string) => {
@@ -175,6 +181,9 @@ export function ProjectsPageClient() {
     })),
     updatingProjectId: updateStatusMutation.isPending
       ? updateStatusMutation.variables?.projectId
+      : null,
+    updatingDateProjectId: updateDateMutation.isPending
+      ? updateDateMutation.variables?.projectId
       : null,
     onDataChanged: () => queryClient.invalidateQueries({ queryKey: ['projects'] }),
   })
@@ -275,6 +284,7 @@ export function ProjectsPageClient() {
             ]}
             meta={{
               handleStatusChange,
+              handleDateChange,
             }}
           />
         )}
