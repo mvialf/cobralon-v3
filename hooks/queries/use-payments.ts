@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { createApiError, handleMutationError } from '@/lib/errors'
-import { FINANCIAL } from '@/lib/constants/financial-constants'
+import { validatePaymentAllocations } from '@/lib/validations/payment-business-rules'
 import type { Payment, CreatePaymentPayload } from '@/lib/validations/payment-validations'
 
 /**
@@ -303,45 +303,24 @@ export function useCreatePayment() {
   return useMutation({
     mutationFn: async (data: CreatePaymentPayload): Promise<Payment> => {
       // ========================================================================
-      // VALIDACIÓN 1: Type vs allocations count
+      // VALIDACIONES DE NEGOCIO (centralizadas en payment-business-rules.ts)
       // ========================================================================
-      if (data.type === 'Project' && data.allocations.length !== 1) {
-        throw new Error('Pago tipo Project debe tener exactamente 1 asignación')
-      }
-
-      if (data.type === 'Customer' && data.allocations.length < 1) {
-        throw new Error('Pago tipo Customer debe tener al menos 1 asignación')
-      }
-
-      // ========================================================================
-      // VALIDACIÓN 2: Sum de allocations === amount (tolerancia FINANCIAL.TOLERANCE)
-      // ========================================================================
-      const totalAllocated = data.allocations.reduce((sum, a) => sum + a.allocatedAmount, 0)
-      const difference = Math.abs(totalAllocated - data.amount)
-
-      if (difference > FINANCIAL.TOLERANCE) {
-        throw new Error(
-          `Las asignaciones ($${totalAllocated.toFixed(2)}) no suman el monto total ($${data.amount.toFixed(2)})`
-        )
+      // Ejecuta todas las validaciones puras que no requieren acceso a DB:
+      // 1. Type vs allocations count
+      // 2. Sum de allocations === amount
+      // 3. No projectIds duplicados
+      // 4. Todos los montos positivos
+      const validation = validatePaymentAllocations(data.type, data.amount, data.allocations)
+      if (!validation.valid) {
+        throw new Error(validation.error)
       }
 
       // ========================================================================
-      // VALIDACIÓN 3: No projectIds duplicados
+      // VALIDACIONES DE BACKEND (requieren acceso a DB)
       // ========================================================================
-      const projectIds = data.allocations.map((a) => a.projectId)
-      const uniqueIds = new Set(projectIds)
-
-      if (projectIds.length !== uniqueIds.size) {
-        throw new Error('No puede asignar el mismo proyecto múltiples veces')
-      }
-
-      // ========================================================================
-      // VALIDACIONES 4-5: customerId y currency coherentes
-      // ========================================================================
-      // Estas se validan en el backend porque requieren fetch de proyectos
-      // El backend retornará 400 si:
-      // - Los projects no pertenecen al mismo customerId
-      // - Los projects no tienen la misma currency
+      // Estas se validan en el backend porque requieren fetch de proyectos:
+      // - Los projects pertenecen al mismo customerId
+      // - Los projects tienen la misma currency
 
       // ========================================================================
       // FETCH: POST /api/payments

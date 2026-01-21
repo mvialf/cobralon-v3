@@ -20,8 +20,20 @@ import { calculateProjectBalance } from './project-balance'
 import { Decimal } from '@prisma/client/runtime/library'
 import { PrismaClient } from '@prisma/client'
 
-// Type para transacción de Prisma
-type PrismaTransaction = Omit<
+/**
+ * Type para transacción de Prisma
+ *
+ * Este tipo representa el cliente de Prisma disponible dentro de una transacción.
+ * Excluye métodos que no están disponibles en transacciones.
+ *
+ * @example
+ * ```ts
+ * await prisma.$transaction(async (tx: PrismaTransaction) => {
+ *   await updateProjectBalance(projectId, tx)
+ * })
+ * ```
+ */
+export type PrismaTransaction = Omit<
   PrismaClient,
   '$connect' | '$disconnect' | '$on' | '$transaction' | '$use' | '$extends'
 >
@@ -30,21 +42,34 @@ type PrismaTransaction = Omit<
  * Actualiza el balance de un proyecto en la DB basándose en sus allocations
  *
  * @param projectId - ID del proyecto a actualizar
+ * @param tx - Transacción de Prisma (opcional, usa prisma global si no se proporciona)
  * @returns Balance actualizado
  *
  * @example
- * // Después de crear un pago
+ * // Después de crear un pago (sin transacción)
  * const payment = await prisma.payment.create({ ... })
  * await updateProjectBalance(payment.projectId)
+ *
+ * @example
+ * // Dentro de una transacción (recomendado para atomicidad)
+ * await prisma.$transaction(async (tx) => {
+ *   await tx.payment.create({ ... })
+ *   await updateProjectBalance(projectId, tx)
+ * })
  *
  * @example
  * // Después de eliminar un pago
  * await prisma.payment.delete({ where: { id } })
  * await updateProjectBalance(projectId)
  */
-export async function updateProjectBalance(projectId: string): Promise<number> {
+export async function updateProjectBalance(
+  projectId: string,
+  tx?: PrismaTransaction
+): Promise<number> {
+  const db = tx || prisma
+
   // Fetch project con allocations
-  const project = await prisma.project.findUnique({
+  const project = await db.project.findUnique({
     where: { id: projectId },
     select: {
       id: true,
@@ -70,7 +95,7 @@ export async function updateProjectBalance(projectId: string): Promise<number> {
   })
 
   // Actualizar en DB
-  await prisma.project.update({
+  await db.project.update({
     where: { id: projectId },
     data: {
       balance: new Decimal(balance),
@@ -84,20 +109,31 @@ export async function updateProjectBalance(projectId: string): Promise<number> {
  * Actualiza el balance de múltiples proyectos en batch
  *
  * @param projectIds - Array de IDs de proyectos
+ * @param tx - Transacción de Prisma (opcional, usa prisma global si no se proporciona)
  * @returns Número de proyectos actualizados
  *
  * @example
- * // Útil en jobs de reconciliación
+ * // Útil en jobs de reconciliación (sin transacción)
  * const projectIds = ['id1', 'id2', 'id3']
  * const updated = await updateMultipleProjectBalances(projectIds)
  * console.log(`${updated} proyectos actualizados`)
+ *
+ * @example
+ * // Dentro de una transacción (recomendado para atomicidad)
+ * await prisma.$transaction(async (tx) => {
+ *   await tx.payment.create({ ... })
+ *   await updateMultipleProjectBalances(projectIds, tx)
+ * })
  */
-export async function updateMultipleProjectBalances(projectIds: string[]): Promise<number> {
+export async function updateMultipleProjectBalances(
+  projectIds: string[],
+  tx?: PrismaTransaction
+): Promise<number> {
   let updated = 0
 
   for (const projectId of projectIds) {
     try {
-      await updateProjectBalance(projectId)
+      await updateProjectBalance(projectId, tx)
       updated++
     } catch (error) {
       console.error(`Error updating project ${projectId}:`, error)
