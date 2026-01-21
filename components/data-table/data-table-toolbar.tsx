@@ -90,8 +90,19 @@ export function DataTableToolbar<TData>({
                     : ((table.getColumn(searchKey)?.getFilterValue() as string) ?? '')
               }
               onChange={(event) => handleSearchChange(event.target.value)}
-              className="pl-8 w-[150px] lg:w-[250px]"
+              className="pl-8 pr-8 w-[150px] lg:w-[250px]"
             />
+            {/* Botón para limpiar búsqueda */}
+            {(onSearchChange ? searchValue : enableGlobalFilter ? table.getState().globalFilter : table.getColumn(searchKey)?.getFilterValue()) && (
+              <button
+                type="button"
+                onClick={() => handleSearchChange('')}
+                className="absolute right-2 top-2.5 h-4 w-4 text-muted-foreground hover:text-foreground transition-colors"
+                aria-label="Limpiar búsqueda"
+              >
+                <Cross2Icon className="h-4 w-4" />
+              </button>
+            )}
           </div>
         )}
         {filterableColumns.map((column) => {

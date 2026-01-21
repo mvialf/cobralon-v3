@@ -1,7 +1,7 @@
 'use client'
 
 import * as React from 'react'
-import { CheckIcon, PlusCircledIcon } from '@radix-ui/react-icons'
+import { CheckIcon, Cross2Icon, PlusCircledIcon } from '@radix-ui/react-icons'
 import { Column } from '@tanstack/react-table'
 
 import { cn } from '@/lib/utils'
@@ -64,6 +64,23 @@ export function DataTableFacetedFilter<TData, TValue>({
   // Para client-side: usar el estado interno de TanStack Table
   const selectedValues = new Set(controlledSelectedValues ?? (column?.getFilterValue() as string[]))
 
+  // Handler para remover un valor específico del filtro
+  const handleRemoveFilter = (valueToRemove: string, e: React.MouseEvent) => {
+    e.stopPropagation() // Evitar que se abra el popover
+    const newValues = new Set(selectedValues)
+    newValues.delete(valueToRemove)
+    const filterValues = Array.from(newValues)
+    column?.setFilterValue(filterValues.length ? filterValues : undefined)
+    onFilterChange?.(filterValues)
+  }
+
+  // Handler para limpiar todos los filtros
+  const handleClearAllFilters = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    column?.setFilterValue(undefined)
+    onFilterChange?.([])
+  }
+
   return (
     <Popover>
       <PopoverTrigger asChild>
@@ -78,8 +95,21 @@ export function DataTableFacetedFilter<TData, TValue>({
               </Badge>
               <div className="hidden space-x-1 lg:flex">
                 {selectedValues.size > 2 ? (
-                  <Badge variant="secondary" className="rounded-sm px-1 font-normal">
+                  <Badge
+                    variant="secondary"
+                    className="rounded-sm px-1 font-normal flex items-center gap-1"
+                  >
                     {selectedValues.size} seleccionados
+                    <span
+                      role="button"
+                      tabIndex={0}
+                      onClick={handleClearAllFilters}
+                      onKeyDown={(e) => e.key === 'Enter' && handleClearAllFilters(e as unknown as React.MouseEvent)}
+                      className="ml-0.5 rounded-full hover:bg-muted-foreground/20 p-0.5 cursor-pointer"
+                      aria-label="Limpiar todos los filtros"
+                    >
+                      <Cross2Icon className="h-3 w-3" />
+                    </span>
                   </Badge>
                 ) : (
                   options
@@ -88,9 +118,19 @@ export function DataTableFacetedFilter<TData, TValue>({
                       <Badge
                         variant="secondary"
                         key={option.value}
-                        className="rounded-sm px-1 font-normal"
+                        className="rounded-sm px-1 font-normal flex items-center gap-1"
                       >
                         {option.label}
+                        <span
+                          role="button"
+                          tabIndex={0}
+                          onClick={(e) => handleRemoveFilter(option.value, e)}
+                          onKeyDown={(e) => e.key === 'Enter' && handleRemoveFilter(option.value, e as unknown as React.MouseEvent)}
+                          className="ml-0.5 rounded-full hover:bg-muted-foreground/20 p-0.5 cursor-pointer"
+                          aria-label={`Quitar filtro ${option.label}`}
+                        >
+                          <Cross2Icon className="h-3 w-3" />
+                        </span>
                       </Badge>
                     ))
                 )}
