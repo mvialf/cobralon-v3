@@ -66,9 +66,9 @@ export async function queryProjectList(filters: ProjectListFilters): Promise<Pro
     LEFT JOIN "BadgeColor" bc ON ps."colorId" = bc.id
     WHERE 1=1
       ${filters.customerId ? Prisma.sql`AND p."customerId" = ${filters.customerId}` : Prisma.empty}
-      ${filters.actualStatusIds.length > 0 && !filters.filterByNullStatus ? Prisma.sql`AND p."projectStatusId" = ANY(${filters.actualStatusIds}::uuid[])` : Prisma.empty}
+      ${filters.actualStatusIds.length > 0 && !filters.filterByNullStatus ? Prisma.sql`AND p."projectStatusId"::text = ANY(${filters.actualStatusIds})` : Prisma.empty}
       ${filters.filterByNullStatus && filters.actualStatusIds.length === 0 ? Prisma.sql`AND p."projectStatusId" IS NULL` : Prisma.empty}
-      ${filters.filterByNullStatus && filters.actualStatusIds.length > 0 ? Prisma.sql`AND (p."projectStatusId" IS NULL OR p."projectStatusId" = ANY(${filters.actualStatusIds}::uuid[]))` : Prisma.empty}
+      ${filters.filterByNullStatus && filters.actualStatusIds.length > 0 ? Prisma.sql`AND (p."projectStatusId" IS NULL OR p."projectStatusId"::text = ANY(${filters.actualStatusIds}))` : Prisma.empty}
       ${filters.projectState === 'Finalizado' ? Prisma.sql`AND (p.balance = 0 AND ps."isFinal" = true)` : Prisma.empty}
       ${filters.projectState === 'Activo' ? Prisma.sql`AND (p.balance > 0 OR ps."isFinal" IS NOT TRUE)` : Prisma.empty}
       ${
@@ -100,9 +100,9 @@ export async function countProjects(filters: ProjectListFilters): Promise<number
     LEFT JOIN "ProjectStatus" ps ON p."projectStatusId" = ps.id
     WHERE 1=1
       ${filters.customerId ? Prisma.sql`AND p."customerId" = ${filters.customerId}` : Prisma.empty}
-      ${filters.actualStatusIds.length > 0 && !filters.filterByNullStatus ? Prisma.sql`AND p."projectStatusId" = ANY(${filters.actualStatusIds}::uuid[])` : Prisma.empty}
+      ${filters.actualStatusIds.length > 0 && !filters.filterByNullStatus ? Prisma.sql`AND p."projectStatusId"::text = ANY(${filters.actualStatusIds})` : Prisma.empty}
       ${filters.filterByNullStatus && filters.actualStatusIds.length === 0 ? Prisma.sql`AND p."projectStatusId" IS NULL` : Prisma.empty}
-      ${filters.filterByNullStatus && filters.actualStatusIds.length > 0 ? Prisma.sql`AND (p."projectStatusId" IS NULL OR p."projectStatusId" = ANY(${filters.actualStatusIds}::uuid[]))` : Prisma.empty}
+      ${filters.filterByNullStatus && filters.actualStatusIds.length > 0 ? Prisma.sql`AND (p."projectStatusId" IS NULL OR p."projectStatusId"::text = ANY(${filters.actualStatusIds}))` : Prisma.empty}
       ${filters.projectState === 'Finalizado' ? Prisma.sql`AND (p.balance = 0 AND ps."isFinal" = true)` : Prisma.empty}
       ${filters.projectState === 'Activo' ? Prisma.sql`AND (p.balance > 0 OR ps."isFinal" IS NOT TRUE)` : Prisma.empty}
       ${
@@ -180,9 +180,9 @@ export async function getStateFacets(
     LEFT JOIN "ProjectStatus" ps ON p."projectStatusId" = ps.id
     WHERE 1=1
       ${filters.customerId ? Prisma.sql`AND p."customerId" = ${filters.customerId}` : Prisma.empty}
-      ${filters.actualStatusIds.length > 0 && !filters.filterByNullStatus ? Prisma.sql`AND p."projectStatusId" = ANY(${filters.actualStatusIds}::uuid[])` : Prisma.empty}
+      ${filters.actualStatusIds.length > 0 && !filters.filterByNullStatus ? Prisma.sql`AND p."projectStatusId"::text = ANY(${filters.actualStatusIds})` : Prisma.empty}
       ${filters.filterByNullStatus && filters.actualStatusIds.length === 0 ? Prisma.sql`AND p."projectStatusId" IS NULL` : Prisma.empty}
-      ${filters.filterByNullStatus && filters.actualStatusIds.length > 0 ? Prisma.sql`AND (p."projectStatusId" IS NULL OR p."projectStatusId" = ANY(${filters.actualStatusIds}::uuid[]))` : Prisma.empty}
+      ${filters.filterByNullStatus && filters.actualStatusIds.length > 0 ? Prisma.sql`AND (p."projectStatusId" IS NULL OR p."projectStatusId"::text = ANY(${filters.actualStatusIds}))` : Prisma.empty}
       ${
         filters.search
           ? Prisma.sql`AND (

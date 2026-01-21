@@ -189,16 +189,11 @@ export function ProjectsPageClient() {
   })
 
   // Formatear opciones para el filtro de status
-  const statusFilterOptions = [
-    // Opción para "Sin estado"
-    { label: 'Sin estado', value: 'null' },
-    // Opciones de statuses disponibles con colores
-    ...(statuses || []).map((status: any) => ({
-      label: status.name,
-      value: status.id,
-      bgClass: status.color.bgClass,
-    })),
-  ]
+  const statusFilterOptions = (statuses || []).map((status: any) => ({
+    label: status.name,
+    value: status.id,
+    bgClass: status.color.bgClass,
+  }))
 
   // Opciones para el filtro de Estado del Proyecto (Activo/Finalizado)
   const projectStateFilterOptions = [
