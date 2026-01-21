@@ -12,6 +12,7 @@ import { Badge } from '@/components/ui/badge'
 import { DataTableColumnHeader } from '@/components/data-table'
 import { toast } from 'sonner'
 import { formatDate } from '@/lib/format'
+import { ProjectNameSummary } from '@/components/summarys/project-name-summary'
 
 export interface Installment {
   id: string
@@ -58,48 +59,42 @@ export const createColumns = ({
   locale = 'es-CL',
 }: ColumnsProps = {}): ColumnDef<Installment>[] => [
   {
-    accessorKey: 'dueDate',
-    header: ({ column }) => <DataTableColumnHeader column={column} title="Vencimiento" />,
-    cell: ({ row }) => {
-      const date = new Date(row.getValue('dueDate'))
-      const today = new Date()
-      today.setHours(0, 0, 0, 0)
-      const dueDate = new Date(date)
-      dueDate.setHours(0, 0, 0, 0)
-      const isOverdue = dueDate < today && row.original.status === 'pending'
-
-      return (
-        <div className={isOverdue ? 'text-red-600 font-medium' : ''}>
-          {formatDate(row.getValue('dueDate'), 'short', locale)}
-          {isOverdue && <div className="text-xs">Vencido</div>}
-        </div>
-      )
+    id: 'associated',
+    accessorFn: (row) => {
+      // Para sorting: usar nombre del cliente o proyecto
+      if (row.payment.allocations.length === 1) {
+        return row.payment.allocations[0].project.projectName || row.payment.allocations[0].project.projectNumber
+      }
+      return row.payment.customer.name
     },
-  },
-  {
-    accessorKey: 'payment.customer.name',
-    id: 'customerName',
-    header: ({ column }) => <DataTableColumnHeader column={column} title="Cliente" />,
-    cell: ({ row }) => <span className="font-medium">{row.original.payment.customer.name}</span>,
-  },
-  {
-    id: 'projects',
-    header: 'Proyectos',
+    header: ({ column }) => <DataTableColumnHeader column={column} title="Cliente/Proyecto" />,
     cell: ({ row }) => {
       const payment = row.original.payment
+
+      // 1 proyecto → ProjectNameSummary
+      if (payment.allocations.length === 1) {
+        const project = payment.allocations[0].project
+        return (
+          <ProjectNameSummary
+            projectId={project.id}
+            projectNumber={project.projectNumber}
+            customerName={payment.customer.name}
+            projectName={project.projectName}
+          />
+        )
+      }
+
+      // Múltiples proyectos → Cliente + lista de proyectos
       return (
         <div className="flex flex-col gap-1">
-          {payment.allocations.map((alloc) => (
-            <div key={alloc.id} className="text-sm">
-              <span className="font-medium">{alloc.project.projectNumber}</span>
-              {alloc.project.projectName && (
-                <span className="text-muted-foreground"> - {alloc.project.projectName}</span>
-              )}
-            </div>
-          ))}
+          <span className="font-medium">{payment.customer.name}</span>
+          <div className="text-xs text-muted-foreground">
+            {payment.allocations.map((alloc) => alloc.project.projectNumber).join(', ')}
+          </div>
         </div>
       )
     },
+    enableSorting: true,
   },
   {
     accessorKey: 'installmentNumber',
@@ -129,6 +124,25 @@ export const createColumns = ({
             minimumFractionDigits: 0,
             maximumFractionDigits: 0,
           }).format(amount)}
+        </div>
+      )
+    },
+  },
+  {
+    accessorKey: 'dueDate',
+    header: ({ column }) => <DataTableColumnHeader column={column} title="Vencimiento" />,
+    cell: ({ row }) => {
+      const date = new Date(row.getValue('dueDate'))
+      const today = new Date()
+      today.setHours(0, 0, 0, 0)
+      const dueDate = new Date(date)
+      dueDate.setHours(0, 0, 0, 0)
+      const isOverdue = dueDate < today && row.original.status === 'pending'
+
+      return (
+        <div className={isOverdue ? 'text-red-600 font-medium' : ''}>
+          {formatDate(row.getValue('dueDate'), 'short', locale)}
+          {isOverdue && <div className="text-xs">Vencido</div>}
         </div>
       )
     },
