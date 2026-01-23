@@ -49,6 +49,7 @@ import { cn } from '@/lib/utils'
 
 import { DataTablePagination } from './data-table-pagination'
 import { DataTableToolbar } from './data-table-toolbar'
+import { DataTableBulkActions, type BulkAction } from './data-table-bulk-actions'
 import { normalizedGlobalFilter, normalizedIncludesString } from './filter-functions'
 
 // Tipo para facets del servidor
@@ -89,6 +90,8 @@ interface DataTableProps<TData, TValue> {
   // Server-side filtering props
   manualFiltering?: boolean
   serverFacets?: ServerFacets
+  // Bulk actions
+  bulkActions?: BulkAction<TData>[]
 }
 
 export function DataTable<TData, TValue>({
@@ -112,6 +115,8 @@ export function DataTable<TData, TValue>({
   // Server-side filtering
   manualFiltering = false,
   serverFacets,
+  // Bulk actions
+  bulkActions,
 }: DataTableProps<TData, TValue>) {
   const [sorting, setSorting] = React.useState<SortingState>([])
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([])
@@ -254,6 +259,9 @@ export function DataTable<TData, TValue>({
         </Table>
       </div>
       <DataTablePagination table={table} />
+      {enableRowSelection && bulkActions && bulkActions.length > 0 && (
+        <DataTableBulkActions table={table} actions={bulkActions} />
+      )}
     </div>
   )
 }

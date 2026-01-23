@@ -466,6 +466,71 @@ export function useUpdatePayment() {
 }
 
 // ============================================================================
+// MUTATION: BULK DELETE (eliminar múltiples pagos)
+// ============================================================================
+
+/**
+ * Hook para eliminar múltiples pagos en paralelo
+ *
+ * @example
+ * const bulkDeleteMutation = useBulkDeletePayments()
+ * bulkDeleteMutation.mutate(['id1', 'id2', 'id3'])
+ */
+export function useBulkDeletePayments() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async (ids: string[]): Promise<{ deleted: number; failed: number }> => {
+      // Ejecutar deletes en paralelo
+      const results = await Promise.allSettled(
+        ids.map(async (id) => {
+          const response = await fetch(`/api/payments/${id}`, {
+            method: 'DELETE',
+          })
+
+          if (!response.ok) {
+            throw new Error(`Error al eliminar pago ${id}`)
+          }
+
+          return id
+        })
+      )
+
+      const deleted = results.filter((r) => r.status === 'fulfilled').length
+      const failed = results.filter((r) => r.status === 'rejected').length
+
+      return { deleted, failed }
+    },
+    onSuccess: ({ deleted, failed }) => {
+      // Invalidar queries relacionadas
+      queryClient.invalidateQueries({
+        predicate: (query) => {
+          const key = query.queryKey[0]
+          return (
+            key === 'payments' ||
+            key === 'projects' ||
+            key === 'search-projects' ||
+            key === 'customer-projects'
+          )
+        },
+      })
+
+      if (failed === 0) {
+        toast.success(
+          `${deleted} pago${deleted !== 1 ? 's' : ''} eliminado${deleted !== 1 ? 's' : ''} exitosamente`
+        )
+      } else {
+        toast.warning(`${deleted} eliminado${deleted !== 1 ? 's' : ''}, ${failed} con error`)
+      }
+    },
+    onError: (error) => {
+      handleMutationError(error)
+      console.error('Error in bulk delete payments:', error)
+    },
+  })
+}
+
+// ============================================================================
 // MUTATION: DELETE (con Optimistic Update)
 // ============================================================================
 

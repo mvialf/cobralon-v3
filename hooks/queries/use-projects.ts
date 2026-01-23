@@ -444,6 +444,70 @@ export function useDeleteProject() {
 // MUTATION: UPDATE STATUS (especializado para cambio de estado)
 // ============================================================================
 
+// ============================================================================
+// MUTATION: BULK DELETE (eliminar múltiples proyectos)
+// ============================================================================
+
+/**
+ * Hook para eliminar múltiples proyectos en paralelo
+ *
+ * @example
+ * const bulkDeleteMutation = useBulkDeleteProjects()
+ * bulkDeleteMutation.mutate(['id1', 'id2', 'id3'])
+ */
+export function useBulkDeleteProjects() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async (ids: string[]): Promise<{ deleted: number; failed: number }> => {
+      // Ejecutar deletes en paralelo
+      const results = await Promise.allSettled(
+        ids.map(async (id) => {
+          const response = await fetch(`/api/projects/${id}`, {
+            method: 'DELETE',
+          })
+
+          if (!response.ok) {
+            throw new Error(`Error al eliminar proyecto ${id}`)
+          }
+
+          return id
+        })
+      )
+
+      const deleted = results.filter((r) => r.status === 'fulfilled').length
+      const failed = results.filter((r) => r.status === 'rejected').length
+
+      return { deleted, failed }
+    },
+    onSuccess: ({ deleted, failed }) => {
+      // Invalidar queries de projects
+      queryClient.invalidateQueries({
+        predicate: (query) => {
+          const key = query.queryKey[0]
+          return key === 'projects' || key === 'projects-with-metadata'
+        },
+      })
+
+      if (failed === 0) {
+        toast.success(
+          `${deleted} proyecto${deleted !== 1 ? 's' : ''} eliminado${deleted !== 1 ? 's' : ''} exitosamente`
+        )
+      } else {
+        toast.warning(`${deleted} eliminado${deleted !== 1 ? 's' : ''}, ${failed} con error`)
+      }
+    },
+    onError: (error) => {
+      handleMutationError(error)
+      console.error('Error in bulk delete:', error)
+    },
+  })
+}
+
+// ============================================================================
+// MUTATION: UPDATE STATUS (especializado para cambio de estado)
+// ============================================================================
+
 /**
  * Hook especializado para actualizar solo el estado de un proyecto
  * Usado por EditableBadge en DataTable
