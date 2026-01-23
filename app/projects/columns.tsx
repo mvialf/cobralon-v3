@@ -4,7 +4,7 @@
 
 import { type ColumnDef, type Table } from '@tanstack/react-table'
 import { Badge } from '@/components/ui/badge'
-import { DataTableColumnHeader } from '@/components/data-table'
+import { DataTableColumnHeader, createSelectColumn } from '@/components/data-table'
 import { EditableBadge } from '@/components/ui/editable-badge'
 import { ProjectNameSummary } from '@/components/summarys/project-name-summary'
 import { PaymentProgressSummary } from '@/components/summarys/payment-progress-summary'
@@ -41,6 +41,8 @@ export const createColumns = ({
   updatingProjectId = null,
   updatingDateProjectId = null,
 }: ColumnsProps = {}): ColumnDef<Project>[] => [
+  // Columna de selección (checkbox)
+  createSelectColumn<Project>(),
   {
     accessorKey: 'projectNumber',
     header: ({ column }) => <DataTableColumnHeader column={column} title="Proyecto" />,

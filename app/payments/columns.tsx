@@ -2,7 +2,7 @@
 
 import { type ColumnDef } from '@tanstack/react-table'
 import { Eye, XCircle, Loader2 } from 'lucide-react'
-import { DataTableDropdown } from '@/components/data-table'
+import { DataTableDropdown, createSelectColumn } from '@/components/data-table'
 import {
   DropdownMenuItem,
   DropdownMenuLabel,
@@ -64,6 +64,8 @@ interface ColumnsProps {
 }
 
 export const createColumns = ({ onViewDetails }: ColumnsProps = {}): ColumnDef<Payment>[] => [
+  // Columna de selección (checkbox)
+  createSelectColumn<Payment>(),
   // Cliente/Proyecto (fusionado)
   {
     id: 'associated',

@@ -2,11 +2,11 @@
 
 import { useState, useMemo, useEffect, useCallback } from 'react'
 import { type PaginationState } from '@tanstack/react-table'
-import { Plus, Upload, Download } from 'lucide-react'
+import { Plus, Upload, Download, Trash2 } from 'lucide-react'
 import { useQueryClient } from '@tanstack/react-query'
 import Link from 'next/link'
 import { AppLayout } from '@/components/layout/app-layout'
-import { DataTable } from '@/components/data-table'
+import { DataTable, type BulkAction } from '@/components/data-table'
 import { createColumns, type Payment } from './columns'
 import { PaymentDetailsDialog } from '@/components/dialogs/payments/payment-details-dialog'
 import { PaymentToProjectDialog } from '@/components/dialogs/payments/payment-to-project-dialog'
@@ -31,6 +31,7 @@ import {
 import {
   usePayments,
   useDeletePayment,
+  useBulkDeletePayments,
   type PaymentsQueryParams,
 } from '@/hooks/queries/use-payments'
 import type { Payment as APIPayment } from '@/lib/validations/payment-validations'
@@ -40,6 +41,10 @@ export function PaymentsPageClient() {
   const queryClient = useQueryClient()
   const [isExporting, setIsExporting] = useState(false)
   const [showExportDialog, setShowExportDialog] = useState(false)
+
+  // Estado para bulk delete
+  const [showBulkDeleteDialog, setShowBulkDeleteDialog] = useState(false)
+  const [paymentsToDelete, setPaymentsToDelete] = useState<Payment[]>([])
 
   // Estado de paginación server-side
   const [pagination, setPagination] = useState<PaginationState>({
@@ -114,6 +119,7 @@ export function PaymentsPageClient() {
   // NOTA: En primera carga, usará datos pre-cargados por HydrationBoundary
   const { data, isLoading, isPlaceholderData } = usePayments(queryParams)
   const deleteMutation = useDeletePayment()
+  const bulkDeleteMutation = useBulkDeletePayments()
 
   // Extraer data del hook (con fallbacks) y cast a tipo local
   const payments = useMemo(() => (data?.payments || []) as Payment[], [data?.payments])
@@ -174,6 +180,30 @@ export function PaymentsPageClient() {
     // Resetear a página 1 al crear nuevo pago
     setPagination({ ...pagination, pageIndex: 0 })
   }
+
+  // Handler para bulk delete
+  const handleBulkDelete = async (selectedPayments: Payment[]) => {
+    setPaymentsToDelete(selectedPayments)
+    setShowBulkDeleteDialog(true)
+  }
+
+  const confirmBulkDelete = async () => {
+    const ids = paymentsToDelete.map((p) => p.id)
+    await bulkDeleteMutation.mutateAsync(ids)
+    setShowBulkDeleteDialog(false)
+    setPaymentsToDelete([])
+  }
+
+  // Configuración de acciones masivas
+  const bulkActions: BulkAction<Payment>[] = [
+    {
+      id: 'delete',
+      label: 'Eliminar',
+      icon: Trash2,
+      variant: 'destructive',
+      onClick: handleBulkDelete,
+    },
+  ]
 
   const columns = useMemo(
     () =>
@@ -293,6 +323,9 @@ export function PaymentsPageClient() {
               handleDelete,
               deletingPaymentId: deleteMutation.variables || null,
             }}
+            // Selección múltiple y acciones masivas
+            enableRowSelection
+            bulkActions={bulkActions}
           />
         )}
       </div>
@@ -347,6 +380,32 @@ export function PaymentsPageClient() {
               Solo Clientes
             </AlertDialogAction>
             <AlertDialogAction onClick={() => handleExport()}>Exportar todos</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Diálogo de confirmación de eliminación masiva */}
+      <AlertDialog open={showBulkDeleteDialog} onOpenChange={setShowBulkDeleteDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Eliminar pagos seleccionados?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Estás a punto de eliminar{' '}
+              <span className="font-semibold text-foreground">
+                {paymentsToDelete.length} pago{paymentsToDelete.length !== 1 ? 's' : ''}
+              </span>
+              . Esta acción no se puede deshacer y liberará el balance de los proyectos asociados.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={bulkDeleteMutation.isPending}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmBulkDelete}
+              disabled={bulkDeleteMutation.isPending}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {bulkDeleteMutation.isPending ? 'Eliminando...' : 'Eliminar'}
+            </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

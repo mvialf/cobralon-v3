@@ -4,7 +4,7 @@ import { useState, useEffect, useMemo, useCallback } from 'react'
 import { type PaginationState } from '@tanstack/react-table'
 import { useQueryClient } from '@tanstack/react-query'
 import Link from 'next/link'
-import { Upload, Download } from 'lucide-react'
+import { Upload, Download, Trash2 } from 'lucide-react'
 import { AppLayout } from '@/components/layout/app-layout'
 import { NewProjectDialog } from '@/components/dialogs/projects/new-project-dialog'
 import { Button } from '@/components/ui/button'
@@ -18,12 +18,13 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
-import { DataTable } from '@/components/data-table/data-table'
-import { createColumns } from './columns'
+import { DataTable, type BulkAction } from '@/components/data-table'
+import { createColumns, type Project } from './columns'
 import {
   useProjects,
   useUpdateProjectStatus,
   useUpdateProjectDate,
+  useBulkDeleteProjects,
   type ProjectsQueryParams,
 } from '@/hooks/queries/use-projects'
 import { useDebounce } from '@/hooks/use-debounce'
@@ -33,6 +34,10 @@ export function ProjectsPageClient() {
   const queryClient = useQueryClient()
   const [isExporting, setIsExporting] = useState(false)
   const [showExportDialog, setShowExportDialog] = useState(false)
+
+  // Estado para bulk delete
+  const [showBulkDeleteDialog, setShowBulkDeleteDialog] = useState(false)
+  const [projectsToDelete, setProjectsToDelete] = useState<Project[]>([])
 
   // Estado de paginación server-side
   const [pagination, setPagination] = useState<PaginationState>({
@@ -124,6 +129,7 @@ export function ProjectsPageClient() {
   // Mutation hooks para actualizar datos de proyecto
   const updateStatusMutation = useUpdateProjectStatus()
   const updateDateMutation = useUpdateProjectDate()
+  const bulkDeleteMutation = useBulkDeleteProjects()
 
   // Extraer data del hook (con fallbacks)
   const projects = data?.projects || []
@@ -172,6 +178,30 @@ export function ProjectsPageClient() {
       setPagination({ ...pagination, pageIndex: 0 })
     }
   }
+
+  // Handler para bulk delete
+  const handleBulkDelete = async (selectedProjects: Project[]) => {
+    setProjectsToDelete(selectedProjects)
+    setShowBulkDeleteDialog(true)
+  }
+
+  const confirmBulkDelete = async () => {
+    const ids = projectsToDelete.map((p) => p.id)
+    await bulkDeleteMutation.mutateAsync(ids)
+    setShowBulkDeleteDialog(false)
+    setProjectsToDelete([])
+  }
+
+  // Configuración de acciones masivas
+  const bulkActions: BulkAction<Project>[] = [
+    {
+      id: 'delete',
+      label: 'Eliminar',
+      icon: Trash2,
+      variant: 'destructive',
+      onClick: handleBulkDelete,
+    },
+  ]
 
   const columns = createColumns({
     statuses: statuses.map((s: any) => ({
@@ -281,6 +311,9 @@ export function ProjectsPageClient() {
               handleStatusChange,
               handleDateChange,
             }}
+            // Selección múltiple y acciones masivas
+            enableRowSelection
+            bulkActions={bulkActions}
           />
         )}
       </div>
@@ -325,6 +358,32 @@ export function ProjectsPageClient() {
               }
             >
               Exportar filtrados
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Diálogo de confirmación de eliminación masiva */}
+      <AlertDialog open={showBulkDeleteDialog} onOpenChange={setShowBulkDeleteDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Eliminar proyectos seleccionados?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Estás a punto de eliminar{' '}
+              <span className="font-semibold text-foreground">
+                {projectsToDelete.length} proyecto{projectsToDelete.length !== 1 ? 's' : ''}
+              </span>
+              . Esta acción no se puede deshacer.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={bulkDeleteMutation.isPending}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmBulkDelete}
+              disabled={bulkDeleteMutation.isPending}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {bulkDeleteMutation.isPending ? 'Eliminando...' : 'Eliminar'}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
