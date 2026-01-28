@@ -50,42 +50,6 @@ const EMPTY_PAYMENT_METHODS: Array<{
   maxInstallments: number | null
 }> = []
 
-/**
- * Componente memoizado para input de asignación de monto
- * Previene re-renders innecesarios que causan pérdida de estado en NumericFormat
- */
-const MemoizedAllocationInput = React.memo(function AllocationInput({
-  value,
-  currency,
-  disabled,
-  onChangeAllocation,
-  index,
-}: {
-  value: number
-  currency: string
-  disabled: boolean
-  onChangeAllocation: (index: number, amount: number) => void
-  index: number
-}) {
-  // Handler memoizado específico para este índice
-  const handleChange = useCallback(
-    (amount: number) => {
-      onChangeAllocation(index, amount)
-    },
-    [index, onChangeAllocation]
-  )
-
-  return (
-    <CurrencyInput
-      value={value}
-      onChange={handleChange}
-      currency={currency}
-      className="text-right"
-      disabled={disabled}
-    />
-  )
-})
-
 interface PaymentToCustomerFormProps {
   onSubmit: (data: PaymentToCustomerFormValues, currency: string) => void | Promise<void>
   isSubmitting?: boolean
@@ -233,25 +197,7 @@ export function PaymentToCustomerForm({
     })
   }, [watchedAmount, customerProjects, form, fields, update])
 
-  // Handler: Eliminar allocation
-  const handleRemoveAllocation = useCallback(
-    (index: number) => {
-      remove(index)
-    },
-    [remove]
-  )
-
-  // Handler: Cambiar monto asignado
-  const handleChangeAllocation = useCallback(
-    (index: number, amount: number) => {
-      const currentValue = fields[index]
-      update(index, {
-        ...currentValue,
-        allocatedAmount: amount,
-      })
-    },
-    [fields, update]
-  )
+  // Handler: Cambiar monto asignado (Eliminado en favor de FormField/Controller)
 
   // Handler: Reset installments cuando cambia método de pago
   const handlePaymentMethodChange = useCallback(() => {
@@ -261,11 +207,7 @@ export function PaymentToCustomerForm({
   // Handler: Cuando se selecciona un cliente (estable para evitar loop infinito en CustomerSearchField)
   const handleCustomerSelect = useCallback(
     (customer: { id: string } | null) => {
-      if (customer) {
-        setSelectedCustomerId(customer.id)
-      } else {
-        setSelectedCustomerId(null)
-      }
+      setSelectedCustomerId(customer?.id || null)
       // Reset allocations y modo cuando cambia cliente
       replace([])
       setDistributionMode('manual')
@@ -273,11 +215,14 @@ export function PaymentToCustomerForm({
     [replace]
   )
 
-  // Calcular suma de allocations desde form fields
-  const totalAllocated = fields.reduce((sum, _, index) => {
-    const amount = form.getValues(`allocations.${index}.allocatedAmount`) || 0
-    return sum + amount
-  }, 0)
+  // ✅ useWatch para obtener las allocations en tiempo real y calcular totales
+  const watchedAllocations = form.watch('allocations')
+
+  // Calcular suma de allocations desde los valores observados
+  const totalAllocated = useMemo(() => {
+    return watchedAllocations?.reduce((sum, a) => sum + (a.allocatedAmount || 0), 0) || 0
+  }, [watchedAllocations])
+
   const difference = watchedAmount - totalAllocated
   const isValidSum = Math.abs(difference) < FINANCIAL.TOLERANCE
 
@@ -362,7 +307,7 @@ export function PaymentToCustomerForm({
                 <Card className="p-2">
                   <CardContent className="flex flex-col">
                     <span className="text-sm text-center text-muted-foreground">Asignado:</span>
-                    <span className="text-center font-semibold">
+                    <span className="text-center font-semibold text-primary">
                       {formatCurrency(totalAllocated, 'CLP')}
                     </span>
                   </CardContent>
@@ -382,7 +327,7 @@ export function PaymentToCustomerForm({
                   </CardContent>
                 </Card>
                 <Card className="p-2">
-                  <CardContent className="flex flex-col gap-1">
+                  <CardContent className="flex flex-col gap-1 items-center">
                     <label
                       htmlFor="auto-fifo"
                       className={cn(
@@ -415,7 +360,7 @@ export function PaymentToCustomerForm({
 
             {/* Tabla de Allocations */}
             {!loadingProjects && fields.length > 0 && (
-              <div className="border rounded-lg">
+              <div className="border rounded-lg overflow-hidden">
                 <Table>
                   <TableHeader>
                     <TableRow>
@@ -430,16 +375,8 @@ export function PaymentToCustomerForm({
                       const project = customerProjects.find((p) => p.id === field.projectId)
                       if (!project) return null
 
-                      // Visual feedback: proyectos con $0 se ven "apagados" en modo FIFO
-                      const isUnallocated = field.allocatedAmount === 0
-                      const rowClassName = cn(
-                        isUnallocated &&
-                          distributionMode === 'fifo' &&
-                          'text-muted-foreground opacity-60'
-                      )
-
                       return (
-                        <TableRow key={field.id} className={rowClassName}>
+                        <TableRow key={field.id}>
                           <TableCell>
                             <div>
                               <div className="font-medium">{project.projectNumber}</div>
@@ -450,16 +387,22 @@ export function PaymentToCustomerForm({
                               )}
                             </div>
                           </TableCell>
-                          <TableCell className="text-right">
+                          <TableCell className="text-right text-muted-foreground">
                             {formatCurrency(project.balance, project.currency)}
                           </TableCell>
                           <TableCell className="text-right">
-                            <MemoizedAllocationInput
-                              value={field.allocatedAmount}
-                              currency={project.currency}
-                              disabled={distributionMode === 'fifo'}
-                              onChangeAllocation={handleChangeAllocation}
-                              index={index}
+                            <FormField
+                              control={form.control}
+                              name={`allocations.${index}.allocatedAmount`}
+                              render={({ field: inputField }) => (
+                                <CurrencyInput
+                                  value={inputField.value}
+                                  onChange={inputField.onChange}
+                                  currency={project.currency}
+                                  disabled={distributionMode === 'fifo'}
+                                  className="text-right max-w-[150px] ml-auto"
+                                />
+                              )}
                             />
                           </TableCell>
                           <TableCell>
@@ -467,7 +410,8 @@ export function PaymentToCustomerForm({
                               type="button"
                               variant="ghost"
                               size="icon"
-                              onClick={() => handleRemoveAllocation(index)}
+                              onClick={() => remove(index)}
+                              className="text-muted-foreground hover:text-destructive"
                             >
                               <Trash2 className="h-4 w-4" />
                             </Button>
