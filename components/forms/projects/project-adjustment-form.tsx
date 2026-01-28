@@ -103,7 +103,7 @@ export function ProjectAdjustmentForm({
                 <FormLabel>Monto del ajuste</FormLabel>
                 <FormControl>
                   <CurrencyInput
-                    value={field.value || 0}
+                    value={field.value}
                     onChange={field.onChange}
                     currency={currency}
                     min={0}

@@ -8,9 +8,9 @@ import { useConfiguration } from '@/hooks/use-configuration'
 
 interface CurrencyInputProps {
   /** Valor numérico del input */
-  value: number
+  value?: number | null
   /** Callback cuando el valor cambia */
-  onChange: (value: number) => void
+  onChange: (value: number | null) => void
   /** Código de moneda ISO 4217 (ej: "EUR", "USD", "GBP", "CLP") */
   currency?: string
   /** Locale para formateo (ej: "es-ES", "en-US", "es-CL") */
@@ -126,7 +126,7 @@ function CurrencyInput({
 
   // Handler para clamping estricto al salir del foco
   const handleBlur = (e: React.FocusEvent<HTMLInputElement>) => {
-    if (value !== undefined) {
+    if (value !== undefined && value !== null) {
       let numValue = value
       if (min !== undefined && numValue < min) numValue = min
       if (max !== undefined && numValue > max) numValue = max
@@ -140,12 +140,14 @@ function CurrencyInput({
 
   return (
     <NumericFormat
-      value={value}
+      value={value ?? ''}
       onValueChange={(values) => {
-        const numValue = values.floatValue ?? 0
-        // Nota: El clamping estricto se movió a handleBlur para mejorar la UX
-        // permitiendo que el usuario borre y edite libremente.
-        onChange(numValue)
+        const numValue = values.floatValue ?? null
+        // Si el valor no ha cambiado realmente (ej: de undefined a null), evitamos el trigger
+        // Pero floatValue ?? null suele ser suficiente para distinguir vacío de valor
+        if (numValue !== value) {
+          onChange(numValue)
+        }
       }}
       // Configuración de formato
       thousandSeparator={formatConfig.thousandSeparator}

@@ -68,9 +68,9 @@ export function CreditApplicationFields({
             <FormLabel>Monto de Crédito a Aplicar</FormLabel>
             <FormControl>
               <CurrencyInput
-                value={field.value || 0}
+                value={field.value}
                 onChange={(value) => {
-                  const numericValue = value || 0
+                  const numericValue = value ?? 0
                   const capped = Math.min(numericValue, maxApplicable)
                   field.onChange(capped)
                 }}
