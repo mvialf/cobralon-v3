@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import {
-  uninstallTagSchema,
-  generateAbbreviation,
+  uninstallTagWithOptionalAbbreviationSchema,
+  normalizeUninstallTagPayload,
 } from '@/lib/validations/uninstall-tag-validations'
 import { z } from 'zod'
 import { Prisma } from '@prisma/client'
@@ -93,13 +93,8 @@ export async function POST(request: Request) {
   try {
     const body = await request.json()
 
-    // Auto-generar abbreviation si viene vacío
-    const dataToValidate = {
-      ...body,
-      abbreviation: body.abbreviation || generateAbbreviation(body.name),
-    }
-
-    const validatedData = uninstallTagSchema.parse(dataToValidate)
+    const parsed = uninstallTagWithOptionalAbbreviationSchema.parse(body)
+    const validatedData = normalizeUninstallTagPayload(parsed)
 
     // Validación: nombre único
     const existingByName = await prisma.uninstallTag.findUnique({

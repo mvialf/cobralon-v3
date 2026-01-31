@@ -148,16 +148,15 @@ describe('POST /api/uninstall-tags', () => {
   })
 
   describe('validaciones Zod', () => {
-    it('debe fallar sin nombre (generateAbbreviation se llama antes de Zod)', async () => {
-      // El route intenta generar abbreviation con body.name undefined ANTES de validar Zod
-      // Esto causa un error interno, no un error de validación
+    it('debe retornar 400 sin nombre', async () => {
       const request = createRequest('POST', {
         colorId: '00000000-0000-0000-0000-000000000001',
       })
       const response = await POST(request)
+      const data = await response.json()
 
-      // Error 500 porque generateAbbreviation falla con undefined
-      expect(response.status).toBe(500)
+      expect(response.status).toBe(400)
+      expect(data.error).toBe('Datos inválidos')
     })
 
     it('debe rechazar sin colorId', async () => {
