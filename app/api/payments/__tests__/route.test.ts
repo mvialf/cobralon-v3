@@ -60,6 +60,7 @@ vi.mock('@/lib/db', () => ({
 
 // Mock de business logic
 vi.mock('@/lib/business-logic/update-project-balance', () => ({
+  updateProjectBalance: vi.fn().mockResolvedValue(0),
   updateMultipleProjectBalances: vi.fn().mockResolvedValue(1),
 }))
 
@@ -122,11 +123,29 @@ describe('POST /api/payments', () => {
       balance: 100000,
     } as never)
 
-    vi.mocked(prisma.payment.create).mockResolvedValue({
+    const defaultPaymentCreateResult = {
       id: 'payment-1',
       allocations: [{ id: 'alloc-1' }],
       installments: [],
-    } as never)
+    }
+
+    vi.mocked(prisma.payment.create).mockResolvedValue(defaultPaymentCreateResult as never)
+
+    // Mock $transaction para ejecutar el callback con un tx mock
+    vi.mocked(prisma.$transaction).mockImplementation(async (fn: unknown) => {
+      const mockTx = {
+        payment: { create: vi.fn().mockResolvedValue(defaultPaymentCreateResult) },
+        project: {
+          findMany: vi.fn().mockResolvedValue([
+            { id: 'project-1', projectNumber: '1001', balance: 0, customerId: 'customer-1' },
+          ]),
+          update: vi.fn(),
+        },
+        customer: { update: vi.fn() },
+        creditTransaction: { create: vi.fn() },
+      }
+      return (fn as (tx: typeof mockTx) => Promise<unknown>)(mockTx)
+    })
   })
 
   describe('validaciones de tipo', () => {
@@ -428,13 +447,19 @@ describe('POST /api/payments', () => {
         creditBalance: 50000,
       } as never)
 
-      vi.mocked(prisma.$transaction).mockImplementation(async (fn) => {
+      vi.mocked(prisma.$transaction).mockImplementation(async (fn: unknown) => {
         const mockTx = {
           payment: { create: vi.fn().mockResolvedValue({ id: 'p1', allocations: [], installments: [] }) },
+          project: {
+            findMany: vi.fn().mockResolvedValue([
+              { id: 'project-1', projectNumber: '1001', balance: 0, customerId: 'customer-1' },
+            ]),
+            update: vi.fn(),
+          },
           customer: { update: vi.fn() },
           creditTransaction: { create: vi.fn() },
         }
-        return fn(mockTx as never)
+        return (fn as (tx: typeof mockTx) => Promise<unknown>)(mockTx)
       })
 
       const request = createRequest({
@@ -454,17 +479,33 @@ describe('POST /api/payments', () => {
       const response = await callPOST(request)
 
       expect(response.status).toBe(201)
-      expect(prisma.payment.create).toHaveBeenCalled()
+      // La creación ocurre dentro de $transaction, verificar que se llamó
+      expect(prisma.$transaction).toHaveBeenCalled()
     })
 
     it('debe incluir datos del pago en respuesta', async () => {
-      vi.mocked(prisma.payment.create).mockResolvedValue({
+      const customPaymentResult = {
         id: 'payment-123',
         type: 'Project',
         amount: 100000,
         allocations: [{ id: 'alloc-1', allocatedAmount: 100000 }],
         installments: [],
-      } as never)
+      }
+
+      vi.mocked(prisma.$transaction).mockImplementation(async (fn: unknown) => {
+        const mockTx = {
+          payment: { create: vi.fn().mockResolvedValue(customPaymentResult) },
+          project: {
+            findMany: vi.fn().mockResolvedValue([
+              { id: 'project-1', projectNumber: '1001', balance: 0, customerId: 'customer-1' },
+            ]),
+            update: vi.fn(),
+          },
+          customer: { update: vi.fn() },
+          creditTransaction: { create: vi.fn() },
+        }
+        return (fn as (tx: typeof mockTx) => Promise<unknown>)(mockTx)
+      })
 
       const request = createRequest(validPayload)
       const response = await callPOST(request)

@@ -49,7 +49,7 @@ function createMockProject(overrides: {
     balance: new Decimal(overrides.balance ?? 1000000),
     totalAmount: overrides.totalAmount !== undefined
       ? (overrides.totalAmount === null ? null : new Decimal(overrides.totalAmount))
-      : new Decimal(1000000),
+      : new Decimal(overrides.total ?? 1000000),
     paymentAllocations: (overrides.paymentAllocations ?? []).map((alloc) => ({
       allocatedAmount: typeof alloc.allocatedAmount === 'number'
         ? new Decimal(alloc.allocatedAmount)
