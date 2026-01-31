@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { ChevronDown, Phone, ArrowRight, Table, MessageSquare, Tags } from 'lucide-react'
+import { ChevronDown, Phone, ArrowRight, Table, MessageSquare } from 'lucide-react'
 
 import { AppLayout } from '@/components/layout/app-layout'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -56,19 +56,6 @@ const ejemplos = [
     icon: ChevronDown,
     features: ['Debounce 300ms', 'Loading state', 'Búsqueda dinámica', 'Barra de progreso'],
     color: 'text-blue-500',
-  },
-  {
-    title: 'Team Tags',
-    description: 'Sistema de tags con CRUD y BadgeColor',
-    href: '/examples/team-tags',
-    icon: Tags,
-    features: [
-      'useTeamTags hook',
-      'TagSelector component',
-      'CRUD operations',
-      'BadgeColor integration',
-    ],
-    color: 'text-pink-500',
   },
 ]
 
