@@ -36,6 +36,7 @@ description: |
 **Signatures completas:** [references/module-signatures.md](references/module-signatures.md)
 
 **Patrón de transacción DB y constantes:** [references/transaction-pattern.md](references/transaction-pattern.md)
+**Edge cases y decisiones de diseño:** [references/edge-cases.md](references/edge-cases.md)
 
 ## Checklist Antes de Modificar Lógica Financiera
 

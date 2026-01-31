@@ -9,7 +9,8 @@ description: |
 
   Cubre: patrones establecidos del proyecto, paralelización de queries Prisma,
   raw SQL con Prisma.sql, indexing strategy, facets opcionales, imports dinámicos,
-  React.cache(), after(), re-render optimization, rendering patterns, y
+  React.cache(), after(), re-render optimization, rendering patterns,
+  TanStack Query patterns (query keys, mutations, SSR hydration), y
   convenciones Next.js 15 + React 19 + React Query + Prisma.
 ---
 
@@ -29,6 +30,7 @@ Combina patrones ya establecidos en el proyecto con mejoras pendientes basadas e
 | 4 | Re-render optimization | MEDIUM | ⚠️ Pendiente | [client-rerender-patterns.md](references/client-rerender-patterns.md) |
 | 5 | Rendering patterns | MEDIUM | ⚠️ Pendiente | [rendering-patterns.md](references/rendering-patterns.md) |
 | 6 | DB & raw query perf | HIGH | ✅ Implementado | [db-query-patterns.md](references/db-query-patterns.md) |
+| 7 | TanStack Query patterns | HIGH | ✅ Documentado | [tanstack-query-patterns.md](references/tanstack-query-patterns.md) |
 
 ## Patrones establecidos (referencia rápida)
 

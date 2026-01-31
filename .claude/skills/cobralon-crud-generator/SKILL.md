@@ -25,6 +25,7 @@ Para una entidad llamada `EntityName` (ej: `Product`, `Category`):
 | 7 | Page | `app/entity-names/page.tsx` | `app/projects/page.tsx` |
 
 **Templates de código completos:** [references/crud-templates.md](references/crud-templates.md)
+**Templates avanzados (N:M, facets, cascade):** [references/advanced-templates.md](references/advanced-templates.md)
 
 ## Naming Conventions
 
