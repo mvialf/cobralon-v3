@@ -1,6 +1,6 @@
 import { AppLayout } from '@/components/layout/app-layout'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Code, Settings, BookOpen, ArrowRight } from 'lucide-react'
+import { Settings, BookOpen, ArrowRight } from 'lucide-react'
 import Link from 'next/link'
 
 export default function HomePage() {
@@ -20,10 +20,6 @@ export default function HomePage() {
             <div>
               <h3 className="font-semibold mb-2">Primeros Pasos:</h3>
               <ol className="space-y-2 list-decimal list-inside text-sm">
-                <li>
-                  Explora <code className="text-primary">/examples</code> para ver componentes y
-                  patrones en acción
-                </li>
                 <li>
                   Personaliza la navegación en{' '}
                   <code className="text-xs bg-muted px-1 rounded">
@@ -46,25 +42,6 @@ export default function HomePage() {
 
         {/* Quick Links Grid */}
         <div className="grid gap-4 md:grid-cols-3">
-          {/* Ejemplos Card */}
-          <Card>
-            <CardHeader>
-              <Code className="h-8 w-8 mb-2 text-primary" />
-              <CardTitle>Ejemplos</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm text-muted-foreground mb-4">
-                Catálogo de componentes, formularios y patrones listos para usar
-              </p>
-              <Link
-                href="/examples"
-                className="text-sm text-primary flex items-center hover:underline"
-              >
-                Ver ejemplos <ArrowRight className="ml-1 h-4 w-4" />
-              </Link>
-            </CardContent>
-          </Card>
-
           {/* Configuración Card */}
           <Card>
             <CardHeader>

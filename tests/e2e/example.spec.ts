@@ -42,17 +42,6 @@ test.describe('Homepage', () => {
 })
 
 test.describe('Navegación', () => {
-  test('debe cargar la página de ejemplos', async ({ page }) => {
-    // Navegar directamente a la página de ejemplos
-    await page.goto('/examples')
-
-    // Verificar que estamos en la URL correcta
-    await expect(page).toHaveURL(/\/examples/)
-
-    // Verificar que el contenido de la página cargó
-    await expect(page.getByRole('heading', { level: 1 })).toBeVisible()
-  })
-
   test('debe cargar la página de configuración', async ({ page }) => {
     // Navegar directamente a la página de configuración
     await page.goto('/settings')
