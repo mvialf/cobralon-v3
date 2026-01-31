@@ -486,10 +486,9 @@ export const POST = withLogging(async (request, logger) => {
     paymentLogger.debug('All validations passed')
 
     // ========================================================================
-    // VALIDACIÓN DE CRÉDITO APLICADO (si aplica)
+    // VALIDACIÓN BÁSICA DE CRÉDITO (sin lectura de DB - se valida dentro de tx)
     // ========================================================================
     const creditToApply = creditApplied || 0
-    let customerCreditBalance = 0
 
     if (creditToApply > 0) {
       paymentLogger.debug({ creditToApply }, 'Credit application requested')
@@ -502,52 +501,6 @@ export const POST = withLogging(async (request, logger) => {
           { status: 400 }
         )
       }
-
-      // Obtener crédito del cliente y balance del proyecto (en paralelo)
-      const [customer, creditProject] = await Promise.all([
-        prisma.customer.findUnique({
-          where: { id: customerId },
-          select: { creditBalance: true },
-        }),
-        prisma.project.findUnique({
-          where: { id: allocations[0].projectId },
-          select: { balance: true },
-        }),
-      ])
-
-      if (!customer) {
-        paymentLogger.error('Customer not found during credit validation')
-        return NextResponse.json({ error: 'Cliente no encontrado' }, { status: 404 })
-      }
-
-      if (!creditProject) {
-        paymentLogger.error('Project not found during credit validation')
-        return NextResponse.json({ error: 'Proyecto no encontrado' }, { status: 404 })
-      }
-
-      customerCreditBalance = Number(customer.creditBalance)
-      const projectBalance = Number(creditProject.balance)
-
-      // Validar que se puede aplicar el crédito
-      const validation = canApplyCredit(creditToApply, customerCreditBalance, projectBalance)
-
-      if (!validation.valid) {
-        paymentLogger.warn(
-          {
-            creditToApply,
-            customerCredit: customerCreditBalance,
-            projectBalance,
-            error: validation.error,
-          },
-          'Credit validation failed'
-        )
-        return NextResponse.json({ error: validation.error }, { status: 400 })
-      }
-
-      paymentLogger.info(
-        { creditToApply, customerCredit: customerCreditBalance, projectBalance },
-        'Credit validation passed'
-      )
     }
 
     // Crear el pago con sus allocations en una transacción
@@ -635,13 +588,48 @@ export const POST = withLogging(async (request, logger) => {
 
       // ====================================================================
       // PASO 2: Aplicar crédito del cliente (si corresponde)
+      // Lectura + validación + aplicación DENTRO de la transacción para
+      // evitar race conditions en creditBalance
       // ====================================================================
       if (creditToApply > 0) {
-        // Reducir crédito del customer
-        await tx.customer.update({
-          where: { id: customerId },
+        // Leer datos DENTRO de la transacción (snapshot consistente)
+        const [customer, creditProject] = await Promise.all([
+          tx.customer.findUnique({
+            where: { id: customerId },
+            select: { creditBalance: true },
+          }),
+          tx.project.findUnique({
+            where: { id: allocations[0].projectId },
+            select: { balance: true },
+          }),
+        ])
+
+        if (!customer || !creditProject) {
+          throw new Error('Cliente o proyecto no encontrado durante validación de crédito')
+        }
+
+        const customerCreditBalance = Number(customer.creditBalance)
+        const projectBalance = Number(creditProject.balance)
+
+        // Validar con datos frescos de la transacción
+        const creditValidation = canApplyCredit(
+          creditToApply,
+          customerCreditBalance,
+          projectBalance
+        )
+        if (!creditValidation.valid) {
+          throw new Error(creditValidation.error)
+        }
+
+        // Aplicar con where guard para prevenir concurrencia
+        const updated = await tx.customer.updateMany({
+          where: { id: customerId, creditBalance: { gte: creditToApply } },
           data: { creditBalance: { decrement: creditToApply } },
         })
+
+        if (updated.count === 0) {
+          throw new Error('Crédito insuficiente (posible concurrencia)')
+        }
 
         // Crear registro de transacción de crédito
         await tx.creditTransaction.create({
@@ -664,7 +652,7 @@ export const POST = withLogging(async (request, logger) => {
           {
             paymentId: newPayment.id,
             creditApplied: creditToApply,
-            newCustomerCredit: customerCreditBalance - creditToApply,
+            previousCredit: customerCreditBalance,
           },
           'Credit applied successfully in transaction'
         )

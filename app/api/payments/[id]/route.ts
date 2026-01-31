@@ -1,6 +1,10 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
-import { updateMultipleProjectBalances } from '@/lib/business-logic/update-project-balance'
+import { Decimal } from '@prisma/client/runtime/library'
+import {
+  updateMultipleProjectBalances,
+  type PrismaTransaction,
+} from '@/lib/business-logic/update-project-balance'
 
 /**
  * PUT /api/payments/[id]
@@ -49,61 +53,60 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
       return NextResponse.json({ error: 'El monto debe ser mayor a 0' }, { status: 400 })
     }
 
-    // Actualizar el pago
-    const payment = await prisma.payment.update({
-      relationLoadStrategy: 'join', // Fix N+1: Force database-level JOINs
-      where: { id },
-      data: {
-        ...(amount !== undefined && { amount }),
-        ...(date !== undefined && { date: new Date(date) }),
-        ...(paymentMethodId !== undefined && { paymentMethodId }),
-        ...(reference !== undefined && { reference: reference?.trim() || null }),
-        ...(notes !== undefined && { notes: notes?.trim() || null }),
-      },
-      include: {
-        customer: {
-          select: {
-            id: true,
-            name: true,
-            phone: true,
-          },
+    // Transacción atómica: actualizar pago + recalcular balances
+    const payment = await prisma.$transaction(async (tx: PrismaTransaction) => {
+      const updated = await tx.payment.update({
+        relationLoadStrategy: 'join',
+        where: { id },
+        data: {
+          ...(amount !== undefined && { amount }),
+          ...(date !== undefined && { date: new Date(date) }),
+          ...(paymentMethodId !== undefined && { paymentMethodId }),
+          ...(reference !== undefined && { reference: reference?.trim() || null }),
+          ...(notes !== undefined && { notes: notes?.trim() || null }),
         },
-        paymentMethod: {
-          select: {
-            id: true,
-            name: true,
-            icon: true,
+        include: {
+          customer: {
+            select: {
+              id: true,
+              name: true,
+              phone: true,
+            },
           },
-        },
-        allocations: {
-          select: {
-            id: true,
-            allocatedAmount: true,
-            projectId: true,
-            project: {
-              select: {
-                id: true,
-                projectNumber: true,
-                projectName: true,
-                totalAmount: true,
-                currency: true,
+          paymentMethod: {
+            select: {
+              id: true,
+              name: true,
+              icon: true,
+            },
+          },
+          allocations: {
+            select: {
+              id: true,
+              allocatedAmount: true,
+              projectId: true,
+              project: {
+                select: {
+                  id: true,
+                  projectNumber: true,
+                  projectName: true,
+                  totalAmount: true,
+                  currency: true,
+                },
               },
             },
           },
         },
-      },
-    })
+      })
 
-    // Actualizar balance de todos los proyectos afectados (si cambió el amount)
-    if (amount !== undefined && payment.allocations.length > 0) {
-      const projectIds = payment.allocations.map((alloc) => alloc.projectId)
-      try {
-        await updateMultipleProjectBalances(projectIds)
-      } catch (balanceError) {
-        console.error('Error updating project balances:', balanceError)
-        // No fallar la petición - el job nocturno corregirá inconsistencias
+      // Recalcular balances dentro de la transacción
+      if (amount !== undefined && updated.allocations.length > 0) {
+        const projectIds = updated.allocations.map((alloc) => alloc.projectId)
+        await updateMultipleProjectBalances(projectIds, tx)
       }
-    }
+
+      return updated
+    })
 
     return NextResponse.json(payment)
   } catch (error) {
@@ -125,11 +128,12 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ i
   try {
     const { id } = await params
 
-    // Verificar que el pago existe y obtener projectIds antes de eliminar
+    // Verificar que el pago existe y obtener datos necesarios antes de la transacción
     const existingPayment = await prisma.payment.findUnique({
       where: { id },
       select: {
         id: true,
+        customerId: true,
         selectedInstallments: true,
         allocations: {
           select: {
@@ -143,23 +147,62 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ i
       return NextResponse.json({ error: 'Pago no encontrado' }, { status: 404 })
     }
 
-    // Guardar projectIds antes de eliminar
     const projectIds = existingPayment.allocations.map((alloc) => alloc.projectId)
 
-    // Eliminar el pago (cascade delete elimina installments y allocations automáticamente)
-    await prisma.payment.delete({
-      where: { id },
-    })
+    // Transacción atómica: revertir créditos + eliminar pago + recalcular balances
+    await prisma.$transaction(async (tx: PrismaTransaction) => {
+      // 1. Buscar CreditTransactions asociadas al pago
+      const creditTransactions = await tx.creditTransaction.findMany({
+        where: { paymentId: id },
+        select: { id: true, type: true, amount: true, customerId: true },
+      })
 
-    // Actualizar balance de todos los proyectos afectados
-    if (projectIds.length > 0) {
-      try {
-        await updateMultipleProjectBalances(projectIds)
-      } catch (balanceError) {
-        console.error('Error updating project balances after deletion:', balanceError)
-        // No fallar la petición - el job nocturno corregirá inconsistencias
+      // 2. Revertir cada CreditTransaction
+      for (const ct of creditTransactions) {
+        const ctAmount = Number(ct.amount)
+
+        if (ct.type === 'APPLIED') {
+          // APPLIED = crédito usado (monto negativo) → devolver al cliente
+          await tx.customer.update({
+            where: { id: ct.customerId },
+            data: { creditBalance: { increment: Math.abs(ctAmount) } },
+          })
+        } else if (ct.type === 'OVERPAYMENT') {
+          // OVERPAYMENT = crédito generado (monto positivo) → retirar del cliente
+          await tx.customer.update({
+            where: { id: ct.customerId },
+            data: { creditBalance: { decrement: ctAmount } },
+          })
+        }
+
+        // Registrar reversión como ADJUSTMENT
+        await tx.creditTransaction.create({
+          data: {
+            customerId: ct.customerId,
+            amount: new Decimal(-ctAmount),
+            type: 'ADJUSTMENT',
+            description: `Reversión por eliminación de pago ${id.slice(0, 8)}`,
+            paymentId: null,
+            metadata: {
+              reversedTransactionId: ct.id,
+              reversedType: ct.type,
+              reversedAmount: ctAmount,
+              deletedPaymentId: id,
+            },
+          },
+        })
       }
-    }
+
+      // 3. Eliminar el pago (cascade borra allocations + installments)
+      await tx.payment.delete({
+        where: { id },
+      })
+
+      // 4. Recalcular balances de proyectos afectados
+      if (projectIds.length > 0) {
+        await updateMultipleProjectBalances(projectIds, tx)
+      }
+    })
 
     return NextResponse.json(
       {
