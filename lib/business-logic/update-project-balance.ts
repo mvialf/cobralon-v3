@@ -74,6 +74,7 @@ export async function updateProjectBalance(
     select: {
       id: true,
       total: true,
+      totalAmount: true,
       paymentAllocations: {
         select: {
           allocatedAmount: true,
@@ -88,7 +89,7 @@ export async function updateProjectBalance(
 
   // Calcular balance usando helper compartido
   const { balance } = calculateProjectBalance({
-    totalAmount: Number(project.total),
+    totalAmount: Number(project.totalAmount ?? project.total),
     allocations: project.paymentAllocations.map((alloc) => ({
       allocatedAmount: Number(alloc.allocatedAmount),
     })),
@@ -161,6 +162,7 @@ export async function verifyProjectBalance(projectId: string): Promise<boolean> 
     where: { id: projectId },
     select: {
       total: true,
+      totalAmount: true,
       balance: true,
       paymentAllocations: {
         select: {
@@ -175,7 +177,7 @@ export async function verifyProjectBalance(projectId: string): Promise<boolean> 
   }
 
   const { balance: calculatedBalance } = calculateProjectBalance({
-    totalAmount: Number(project.total),
+    totalAmount: Number(project.totalAmount ?? project.total),
     allocations: project.paymentAllocations.map((alloc) => ({
       allocatedAmount: Number(alloc.allocatedAmount),
     })),
