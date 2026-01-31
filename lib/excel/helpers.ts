@@ -1,5 +1,3 @@
-import * as XLSX from 'xlsx'
-
 /**
  * Normaliza el nombre de una columna para matching (case-insensitive, sin acentos)
  *
@@ -52,12 +50,13 @@ export function findColumnIndex(
  * @param value - Valor a parsear
  * @returns Date válido o null si no se puede parsear
  */
-export function parseDate(value: unknown): Date | null {
+export async function parseDate(value: unknown): Promise<Date | null> {
   if (!value) return null
 
   // Si es un número (Excel date serial)
   if (typeof value === 'number') {
     // Excel dates son días desde 1900-01-01
+    const XLSX = await import('xlsx')
     const date = XLSX.SSF.parse_date_code(value)
     return new Date(date.y, date.m - 1, date.d)
   }

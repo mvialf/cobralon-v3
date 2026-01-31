@@ -1,4 +1,3 @@
-import * as XLSX from 'xlsx'
 import { normalizePhone } from '@/lib/utils/phone'
 import { normalizeRegionValue } from '@/lib/regiones-chile'
 import {
@@ -101,8 +100,9 @@ export async function parseProjectExcel(file: File): Promise<ProjectParseResult>
       reject(new Error('Error al leer el archivo'))
     }
 
-    reader.onload = (e) => {
+    reader.onload = async (e) => {
       try {
+        const XLSX = await import('xlsx')
         const data = e.target?.result
         if (!data) {
           reject(new Error('No se pudo leer el contenido del archivo'))
@@ -236,7 +236,7 @@ export async function parseProjectExcel(file: File): Promise<ProjectParseResult>
           if (!subtotal || subtotal <= 0) errors.push('Subtotal debe ser mayor a 0')
 
           // Parsear fecha
-          const date = parseDate(dateValue)
+          const date = await parseDate(dateValue)
           if (!date) {
             errors.push('Fecha inválida (formato esperado: DD/MM/YYYY)')
           }

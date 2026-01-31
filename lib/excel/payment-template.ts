@@ -1,5 +1,3 @@
-import * as XLSX from 'xlsx'
-
 /**
  * Datos de ejemplo para el template
  */
@@ -36,7 +34,9 @@ const EXAMPLE_DATA = [
 /**
  * Genera y descarga un archivo Excel template para importar pagos
  */
-export function downloadPaymentTemplate(): void {
+export async function downloadPaymentTemplate(): Promise<void> {
+  const XLSX = await import('xlsx')
+
   // Crear workbook
   const workbook = XLSX.utils.book_new()
 
@@ -81,7 +81,9 @@ export function downloadPaymentTemplate(): void {
 /**
  * Genera un template vacío (sin datos de ejemplo)
  */
-export function downloadEmptyPaymentTemplate(): void {
+export async function downloadEmptyPaymentTemplate(): Promise<void> {
+  const XLSX = await import('xlsx')
+
   // Crear workbook
   const workbook = XLSX.utils.book_new()
 

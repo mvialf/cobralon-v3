@@ -166,50 +166,50 @@ describe('findColumnIndex', () => {
 // =============================================================================
 describe('parseDate', () => {
   describe('valores null/undefined/falsy', () => {
-    it('retorna null para null', () => {
-      expect(parseDate(null)).toBeNull()
+    it('retorna null para null', async () => {
+      expect(await parseDate(null)).toBeNull()
     })
 
-    it('retorna null para undefined', () => {
-      expect(parseDate(undefined)).toBeNull()
+    it('retorna null para undefined', async () => {
+      expect(await parseDate(undefined)).toBeNull()
     })
 
-    it('retorna null para string vacío', () => {
-      expect(parseDate('')).toBeNull()
-      expect(parseDate('   ')).toBeNull()
+    it('retorna null para string vacío', async () => {
+      expect(await parseDate('')).toBeNull()
+      expect(await parseDate('   ')).toBeNull()
     })
 
-    it('retorna null para 0', () => {
+    it('retorna null para 0', async () => {
       // 0 es falsy, pero parseDate lo trata como número Excel
       // El número 0 en Excel es 1899-12-30 (bug conocido de Excel)
-      const result = parseDate(0)
+      const result = await parseDate(0)
       // Podría ser null o fecha antigua dependiendo de implementación
       expect(result === null || result instanceof Date).toBe(true)
     })
   })
 
   describe('Excel date serial (número)', () => {
-    it('parsea fecha Excel moderna', () => {
+    it('parsea fecha Excel moderna', async () => {
       // 45658 = 2025-01-01 en Excel (días desde 1900-01-01)
-      const result = parseDate(45658)
+      const result = await parseDate(45658)
       expect(result).toBeInstanceOf(Date)
       expect(result?.getFullYear()).toBe(2025)
       expect(result?.getMonth()).toBe(0) // Enero = 0
       expect(result?.getDate()).toBe(1)
     })
 
-    it('parsea fecha Excel de 2024', () => {
+    it('parsea fecha Excel de 2024', async () => {
       // 45292 = 2024-01-01
-      const result = parseDate(45292)
+      const result = await parseDate(45292)
       expect(result).toBeInstanceOf(Date)
       expect(result?.getFullYear()).toBe(2024)
       expect(result?.getMonth()).toBe(0)
       expect(result?.getDate()).toBe(1)
     })
 
-    it('parsea fecha Excel con decimales (ignora hora)', () => {
+    it('parsea fecha Excel con decimales (ignora hora)', async () => {
       // 45658.5 = 2025-01-01 12:00
-      const result = parseDate(45658.5)
+      const result = await parseDate(45658.5)
       expect(result).toBeInstanceOf(Date)
       expect(result?.getFullYear()).toBe(2025)
       expect(result?.getMonth()).toBe(0)
@@ -218,24 +218,24 @@ describe('parseDate', () => {
   })
 
   describe('string formato DD/MM/YYYY', () => {
-    it('parsea fecha con formato DD/MM/YYYY', () => {
-      const result = parseDate('15/06/2024')
+    it('parsea fecha con formato DD/MM/YYYY', async () => {
+      const result = await parseDate('15/06/2024')
       expect(result).toBeInstanceOf(Date)
       expect(result?.getFullYear()).toBe(2024)
       expect(result?.getMonth()).toBe(5) // Junio = 5
       expect(result?.getDate()).toBe(15)
     })
 
-    it('parsea fecha con formato D/M/YYYY (sin ceros)', () => {
-      const result = parseDate('5/3/2024')
+    it('parsea fecha con formato D/M/YYYY (sin ceros)', async () => {
+      const result = await parseDate('5/3/2024')
       expect(result).toBeInstanceOf(Date)
       expect(result?.getFullYear()).toBe(2024)
       expect(result?.getMonth()).toBe(2) // Marzo = 2
       expect(result?.getDate()).toBe(5)
     })
 
-    it('parsea fecha con formato DD-MM-YYYY (guiones)', () => {
-      const result = parseDate('25-12-2024')
+    it('parsea fecha con formato DD-MM-YYYY (guiones)', async () => {
+      const result = await parseDate('25-12-2024')
       expect(result).toBeInstanceOf(Date)
       expect(result?.getFullYear()).toBe(2024)
       expect(result?.getMonth()).toBe(11) // Diciembre = 11
@@ -244,8 +244,8 @@ describe('parseDate', () => {
   })
 
   describe('string formato ISO', () => {
-    it('parsea fecha ISO completa', () => {
-      const result = parseDate('2024-06-15')
+    it('parsea fecha ISO completa', async () => {
+      const result = await parseDate('2024-06-15')
       expect(result).toBeInstanceOf(Date)
       expect(result?.getFullYear()).toBe(2024)
       expect(result?.getMonth()).toBe(5)
@@ -253,40 +253,40 @@ describe('parseDate', () => {
       expect([14, 15]).toContain(result?.getDate())
     })
 
-    it('parsea fecha ISO con hora', () => {
-      const result = parseDate('2024-06-15T10:30:00')
+    it('parsea fecha ISO con hora', async () => {
+      const result = await parseDate('2024-06-15T10:30:00')
       expect(result).toBeInstanceOf(Date)
       expect(result?.getFullYear()).toBe(2024)
     })
   })
 
   describe('Date object', () => {
-    it('retorna Date válido si input es Date válido', () => {
+    it('retorna Date válido si input es Date válido', async () => {
       const input = new Date(2024, 5, 15) // 15 Junio 2024
-      const result = parseDate(input)
+      const result = await parseDate(input)
       expect(result).toBeInstanceOf(Date)
       expect(result?.getFullYear()).toBe(2024)
       expect(result?.getMonth()).toBe(5)
       expect(result?.getDate()).toBe(15)
     })
 
-    it('retorna null para Date inválido', () => {
+    it('retorna null para Date inválido', async () => {
       const invalidDate = new Date('invalid')
-      expect(parseDate(invalidDate)).toBeNull()
+      expect(await parseDate(invalidDate)).toBeNull()
     })
   })
 
   describe('strings inválidos', () => {
-    it('retorna null para texto no-fecha', () => {
-      expect(parseDate('hola')).toBeNull()
-      expect(parseDate('abc123')).toBeNull()
+    it('retorna null para texto no-fecha', async () => {
+      expect(await parseDate('hola')).toBeNull()
+      expect(await parseDate('abc123')).toBeNull()
     })
 
-    it('retorna null para formato claramente inválido', () => {
+    it('retorna null para formato claramente inválido', async () => {
       // Nota: JavaScript Date es MUY permisivo - acepta 32/13/2024 con overflow
       // Estos formatos NO matchean el regex DD/MM/YYYY ni Date nativo
-      expect(parseDate('no-es-fecha')).toBeNull()
-      expect(parseDate('xx/yy/zzzz')).toBeNull()
+      expect(await parseDate('no-es-fecha')).toBeNull()
+      expect(await parseDate('xx/yy/zzzz')).toBeNull()
     })
   })
 })

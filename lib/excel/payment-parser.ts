@@ -1,4 +1,3 @@
-import * as XLSX from 'xlsx'
 import {
   findColumnIndex,
   parseDate,
@@ -79,8 +78,9 @@ export async function parsePaymentExcel(file: File): Promise<PaymentParseResult>
       reject(new Error('Error al leer el archivo'))
     }
 
-    reader.onload = (e) => {
+    reader.onload = async (e) => {
       try {
+        const XLSX = await import('xlsx')
         const data = e.target?.result
         if (!data) {
           reject(new Error('No se pudo leer el contenido del archivo'))
@@ -176,7 +176,7 @@ export async function parsePaymentExcel(file: File): Promise<PaymentParseResult>
           if (!paymentMethodName) errors.push('Método de pago es requerido')
 
           // Parsear fecha
-          const date = parseDate(dateValue)
+          const date = await parseDate(dateValue)
           if (!date) {
             errors.push('Fecha inválida (formato esperado: DD/MM/YYYY)')
           }

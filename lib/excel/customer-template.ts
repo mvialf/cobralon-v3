@@ -1,5 +1,3 @@
-import * as XLSX from 'xlsx'
-
 /**
  * Datos de ejemplo para el template
  */
@@ -24,7 +22,9 @@ const EXAMPLE_DATA = [
 /**
  * Genera y descarga un archivo Excel template para importar clientes
  */
-export function downloadCustomerTemplate(): void {
+export async function downloadCustomerTemplate(): Promise<void> {
+  const XLSX = await import('xlsx')
+
   // Crear workbook
   const workbook = XLSX.utils.book_new()
 
@@ -65,7 +65,9 @@ export function downloadCustomerTemplate(): void {
 /**
  * Genera un template vacío (sin datos de ejemplo)
  */
-export function downloadEmptyCustomerTemplate(): void {
+export async function downloadEmptyCustomerTemplate(): Promise<void> {
+  const XLSX = await import('xlsx')
+
   // Crear workbook
   const workbook = XLSX.utils.book_new()
 

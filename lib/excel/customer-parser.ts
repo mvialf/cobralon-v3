@@ -1,4 +1,3 @@
-import * as XLSX from 'xlsx'
 import { customerSchema, type CustomerFormData } from '@/lib/validations/customer-validations'
 import {
   findColumnIndex as findColumnIndexHelper,
@@ -55,8 +54,9 @@ export async function parseCustomerExcel(file: File): Promise<ParseResult> {
       reject(new Error('Error al leer el archivo'))
     }
 
-    reader.onload = (e) => {
+    reader.onload = async (e) => {
       try {
+        const XLSX = await import('xlsx')
         const data = e.target?.result
         if (!data) {
           reject(new Error('No se pudo leer el contenido del archivo'))
