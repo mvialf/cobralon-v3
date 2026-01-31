@@ -211,6 +211,11 @@ export const POST = withLogging(async (request, logger) => {
   projectLogger.info('Project creation requested')
 
   try {
+    // Defer: iniciar query a DB antes de validaciones sync
+    const customerPromise = prisma.customer.findUnique({
+      where: { id: customerId },
+    })
+
     // Validaciones básicas
     projectLogger.debug('Starting basic validations')
 
@@ -256,11 +261,9 @@ export const POST = withLogging(async (request, logger) => {
 
     projectLogger.debug('Basic validations passed')
 
-    // Verificar que el customer existe
+    // Await de la query iniciada antes de validaciones
     projectLogger.debug({ customerId }, 'Validating customer exists')
-    const customerExists = await prisma.customer.findUnique({
-      where: { id: customerId },
-    })
+    const customerExists = await customerPromise
 
     if (!customerExists) {
       projectLogger.warn('Customer not found')

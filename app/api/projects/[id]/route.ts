@@ -96,24 +96,20 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
     const { id } = await params
     const body = await request.json()
 
-    // Verificar que el proyecto existe
-    const existingProject = await prisma.project.findUnique({
-      where: { id },
-    })
+    // Verificar proyecto y customer en paralelo
+    const [existingProject, customerExists] = await Promise.all([
+      prisma.project.findUnique({ where: { id } }),
+      body.customerId
+        ? prisma.customer.findUnique({ where: { id: body.customerId } })
+        : Promise.resolve(null),
+    ])
 
     if (!existingProject) {
       return NextResponse.json({ error: 'Proyecto no encontrado' }, { status: 404 })
     }
 
-    // Si se actualiza el customerId, verificar que existe
-    if (body.customerId) {
-      const customerExists = await prisma.customer.findUnique({
-        where: { id: body.customerId },
-      })
-
-      if (!customerExists) {
-        return NextResponse.json({ error: 'El cliente no existe' }, { status: 404 })
-      }
+    if (body.customerId && !customerExists) {
+      return NextResponse.json({ error: 'El cliente no existe' }, { status: 404 })
     }
 
     // SEGURIDAD: Siempre recalcular total en el servidor cuando cambian subtotal/taxRate

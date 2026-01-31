@@ -316,6 +316,21 @@ export const POST = withLogging(async (request, logger) => {
   paymentLogger.info('Payment creation requested')
 
   try {
+    // Pre-calcular projectIds para query en paralelo
+    const projectIds = allocations?.map((a: AllocationInput) => a.projectId) ?? []
+
+    // Defer: iniciar 3 queries a DB antes de validaciones sync
+    const dbQueriesPromise = Promise.all([
+      prisma.customer.findUnique({ where: { id: customerId } }),
+      prisma.paymentMethod.findUnique({ where: { id: paymentMethodId } }),
+      projectIds.length > 0
+        ? prisma.project.findMany({
+            where: { id: { in: projectIds } },
+            select: { id: true, customerId: true, currency: true },
+          })
+        : Promise.resolve([] as Array<{ id: string; customerId: string; currency: string }>),
+    ])
+
     // Validaciones básicas
     paymentLogger.debug('Starting basic validations')
 
@@ -376,22 +391,14 @@ export const POST = withLogging(async (request, logger) => {
 
     paymentLogger.debug('Basic validations passed')
 
-    // Verificar que el customer existe
-    paymentLogger.debug('Validating customer exists')
-    const customerExists = await prisma.customer.findUnique({
-      where: { id: customerId },
-    })
+    // Await de las 3 queries lanzadas antes de validaciones
+    paymentLogger.debug('Validating customer, payment method and projects exist')
+    const [customerExists, paymentMethod, projects] = await dbQueriesPromise
 
     if (!customerExists) {
       paymentLogger.warn('Customer not found')
       return NextResponse.json({ error: 'El cliente no existe' }, { status: 404 })
     }
-
-    // Verificar que el payment method existe
-    paymentLogger.debug({ paymentMethodId }, 'Validating payment method exists')
-    const paymentMethod = await prisma.paymentMethod.findUnique({
-      where: { id: paymentMethodId },
-    })
 
     if (!paymentMethod) {
       paymentLogger.warn('Payment method not found')
@@ -409,20 +416,8 @@ export const POST = withLogging(async (request, logger) => {
       return NextResponse.json({ error: duplicatesValidation.error }, { status: 400 })
     }
 
-    const projectIds = allocations.map((a: AllocationInput) => a.projectId)
-
     // Verificar que todos los proyectos existen y pertenecen al mismo cliente
     paymentLogger.debug({ projectIds }, 'Validating projects')
-    const projects = await prisma.project.findMany({
-      where: {
-        id: { in: projectIds },
-      },
-      select: {
-        id: true,
-        customerId: true,
-        currency: true, // Solo traer campos necesarios para validación
-      },
-    })
 
     if (projects.length !== projectIds.length) {
       paymentLogger.warn(
@@ -485,31 +480,30 @@ export const POST = withLogging(async (request, logger) => {
         )
       }
 
-      // Obtener crédito actual del cliente
-      const customer = await prisma.customer.findUnique({
-        where: { id: customerId },
-        select: { creditBalance: true },
-      })
+      // Obtener crédito del cliente y balance del proyecto (en paralelo)
+      const [customer, creditProject] = await Promise.all([
+        prisma.customer.findUnique({
+          where: { id: customerId },
+          select: { creditBalance: true },
+        }),
+        prisma.project.findUnique({
+          where: { id: allocations[0].projectId },
+          select: { balance: true },
+        }),
+      ])
 
       if (!customer) {
         paymentLogger.error('Customer not found during credit validation')
         return NextResponse.json({ error: 'Cliente no encontrado' }, { status: 404 })
       }
 
-      customerCreditBalance = Number(customer.creditBalance)
-
-      // Obtener balance del proyecto
-      const project = await prisma.project.findUnique({
-        where: { id: allocations[0].projectId },
-        select: { balance: true },
-      })
-
-      if (!project) {
+      if (!creditProject) {
         paymentLogger.error('Project not found during credit validation')
         return NextResponse.json({ error: 'Proyecto no encontrado' }, { status: 404 })
       }
 
-      const projectBalance = Number(project.balance)
+      customerCreditBalance = Number(customer.creditBalance)
+      const projectBalance = Number(creditProject.balance)
 
       // Validar que se puede aplicar el crédito
       const validation = canApplyCredit(creditToApply, customerCreditBalance, projectBalance)
