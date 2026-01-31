@@ -37,6 +37,8 @@ export interface PaymentsQueryParams {
   projectId?: string
   startDate?: string
   endDate?: string
+  // Performance: solo pedir facets cuando se necesitan
+  includeFacets?: boolean
 }
 
 /** Facet individual (usado en facets de respuesta) */
@@ -152,6 +154,7 @@ export function usePayments(params: PaymentsQueryParams = {}) {
       if (params.projectId) searchParams.set('projectId', params.projectId)
       if (params.startDate) searchParams.set('startDate', params.startDate)
       if (params.endDate) searchParams.set('endDate', params.endDate)
+      if (params.includeFacets) searchParams.set('includeFacets', 'true')
 
       const response = await fetch(`/api/payments?${searchParams}`)
 

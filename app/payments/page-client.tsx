@@ -104,6 +104,8 @@ export function PaymentsPageClient() {
       type: typeFilter,
       paymentMethodId: paymentMethodFilter,
       projectNumber: projectNumberFilter,
+      // Facets solo en página 1 (carga inicial + cambio de filtros que resetean a pág 1)
+      includeFacets: pagination.pageIndex === 0,
     }),
     [
       pagination.pageIndex,

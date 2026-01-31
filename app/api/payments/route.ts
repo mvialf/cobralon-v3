@@ -51,6 +51,7 @@ export const GET = withLogging(async (request, logger) => {
   const projectId = searchParams.get('projectId') || ''
   const startDate = searchParams.get('startDate') || ''
   const endDate = searchParams.get('endDate') || ''
+  const includeFacets = searchParams.get('includeFacets') === 'true'
 
   logger.debug(
     {
@@ -139,55 +140,67 @@ export const GET = withLogging(async (request, logger) => {
   }
 
   try {
-    // Obtener pagos, total count y facets en paralelo
-    const [payments, total, typeFacets, paymentMethodFacets, projectNumberFacets] =
-      await Promise.all([
-        // Query principal
-        prisma.payment.findMany({
-          relationLoadStrategy: 'join', // ← Fix N+1: Force database-level JOINs
-          where,
-          skip,
-          take: limit,
-          orderBy: { date: 'desc' }, // Más recientes primero
-          include: {
-            customer: {
-              select: {
-                id: true,
-                name: true,
-                phone: true,
-              },
+    // Queries base: pagos + count (siempre se ejecutan)
+    const baseQueries = [
+      // Query principal
+      prisma.payment.findMany({
+        relationLoadStrategy: 'join',
+        where,
+        skip,
+        take: limit,
+        orderBy: { date: 'desc' },
+        include: {
+          customer: {
+            select: {
+              id: true,
+              name: true,
+              phone: true,
             },
-            paymentMethod: {
-              select: {
-                id: true,
-                name: true,
-                icon: true,
-              },
+          },
+          paymentMethod: {
+            select: {
+              id: true,
+              name: true,
+              icon: true,
             },
-            allocations: {
-              select: {
-                id: true,
-                allocatedAmount: true,
-                project: {
-                  select: {
-                    id: true,
-                    projectNumber: true,
-                    projectName: true,
-                    totalAmount: true,
-                    currency: true,
-                  },
+          },
+          allocations: {
+            select: {
+              id: true,
+              allocatedAmount: true,
+              project: {
+                select: {
+                  id: true,
+                  projectNumber: true,
+                  projectName: true,
+                  totalAmount: true,
+                  currency: true,
                 },
               },
-              orderBy: {
-                project: {
-                  createdAt: 'asc', // Ordenar por FIFO
-                },
+            },
+            orderBy: {
+              project: {
+                createdAt: 'asc',
               },
             },
           },
-        }),
-        // Count total
-        prisma.payment.count({ where }),
+        },
+      }),
+      // Count total
+      prisma.payment.count({ where }),
+    ] as const
+
+    // Facets: solo si el cliente las solicita (carga inicial + cambio de filtros)
+    if (includeFacets) {
+      const [
+        payments,
+        total,
+        typeFacets,
+        paymentMethodFacets,
+        projectNumberFacets,
+        paymentMethods,
+      ] = await Promise.all([
+        ...baseQueries,
         // Facet: tipo de pago
         prisma.payment.groupBy({
           by: ['type'],
@@ -202,42 +215,68 @@ export const GET = withLogging(async (request, logger) => {
         }),
         // Facet: números de proyecto (raw query para aplanar allocations)
         prisma.$queryRaw<Array<{ projectNumber: string; count: bigint }>>`
-        SELECT p."projectNumber", COUNT(DISTINCT pa.id) as count
-        FROM "PaymentAllocation" pa
-        JOIN "Project" p ON pa."projectId" = p.id
-        JOIN "Payment" pm ON pa."paymentId" = pm.id
-        WHERE 1=1
-          ${search ? Prisma.sql`AND (EXISTS (SELECT 1 FROM "Customer" c WHERE c.id = pm."customerId" AND c.name ILIKE ${`%${search}%`}) OR p."projectNumber" ILIKE ${`%${search}%`} OR p."projectName" ILIKE ${`%${search}%`})` : Prisma.empty}
-          ${type ? Prisma.sql`AND pm.type = ${type}` : Prisma.empty}
-          ${paymentMethodId ? Prisma.sql`AND pm."paymentMethodId"::text = ${paymentMethodId}` : Prisma.empty}
-          ${customerId ? Prisma.sql`AND pm."customerId"::text = ${customerId}` : Prisma.empty}
-          ${startDate ? Prisma.sql`AND pm.date >= ${new Date(startDate)}` : Prisma.empty}
-          ${endDate ? Prisma.sql`AND pm.date <= ${new Date(endDate)}` : Prisma.empty}
-        GROUP BY p."projectNumber"
-        ORDER BY p."projectNumber"
-      `,
+          SELECT p."projectNumber", COUNT(DISTINCT pa.id) as count
+          FROM "PaymentAllocation" pa
+          JOIN "Project" p ON pa."projectId" = p.id
+          JOIN "Payment" pm ON pa."paymentId" = pm.id
+          WHERE 1=1
+            ${search ? Prisma.sql`AND (EXISTS (SELECT 1 FROM "Customer" c WHERE c.id = pm."customerId" AND c.name ILIKE ${`%${search}%`}) OR p."projectNumber" ILIKE ${`%${search}%`} OR p."projectName" ILIKE ${`%${search}%`})` : Prisma.empty}
+            ${type ? Prisma.sql`AND pm.type = ${type}` : Prisma.empty}
+            ${paymentMethodId ? Prisma.sql`AND pm."paymentMethodId"::text = ${paymentMethodId}` : Prisma.empty}
+            ${customerId ? Prisma.sql`AND pm."customerId"::text = ${customerId}` : Prisma.empty}
+            ${startDate ? Prisma.sql`AND pm.date >= ${new Date(startDate)}` : Prisma.empty}
+            ${endDate ? Prisma.sql`AND pm.date <= ${new Date(endDate)}` : Prisma.empty}
+          GROUP BY p."projectNumber"
+          ORDER BY p."projectNumber"
+        `,
+        // Nombres de métodos de pago (para labels de facets)
+        prisma.paymentMethod.findMany({
+          where: { active: true },
+          select: { id: true, name: true },
+        }),
       ])
 
-    // Obtener nombres de métodos de pago para los facets (filtrar nulls)
-    const validPaymentMethodFacets = paymentMethodFacets.filter((f) => f.paymentMethodId !== null)
-    const paymentMethodIds = validPaymentMethodFacets.map((f) => f.paymentMethodId) as string[]
+      const paymentMethodMap = new Map(paymentMethods.map((pm) => [pm.id, pm.name]))
+      const validPaymentMethodFacets = paymentMethodFacets.filter((f) => f.paymentMethodId !== null)
 
-    const paymentMethods =
-      paymentMethodIds.length > 0
-        ? await prisma.paymentMethod.findMany({
-            where: { id: { in: paymentMethodIds } },
-            select: { id: true, name: true },
-          })
-        : []
+      logger.info(
+        { found: payments.length, total, page, includeFacets: true },
+        'Payments fetched successfully'
+      )
 
-    const paymentMethodMap = new Map(paymentMethods.map((pm) => [pm.id, pm.name]))
+      return NextResponse.json({
+        payments,
+        pagination: {
+          page,
+          limit,
+          total,
+          totalPages: Math.ceil(total / limit),
+        },
+        facets: {
+          type: typeFacets.map((f) => ({
+            value: f.type,
+            label: f.type === 'Project' ? 'Proyecto' : 'Cliente',
+            count: f._count,
+          })),
+          paymentMethod: validPaymentMethodFacets.map((f) => ({
+            value: f.paymentMethodId as string,
+            label: paymentMethodMap.get(f.paymentMethodId as string) || f.paymentMethodId,
+            count: f._count,
+          })),
+          projectNumber: projectNumberFacets.map((f) => ({
+            value: f.projectNumber,
+            label: f.projectNumber,
+            count: Number(f.count),
+          })),
+        },
+      })
+    }
+
+    // Sin facets: solo pagos + count
+    const [payments, total] = await Promise.all(baseQueries)
 
     logger.info(
-      {
-        found: payments.length,
-        total,
-        page,
-      },
+      { found: payments.length, total, page, includeFacets: false },
       'Payments fetched successfully'
     )
 
@@ -248,23 +287,6 @@ export const GET = withLogging(async (request, logger) => {
         limit,
         total,
         totalPages: Math.ceil(total / limit),
-      },
-      facets: {
-        type: typeFacets.map((f) => ({
-          value: f.type,
-          label: f.type === 'Project' ? 'Proyecto' : 'Cliente',
-          count: f._count,
-        })),
-        paymentMethod: validPaymentMethodFacets.map((f) => ({
-          value: f.paymentMethodId as string,
-          label: paymentMethodMap.get(f.paymentMethodId as string) || f.paymentMethodId,
-          count: f._count,
-        })),
-        projectNumber: projectNumberFacets.map((f) => ({
-          value: f.projectNumber,
-          label: f.projectNumber,
-          count: Number(f.count),
-        })),
       },
     })
   } catch (error) {
