@@ -92,12 +92,13 @@ export const GET = withLogging(async (request, logger) => {
     result.totalProjects = projects.length
     logger.info({ totalProjects: projects.length }, 'Projects loaded')
 
-    // Verificar y corregir cada proyecto
+    // Fase 1: Detectar inconsistencias en memoria
+    const toFix: Array<{ id: string; balance: number }> = []
+
     for (const project of projects) {
       result.checkedProjects++
 
       try {
-        // Calcular balance esperado
         const { balance: calculatedBalance } = calculateProjectBalance({
           totalAmount: Number(project.total),
           allocations: project.paymentAllocations.map((alloc) => ({
@@ -108,7 +109,6 @@ export const GET = withLogging(async (request, logger) => {
         const dbBalance = Number(project.balance)
         const difference = Math.abs(dbBalance - calculatedBalance)
 
-        // Tolerancia por redondeos decimales
         if (difference >= FINANCIAL.TOLERANCE) {
           result.inconsistentProjects++
 
@@ -123,7 +123,6 @@ export const GET = withLogging(async (request, logger) => {
             'Inconsistent balance detected'
           )
 
-          // Guardar detalle
           result.details.push({
             projectId: project.id,
             projectNumber: project.projectNumber,
@@ -132,25 +131,7 @@ export const GET = withLogging(async (request, logger) => {
             difference,
           })
 
-          // Corregir balance
-          await prisma.project.update({
-            where: { id: project.id },
-            data: {
-              balance: new Decimal(calculatedBalance),
-            },
-          })
-
-          result.fixedProjects++
-
-          logger.info(
-            {
-              projectId: project.id,
-              projectNumber: project.projectNumber,
-              oldBalance: dbBalance,
-              newBalance: calculatedBalance,
-            },
-            'Balance corrected'
-          )
+          toFix.push({ id: project.id, balance: calculatedBalance })
         }
       } catch (error) {
         result.errors++
@@ -162,6 +143,26 @@ export const GET = withLogging(async (request, logger) => {
           },
           'Error processing project'
         )
+      }
+    }
+
+    // Fase 2: Corregir en batch dentro de una transacción
+    if (toFix.length > 0) {
+      try {
+        await prisma.$transaction(
+          toFix.map(({ id, balance }) =>
+            prisma.project.update({
+              where: { id },
+              data: { balance: new Decimal(balance) },
+            })
+          )
+        )
+        result.fixedProjects = toFix.length
+
+        logger.info({ fixedCount: toFix.length }, 'Batch balance correction completed')
+      } catch (error) {
+        result.errors += toFix.length
+        logger.error({ err: error }, 'Error in batch balance correction')
       }
     }
 
