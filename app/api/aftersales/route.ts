@@ -119,35 +119,34 @@ export async function POST(request: Request) {
     const body = await request.json()
     const validatedData = createAftersaleSchema.parse(body)
 
-    // Validación: proyecto existe
-    const project = await prisma.project.findUnique({
-      where: { id: validatedData.projectId },
-      include: {
-        projectStatus: {
-          select: {
-            isFinal: true,
+    // Validaciones en paralelo: proyecto existe, estado existe
+    const [project, status] = await Promise.all([
+      prisma.project.findUnique({
+        where: { id: validatedData.projectId },
+        include: {
+          projectStatus: {
+            select: {
+              isFinal: true,
+            },
           },
         },
-      },
-    })
+      }),
+      prisma.aftersaleStatus.findUnique({
+        where: { id: validatedData.aftersaleStatusId },
+      }),
+    ])
 
     if (!project) {
       return NextResponse.json({ error: 'El proyecto seleccionado no existe' }, { status: 404 })
     }
 
-    // Validación opcional: verificar que el proyecto esté finalizado
-    // (puede comentarse si se permite crear casos de postventa en cualquier estado)
+    // Validación: verificar que el proyecto esté finalizado
     if (!project.projectStatus?.isFinal) {
       return NextResponse.json(
         { error: 'Solo se pueden crear casos de postventa para proyectos finalizados' },
         { status: 400 }
       )
     }
-
-    // Validación: estado existe y está activo
-    const status = await prisma.aftersaleStatus.findUnique({
-      where: { id: validatedData.aftersaleStatusId },
-    })
 
     if (!status) {
       return NextResponse.json({ error: 'El estado seleccionado no existe' }, { status: 404 })

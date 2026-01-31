@@ -112,10 +112,25 @@ export async function POST(request: Request) {
     const body = await request.json()
     const validatedData = visitStatusSchema.parse(body)
 
-    // Validación: nombre único
-    const existingByName = await prisma.visitStatus.findUnique({
-      where: { name: validatedData.name },
-    })
+    // Validaciones en paralelo: nombre único, color existe, estado inicial/final
+    const [existingByName, colorExists, currentInitial, currentFinal] = await Promise.all([
+      prisma.visitStatus.findUnique({
+        where: { name: validatedData.name },
+      }),
+      prisma.badgeColor.findUnique({
+        where: { id: validatedData.colorId },
+      }),
+      validatedData.isInitial
+        ? prisma.visitStatus.findFirst({
+            where: { isInitial: true, isActive: true },
+          })
+        : Promise.resolve(null),
+      validatedData.isFinal
+        ? prisma.visitStatus.findFirst({
+            where: { isFinal: true, isActive: true },
+          })
+        : Promise.resolve(null),
+    ])
 
     if (existingByName) {
       return NextResponse.json(
@@ -124,40 +139,21 @@ export async function POST(request: Request) {
       )
     }
 
-    // Validación: solo un estado inicial
-    if (validatedData.isInitial) {
-      const currentInitial = await prisma.visitStatus.findFirst({
-        where: { isInitial: true, isActive: true },
-      })
-
-      if (currentInitial) {
-        return NextResponse.json(
-          {
-            error: `Ya existe un estado inicial: "${currentInitial.name}". Solo puede haber uno.`,
-          },
-          { status: 400 }
-        )
-      }
+    if (validatedData.isInitial && currentInitial) {
+      return NextResponse.json(
+        {
+          error: `Ya existe un estado inicial: "${currentInitial.name}". Solo puede haber uno.`,
+        },
+        { status: 400 }
+      )
     }
 
-    // Validación: solo un estado final
-    if (validatedData.isFinal) {
-      const currentFinal = await prisma.visitStatus.findFirst({
-        where: { isFinal: true, isActive: true },
-      })
-
-      if (currentFinal) {
-        return NextResponse.json(
-          { error: `Ya existe un estado final: "${currentFinal.name}". Solo puede haber uno.` },
-          { status: 400 }
-        )
-      }
+    if (validatedData.isFinal && currentFinal) {
+      return NextResponse.json(
+        { error: `Ya existe un estado final: "${currentFinal.name}". Solo puede haber uno.` },
+        { status: 400 }
+      )
     }
-
-    // Validación: colorId existe
-    const colorExists = await prisma.badgeColor.findUnique({
-      where: { id: validatedData.colorId },
-    })
 
     if (!colorExists) {
       return NextResponse.json({ error: 'El color seleccionado no existe' }, { status: 400 })

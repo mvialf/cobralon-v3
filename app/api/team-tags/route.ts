@@ -97,10 +97,21 @@ export async function POST(request: Request) {
 
     const validatedData = teamTagSchema.parse(dataToValidate)
 
-    // Validación: nombre único
-    const existingByName = await prisma.teamTag.findUnique({
-      where: { name: validatedData.name },
-    })
+    // Validaciones en paralelo: nombre único, color existe, max order
+    const [existingByName, colorExists, maxOrderResult] = await Promise.all([
+      prisma.teamTag.findUnique({
+        where: { name: validatedData.name },
+      }),
+      prisma.badgeColor.findUnique({
+        where: { id: validatedData.colorId },
+      }),
+      body.order === undefined
+        ? prisma.teamTag.findFirst({
+            orderBy: { order: 'desc' },
+            select: { order: true },
+          })
+        : Promise.resolve(null),
+    ])
 
     if (existingByName) {
       return NextResponse.json(
@@ -109,30 +120,13 @@ export async function POST(request: Request) {
       )
     }
 
-    // Validación: colorId existe
-    const colorExists = await prisma.badgeColor.findUnique({
-      where: { id: validatedData.colorId },
-    })
-
     if (!colorExists) {
       return NextResponse.json({ error: 'El color seleccionado no existe' }, { status: 400 })
     }
 
     // Calcular order automáticamente si no se provee
-    let order: number
-
-    if (body.order !== undefined) {
-      order = body.order
-    } else {
-      // Buscar el máximo order actual
-      const maxOrder = await prisma.teamTag.findFirst({
-        orderBy: { order: 'desc' },
-        select: { order: true },
-      })
-
-      // Si no hay tags, empezar en 10, sino sumar 10 al máximo
-      order = maxOrder ? maxOrder.order + 10 : 10
-    }
+    const order =
+      body.order !== undefined ? body.order : maxOrderResult ? maxOrderResult.order + 10 : 10
 
     // Crear el team tag
     const newTag = await prisma.teamTag.create({

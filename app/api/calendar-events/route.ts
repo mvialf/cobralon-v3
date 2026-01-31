@@ -43,108 +43,109 @@ export const GET = withLogging(async (request, logger) => {
 
     const { start, end } = validationResult.data
 
-    // Fetch ProjectEvents con relación M:M de uninstallTags y teamTags
-    const projectEvents = await prisma.projectEvent.findMany({
-      relationLoadStrategy: 'join', // Evita N+1 queries
-      where: {
-        scheduledDate: {
-          gte: start,
-          lte: end,
+    // Fetch todos los eventos en paralelo
+    const [projectEvents, aftersaleEvents, visitEvents] = await Promise.all([
+      // ProjectEvents con relación M:M de uninstallTags y teamTags
+      prisma.projectEvent.findMany({
+        relationLoadStrategy: 'join', // Evita N+1 queries
+        where: {
+          scheduledDate: {
+            gte: start,
+            lte: end,
+          },
         },
-      },
-      include: {
-        project: {
-          include: {
-            customer: true,
-            projectStatus: {
-              include: {
-                color: true,
+        include: {
+          project: {
+            include: {
+              customer: true,
+              projectStatus: {
+                include: {
+                  color: true,
+                },
               },
-            },
-            // Relación M:M con UninstallTags (elimina workaround manual)
-            uninstallTags: {
-              include: {
-                uninstallTag: {
-                  include: {
-                    color: true,
+              // Relación M:M con UninstallTags (elimina workaround manual)
+              uninstallTags: {
+                include: {
+                  uninstallTag: {
+                    include: {
+                      color: true,
+                    },
                   },
                 },
               },
             },
           },
-        },
-        // TeamTags asignados al evento
-        teamTags: {
-          include: {
-            color: true,
-          },
-        },
-      },
-      orderBy: [{ scheduledDate: 'asc' }, { order: 'asc' }],
-    })
-
-    // Fetch AftersaleEvents en paralelo
-    const aftersaleEvents = await prisma.aftersaleEvent.findMany({
-      relationLoadStrategy: 'join', // Evita N+1 queries
-      where: {
-        scheduledDate: {
-          gte: start,
-          lte: end,
-        },
-      },
-      include: {
-        aftersale: {
-          include: {
-            project: {
-              include: {
-                customer: true,
-              },
-            },
-            aftersaleStatus: {
-              include: {
-                color: true,
-              },
+          // TeamTags asignados al evento
+          teamTags: {
+            include: {
+              color: true,
             },
           },
         },
-        // TeamTags asignados al evento
-        teamTags: {
-          include: {
-            color: true,
+        orderBy: [{ scheduledDate: 'asc' }, { order: 'asc' }],
+      }),
+      // AftersaleEvents
+      prisma.aftersaleEvent.findMany({
+        relationLoadStrategy: 'join', // Evita N+1 queries
+        where: {
+          scheduledDate: {
+            gte: start,
+            lte: end,
           },
         },
-      },
-      orderBy: [{ scheduledDate: 'asc' }, { order: 'asc' }],
-    })
-
-    // Fetch VisitEvents en paralelo
-    const visitEvents = await prisma.visitEvent.findMany({
-      relationLoadStrategy: 'join', // Evita N+1 queries
-      where: {
-        scheduledDate: {
-          gte: start,
-          lte: end,
-        },
-      },
-      include: {
-        visit: {
-          include: {
-            visitStatus: {
-              include: {
-                color: true,
+        include: {
+          aftersale: {
+            include: {
+              project: {
+                include: {
+                  customer: true,
+                },
+              },
+              aftersaleStatus: {
+                include: {
+                  color: true,
+                },
               },
             },
           },
-        },
-        // TeamTags asignados al evento
-        teamTags: {
-          include: {
-            color: true,
+          // TeamTags asignados al evento
+          teamTags: {
+            include: {
+              color: true,
+            },
           },
         },
-      },
-      orderBy: [{ scheduledDate: 'asc' }, { order: 'asc' }],
-    })
+        orderBy: [{ scheduledDate: 'asc' }, { order: 'asc' }],
+      }),
+      // VisitEvents
+      prisma.visitEvent.findMany({
+        relationLoadStrategy: 'join', // Evita N+1 queries
+        where: {
+          scheduledDate: {
+            gte: start,
+            lte: end,
+          },
+        },
+        include: {
+          visit: {
+            include: {
+              visitStatus: {
+                include: {
+                  color: true,
+                },
+              },
+            },
+          },
+          // TeamTags asignados al evento
+          teamTags: {
+            include: {
+              color: true,
+            },
+          },
+        },
+        orderBy: [{ scheduledDate: 'asc' }, { order: 'asc' }],
+      }),
+    ])
 
     // Unificar eventos con tipo discriminado
     // IMPORTANTE: Convertir Decimals a números para serialización JSON
