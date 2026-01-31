@@ -43,7 +43,6 @@ export interface TagSelectorProps {
     colorId: string
   ) => void | Promise<void>
   onDeleteTag?: (tagId: string) => void | Promise<void>
-  placeholder?: string
   label?: string
   className?: string
   showFullNameInSelected?: boolean // Si true, las tags seleccionadas muestran nombre completo
