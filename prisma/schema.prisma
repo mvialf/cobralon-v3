@@ -195,6 +195,7 @@ model Project {
   @@index([customerId, projectStatusId])
   @@index([projectStatusId, createdAt(sort: Desc)])
   @@index([projectStatusId, balance]) // Index compuesto para filtros de estado + balance
+  @@index([createdAt(sort: Asc)]) // Index para ORDER BY createdAt ASC (FIFO en allocations)
 }
 
 model PaymentMethod {
@@ -266,6 +267,7 @@ model PaymentAllocation {
   @@unique([paymentId, projectId])
   @@index([paymentId])
   @@index([projectId])
+  @@index([projectId, paymentId]) // Index para facet query (JOIN por projectId primero)
 }
 
 model UninstallTag {
