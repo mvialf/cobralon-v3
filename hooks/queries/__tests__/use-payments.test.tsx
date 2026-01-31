@@ -330,7 +330,7 @@ describe('useCreatePayment', () => {
     }
 
     await expect(result.current.mutateAsync(invalidData)).rejects.toThrow(
-      'Pago tipo Project debe tener exactamente 1 asignación'
+      'Pago tipo "Project" debe tener exactamente 1 asignación'
     )
   })
 
@@ -353,7 +353,7 @@ describe('useCreatePayment', () => {
     }
 
     await expect(result.current.mutateAsync(invalidData)).rejects.toThrow(
-      'Pago tipo Project debe tener exactamente 1 asignación'
+      'Pago tipo "Project" debe tener exactamente 1 asignación'
     )
   })
 
@@ -425,7 +425,7 @@ describe('useCreatePayment', () => {
     }
 
     await expect(result.current.mutateAsync(invalidData)).rejects.toThrow(
-      'Pago tipo Customer debe tener al menos 1 asignación'
+      'Pago tipo "Customer" debe tener al menos 1 asignación'
     )
   })
 
