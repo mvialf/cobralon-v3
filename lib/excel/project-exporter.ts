@@ -1,5 +1,3 @@
-import * as XLSX from 'xlsx'
-
 import type { Decimal } from '@prisma/client/runtime/library'
 
 /**
@@ -61,7 +59,12 @@ function transformProjectData(projects: ProjectExportData[]) {
  * @param projects - Array de proyectos a exportar
  * @param filename - Nombre del archivo (sin extensión)
  */
-export function exportProjectsToExcel(projects: ProjectExportData[], filename?: string): void {
+export async function exportProjectsToExcel(
+  projects: ProjectExportData[],
+  filename?: string
+): Promise<void> {
+  const XLSX = await import('xlsx')
+
   // Transformar datos
   const data = transformProjectData(projects)
 
@@ -123,7 +126,11 @@ export function exportProjectsToExcel(projects: ProjectExportData[], filename?: 
  * @param projects - Array de proyectos a exportar
  * @returns ArrayBuffer del archivo Excel (compatible con Response/Blob)
  */
-export function generateProjectsExcelBuffer(projects: ProjectExportData[]): ArrayBuffer {
+export async function generateProjectsExcelBuffer(
+  projects: ProjectExportData[]
+): Promise<ArrayBuffer> {
+  const XLSX = await import('xlsx')
+
   // Transformar datos
   const data = transformProjectData(projects)
 

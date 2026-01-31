@@ -124,7 +124,7 @@ export async function GET(request: Request) {
     }
 
     // Generar Excel buffer
-    const excelBuffer = generateProjectsExcelBuffer(filteredProjects)
+    const excelBuffer = await generateProjectsExcelBuffer(filteredProjects)
 
     // Nombre del archivo con fecha
     const filename = `proyectos-${new Date().toISOString().split('T')[0]}.xlsx`

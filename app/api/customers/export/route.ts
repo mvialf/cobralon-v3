@@ -47,7 +47,7 @@ export async function GET(request: Request) {
     }
 
     // Generar Excel buffer
-    const excelBuffer = generateCustomersExcelBuffer(customers)
+    const excelBuffer = await generateCustomersExcelBuffer(customers)
 
     // Nombre del archivo con fecha
     const filename = `clientes-${new Date().toISOString().split('T')[0]}.xlsx`

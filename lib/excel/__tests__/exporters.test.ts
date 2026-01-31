@@ -42,22 +42,22 @@ describe('generateCustomersExcelBuffer', () => {
     },
   ]
 
-  it('retorna ArrayBuffer válido', () => {
-    const buffer = generateCustomersExcelBuffer(mockCustomers)
+  it('retorna ArrayBuffer válido', async () => {
+    const buffer = await generateCustomersExcelBuffer(mockCustomers)
     expect(buffer).toBeInstanceOf(ArrayBuffer)
     expect(buffer.byteLength).toBeGreaterThan(0)
   })
 
-  it('genera Excel válido que se puede leer', () => {
-    const buffer = generateCustomersExcelBuffer(mockCustomers)
+  it('genera Excel válido que se puede leer', async () => {
+    const buffer = await generateCustomersExcelBuffer(mockCustomers)
     const workbook = readExcelFromBuffer(buffer)
 
     expect(workbook.SheetNames).toContain('Clientes')
     expect(workbook.SheetNames.length).toBe(1)
   })
 
-  it('contiene headers correctos', () => {
-    const buffer = generateCustomersExcelBuffer(mockCustomers)
+  it('contiene headers correctos', async () => {
+    const buffer = await generateCustomersExcelBuffer(mockCustomers)
     const workbook = readExcelFromBuffer(buffer)
     const data = getFirstSheetData(workbook)
 
@@ -70,8 +70,8 @@ describe('generateCustomersExcelBuffer', () => {
     expect(headers).toContain('Proyectos')
   })
 
-  it('contiene datos transformados correctamente', () => {
-    const buffer = generateCustomersExcelBuffer(mockCustomers)
+  it('contiene datos transformados correctamente', async () => {
+    const buffer = await generateCustomersExcelBuffer(mockCustomers)
     const workbook = readExcelFromBuffer(buffer)
     const data = getFirstSheetData(workbook)
 
@@ -84,8 +84,8 @@ describe('generateCustomersExcelBuffer', () => {
     expect(firstRow).toContain(3) // Proyectos
   })
 
-  it('maneja email null correctamente', () => {
-    const buffer = generateCustomersExcelBuffer(mockCustomers)
+  it('maneja email null correctamente', async () => {
+    const buffer = await generateCustomersExcelBuffer(mockCustomers)
     const workbook = readExcelFromBuffer(buffer)
     const data = getFirstSheetData(workbook)
 
@@ -95,8 +95,8 @@ describe('generateCustomersExcelBuffer', () => {
     expect(secondRow).toContain('') // Email vacío
   })
 
-  it('genera Excel para array vacío', () => {
-    const buffer = generateCustomersExcelBuffer([])
+  it('genera Excel para array vacío', async () => {
+    const buffer = await generateCustomersExcelBuffer([])
     const workbook = readExcelFromBuffer(buffer)
     const data = getFirstSheetData(workbook)
 
@@ -104,7 +104,7 @@ describe('generateCustomersExcelBuffer', () => {
     expect(data.length).toBe(0)
   })
 
-  it('maneja creditBalance como Decimal-like string', () => {
+  it('maneja creditBalance como Decimal-like string', async () => {
     const customersWithDecimal: CustomerExportData[] = [
       {
         id: '1',
@@ -116,7 +116,7 @@ describe('generateCustomersExcelBuffer', () => {
       },
     ]
 
-    const buffer = generateCustomersExcelBuffer(customersWithDecimal)
+    const buffer = await generateCustomersExcelBuffer(customersWithDecimal)
     const workbook = readExcelFromBuffer(buffer)
     const data = getFirstSheetData(workbook)
 
@@ -124,7 +124,7 @@ describe('generateCustomersExcelBuffer', () => {
     expect(row).toContain(15000.5)
   })
 
-  it('maneja _count undefined', () => {
+  it('maneja _count undefined', async () => {
     const customersNoCount: CustomerExportData[] = [
       {
         id: '1',
@@ -137,7 +137,7 @@ describe('generateCustomersExcelBuffer', () => {
       },
     ]
 
-    const buffer = generateCustomersExcelBuffer(customersNoCount)
+    const buffer = await generateCustomersExcelBuffer(customersNoCount)
     const workbook = readExcelFromBuffer(buffer)
     const data = getFirstSheetData(workbook)
 
@@ -193,21 +193,21 @@ describe('generateProjectsExcelBuffer', () => {
     },
   ]
 
-  it('retorna ArrayBuffer válido', () => {
-    const buffer = generateProjectsExcelBuffer(mockProjects)
+  it('retorna ArrayBuffer válido', async () => {
+    const buffer = await generateProjectsExcelBuffer(mockProjects)
     expect(buffer).toBeInstanceOf(ArrayBuffer)
     expect(buffer.byteLength).toBeGreaterThan(0)
   })
 
-  it('genera Excel con hoja "Proyectos"', () => {
-    const buffer = generateProjectsExcelBuffer(mockProjects)
+  it('genera Excel con hoja "Proyectos"', async () => {
+    const buffer = await generateProjectsExcelBuffer(mockProjects)
     const workbook = readExcelFromBuffer(buffer)
 
     expect(workbook.SheetNames).toContain('Proyectos')
   })
 
-  it('contiene headers de proyecto correctos', () => {
-    const buffer = generateProjectsExcelBuffer(mockProjects)
+  it('contiene headers de proyecto correctos', async () => {
+    const buffer = await generateProjectsExcelBuffer(mockProjects)
     const workbook = readExcelFromBuffer(buffer)
     const data = getFirstSheetData(workbook)
 
@@ -221,8 +221,8 @@ describe('generateProjectsExcelBuffer', () => {
     expect(headers).toContain('Saldo')
   })
 
-  it('contiene datos de proyecto transformados', () => {
-    const buffer = generateProjectsExcelBuffer(mockProjects)
+  it('contiene datos de proyecto transformados', async () => {
+    const buffer = await generateProjectsExcelBuffer(mockProjects)
     const workbook = readExcelFromBuffer(buffer)
     const data = getFirstSheetData(workbook)
 
@@ -235,8 +235,8 @@ describe('generateProjectsExcelBuffer', () => {
     expect(firstRow).toContain(1190000)
   })
 
-  it('maneja projectStatus null', () => {
-    const buffer = generateProjectsExcelBuffer(mockProjects)
+  it('maneja projectStatus null', async () => {
+    const buffer = await generateProjectsExcelBuffer(mockProjects)
     const workbook = readExcelFromBuffer(buffer)
     const data = getFirstSheetData(workbook)
 
@@ -244,8 +244,8 @@ describe('generateProjectsExcelBuffer', () => {
     expect(secondRow).toContain('Sin estado')
   })
 
-  it('maneja valores null/undefined', () => {
-    const buffer = generateProjectsExcelBuffer(mockProjects)
+  it('maneja valores null/undefined', async () => {
+    const buffer = await generateProjectsExcelBuffer(mockProjects)
     const workbook = readExcelFromBuffer(buffer)
     const data = getFirstSheetData(workbook)
 
@@ -254,8 +254,8 @@ describe('generateProjectsExcelBuffer', () => {
     expect(secondRow).toContain('') // apartment null
   })
 
-  it('convierte Decimal-like strings a números', () => {
-    const buffer = generateProjectsExcelBuffer(mockProjects)
+  it('convierte Decimal-like strings a números', async () => {
+    const buffer = await generateProjectsExcelBuffer(mockProjects)
     const workbook = readExcelFromBuffer(buffer)
     const data = getFirstSheetData(workbook)
 
@@ -264,8 +264,8 @@ describe('generateProjectsExcelBuffer', () => {
     expect(secondRow).toContain(595000) // total como número
   })
 
-  it('genera Excel para array vacío', () => {
-    const buffer = generateProjectsExcelBuffer([])
+  it('genera Excel para array vacío', async () => {
+    const buffer = await generateProjectsExcelBuffer([])
     const workbook = readExcelFromBuffer(buffer)
     const data = getFirstSheetData(workbook)
 
@@ -321,21 +321,21 @@ describe('generatePaymentsExcelBuffer', () => {
     },
   ]
 
-  it('retorna ArrayBuffer válido', () => {
-    const buffer = generatePaymentsExcelBuffer(mockPayments)
+  it('retorna ArrayBuffer válido', async () => {
+    const buffer = await generatePaymentsExcelBuffer(mockPayments)
     expect(buffer).toBeInstanceOf(ArrayBuffer)
     expect(buffer.byteLength).toBeGreaterThan(0)
   })
 
-  it('genera Excel con hoja "Pagos"', () => {
-    const buffer = generatePaymentsExcelBuffer(mockPayments)
+  it('genera Excel con hoja "Pagos"', async () => {
+    const buffer = await generatePaymentsExcelBuffer(mockPayments)
     const workbook = readExcelFromBuffer(buffer)
 
     expect(workbook.SheetNames).toContain('Pagos')
   })
 
-  it('contiene headers de pago correctos', () => {
-    const buffer = generatePaymentsExcelBuffer(mockPayments)
+  it('contiene headers de pago correctos', async () => {
+    const buffer = await generatePaymentsExcelBuffer(mockPayments)
     const workbook = readExcelFromBuffer(buffer)
     const data = getFirstSheetData(workbook)
 
@@ -350,8 +350,8 @@ describe('generatePaymentsExcelBuffer', () => {
     expect(headers).toContain('Cuotas')
   })
 
-  it('transforma tipo Project a "Proyecto"', () => {
-    const buffer = generatePaymentsExcelBuffer(mockPayments)
+  it('transforma tipo Project a "Proyecto"', async () => {
+    const buffer = await generatePaymentsExcelBuffer(mockPayments)
     const workbook = readExcelFromBuffer(buffer)
     const data = getFirstSheetData(workbook)
 
@@ -359,8 +359,8 @@ describe('generatePaymentsExcelBuffer', () => {
     expect(firstRow).toContain('Proyecto')
   })
 
-  it('transforma tipo Customer a "Cliente"', () => {
-    const buffer = generatePaymentsExcelBuffer(mockPayments)
+  it('transforma tipo Customer a "Cliente"', async () => {
+    const buffer = await generatePaymentsExcelBuffer(mockPayments)
     const workbook = readExcelFromBuffer(buffer)
     const data = getFirstSheetData(workbook)
 
@@ -368,8 +368,8 @@ describe('generatePaymentsExcelBuffer', () => {
     expect(secondRow).toContain('Cliente')
   })
 
-  it('concatena múltiples proyectos en allocations', () => {
-    const buffer = generatePaymentsExcelBuffer(mockPayments)
+  it('concatena múltiples proyectos en allocations', async () => {
+    const buffer = await generatePaymentsExcelBuffer(mockPayments)
     const workbook = readExcelFromBuffer(buffer)
     const data = getFirstSheetData(workbook)
 
@@ -381,8 +381,8 @@ describe('generatePaymentsExcelBuffer', () => {
     expect(proyectosCell).toBeDefined()
   })
 
-  it('maneja paymentMethod null', () => {
-    const buffer = generatePaymentsExcelBuffer(mockPayments)
+  it('maneja paymentMethod null', async () => {
+    const buffer = await generatePaymentsExcelBuffer(mockPayments)
     const workbook = readExcelFromBuffer(buffer)
     const data = getFirstSheetData(workbook)
 
@@ -390,8 +390,8 @@ describe('generatePaymentsExcelBuffer', () => {
     expect(secondRow).toContain('Sin especificar')
   })
 
-  it('genera Excel para array vacío', () => {
-    const buffer = generatePaymentsExcelBuffer([])
+  it('genera Excel para array vacío', async () => {
+    const buffer = await generatePaymentsExcelBuffer([])
     const workbook = readExcelFromBuffer(buffer)
     const data = getFirstSheetData(workbook)
 

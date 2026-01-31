@@ -122,7 +122,7 @@ export async function GET(request: Request) {
     }
 
     // Generar Excel buffer
-    const excelBuffer = generatePaymentsExcelBuffer(allPayments)
+    const excelBuffer = await generatePaymentsExcelBuffer(allPayments)
 
     // Nombre del archivo con fecha
     const filename = `pagos-${new Date().toISOString().split('T')[0]}.xlsx`
