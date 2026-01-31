@@ -1,22 +1,11 @@
 'use client'
 
-import { useRef, useMemo } from 'react'
+import { useRef, useMemo, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Input } from '@/components/ui/input'
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog'
 import { Trash2, Plus, AlertCircle } from 'lucide-react'
 import { useTodoList, type TodoItem } from '@/hooks/use-todo-list'
-import { useState } from 'react'
 
 interface TodoListFieldProps {
   /**
@@ -94,17 +83,6 @@ interface TodoListFieldProps {
  *   )}
  * />
  * ```
- *
- * **Características:**
- * - ✅ Compatible con React Hook Form
- * - ✅ Validación con Zod
- * - ✅ Muestra errores de validación
- * - ✅ Estados disabled/loading
- * - ✅ IDs únicos (crypto.randomUUID)
- * - ✅ Accesible (aria-labels)
- * - ✅ Confirmación antes de eliminar
- * - ✅ Focus management
- * - ✅ Auto-sort: tareas completadas se mueven al final automáticamente
  */
 export function TodoListField({
   value,
@@ -117,36 +95,27 @@ export function TodoListField({
   name,
   autoSort = true,
 }: TodoListFieldProps) {
-  // Hook de lógica de todos (modo controlado)
   const { addTodo, toggleTodo, deleteTodo, stats } = useTodoList({
     todos: value,
-    onTodosChange: onChange,
+    onChange,
   })
 
   // Ordenar tareas: pendientes primero, completadas al final
   const displayTodos = useMemo(() => {
     if (!autoSort) return value
 
-    return [...value].sort((a, b) => {
-      // Si ambas tienen el mismo estado de completado, mantener orden
-      if (a.completed === b.completed) return 0
-      // Completadas van al final (return 1), no completadas primero (return -1)
-      return a.completed ? 1 : -1
-    })
+    return value
+      .map((todo, index) => ({ todo, index }))
+      .sort((a, b) => {
+        if (a.todo.completed === b.todo.completed) return a.index - b.index
+        return a.todo.completed ? 1 : -1
+      })
+      .map(({ todo }) => todo)
   }, [value, autoSort])
 
-  // Estado local del input
   const [newTodo, setNewTodo] = useState('')
-
-  // Ref del input para focus management
   const inputRef = useRef<HTMLInputElement>(null)
 
-  // Estado para confirmación de eliminación
-  const [todoToDelete, setTodoToDelete] = useState<{ id: string; text: string } | null>(null)
-
-  /**
-   * Maneja el agregado de una nueva tarea.
-   */
   const handleAddTodo = () => {
     if (disabled) return
 
@@ -158,173 +127,120 @@ export function TodoListField({
     }
   }
 
-  /**
-   * Maneja el Enter en el input.
-   */
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter' && !disabled) {
-      e.preventDefault() // Evitar submit del form
+      e.preventDefault()
       handleAddTodo()
     }
   }
 
-  /**
-   * Abre el diálogo de confirmación antes de eliminar.
-   */
-  const handleDeleteClick = (id: string, text: string) => {
-    if (disabled) return
-    setTodoToDelete({ id, text })
-  }
-
-  /**
-   * Confirma y ejecuta la eliminación.
-   */
-  const handleConfirmDelete = () => {
-    if (todoToDelete) {
-      deleteTodo(todoToDelete.id)
-      setTodoToDelete(null)
-    }
-  }
-
-  /**
-   * Cancela la eliminación.
-   */
-  const handleCancelDelete = () => {
-    setTodoToDelete(null)
-  }
-
-  /**
-   * Maneja el toggle de completado.
-   */
   const handleToggle = (id: string) => {
     if (disabled) return
     toggleTodo(id)
   }
 
+  const handleDelete = (id: string) => {
+    if (disabled) return
+    deleteTodo(id)
+  }
+
   return (
-    <>
-      <div className="w-full">
-        {/* Header (opcional) */}
-        {(title || description) && (
-          <div className="mb-3 space-y-1">
-            {title && <h4 className="text-sm font-medium">{title}</h4>}
-            {description && <p className="text-sm text-muted-foreground">{description}</p>}
+    <div className="w-full">
+      {/* Header (opcional) */}
+      {(title || description) && (
+        <div className="mb-3 space-y-1">
+          {title && <h4 className="text-sm font-medium">{title}</h4>}
+          {description && <p className="text-sm text-muted-foreground">{description}</p>}
+        </div>
+      )}
+
+      {/* Estadísticas */}
+      {displayTodos.length > 0 && (
+        <div className="mb-2 flex items-center gap-2">
+          <p className="text-xs text-muted-foreground">
+            {stats.completed} / {stats.total} completadas
+          </p>
+        </div>
+      )}
+
+      <div className="space-y-3">
+        {/* Input para nueva tarea */}
+        <div className="flex gap-2">
+          <Input
+            ref={inputRef}
+            placeholder={placeholder}
+            value={newTodo}
+            onChange={(e) => setNewTodo(e.target.value)}
+            onKeyDown={handleKeyDown}
+            className="flex-1"
+            aria-label={name ? `Nueva tarea para ${name}` : 'Nueva tarea'}
+            disabled={disabled}
+            aria-invalid={!!error}
+          />
+          <Button
+            type="button"
+            onClick={handleAddTodo}
+            size="icon"
+            aria-label="Agregar tarea"
+            disabled={disabled || !newTodo.trim()}
+          >
+            <Plus className="h-4 w-4" />
+          </Button>
+        </div>
+
+        {/* Mensaje de error de validación */}
+        {error && (
+          <div className="flex items-start gap-2 rounded-md border border-destructive/50 bg-destructive/10 p-3 text-sm text-destructive">
+            <AlertCircle className="mt-0.5 h-4 w-4 flex-shrink-0" />
+            <p>{error}</p>
           </div>
         )}
 
-        {/* Estadísticas */}
-        {displayTodos.length > 0 && (
-          <div className="mb-2 flex items-center gap-2">
-            <p className="text-xs text-muted-foreground">
-              {stats.completed} / {stats.total} completadas
+        {/* Lista de tareas */}
+        <div className="space-y-2">
+          {displayTodos.length === 0 ? (
+            <p className="py-4 text-center text-sm text-muted-foreground">
+              No hay tareas. Agrega una para comenzar.
             </p>
-          </div>
-        )}
-
-        <div className="space-y-3">
-          {/* Input para nueva tarea */}
-          <div className="flex gap-2">
-            <Input
-              ref={inputRef}
-              placeholder={placeholder}
-              value={newTodo}
-              onChange={(e) => setNewTodo(e.target.value)}
-              onKeyDown={handleKeyDown}
-              className="flex-1"
-              aria-label={name ? `Nueva tarea para ${name}` : 'Nueva tarea'}
-              disabled={disabled}
-              aria-invalid={!!error}
-            />
-            <Button
-              type="button"
-              onClick={handleAddTodo}
-              size="icon"
-              aria-label="Agregar tarea"
-              disabled={disabled || !newTodo.trim()}
-            >
-              <Plus className="h-4 w-4" />
-            </Button>
-          </div>
-
-          {/* Mensaje de error de validación */}
-          {error && (
-            <div className="flex items-start gap-2 rounded-md border border-destructive/50 bg-destructive/10 p-3 text-sm text-destructive">
-              <AlertCircle className="mt-0.5 h-4 w-4 flex-shrink-0" />
-              <p>{error}</p>
-            </div>
-          )}
-
-          {/* Lista de tareas */}
-          <div className="space-y-2">
-            {displayTodos.length === 0 ? (
-              <p className="py-4 text-center text-sm text-muted-foreground">
-                No hay tareas. Agrega una para comenzar.
-              </p>
-            ) : (
-              displayTodos.map((todo) => (
-                <div
-                  key={todo.id}
-                  className={`flex items-center gap-3 rounded-lg px-2 py-1 ${
-                    disabled ? 'opacity-50' : 'hover:bg-accent/50'
-                  }`}
+          ) : (
+            displayTodos.map((todo) => (
+              <div
+                key={todo.id}
+                className={`flex items-center gap-3 rounded-lg px-2 py-1 ${
+                  disabled ? 'opacity-50' : 'hover:bg-accent/50'
+                }`}
+              >
+                <Checkbox
+                  checked={todo.completed}
+                  onCheckedChange={() => handleToggle(todo.id)}
+                  id={`todo-${todo.id}`}
+                  aria-label={`Marcar tarea "${todo.text}" como ${todo.completed ? 'pendiente' : 'completada'}`}
+                  disabled={disabled}
+                />
+                <label
+                  htmlFor={`todo-${todo.id}`}
+                  className={`flex-1 select-none text-sm ${
+                    todo.completed ? 'text-muted-foreground line-through' : ''
+                  } ${disabled ? 'cursor-not-allowed' : 'cursor-pointer'}`}
                 >
-                  <Checkbox
-                    checked={todo.completed}
-                    onCheckedChange={() => handleToggle(todo.id)}
-                    id={`todo-${todo.id}`}
-                    aria-label={`Marcar tarea "${todo.text}" como ${todo.completed ? 'pendiente' : 'completada'}`}
-                    disabled={disabled}
-                  />
-                  <label
-                    htmlFor={`todo-${todo.id}`}
-                    className={`flex-1 select-none text-sm ${
-                      todo.completed ? 'text-muted-foreground line-through' : ''
-                    } ${disabled ? 'cursor-not-allowed' : 'cursor-pointer'}`}
-                  >
-                    {todo.text}
-                  </label>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => handleDeleteClick(todo.id, todo.text)}
-                    className="h-8 w-8"
-                    aria-label={`Eliminar tarea "${todo.text}"`}
-                    disabled={disabled}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </div>
-              ))
-            )}
-          </div>
+                  {todo.text}
+                </label>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => handleDelete(todo.id)}
+                  className="h-8 w-8"
+                  aria-label={`Eliminar tarea "${todo.text}"`}
+                  disabled={disabled}
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              </div>
+            ))
+          )}
         </div>
       </div>
-
-      {/* Dialog de confirmación de eliminación */}
-      <AlertDialog open={!!todoToDelete} onOpenChange={handleCancelDelete}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>¿Eliminar tarea?</AlertDialogTitle>
-            <AlertDialogDescription>
-              ¿Estás seguro de que deseas eliminar la tarea{' '}
-              <span className="font-semibold text-foreground">
-                &quot;{todoToDelete?.text}&quot;
-              </span>
-              ? Esta acción no se puede deshacer.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel onClick={handleCancelDelete}>Cancelar</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleConfirmDelete}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              Eliminar
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-    </>
+    </div>
   )
 }
