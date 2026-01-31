@@ -44,10 +44,20 @@ export async function POST(request: NextRequest) {
 
 ## Reglas
 
-1. **Siempre validar con Zod** antes de usar datos
+1. **Siempre validar con Zod** antes de usar datos (preferir `safeParse` sobre `parse`)
 2. **Usar transacciones** para operaciones multi-tabla
-3. **Retornar códigos HTTP apropiados**: 200 OK, 201 Created, 400 Bad Request, 404 Not Found, 500 Error
-4. **Manejar errores específicos** (ZodError, PrismaError, etc.)
+3. **Retornar códigos HTTP apropiados**: 200 OK, 201 Created, 400 Bad Request, 404 Not Found, 409 Conflict, 500 Error
+4. **Manejar errores específicos** (ZodError → 400, Prisma P2002 → 409, P2025 → 404)
+
+## Error Handling Estandarizado
+
+Orden de manejo en el `catch`:
+
+1. `PrismaClientKnownRequestError` con `code === 'P2002'` → 409 Conflict
+2. `PrismaClientKnownRequestError` con `code === 'P2025'` → 404 Not Found
+3. Error genérico → 500 + `logger.error({ err: error }, '...')`
+
+**Detalles completos:** Usar skill `cobralon-error-handling`
 
 ## Operaciones Financieras
 
@@ -65,4 +75,6 @@ Ver `lib/business-logic/` para lógica de negocio pura.
 
 - **Lógica financiera** (pagos, créditos, FIFO): usar skill `cobralon-financial-logic`
 - **Performance** (async waterfalls, Promise.all): usar skill `cobralon-best-practices`
+- **Error handling** (patrones completos, Pino, toasts): usar skill `cobralon-error-handling`
 - **Generación CRUD**: usar skill `cobralon-crud-generator` para nuevas entidades
+- **Testing**: usar skill `cobralon-testing-strategy` para escribir tests de endpoints

@@ -40,7 +40,19 @@ await prisma.$transaction(async (tx) => {
 - Setup: [docs/template/guides/database-setup.md](docs/template/guides/database-setup.md)
 - Arquitectura financiera: [docs/project/architecture.md](docs/project/architecture.md)
 
+## Testing
+
+Después de cambios en business-logic o API routes:
+
+```bash
+npm test -- lib/business-logic/__tests__/   # Tests de lógica financiera
+npm test -- app/api/                         # Tests de endpoints
+```
+
+**Cómo mockear Prisma en tests:** Usar skill `cobralon-testing-strategy`
+
 ## Skills relacionados
 
 - **Lógica financiera completa**: usar skill `cobralon-financial-logic` para invariantes y patrón de transacción
 - **Performance de queries**: usar skill `cobralon-best-practices` para paralelización
+- **Testing**: usar skill `cobralon-testing-strategy` para mocking de Prisma y factories
