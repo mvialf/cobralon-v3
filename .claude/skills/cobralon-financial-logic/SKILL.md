@@ -17,54 +17,25 @@ description: |
 2. Customer.creditBalance >= 0    (SIEMPRE)
 3. FIFO: Deudas antiguas primero  (Ordenar por createdAt ASC)
 4. Operaciones de crédito = ATÓMICAS (usar $transaction)
-5. Todo movimiento de crédito → CreditTransaction (auditoría)
+5. Todo movimiento de crédito -> CreditTransaction (auditoría)
 ```
 
 ## Módulos de Lógica de Negocio
 
-### `lib/business-logic/payment-fifo.ts`
+| Módulo | Responsabilidad |
+|--------|----------------|
+| `payment-fifo.ts` | Distribución FIFO (más antiguo primero) |
+| `credit-management.ts` | Distribución pago/crédito, validación |
+| `credit-eligibility.ts` | Elegibilidad de crédito y labels de UI |
+| `project-state.ts` | Estado derivado: Activo vs Finalizado |
+| `project-balance.ts` | Cálculo de balance (función más crítica) |
+| `totals.ts` | Validación de integridad financiera |
+| `installments.ts` | Lógica de cuotas sin interés |
+| `update-project-balance.ts` | Actualización/verificación de balance en DB |
 
-```typescript
-// Distribuye pago FIFO (más antiguo primero)
-calculateFIFO(totalAmount: number, projects: ProjectWithBalance[]): FIFOAllocation[]
+**Signatures completas:** [references/module-signatures.md](references/module-signatures.md)
 
-// Valida que suma de allocations = total (con tolerancia)
-validateAllocationsSum(totalAmount: number, allocations: Array<{allocatedAmount: number}>): boolean
-
-// Filtra proyectos con balance > 0
-filterProjectsWithBalance(projects: ProjectWithBalance[]): ProjectWithBalance[]
-```
-
-### `lib/business-logic/credit-management.ts`
-
-```typescript
-// Calcula distribución: cuánto al proyecto, cuánto a crédito
-calculatePaymentDistribution(projectBalance, paymentAmount, creditApplied): ProcessPaymentWithCreditResult
-
-// Máximo crédito aplicable = min(creditDisponible, balanceProyecto)
-calculateMaxCreditApplication(customerCredit, projectBalance): number
-
-// Valida si puede aplicar crédito
-canApplyCredit(requestedAmount, customerCredit, projectBalance): CreditApplicationValidation
-```
-
-### `lib/business-logic/project-state.ts`
-
-```typescript
-// Estado derivado: "Activo" o "Finalizado"
-// Finalizado = (isFinal === true) AND (balance === 0)
-calculateProjectState(balance: number, isFinal: boolean): ProjectState
-```
-
-### `lib/business-logic/totals.ts`
-
-```typescript
-// Total = Subtotal + (Subtotal × taxRate/100)
-calculateProjectTotal(subtotal: number, taxRate: number): number
-
-// Valida total contra cálculo esperado (tolerancia: 0.01)
-validateProjectTotal(subtotal, taxRate, receivedTotal): boolean
-```
+**Patrón de transacción DB y constantes:** [references/transaction-pattern.md](references/transaction-pattern.md)
 
 ## Checklist Antes de Modificar Lógica Financiera
 
@@ -74,54 +45,6 @@ validateProjectTotal(subtotal, taxRate, receivedTotal): boolean
 - [ ] Crearé `CreditTransaction` si hay movimiento de crédito
 - [ ] Escribí/actualicé tests en `lib/business-logic/__tests__/`
 - [ ] Ejecuté `npm run lint && npm run typecheck`
-
-## Patrón de Transacción DB
-
-```typescript
-// SIEMPRE usar transacción para operaciones financieras
-await prisma.$transaction(async (tx) => {
-  // 1. Crear Payment
-  const payment = await tx.payment.create({ ... })
-
-  // 2. Crear PaymentAllocations (distribución FIFO)
-  await tx.paymentAllocation.createMany({
-    data: allocations.map(a => ({
-      paymentId: payment.id,
-      projectId: a.projectId,
-      allocatedAmount: a.allocatedAmount,
-    }))
-  })
-
-  // 3. Si hay crédito generado/consumido
-  if (creditChange !== 0) {
-    // Actualizar creditBalance del customer
-    await tx.customer.update({
-      where: { id: customerId },
-      data: { creditBalance: { increment: creditChange } }
-    })
-
-    // Crear registro de auditoría
-    await tx.creditTransaction.create({
-      data: {
-        customerId,
-        amount: Math.abs(creditChange),
-        type: creditChange > 0 ? 'GENERATION' : 'APPLICATION',
-        paymentId: payment.id,
-      }
-    })
-  }
-})
-```
-
-## Constantes Financieras
-
-```typescript
-// lib/constants/financial-constants.ts
-FINANCIAL.TOLERANCE = 0.01      // Tolerancia para comparaciones
-FINANCIAL.DEFAULT_TAX_RATE = 19 // IVA Chile
-FINANCIAL.MIN_TAX_RATE = 0
-FINANCIAL.MAX_TAX_RATE = 100
-```
 
 ## Tests Requeridos
 
@@ -137,3 +60,9 @@ npm test
 # Verificación de tipos (CRÍTICO para evitar NaN)
 npm run typecheck
 ```
+
+## Relación con rules y skills
+
+- **API routes** (`api-routes.md`): transacciones, validación Zod en endpoints financieros
+- **Database** (`database.md`): comandos Prisma, reglas FIFO, transacciones
+- **CRUD generator** (`cobralon-crud-generator`): para crear entidades no-financieras; las financieras requieren esta skill
