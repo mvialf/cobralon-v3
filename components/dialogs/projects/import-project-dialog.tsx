@@ -226,7 +226,7 @@ export function ImportProjectDialog({ onImportComplete }: ImportProjectDialogPro
                 type="button"
                 variant="link"
                 className="gap-2"
-                onClick={() => downloadProjectTemplate()}
+                onClick={async () => downloadProjectTemplate()}
               >
                 <Download className="h-4 w-4" />
                 Descargar template de ejemplo

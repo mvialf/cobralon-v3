@@ -214,7 +214,7 @@ export function ImportCustomerDialog({ onImportComplete }: ImportCustomerDialogP
                 type="button"
                 variant="link"
                 className="gap-2"
-                onClick={() => downloadCustomerTemplate()}
+                onClick={async () => downloadCustomerTemplate()}
               >
                 <Download className="h-4 w-4" />
                 Descargar template de ejemplo

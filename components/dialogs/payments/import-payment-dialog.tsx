@@ -210,7 +210,7 @@ export function ImportPaymentDialog({ onImportComplete }: ImportPaymentDialogPro
             <Button
               type="button"
               variant="outline"
-              onClick={downloadPaymentTemplate}
+              onClick={async () => downloadPaymentTemplate()}
               className="w-full"
             >
               <Download className="mr-2 h-4 w-4" />

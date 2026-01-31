@@ -6,9 +6,31 @@ import { FileSpreadsheet, Users, Briefcase, CreditCard } from 'lucide-react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Alert, AlertDescription } from '@/components/ui/alert'
-import { ImportCustomerDialog } from '@/components/dialogs/customer/import-customer-dialog'
-import { ImportProjectDialog } from '@/components/dialogs/projects/import-project-dialog'
-import { ImportPaymentDialog } from '@/components/dialogs/payments/import-payment-dialog'
+import dynamic from 'next/dynamic'
+
+const ImportCustomerDialog = dynamic(
+  () =>
+    import('@/components/dialogs/customer/import-customer-dialog').then((m) => ({
+      default: m.ImportCustomerDialog,
+    })),
+  { ssr: false }
+)
+
+const ImportProjectDialog = dynamic(
+  () =>
+    import('@/components/dialogs/projects/import-project-dialog').then((m) => ({
+      default: m.ImportProjectDialog,
+    })),
+  { ssr: false }
+)
+
+const ImportPaymentDialog = dynamic(
+  () =>
+    import('@/components/dialogs/payments/import-payment-dialog').then((m) => ({
+      default: m.ImportPaymentDialog,
+    })),
+  { ssr: false }
+)
 
 type ImportTab = 'customers' | 'projects' | 'payments'
 
