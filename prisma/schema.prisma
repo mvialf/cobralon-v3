@@ -237,6 +237,7 @@ model Payment {
   @@index([date])
   @@index([type])
   @@index([type, date(sort: Desc)])
+  @@index([customerId, date(sort: Desc)]) // Pagos de cliente ordenados por fecha
 }
 
 model Installment {
