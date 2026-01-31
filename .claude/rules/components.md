@@ -56,3 +56,8 @@ npx shadcn@latest add [component-name]
 - Data Down, Events Up (props > hooks)
 
 **Guía completa:** [docs/template/guides/building-features/](docs/template/guides/building-features/)
+
+## Skills relacionados
+
+- **Generación CRUD**: usar skill `cobralon-crud-generator` para crear feature completa
+- **Best practices**: usar skill `cobralon-best-practices` para patrones de performance y rendering

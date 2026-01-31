@@ -39,3 +39,8 @@ await prisma.$transaction(async (tx) => {
 
 - Setup: [docs/template/guides/database-setup.md](docs/template/guides/database-setup.md)
 - Arquitectura financiera: [docs/project/architecture.md](docs/project/architecture.md)
+
+## Skills relacionados
+
+- **Lógica financiera completa**: usar skill `cobralon-financial-logic` para invariantes y patrón de transacción
+- **Performance de queries**: usar skill `cobralon-best-practices` para paralelización

@@ -60,3 +60,9 @@ await prisma.$transaction(async (tx) => {
 ```
 
 Ver `lib/business-logic/` para lógica de negocio pura.
+
+## Skills relacionados
+
+- **Lógica financiera** (pagos, créditos, FIFO): usar skill `cobralon-financial-logic`
+- **Performance** (async waterfalls, Promise.all): usar skill `cobralon-best-practices`
+- **Generación CRUD**: usar skill `cobralon-crud-generator` para nuevas entidades
