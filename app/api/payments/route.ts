@@ -215,12 +215,13 @@ export const GET = withLogging(async (request, logger) => {
         }),
         // Facet: números de proyecto (raw query para aplanar allocations)
         prisma.$queryRaw<Array<{ projectNumber: string; count: bigint }>>`
-          SELECT p."projectNumber", COUNT(DISTINCT pa.id) as count
+          SELECT p."projectNumber", COUNT(*) as count
           FROM "PaymentAllocation" pa
           JOIN "Project" p ON pa."projectId" = p.id
           JOIN "Payment" pm ON pa."paymentId" = pm.id
+          ${search ? Prisma.sql`JOIN "Customer" c ON c.id = pm."customerId"` : Prisma.empty}
           WHERE 1=1
-            ${search ? Prisma.sql`AND (EXISTS (SELECT 1 FROM "Customer" c WHERE c.id = pm."customerId" AND c.name ILIKE ${`%${search}%`}) OR p."projectNumber" ILIKE ${`%${search}%`} OR p."projectName" ILIKE ${`%${search}%`})` : Prisma.empty}
+            ${search ? Prisma.sql`AND (c.name ILIKE ${`%${search}%`} OR p."projectNumber" ILIKE ${`%${search}%`} OR p."projectName" ILIKE ${`%${search}%`})` : Prisma.empty}
             ${type ? Prisma.sql`AND pm.type = ${type}` : Prisma.empty}
             ${paymentMethodId ? Prisma.sql`AND pm."paymentMethodId"::text = ${paymentMethodId}` : Prisma.empty}
             ${customerId ? Prisma.sql`AND pm."customerId"::text = ${customerId}` : Prisma.empty}
