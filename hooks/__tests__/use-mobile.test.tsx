@@ -48,15 +48,8 @@ describe('useIsMobile', () => {
     })
   })
 
-  // NOTA: Tests de cambios dinámicos comentados debido a limitaciones de jsdom
-  // con MediaQueryList. jsdom no simula correctamente los eventos 'change' de matchMedia.
-  // Estos tests funcionarían en un browser real o con Playwright/Puppeteer.
-
-  // describe('Cambios de viewport', () => {
-  //   it('debe actualizarse cuando la ventana cambia de desktop a mobile', () => {
-  //     ...
-  //   })
-  // })
+  // jsdom no simula correctamente los eventos 'change' de MediaQueryList
+  it.todo('debe actualizarse cuando la ventana cambia de desktop a mobile (requiere browser real)')
 
   describe('Cleanup', () => {
     it('debe ejecutar cleanup al desmontarse', () => {

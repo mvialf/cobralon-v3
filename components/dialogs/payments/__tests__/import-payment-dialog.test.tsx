@@ -10,9 +10,10 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { ImportPaymentDialog } from '../import-payment-dialog'
+import type { PaymentParseResult } from '@/lib/excel/payment-parser'
 
 // Mock de parsePaymentExcel y validateExcelFile
 const mockParsePaymentExcel = vi.fn()
@@ -60,7 +61,7 @@ const validParseResult = {
     {
       rowNumber: 2,
       isValid: true,
-      errors: [],
+      errors: [] as string[],
       data: {
         projectNumber: 'PRO-001',
         amount: 500000,
@@ -71,7 +72,7 @@ const validParseResult = {
     {
       rowNumber: 3,
       isValid: true,
-      errors: [],
+      errors: [] as string[],
       data: {
         projectNumber: 'PRO-002',
         amount: 250000,
@@ -90,7 +91,7 @@ const mixedParseResult = {
     {
       rowNumber: 2,
       isValid: true,
-      errors: [],
+      errors: [] as string[],
       data: {
         projectNumber: 'PRO-001',
         amount: 500000,
@@ -110,6 +111,20 @@ const mixedParseResult = {
   totalRows: 2,
 }
 
+const zeroValidParseResult = {
+  payments: [
+    {
+      rowNumber: 2,
+      isValid: false,
+      errors: ['Proyecto no encontrado'],
+      data: null,
+    },
+  ],
+  validCount: 0,
+  errorCount: 1,
+  totalRows: 1,
+}
+
 // =============================================================================
 // HELPERS
 // =============================================================================
@@ -118,6 +133,55 @@ function createMockFile(name = 'test.xlsx'): File {
   return new File(['mock content'], name, {
     type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
   })
+}
+
+/**
+ * Helper: abre el dialog y sube un archivo via el input del dropzone.
+ * Retorna el userEvent instance para encadenar acciones.
+ */
+async function openAndUploadFile(
+  props: { onImportComplete?: () => void } = {},
+  parseResult: PaymentParseResult = validParseResult,
+) {
+  mockParsePaymentExcel.mockResolvedValue(parseResult)
+  const user = userEvent.setup()
+
+  render(<ImportPaymentDialog {...props} />)
+
+  // Abrir el sheet
+  await user.click(screen.getByRole('button', { name: /importar pagos/i }))
+
+  // Subir archivo via el input oculto del dropzone
+  const file = createMockFile()
+  const input = document.querySelector('input[type="file"]') as HTMLInputElement
+  await user.upload(input, file)
+
+  // Esperar a que el parseo se complete y transicione a preview
+  await waitFor(() => {
+    expect(screen.getByTestId('preview-table')).toBeInTheDocument()
+  })
+
+  return user
+}
+
+/**
+ * Helper: flujo completo hasta estado 'complete'.
+ */
+async function completeFullImportFlow(
+  props: { onImportComplete?: () => void } = {},
+) {
+  const user = await openAndUploadFile(props)
+
+  // Click en botón importar
+  const importButton = screen.getByRole('button', { name: /importar 2 pagos/i })
+  await user.click(importButton)
+
+  // Esperar a que complete
+  await waitFor(() => {
+    expect(screen.getByText(/importación exitosa/i)).toBeInTheDocument()
+  })
+
+  return user
 }
 
 // =============================================================================
@@ -199,80 +263,128 @@ describe('ImportPaymentDialog', () => {
 
       await user.click(screen.getByRole('button', { name: /importar pagos/i }))
 
-      // Simular que el dropzone llamó a onDrop con archivo inválido
-      // El componente debería mostrar el error
-      // Nota: Testing del dropzone es complejo, este test verifica el estado de error
+      const file = createMockFile('test.xlsx')
+      const input = document.querySelector('input[type="file"]') as HTMLInputElement
+      await user.upload(input, file)
+
+      await waitFor(() => {
+        expect(screen.getByText('Solo archivos Excel')).toBeInTheDocument()
+      })
     })
   })
 
   describe('Estado: Preview', () => {
     it('muestra tabla de preview después de parsear archivo', async () => {
-      const user = userEvent.setup()
-      render(<ImportPaymentDialog />)
+      await openAndUploadFile()
 
-      await user.click(screen.getByRole('button', { name: /importar pagos/i }))
-
-      // Simular que el dropzone procesó el archivo
-      // y cambió el estado a preview
-      // Nota: Necesitamos simular internamente el cambio de estado
-
-      // Por ahora verificamos que el mock está configurado
-      expect(mockParsePaymentExcel).toBeDefined()
+      expect(screen.getByTestId('preview-table')).toBeInTheDocument()
     })
 
     it('muestra contadores de válidos y errores', async () => {
-      // Este test requiere simular el flujo completo del dropzone
-      // que es complejo de mockear. Lo dejamos como placeholder.
-      expect(true).toBe(true)
+      await openAndUploadFile({}, mixedParseResult)
+
+      expect(screen.getByTestId('valid-count')).toHaveTextContent('1')
+      expect(screen.getByTestId('error-count')).toHaveTextContent('1')
     })
 
     it('botón Importar muestra cantidad de pagos válidos', async () => {
-      // Placeholder - requiere simular estado preview
-      expect(true).toBe(true)
+      await openAndUploadFile()
+
+      expect(screen.getByRole('button', { name: /importar 2 pagos/i })).toBeInTheDocument()
     })
 
     it('botón Importar está deshabilitado si no hay válidos', async () => {
-      // Placeholder - requiere simular estado preview con validCount=0
-      expect(true).toBe(true)
+      await openAndUploadFile({}, zeroValidParseResult)
+
+      const importButton = screen.getByRole('button', { name: /importar 0 pagos/i })
+      expect(importButton).toBeDisabled()
     })
 
     it('botón Volver regresa a estado Upload', async () => {
-      // Placeholder - requiere simular estado preview
-      expect(true).toBe(true)
+      const user = await openAndUploadFile()
+
+      await user.click(screen.getByRole('button', { name: /volver/i }))
+
+      // Debe volver a mostrar el dropzone / estado upload
+      await waitFor(() => {
+        expect(screen.getByText(/importar pagos desde excel/i)).toBeInTheDocument()
+      })
     })
   })
 
   describe('Estado: Importing', () => {
-    it('muestra progress bar durante importación', async () => {
-      // Placeholder - requiere simular estado importing
-      expect(true).toBe(true)
+    it('muestra mensaje de progreso durante importación', async () => {
+      // Hacer que fetch no resuelva inmediatamente
+      let resolveFetch!: (value: unknown) => void
+      mockFetch.mockReturnValue(
+        new Promise((resolve) => {
+          resolveFetch = resolve
+        }),
+      )
+
+      const user = await openAndUploadFile()
+
+      // Click importar
+      await user.click(screen.getByRole('button', { name: /importar 2 pagos/i }))
+
+      // Mientras fetch está pendiente, debe mostrar el estado importing
+      await waitFor(() => {
+        expect(screen.getByText(/importando 2 pagos/i)).toBeInTheDocument()
+      })
+
+      // Resolver fetch para limpiar
+      resolveFetch({
+        ok: true,
+        json: async () => ({ imported: 2 }),
+      })
     })
 
-    it('muestra mensaje de progreso', async () => {
-      // Placeholder
-      expect(true).toBe(true)
+    it('muestra progressbar durante importación', async () => {
+      let resolveFetch!: (value: unknown) => void
+      mockFetch.mockReturnValue(
+        new Promise((resolve) => {
+          resolveFetch = resolve
+        }),
+      )
+
+      const user = await openAndUploadFile()
+      await user.click(screen.getByRole('button', { name: /importar 2 pagos/i }))
+
+      await waitFor(() => {
+        expect(screen.getByRole('progressbar')).toBeInTheDocument()
+      })
+
+      resolveFetch({
+        ok: true,
+        json: async () => ({ imported: 2 }),
+      })
     })
   })
 
   describe('Estado: Complete', () => {
-    it('muestra ícono de éxito', async () => {
-      // Placeholder - requiere simular estado complete
-      expect(true).toBe(true)
+    it('muestra ícono de éxito y mensaje', async () => {
+      await completeFullImportFlow()
+
+      expect(screen.getByText(/importación exitosa/i)).toBeInTheDocument()
     })
 
     it('muestra cantidad de pagos importados', async () => {
-      // Placeholder
-      expect(true).toBe(true)
+      await completeFullImportFlow()
+
+      expect(screen.getByText(/se importaron 2 pagos correctamente/i)).toBeInTheDocument()
     })
 
-    it('botón Cerrar cierra el dialog', async () => {
-      // Placeholder
-      expect(true).toBe(true)
+    it('botón Cerrar está presente en estado complete', async () => {
+      await completeFullImportFlow()
+
+      expect(screen.getByRole('button', { name: /cerrar/i })).toBeInTheDocument()
     })
 
-    it('llama onImportComplete callback', async () => {
-      // Placeholder
-      expect(true).toBe(true)
+    it('llama onImportComplete callback al completar', async () => {
+      const onImportComplete = vi.fn()
+      await completeFullImportFlow({ onImportComplete })
+
+      expect(onImportComplete).toHaveBeenCalledTimes(1)
     })
   })
 
@@ -280,8 +392,18 @@ describe('ImportPaymentDialog', () => {
     it('muestra error cuando parsePaymentExcel falla', async () => {
       mockParsePaymentExcel.mockRejectedValue(new Error('Error al procesar archivo'))
 
-      // Placeholder - requiere simular upload
-      expect(true).toBe(true)
+      const user = userEvent.setup()
+      render(<ImportPaymentDialog />)
+
+      await user.click(screen.getByRole('button', { name: /importar pagos/i }))
+
+      const file = createMockFile()
+      const input = document.querySelector('input[type="file"]') as HTMLInputElement
+      await user.upload(input, file)
+
+      await waitFor(() => {
+        expect(screen.getByText('Error al procesar archivo')).toBeInTheDocument()
+      })
     })
 
     it('muestra error cuando API falla', async () => {
@@ -290,23 +412,37 @@ describe('ImportPaymentDialog', () => {
         json: async () => ({ error: 'Error del servidor' }),
       })
 
-      // Placeholder - requiere simular flujo completo
-      expect(true).toBe(true)
+      const user = await openAndUploadFile()
+      await user.click(screen.getByRole('button', { name: /importar 2 pagos/i }))
+
+      await waitFor(() => {
+        expect(screen.getByText('Error del servidor')).toBeInTheDocument()
+      })
     })
 
     it('vuelve a estado preview si API falla', async () => {
-      // Placeholder
-      expect(true).toBe(true)
+      mockFetch.mockResolvedValue({
+        ok: false,
+        json: async () => ({ error: 'Error del servidor' }),
+      })
+
+      const user = await openAndUploadFile()
+      await user.click(screen.getByRole('button', { name: /importar 2 pagos/i }))
+
+      // Debe volver a preview con el error visible
+      await waitFor(() => {
+        expect(screen.getByTestId('preview-table')).toBeInTheDocument()
+        expect(screen.getByText('Error del servidor')).toBeInTheDocument()
+      })
     })
   })
 
   describe('Integración con props', () => {
     it('llama onImportComplete cuando importación es exitosa', async () => {
       const onImportComplete = vi.fn()
-      render(<ImportPaymentDialog onImportComplete={onImportComplete} />)
+      await completeFullImportFlow({ onImportComplete })
 
-      // Placeholder - requiere simular flujo completo
-      expect(onImportComplete).toBeDefined()
+      expect(onImportComplete).toHaveBeenCalledTimes(1)
     })
   })
 })
