@@ -10,7 +10,10 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
-import { useToast } from '@/hooks/use-toast'
+import {
+  useCreateProjectStatus,
+  useUpdateProjectStatus,
+} from '@/hooks/queries/use-project-statuses'
 
 import {
   ProjectStatusForm,
@@ -41,61 +44,30 @@ export function ProjectStatusDialog({
   open,
   onOpenChange,
 }: ProjectStatusDialogProps) {
-  const { toast } = useToast()
   const formRef = React.useRef<ProjectStatusFormHandle>(null)
-  const [isSubmitting, setIsSubmitting] = React.useState(false)
+  const createMutation = useCreateProjectStatus()
+  const updateMutation = useUpdateProjectStatus()
+  const isSubmitting = createMutation.isPending || updateMutation.isPending
 
-  // Early return si status no está presente en modo edit
-  // Esto previene renders con data incompleta durante race conditions
   if (mode === 'edit' && !status) {
     return null
   }
 
   const handleSubmit = async (data: ProjectStatusFormValues) => {
-    setIsSubmitting(true)
+    const isInitial = mode === 'edit' ? status!.isInitial : false
+    const isFinal = mode === 'edit' ? status!.isFinal : false
+    const payload = formValuesToPayload(data, isInitial, isFinal)
 
     try {
-      // Determinar isInitial/isFinal según el modo:
-      // - CREATE: Siempre estado normal (isInitial: false, isFinal: false)
-      // - EDIT: Preservar el tipo actual del status
-      const isInitial = mode === 'edit' ? status!.isInitial : false
-      const isFinal = mode === 'edit' ? status!.isFinal : false
-
-      const payload = formValuesToPayload(data, isInitial, isFinal)
-
-      const url = mode === 'create' ? '/api/project-status' : `/api/project-status/${status?.id}`
-      const method = mode === 'create' ? 'POST' : 'PUT'
-
-      const response = await fetch(url, {
-        method,
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      })
-
-      const responseData = await response.json()
-
-      if (!response.ok) {
-        throw new Error(responseData.error || 'Error al procesar la solicitud')
+      if (mode === 'create') {
+        await createMutation.mutateAsync(payload)
+      } else {
+        await updateMutation.mutateAsync({ id: status!.id, ...payload })
       }
-
-      toast({
-        title: mode === 'create' ? 'Estado creado' : 'Estado actualizado',
-        description:
-          mode === 'create'
-            ? `El estado "${data.name}" se creó correctamente`
-            : `El estado "${data.name}" se actualizó correctamente`,
-      })
-
       onSuccess()
       onOpenChange?.(false)
-    } catch (error) {
-      toast({
-        title: 'Error',
-        description: error instanceof Error ? error.message : 'Error al procesar la solicitud',
-        variant: 'destructive',
-      })
-    } finally {
-      setIsSubmitting(false)
+    } catch {
+      // Error ya manejado por el hook (toast automático)
     }
   }
 

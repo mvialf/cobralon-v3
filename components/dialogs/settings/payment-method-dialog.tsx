@@ -10,7 +10,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
-import { useToast } from '@/hooks/use-toast'
+import { useCreatePaymentMethod, useUpdatePaymentMethod } from '@/hooks/queries/use-payment-methods'
 
 import {
   PaymentMethodForm,
@@ -38,54 +38,28 @@ export function PaymentMethodDialog({
   open,
   onOpenChange,
 }: PaymentMethodDialogProps) {
-  const { toast } = useToast()
   const formRef = React.useRef<PaymentMethodFormHandle>(null)
-  const [isSubmitting, setIsSubmitting] = React.useState(false)
+  const createMutation = useCreatePaymentMethod()
+  const updateMutation = useUpdatePaymentMethod()
+  const isSubmitting = createMutation.isPending || updateMutation.isPending
 
-  // Early return si method no está presente en modo edit
   if (mode === 'edit' && !method) {
     return null
   }
 
   const handleSubmit = async (data: PaymentMethodFormValues) => {
-    setIsSubmitting(true)
+    const payload = formValuesToPayload(data)
 
     try {
-      const payload = formValuesToPayload(data)
-
-      const url = mode === 'create' ? '/api/payment-methods' : `/api/payment-methods/${method?.id}`
-      const httpMethod = mode === 'create' ? 'POST' : 'PUT'
-
-      const response = await fetch(url, {
-        method: httpMethod,
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      })
-
-      const responseData = await response.json()
-
-      if (!response.ok) {
-        throw new Error(responseData.error || 'Error al procesar la solicitud')
+      if (mode === 'create') {
+        await createMutation.mutateAsync(payload)
+      } else {
+        await updateMutation.mutateAsync({ id: method!.id, ...payload })
       }
-
-      toast({
-        title: mode === 'create' ? 'Método creado' : 'Método actualizado',
-        description:
-          mode === 'create'
-            ? `El método de pago "${data.name}" se creó correctamente`
-            : `El método de pago "${data.name}" se actualizó correctamente`,
-      })
-
       onSuccess()
       onOpenChange?.(false)
-    } catch (error) {
-      toast({
-        title: 'Error',
-        description: error instanceof Error ? error.message : 'Error al procesar la solicitud',
-        variant: 'destructive',
-      })
-    } finally {
-      setIsSubmitting(false)
+    } catch {
+      // Error ya manejado por el hook (toast automático)
     }
   }
 

@@ -7,7 +7,9 @@
  * - app/projects/page.tsx (ya usa React Query directamente)
  */
 
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { toast } from 'sonner'
+import { createApiError, handleMutationError } from '@/lib/errors'
 
 export interface ProjectStatus {
   id: string
@@ -79,4 +81,67 @@ export function getInitialStatus(statuses: ProjectStatus[]): ProjectStatus | und
  */
 export function getStatusById(statuses: ProjectStatus[], id: string): ProjectStatus | undefined {
   return statuses.find((status) => status.id === id)
+}
+
+// ============================================================================
+// MUTATIONS
+// ============================================================================
+
+export function useCreateProjectStatus() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async (payload: Record<string, unknown>): Promise<ProjectStatus> => {
+      const response = await fetch('/api/project-status', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      })
+
+      if (!response.ok) {
+        throw await createApiError(response, 'Error al crear estado')
+      }
+
+      const data = await response.json()
+      return data.projectStatus
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['project-statuses'] })
+      toast.success('Estado creado exitosamente')
+    },
+    onError: (error) => {
+      handleMutationError(error, { 409: 'Ya existe un estado con ese nombre' })
+    },
+  })
+}
+
+export function useUpdateProjectStatus() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async ({
+      id,
+      ...payload
+    }: { id: string } & Record<string, unknown>): Promise<ProjectStatus> => {
+      const response = await fetch(`/api/project-status/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      })
+
+      if (!response.ok) {
+        throw await createApiError(response, 'Error al actualizar estado')
+      }
+
+      const data = await response.json()
+      return data.projectStatus
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['project-statuses'] })
+      toast.success('Estado actualizado exitosamente')
+    },
+    onError: (error) => {
+      handleMutationError(error, { 409: 'Ya existe un estado con ese nombre' })
+    },
+  })
 }

@@ -8,6 +8,7 @@ import { createVisitSchema, type CreateVisitInput } from '@/lib/validations/visi
 import { normalizePhone } from '@/lib/utils/phone'
 import { cn, formatDateValue, parseDateValue } from '@/lib/utils'
 import { useConfiguration } from '@/hooks/use-configuration'
+import { useVisitStatuses, getInitialVisitStatus } from '@/hooks/queries/use-visit-statuses'
 
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -43,23 +44,10 @@ export interface VisitFormHandle {
   reset: () => void
 }
 
-interface VisitStatus {
-  id: string
-  name: string
-  isInitial?: boolean
-  isFinal?: boolean
-  color: {
-    bgClass: string
-    textClass: string
-  }
-}
-
 export const VisitForm = React.forwardRef<VisitFormHandle, VisitFormProps>(
   ({ onSubmit, isSubmitting, defaultValues, showSubmitButton = true }, ref) => {
     const { configuration } = useConfiguration()
-
-    const [visitStatuses, setVisitStatuses] = React.useState<VisitStatus[]>([])
-    const [loadingStatuses, setLoadingStatuses] = React.useState(true)
+    const { data: visitStatuses = [], isLoading: loadingStatuses } = useVisitStatuses()
 
     const form = useForm<CreateVisitInput>({
       resolver: zodResolver(createVisitSchema),
@@ -106,31 +94,15 @@ export const VisitForm = React.forwardRef<VisitFormHandle, VisitFormProps>(
       }
     }, [defaultValues, form, configuration])
 
-    // Cargar lista de visit statuses al montar
+    // Auto-seleccionar status inicial cuando se cargan los statuses
     React.useEffect(() => {
-      async function loadStatuses() {
-        try {
-          const response = await fetch('/api/visit-statuses')
-          if (!response.ok) throw new Error('Error al cargar estados')
-          const statuses: VisitStatus[] = await response.json()
-          setVisitStatuses(statuses)
-
-          // Si no hay valor por defecto, seleccionar el estado inicial
-          if (!defaultValues?.visitStatusId && statuses.length > 0) {
-            const initialStatus = statuses.find((s) => s.isInitial)
-            if (initialStatus) {
-              form.setValue('visitStatusId', initialStatus.id)
-            }
-          }
-        } catch (error) {
-          console.error('Error loading visit statuses:', error)
-        } finally {
-          setLoadingStatuses(false)
+      if (!defaultValues?.visitStatusId && visitStatuses.length > 0) {
+        const initialStatus = getInitialVisitStatus(visitStatuses)
+        if (initialStatus) {
+          form.setValue('visitStatusId', initialStatus.id)
         }
       }
-
-      loadStatuses()
-    }, [defaultValues?.visitStatusId, form])
+    }, [defaultValues?.visitStatusId, visitStatuses, form])
 
     return (
       <Form {...form}>
