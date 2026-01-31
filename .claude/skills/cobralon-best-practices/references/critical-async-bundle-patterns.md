@@ -10,45 +10,27 @@ Las dos categorías de mayor impacto en performance. Combina reglas adaptadas de
 
 **Impacto:** CRITICAL
 **Aplica a:** `app/api/*/route.ts`
-**Estado:** 🔄 Parcial — GET endpoints ✅, POST endpoints ⚠️
+**Estado:** ✅ Implementado — GET endpoints con Promise.all, POST payments con patrón defer
 
 Queries Prisma independientes deben ejecutarse en paralelo con `Promise.all`.
 
-#### Incorrecto
+#### Correcto (implementado en payments POST con patrón defer)
 
 ```typescript
-// app/api/payments/route.ts POST (~líneas 381-425)
-// ❌ Tres queries secuenciales que no dependen entre sí
-const customer = await prisma.customer.findUnique({
-  where: { id: customerId },
-})
-if (!customer) return NextResponse.json({ error: 'Customer not found' }, { status: 404 })
-
-const paymentMethod = await prisma.paymentMethod.findUnique({
-  where: { id: paymentMethodId },
-})
-if (!paymentMethod) return NextResponse.json({ error: 'Payment method not found' }, { status: 404 })
-
-const projects = await prisma.project.findMany({
-  where: { id: { in: projectIds } },
-})
-```
-
-#### Correcto
-
-```typescript
-// ✅ Paralelizar validaciones independientes
-const [customer, paymentMethod, projects] = await Promise.all([
+// app/api/payments/route.ts:345-354
+// ✅ Defer: iniciar queries antes de validaciones sync
+const dbQueriesPromise = Promise.all([
   prisma.customer.findUnique({ where: { id: customerId } }),
   prisma.paymentMethod.findUnique({ where: { id: paymentMethodId } }),
   prisma.project.findMany({ where: { id: { in: projectIds } } }),
 ])
 
-if (!customer) return NextResponse.json({ error: 'Customer not found' }, { status: 404 })
-if (!paymentMethod) return NextResponse.json({ error: 'Payment method not found' }, { status: 404 })
-```
+// Validaciones sync mientras queries corren en paralelo...
+// ...
 
-**Issue real:** `app/api/payments/route.ts` POST tiene 3 validaciones secuenciales.
+// Await solo cuando se necesitan los resultados
+const [customerExists, paymentMethod, projects] = await dbQueriesPromise
+```
 
 ### Defer await hasta donde se necesite
 

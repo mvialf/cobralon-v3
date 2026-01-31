@@ -8,8 +8,9 @@ description: |
   patrón sigue las convenciones del proyecto.
 
   Cubre: patrones establecidos del proyecto, paralelización de queries Prisma,
-  imports dinámicos, React.cache(), after(), re-render optimization, rendering
-  patterns, y convenciones Next.js 15 + React 19 + React Query + Prisma.
+  raw SQL con Prisma.sql, indexing strategy, facets opcionales, imports dinámicos,
+  React.cache(), after(), re-render optimization, rendering patterns, y
+  convenciones Next.js 15 + React 19 + React Query + Prisma.
 ---
 
 # Cobralon Best Practices
@@ -27,6 +28,7 @@ Combina patrones ya establecidos en el proyecto con mejoras pendientes basadas e
 | 3 | Server-side performance | HIGH | ⚠️ Pendiente | [server-patterns.md](references/server-patterns.md) |
 | 4 | Re-render optimization | MEDIUM | ⚠️ Pendiente | [client-rerender-patterns.md](references/client-rerender-patterns.md) |
 | 5 | Rendering patterns | MEDIUM | ⚠️ Pendiente | [rendering-patterns.md](references/rendering-patterns.md) |
+| 6 | DB & raw query perf | HIGH | ✅ Implementado | [db-query-patterns.md](references/db-query-patterns.md) |
 
 ## Patrones establecidos (referencia rápida)
 
@@ -74,6 +76,15 @@ Ver detalles en [established-patterns.md](references/established-patterns.md).
 | Minimizar serialización RSC | ✅ Implementado | [server-patterns.md#serialization](references/server-patterns.md#minimizar-serialización-rsc) |
 | Parallel fetching en server components | ✅ Implementado | [server-patterns.md#parallel](references/server-patterns.md#parallel-fetching-en-server-components) |
 
+### HIGH — DB & Raw Query Performance
+
+| Regla | Estado | Referencia |
+|-------|--------|------------|
+| Raw SQL con Prisma.sql/Prisma.empty para queries condicionales | ✅ Implementado | [db-query-patterns.md](references/db-query-patterns.md) |
+| JOIN condicional vs EXISTS subquery | ✅ Implementado | [db-query-patterns.md](references/db-query-patterns.md) |
+| Facets opcionales con includeFacets param | ✅ Implementado | [db-query-patterns.md](references/db-query-patterns.md) |
+| Índices compuestos con sort direction | ✅ Implementado | [db-query-patterns.md](references/db-query-patterns.md) |
+
 ### MEDIUM — Re-renders
 
 | Regla | Estado | Referencia |
@@ -96,23 +107,9 @@ Ver detalles en [established-patterns.md](references/established-patterns.md).
 
 Issues concretos detectados en el código actual:
 
-### 1. Waterfall en POST `/api/payments/route.ts`
+### ~~1. Waterfall en POST `/api/payments/route.ts`~~ ✅ Resuelto
 
-**Líneas ~381-425:** Tres validaciones Prisma secuenciales que podrían paralelizarse.
-
-```typescript
-// ❌ Actual: secuencial
-const customer = await prisma.customer.findUnique({ where: { id: customerId } })
-const paymentMethod = await prisma.paymentMethod.findUnique({ where: { id: paymentMethodId } })
-const projects = await prisma.project.findMany({ where: { id: { in: projectIds } } })
-
-// ✅ Correcto: paralelo
-const [customer, paymentMethod, projects] = await Promise.all([
-  prisma.customer.findUnique({ where: { id: customerId } }),
-  prisma.paymentMethod.findUnique({ where: { id: paymentMethodId } }),
-  prisma.project.findMany({ where: { id: { in: projectIds } } }),
-])
-```
+Resuelto con patrón defer: queries se inician antes de validaciones sync, await al necesitar resultados. Ver `route.ts:345-354`.
 
 ### 2. Waterfall en PUT `/api/projects/[id]/route.ts`
 
