@@ -5,6 +5,7 @@ import {
   updateMultipleProjectBalances,
   type PrismaTransaction,
 } from '@/lib/business-logic/update-project-balance'
+import { logger } from '@/lib/logger'
 
 /**
  * PUT /api/payments/[id]
@@ -125,8 +126,10 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
  * - Los PaymentAllocations también se eliminan automáticamente por cascade delete
  */
 export async function DELETE(request: Request, { params }: { params: Promise<{ id: string }> }) {
+  let deleteLogger = logger.child({ operation: 'delete-payment' })
   try {
     const { id } = await params
+    deleteLogger = logger.child({ operation: 'delete-payment', paymentId: id })
 
     // Verificar que el pago existe y obtener datos necesarios antes de la transacción
     const existingPayment = await prisma.payment.findUnique({
@@ -156,6 +159,11 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ i
         where: { paymentId: id },
         select: { id: true, type: true, amount: true, customerId: true },
       })
+
+      deleteLogger.info(
+        { creditTransactionsFound: creditTransactions.length },
+        'CreditTransactions linked to payment'
+      )
 
       // 2. Revertir cada CreditTransaction
       for (const ct of creditTransactions) {
@@ -191,6 +199,11 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ i
             },
           },
         })
+
+        deleteLogger.info(
+          { transactionId: ct.id, type: ct.type, amount: ctAmount },
+          'Credit transaction reversed'
+        )
       }
 
       // 3. Eliminar el pago (cascade borra allocations + installments)
@@ -204,6 +217,8 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ i
       }
     })
 
+    deleteLogger.info({ projectsRecalculated: projectIds.length }, 'Payment deleted successfully')
+
     return NextResponse.json(
       {
         success: true,
@@ -213,7 +228,7 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ i
       { status: 200 }
     )
   } catch (error) {
-    console.error('Error deleting payment:', error)
+    deleteLogger.error({ err: error }, 'Failed to delete payment')
     return NextResponse.json({ error: 'Error al eliminar pago' }, { status: 500 })
   }
 }

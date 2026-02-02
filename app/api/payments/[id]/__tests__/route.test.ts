@@ -14,6 +14,17 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { Decimal } from '@prisma/client/runtime/library'
 
+// Mock de logger (antes de imports del proyecto)
+vi.mock('@/lib/logger', () => ({
+  logger: {
+    child: vi.fn().mockReturnThis(),
+    debug: vi.fn(),
+    info: vi.fn(),
+    warn: vi.fn(),
+    error: vi.fn(),
+  },
+}))
+
 // Mock de Prisma (con $transaction)
 vi.mock('@/lib/db', () => ({
   prisma: {
@@ -323,25 +334,18 @@ describe('DELETE /api/payments/[id]', () => {
 
   describe('reversión de créditos', () => {
     it('debe revertir créditos APPLIED (devolver balance al cliente)', async () => {
-      let customerUpdateCalled = false
-      let creditCreateCalled = false
+      let mockTx: Record<string, Record<string, ReturnType<typeof vi.fn>>>
 
       vi.mocked(prisma.$transaction).mockImplementation(async (fn) => {
-        const mockTx = {
+        mockTx = {
           creditTransaction: {
             findMany: vi.fn().mockResolvedValue([
               { id: 'ct-1', type: 'APPLIED', amount: new Decimal(-5000), customerId: 'c1' },
             ]),
-            create: vi.fn().mockImplementation(() => {
-              creditCreateCalled = true
-              return {}
-            }),
+            create: vi.fn().mockResolvedValue({}),
           },
           customer: {
-            update: vi.fn().mockImplementation(() => {
-              customerUpdateCalled = true
-              return {}
-            }),
+            update: vi.fn().mockResolvedValue({}),
           },
           payment: {
             delete: vi.fn().mockResolvedValue({ id: 'payment-1' }),
@@ -353,27 +357,46 @@ describe('DELETE /api/payments/[id]', () => {
       const request = createRequest('DELETE')
       await DELETE(request, createParams('payment-1'))
 
-      expect(customerUpdateCalled).toBe(true)
-      expect(creditCreateCalled).toBe(true)
+      // Verificar findMany con args correctos
+      expect(mockTx!.creditTransaction.findMany).toHaveBeenCalledWith({
+        where: { paymentId: 'payment-1' },
+        select: { id: true, type: true, amount: true, customerId: true },
+      })
+
+      // APPLIED: debe incrementar creditBalance (devolver crédito usado)
+      expect(mockTx!.customer.update).toHaveBeenCalledWith({
+        where: { id: 'c1' },
+        data: { creditBalance: { increment: 5000 } },
+      })
+
+      // Debe crear ADJUSTMENT de reversión
+      expect(mockTx!.creditTransaction.create).toHaveBeenCalledWith({
+        data: expect.objectContaining({
+          customerId: 'c1',
+          amount: new Decimal(5000),
+          type: 'ADJUSTMENT',
+          paymentId: null,
+          metadata: expect.objectContaining({
+            reversedTransactionId: 'ct-1',
+            reversedType: 'APPLIED',
+          }),
+        }),
+      })
     })
 
     it('debe revertir créditos OVERPAYMENT (retirar balance del cliente)', async () => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      let customerUpdateArgs: any = null
+      let mockTx: Record<string, Record<string, ReturnType<typeof vi.fn>>>
 
       vi.mocked(prisma.$transaction).mockImplementation(async (fn) => {
-        const mockTx = {
+        mockTx = {
           creditTransaction: {
             findMany: vi.fn().mockResolvedValue([
               { id: 'ct-2', type: 'OVERPAYMENT', amount: new Decimal(10000), customerId: 'c1' },
             ]),
-            create: vi.fn(),
+            create: vi.fn().mockResolvedValue({}),
           },
           customer: {
-            update: vi.fn().mockImplementation((args: Record<string, unknown>) => {
-              customerUpdateArgs = args
-              return {}
-            }),
+            update: vi.fn().mockResolvedValue({}),
           },
           payment: {
             delete: vi.fn().mockResolvedValue({ id: 'payment-1' }),
@@ -385,13 +408,116 @@ describe('DELETE /api/payments/[id]', () => {
       const request = createRequest('DELETE')
       await DELETE(request, createParams('payment-1'))
 
-      expect(customerUpdateArgs).not.toBeNull()
-      // Debe decrementar el balance (revertir el overpayment)
-      expect(customerUpdateArgs.data).toEqual(
-        expect.objectContaining({
-          creditBalance: { decrement: 10000 },
-        })
-      )
+      // Verificar findMany con args correctos
+      expect(mockTx!.creditTransaction.findMany).toHaveBeenCalledWith({
+        where: { paymentId: 'payment-1' },
+        select: { id: true, type: true, amount: true, customerId: true },
+      })
+
+      // OVERPAYMENT: debe decrementar creditBalance (retirar crédito generado)
+      expect(mockTx!.customer.update).toHaveBeenCalledWith({
+        where: { id: 'c1' },
+        data: { creditBalance: { decrement: 10000 } },
+      })
+
+      // Debe crear ADJUSTMENT de reversión
+      expect(mockTx!.creditTransaction.create).toHaveBeenCalledWith({
+        data: expect.objectContaining({
+          customerId: 'c1',
+          amount: new Decimal(-10000),
+          type: 'ADJUSTMENT',
+          paymentId: null,
+          metadata: expect.objectContaining({
+            reversedTransactionId: 'ct-2',
+            reversedType: 'OVERPAYMENT',
+          }),
+        }),
+      })
+    })
+
+    it('debe revertir escenario mixto APPLIED + OVERPAYMENT', async () => {
+      let mockTx: Record<string, Record<string, ReturnType<typeof vi.fn>>>
+
+      vi.mocked(prisma.$transaction).mockImplementation(async (fn) => {
+        mockTx = {
+          creditTransaction: {
+            findMany: vi.fn().mockResolvedValue([
+              { id: 'ct-1', type: 'APPLIED', amount: new Decimal(-3000), customerId: 'c1' },
+              { id: 'ct-2', type: 'OVERPAYMENT', amount: new Decimal(7000), customerId: 'c1' },
+            ]),
+            create: vi.fn().mockResolvedValue({}),
+          },
+          customer: {
+            update: vi.fn().mockResolvedValue({}),
+          },
+          payment: {
+            delete: vi.fn().mockResolvedValue({ id: 'payment-1' }),
+          },
+        }
+        return fn(mockTx as never)
+      })
+
+      const request = createRequest('DELETE')
+      await DELETE(request, createParams('payment-1'))
+
+      // 2 customer.update: increment para APPLIED, decrement para OVERPAYMENT
+      expect(mockTx!.customer.update).toHaveBeenCalledTimes(2)
+      expect(mockTx!.customer.update).toHaveBeenCalledWith({
+        where: { id: 'c1' },
+        data: { creditBalance: { increment: 3000 } },
+      })
+      expect(mockTx!.customer.update).toHaveBeenCalledWith({
+        where: { id: 'c1' },
+        data: { creditBalance: { decrement: 7000 } },
+      })
+
+      // 2 ADJUSTMENTs creados
+      expect(mockTx!.creditTransaction.create).toHaveBeenCalledTimes(2)
+    })
+
+    it('debe revertir múltiples CreditTransactions del mismo tipo', async () => {
+      let mockTx: Record<string, Record<string, ReturnType<typeof vi.fn>>>
+
+      vi.mocked(prisma.$transaction).mockImplementation(async (fn) => {
+        mockTx = {
+          creditTransaction: {
+            findMany: vi.fn().mockResolvedValue([
+              { id: 'ct-1', type: 'OVERPAYMENT', amount: new Decimal(1000), customerId: 'c1' },
+              { id: 'ct-2', type: 'OVERPAYMENT', amount: new Decimal(2000), customerId: 'c1' },
+              { id: 'ct-3', type: 'OVERPAYMENT', amount: new Decimal(3000), customerId: 'c1' },
+            ]),
+            create: vi.fn().mockResolvedValue({}),
+          },
+          customer: {
+            update: vi.fn().mockResolvedValue({}),
+          },
+          payment: {
+            delete: vi.fn().mockResolvedValue({ id: 'payment-1' }),
+          },
+        }
+        return fn(mockTx as never)
+      })
+
+      const request = createRequest('DELETE')
+      await DELETE(request, createParams('payment-1'))
+
+      // 3 decrements (uno por cada OVERPAYMENT)
+      expect(mockTx!.customer.update).toHaveBeenCalledTimes(3)
+      expect(mockTx!.customer.update).toHaveBeenCalledWith({
+        where: { id: 'c1' },
+        data: { creditBalance: { decrement: 1000 } },
+      })
+      expect(mockTx!.customer.update).toHaveBeenCalledWith({
+        where: { id: 'c1' },
+        data: { creditBalance: { decrement: 2000 } },
+      })
+      expect(mockTx!.customer.update).toHaveBeenCalledWith({
+        where: { id: 'c1' },
+        data: { creditBalance: { decrement: 3000 } },
+      })
+
+      // 3 ADJUSTMENTs creados
+      expect(mockTx!.creditTransaction.create).toHaveBeenCalledTimes(3)
     })
   })
 
