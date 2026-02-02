@@ -219,9 +219,11 @@ export function PaymentToCustomerForm({
   const watchedAllocations = form.watch('allocations')
 
   // Calcular suma de allocations desde los valores observados
-  const totalAllocated = useMemo(() => {
-    return watchedAllocations?.reduce((sum, a) => sum + (a.allocatedAmount || 0), 0) || 0
-  }, [watchedAllocations])
+  // NO usar useMemo: form.watch retorna la misma referencia del array cuando
+  // se editan valores nested (modo manual), así que useMemo devolvería el valor cacheado.
+  // useFieldArray.update() sí crea nueva referencia (modo FIFO), por eso FIFO funcionaba.
+  const totalAllocated =
+    watchedAllocations?.reduce((sum, a) => sum + (a.allocatedAmount || 0), 0) || 0
 
   const difference = watchedAmount - totalAllocated
   const isValidSum = Math.abs(difference) < FINANCIAL.TOLERANCE
