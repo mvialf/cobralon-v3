@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { type ColumnDef } from '@tanstack/react-table'
-import { Pencil, Trash2, DollarSign, ArrowLeftRight, FileText } from 'lucide-react'
+import { Pencil, Trash2, DollarSign, ArrowLeftRight, FileText, History } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { DataTableDropdown, DataTableColumnHeader } from '@/components/data-table'
 import {
@@ -15,6 +15,7 @@ import { RefundCreditDialog } from '@/components/dialogs/customers/refund-credit
 import { EditCustomerDialog } from '@/components/dialogs/customer/edit-customer-dialog'
 import { ConfirmDeleteDialog } from '@/components/dialogs/confirm-delete-dialog'
 import { ViewCustomerAccountDialog } from '@/components/dialogs/customers/view-customer-account-dialog'
+import { CreditHistoryDialog } from '@/components/dialogs/customers/credit-history-dialog'
 import { CustomerCreditBadge } from '@/components/ui/customer-credit-badge'
 import { shouldShowRefundOption } from '@/lib/business-logic/credit-eligibility'
 import { useDeleteCustomer } from '@/hooks/queries/use-customers'
@@ -38,6 +39,7 @@ function CustomerActionsCell({
   const [paymentDialogOpen, setPaymentDialogOpen] = useState(false)
   const [refundDialogOpen, setRefundDialogOpen] = useState(false)
   const [accountDialogOpen, setAccountDialogOpen] = useState(false)
+  const [creditHistoryOpen, setCreditHistoryOpen] = useState(false)
   const [editDialogOpen, setEditDialogOpen] = useState(false)
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
 
@@ -81,6 +83,14 @@ function CustomerActionsCell({
           <FileText className="mr-2 h-4 w-4" />
           Estado de cuenta
         </DropdownMenuItem>
+
+        {/* Historial de crédito - solo si tiene crédito */}
+        {canRefund && (
+          <DropdownMenuItem onClick={() => setCreditHistoryOpen(true)}>
+            <History className="mr-2 h-4 w-4" />
+            Historial de crédito
+          </DropdownMenuItem>
+        )}
 
         <DropdownMenuSeparator />
 
@@ -155,6 +165,14 @@ function CustomerActionsCell({
         customerName={customer.name}
         open={accountDialogOpen}
         onOpenChange={setAccountDialogOpen}
+      />
+
+      {/* Dialog para historial de crédito */}
+      <CreditHistoryDialog
+        customerId={customer.id}
+        customerName={customer.name}
+        open={creditHistoryOpen}
+        onOpenChange={setCreditHistoryOpen}
       />
     </>
   )
