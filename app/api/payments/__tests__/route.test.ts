@@ -1,13 +1,13 @@
 /**
- * Tests para app/api/payments/route.ts (POST endpoint)
+ * Tests para app/api/payments/route.ts (GET y POST endpoints)
  *
  * Valida:
- * - Validaciones de entrada
- * - Reglas de negocio para allocations
- * - Validación de crédito aplicado
- *
- * NOTA: Estos tests mockean Prisma y se enfocan en validaciones,
- * no en la creación real de registros.
+ * - GET: Listado con filtros, paginación y facets
+ * - POST: Validaciones de entrada
+ * - POST: Reglas de negocio para allocations
+ * - POST: Validación de crédito aplicado
+ * - POST: Sobrepagos y generación de créditos
+ * - POST: Errores en transacción
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
@@ -38,6 +38,7 @@ vi.mock('@/lib/db', () => ({
     },
     paymentMethod: {
       findUnique: vi.fn(),
+      findMany: vi.fn(),
     },
     project: {
       findMany: vi.fn(),
@@ -69,7 +70,8 @@ vi.mock('@/lib/business-logic/credit-management', () => ({
 }))
 
 import { prisma } from '@/lib/db'
-import { POST } from '../route'
+import { canApplyCredit } from '@/lib/business-logic/credit-management'
+import { GET, POST } from '../route'
 
 // Helper para llamar al handler con context mock
 async function callPOST(request: NextRequest) {
@@ -78,13 +80,31 @@ async function callPOST(request: NextRequest) {
   return (POST as any)(request, context)
 }
 
-// Helper para crear request
+// Helper para llamar GET con context mock
+async function callGET(request: NextRequest) {
+  const context = { params: Promise.resolve({}) }
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return (GET as any)(request, context)
+}
+
+// Helper para crear request POST
 function createRequest(body: Record<string, unknown>): NextRequest {
   return new NextRequest('http://localhost:3000/api/payments', {
     method: 'POST',
     body: JSON.stringify(body),
     headers: { 'Content-Type': 'application/json' },
   })
+}
+
+// Helper para crear request GET con query params
+function createGETRequest(searchParams?: Record<string, string>): NextRequest {
+  const url = new URL('http://localhost:3000/api/payments')
+  if (searchParams) {
+    Object.entries(searchParams).forEach(([key, value]) => {
+      url.searchParams.set(key, value)
+    })
+  }
+  return new NextRequest(url, { method: 'GET' })
 }
 
 // Payload base válido
@@ -519,5 +539,493 @@ describe('POST /api/payments', () => {
       expect(data.id).toBe('payment-123')
       expect(data.allocations).toHaveLength(1)
     })
+  })
+
+  describe('sobrepagos (generación de crédito)', () => {
+    it('debe generar crédito cuando proyecto tiene balance negativo', async () => {
+      const txPayment = { create: vi.fn().mockResolvedValue({ id: 'p1', allocations: [], installments: [] }) }
+      const txProject = {
+        findMany: vi.fn().mockResolvedValue([
+          { id: 'project-1', projectNumber: '1001', balance: -5000, customerId: 'customer-1' },
+        ]),
+        update: vi.fn(),
+      }
+      const txCustomer = { update: vi.fn() }
+      const txCreditTransaction = { create: vi.fn() }
+
+      vi.mocked(prisma.$transaction).mockImplementation(async (fn) => {
+        return fn({ payment: txPayment, project: txProject, customer: txCustomer, creditTransaction: txCreditTransaction } as never)
+      })
+
+      const request = createRequest(validPayload)
+      const response = await callPOST(request)
+
+      expect(response.status).toBe(201)
+      // Debe ajustar balance a 0
+      expect(txProject.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: 'project-1' },
+          data: expect.objectContaining({ balance: expect.anything() }),
+        })
+      )
+      // Debe incrementar crédito del cliente
+      expect(txCustomer.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: 'customer-1' },
+          data: { creditBalance: { increment: 5000 } },
+        })
+      )
+      // Debe crear CreditTransaction tipo OVERPAYMENT
+      expect(txCreditTransaction.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            type: 'OVERPAYMENT',
+            customerId: 'customer-1',
+          }),
+        })
+      )
+    })
+
+    it('debe generar créditos para múltiples proyectos con sobrepago', async () => {
+      vi.mocked(prisma.project.findMany).mockResolvedValue([
+        { id: 'p1', customerId: 'customer-1', currency: 'CLP' },
+        { id: 'p2', customerId: 'customer-1', currency: 'CLP' },
+      ] as never)
+
+      const txCreditTransaction = { create: vi.fn() }
+      const txProject = {
+        findMany: vi.fn().mockResolvedValue([
+          { id: 'p1', projectNumber: '1001', balance: -3000, customerId: 'customer-1' },
+          { id: 'p2', projectNumber: '1002', balance: -2000, customerId: 'customer-1' },
+        ]),
+        update: vi.fn(),
+      }
+
+      vi.mocked(prisma.$transaction).mockImplementation(async (fn) => {
+        return fn({
+          payment: { create: vi.fn().mockResolvedValue({ id: 'p1', allocations: [], installments: [] }) },
+          project: txProject,
+          customer: { update: vi.fn() },
+          creditTransaction: txCreditTransaction,
+        } as never)
+      })
+
+      const request = createRequest({
+        ...validPayload,
+        type: 'Customer',
+        allocations: [
+          { projectId: 'p1', allocatedAmount: 50000 },
+          { projectId: 'p2', allocatedAmount: 50000 },
+        ],
+      })
+      const response = await callPOST(request)
+
+      expect(response.status).toBe(201)
+      expect(txCreditTransaction.create).toHaveBeenCalledTimes(2)
+    })
+
+    it('no debe generar crédito cuando balance >= 0', async () => {
+      const txCreditTransaction = { create: vi.fn() }
+      vi.mocked(prisma.$transaction).mockImplementation(async (fn) => {
+        return fn({
+          payment: { create: vi.fn().mockResolvedValue({ id: 'p1', allocations: [], installments: [] }) },
+          project: {
+            findMany: vi.fn().mockResolvedValue([
+              { id: 'project-1', projectNumber: '1001', balance: 5000, customerId: 'customer-1' },
+            ]),
+            update: vi.fn(),
+          },
+          customer: { update: vi.fn() },
+          creditTransaction: txCreditTransaction,
+        } as never)
+      })
+
+      const request = createRequest(validPayload)
+      const response = await callPOST(request)
+
+      expect(response.status).toBe(201)
+      expect(txCreditTransaction.create).not.toHaveBeenCalled()
+    })
+
+    it('debe generar crédito solo para proyectos con balance negativo', async () => {
+      vi.mocked(prisma.project.findMany).mockResolvedValue([
+        { id: 'p1', customerId: 'customer-1', currency: 'CLP' },
+        { id: 'p2', customerId: 'customer-1', currency: 'CLP' },
+      ] as never)
+
+      const txCreditTransaction = { create: vi.fn() }
+      vi.mocked(prisma.$transaction).mockImplementation(async (fn) => {
+        return fn({
+          payment: { create: vi.fn().mockResolvedValue({ id: 'p1', allocations: [], installments: [] }) },
+          project: {
+            findMany: vi.fn().mockResolvedValue([
+              { id: 'p1', projectNumber: '1001', balance: -3000, customerId: 'customer-1' },
+              { id: 'p2', projectNumber: '1002', balance: 5000, customerId: 'customer-1' },
+            ]),
+            update: vi.fn(),
+          },
+          customer: { update: vi.fn() },
+          creditTransaction: txCreditTransaction,
+        } as never)
+      })
+
+      const request = createRequest({
+        ...validPayload,
+        type: 'Customer',
+        allocations: [
+          { projectId: 'p1', allocatedAmount: 50000 },
+          { projectId: 'p2', allocatedAmount: 50000 },
+        ],
+      })
+      const response = await callPOST(request)
+
+      expect(response.status).toBe(201)
+      // Solo 1 crédito (p1 con balance negativo)
+      expect(txCreditTransaction.create).toHaveBeenCalledTimes(1)
+    })
+  })
+
+  describe('errores en transacción', () => {
+    it('debe retornar 500 cuando cliente no se encuentra en TX (crédito)', async () => {
+      vi.mocked(prisma.$transaction).mockImplementation(async (fn) => {
+        return fn({
+          payment: { create: vi.fn().mockResolvedValue({ id: 'p1', allocations: [], installments: [] }) },
+          project: { findUnique: vi.fn().mockResolvedValue({ balance: 100000 }), findMany: vi.fn(), update: vi.fn() },
+          customer: { findUnique: vi.fn().mockResolvedValue(null), update: vi.fn(), updateMany: vi.fn() },
+          creditTransaction: { create: vi.fn() },
+        } as never)
+      })
+
+      const request = createRequest({
+        ...validPayload,
+        creditApplied: 5000,
+      })
+      const response = await callPOST(request)
+
+      expect(response.status).toBe(500)
+    })
+
+    it('debe retornar 500 cuando proyecto no se encuentra en TX (crédito)', async () => {
+      vi.mocked(prisma.$transaction).mockImplementation(async (fn) => {
+        return fn({
+          payment: { create: vi.fn().mockResolvedValue({ id: 'p1', allocations: [], installments: [] }) },
+          project: { findUnique: vi.fn().mockResolvedValue(null), findMany: vi.fn(), update: vi.fn() },
+          customer: { findUnique: vi.fn().mockResolvedValue({ creditBalance: 50000 }), update: vi.fn(), updateMany: vi.fn() },
+          creditTransaction: { create: vi.fn() },
+        } as never)
+      })
+
+      const request = createRequest({
+        ...validPayload,
+        creditApplied: 5000,
+      })
+      const response = await callPOST(request)
+
+      expect(response.status).toBe(500)
+    })
+
+    it('debe retornar 500 por race condition de crédito (count=0)', async () => {
+      vi.mocked(prisma.$transaction).mockImplementation(async (fn) => {
+        return fn({
+          payment: { create: vi.fn().mockResolvedValue({ id: 'p1', allocations: [], installments: [] }) },
+          project: { findUnique: vi.fn().mockResolvedValue({ balance: 100000 }), findMany: vi.fn(), update: vi.fn() },
+          customer: {
+            findUnique: vi.fn().mockResolvedValue({ creditBalance: 50000 }),
+            update: vi.fn(),
+            updateMany: vi.fn().mockResolvedValue({ count: 0 }),
+          },
+          creditTransaction: { create: vi.fn() },
+        } as never)
+      })
+
+      const request = createRequest({
+        ...validPayload,
+        creditApplied: 5000,
+      })
+      const response = await callPOST(request)
+
+      expect(response.status).toBe(500)
+    })
+
+    it('debe retornar 500 cuando canApplyCredit es inválido en TX', async () => {
+      vi.mocked(canApplyCredit).mockReturnValue({ valid: false, error: 'Crédito insuficiente' })
+
+      vi.mocked(prisma.$transaction).mockImplementation(async (fn) => {
+        return fn({
+          payment: { create: vi.fn().mockResolvedValue({ id: 'p1', allocations: [], installments: [] }) },
+          project: { findUnique: vi.fn().mockResolvedValue({ balance: 100000 }), findMany: vi.fn(), update: vi.fn() },
+          customer: {
+            findUnique: vi.fn().mockResolvedValue({ creditBalance: 50000 }),
+            update: vi.fn(),
+            updateMany: vi.fn().mockResolvedValue({ count: 1 }),
+          },
+          creditTransaction: { create: vi.fn() },
+        } as never)
+      })
+
+      const request = createRequest({
+        ...validPayload,
+        creditApplied: 5000,
+      })
+      const response = await callPOST(request)
+
+      expect(response.status).toBe(500)
+    })
+
+    it('debe retornar 500 cuando $transaction rechaza', async () => {
+      vi.mocked(prisma.$transaction).mockRejectedValue(new Error('TX failed'))
+
+      const request = createRequest(validPayload)
+      const response = await callPOST(request)
+      const data = await response.json()
+
+      expect(response.status).toBe(500)
+      expect(data.error).toBe('Error al crear pago')
+    })
+  })
+})
+
+// ============================================================================
+// GET /api/payments
+// ============================================================================
+
+describe('GET /api/payments', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  const mockPayments = [
+    {
+      id: 'pay-1',
+      type: 'Project',
+      amount: 100000,
+      date: '2024-01-15',
+      customer: { id: 'c1', name: 'Cliente 1', phone: '+56911111111' },
+      paymentMethod: { id: 'pm1', name: 'Efectivo', icon: null },
+      allocations: [
+        {
+          id: 'a1',
+          allocatedAmount: 100000,
+          project: { id: 'p1', projectNumber: '1001', projectName: null, totalAmount: 200000, currency: 'CLP' },
+        },
+      ],
+    },
+  ]
+
+  it('debe retornar pagos con paginación por defecto', async () => {
+    vi.mocked(prisma.payment.findMany).mockResolvedValue(mockPayments as never)
+    vi.mocked(prisma.payment.count).mockResolvedValue(1)
+
+    const response = await callGET(createGETRequest())
+    const data = await response.json()
+
+    expect(response.status).toBe(200)
+    expect(data.payments).toHaveLength(1)
+    expect(data.pagination).toEqual({
+      page: 1,
+      limit: 10,
+      total: 1,
+      totalPages: 1,
+    })
+  })
+
+  it('debe aplicar filtro search con OR conditions', async () => {
+    vi.mocked(prisma.payment.findMany).mockResolvedValue([] as never)
+    vi.mocked(prisma.payment.count).mockResolvedValue(0)
+
+    await callGET(createGETRequest({ search: 'Juan' }))
+
+    expect(prisma.payment.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          OR: expect.arrayContaining([
+            expect.objectContaining({ customer: { name: { contains: 'Juan', mode: 'insensitive' } } }),
+          ]),
+        }),
+      })
+    )
+  })
+
+  it('debe filtrar por tipo Project', async () => {
+    vi.mocked(prisma.payment.findMany).mockResolvedValue([] as never)
+    vi.mocked(prisma.payment.count).mockResolvedValue(0)
+
+    await callGET(createGETRequest({ type: 'Project' }))
+
+    expect(prisma.payment.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({ type: 'Project' }),
+      })
+    )
+  })
+
+  it('debe ignorar tipo inválido', async () => {
+    vi.mocked(prisma.payment.findMany).mockResolvedValue([] as never)
+    vi.mocked(prisma.payment.count).mockResolvedValue(0)
+
+    await callGET(createGETRequest({ type: 'Invalid' }))
+
+    const call = vi.mocked(prisma.payment.findMany).mock.calls[0][0]
+    expect(call?.where?.type).toBeUndefined()
+  })
+
+  it('debe filtrar por paymentMethodId', async () => {
+    vi.mocked(prisma.payment.findMany).mockResolvedValue([] as never)
+    vi.mocked(prisma.payment.count).mockResolvedValue(0)
+
+    await callGET(createGETRequest({ paymentMethodId: 'pm-1' }))
+
+    expect(prisma.payment.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({ paymentMethodId: 'pm-1' }),
+      })
+    )
+  })
+
+  it('debe filtrar por projectNumber via allocations', async () => {
+    vi.mocked(prisma.payment.findMany).mockResolvedValue([] as never)
+    vi.mocked(prisma.payment.count).mockResolvedValue(0)
+
+    await callGET(createGETRequest({ projectNumber: '1001' }))
+
+    expect(prisma.payment.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          allocations: { some: { project: { projectNumber: '1001' } } },
+        }),
+      })
+    )
+  })
+
+  it('debe filtrar por customerId', async () => {
+    vi.mocked(prisma.payment.findMany).mockResolvedValue([] as never)
+    vi.mocked(prisma.payment.count).mockResolvedValue(0)
+
+    await callGET(createGETRequest({ customerId: 'c-1' }))
+
+    expect(prisma.payment.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({ customerId: 'c-1' }),
+      })
+    )
+  })
+
+  it('debe filtrar por rango de fechas', async () => {
+    vi.mocked(prisma.payment.findMany).mockResolvedValue([] as never)
+    vi.mocked(prisma.payment.count).mockResolvedValue(0)
+
+    await callGET(createGETRequest({ startDate: '2024-01-01', endDate: '2024-12-31' }))
+
+    expect(prisma.payment.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          date: {
+            gte: expect.any(Date),
+            lte: expect.any(Date),
+          },
+        }),
+      })
+    )
+  })
+
+  it('debe filtrar solo con startDate', async () => {
+    vi.mocked(prisma.payment.findMany).mockResolvedValue([] as never)
+    vi.mocked(prisma.payment.count).mockResolvedValue(0)
+
+    await callGET(createGETRequest({ startDate: '2024-01-01' }))
+
+    expect(prisma.payment.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          date: { gte: expect.any(Date) },
+        }),
+      })
+    )
+  })
+
+  it('debe filtrar por projectId via allocations', async () => {
+    vi.mocked(prisma.payment.findMany).mockResolvedValue([] as never)
+    vi.mocked(prisma.payment.count).mockResolvedValue(0)
+
+    await callGET(createGETRequest({ projectId: 'proj-1' }))
+
+    expect(prisma.payment.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          allocations: { some: { projectId: 'proj-1' } },
+        }),
+      })
+    )
+  })
+
+  it('debe respetar paginación', async () => {
+    vi.mocked(prisma.payment.findMany).mockResolvedValue([] as never)
+    vi.mocked(prisma.payment.count).mockResolvedValue(50)
+
+    const response = await callGET(createGETRequest({ page: '3', limit: '5' }))
+    const data = await response.json()
+
+    expect(prisma.payment.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        skip: 10, // (3-1)*5
+        take: 5,
+      })
+    )
+    expect(data.pagination.totalPages).toBe(10)
+  })
+
+  it('debe limitar máximo a 100 registros', async () => {
+    vi.mocked(prisma.payment.findMany).mockResolvedValue([] as never)
+    vi.mocked(prisma.payment.count).mockResolvedValue(0)
+
+    await callGET(createGETRequest({ limit: '200' }))
+
+    expect(prisma.payment.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({ take: 100 })
+    )
+  })
+
+  it('debe incluir facets cuando includeFacets=true', async () => {
+    vi.mocked(prisma.payment.findMany).mockResolvedValue(mockPayments as never)
+    vi.mocked(prisma.payment.count).mockResolvedValue(1)
+    vi.mocked(prisma.payment.groupBy)
+      .mockResolvedValueOnce([{ type: 'Project', _count: 5 }] as never)
+      .mockResolvedValueOnce([{ paymentMethodId: 'pm1', _count: 3 }] as never)
+    vi.mocked(prisma.$queryRaw).mockResolvedValue([
+      { projectNumber: '1001', count: BigInt(2) },
+    ] as never)
+    vi.mocked(prisma.paymentMethod.findMany).mockResolvedValue([
+      { id: 'pm1', name: 'Efectivo' },
+    ] as never)
+
+    const response = await callGET(createGETRequest({ includeFacets: 'true' }))
+    const data = await response.json()
+
+    expect(response.status).toBe(200)
+    expect(data.facets).toBeDefined()
+    expect(data.facets.type).toBeDefined()
+    expect(data.facets.paymentMethod).toBeDefined()
+    expect(data.facets.projectNumber).toBeDefined()
+  })
+
+  it('no debe incluir facets por defecto', async () => {
+    vi.mocked(prisma.payment.findMany).mockResolvedValue([] as never)
+    vi.mocked(prisma.payment.count).mockResolvedValue(0)
+
+    const response = await callGET(createGETRequest())
+    const data = await response.json()
+
+    expect(data.facets).toBeUndefined()
+    expect(prisma.payment.groupBy).not.toHaveBeenCalled()
+  })
+
+  it('debe retornar 500 cuando findMany falla', async () => {
+    vi.mocked(prisma.payment.findMany).mockRejectedValue(new Error('DB Error'))
+
+    const response = await callGET(createGETRequest())
+    const data = await response.json()
+
+    expect(response.status).toBe(500)
+    expect(data.error).toBe('Error al obtener pagos')
   })
 })
