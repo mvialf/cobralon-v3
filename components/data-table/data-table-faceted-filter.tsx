@@ -104,7 +104,9 @@ export function DataTableFacetedFilter<TData, TValue>({
                       role="button"
                       tabIndex={0}
                       onClick={handleClearAllFilters}
-                      onKeyDown={(e) => e.key === 'Enter' && handleClearAllFilters(e as unknown as React.MouseEvent)}
+                      onKeyDown={(e) =>
+                        e.key === 'Enter' && handleClearAllFilters(e as unknown as React.MouseEvent)
+                      }
                       className="ml-0.5 rounded-full hover:bg-muted-foreground/20 p-0.5 cursor-pointer"
                       aria-label="Limpiar todos los filtros"
                     >
@@ -125,7 +127,10 @@ export function DataTableFacetedFilter<TData, TValue>({
                           role="button"
                           tabIndex={0}
                           onClick={(e) => handleRemoveFilter(option.value, e)}
-                          onKeyDown={(e) => e.key === 'Enter' && handleRemoveFilter(option.value, e as unknown as React.MouseEvent)}
+                          onKeyDown={(e) =>
+                            e.key === 'Enter' &&
+                            handleRemoveFilter(option.value, e as unknown as React.MouseEvent)
+                          }
                           className="ml-0.5 rounded-full hover:bg-muted-foreground/20 p-0.5 cursor-pointer"
                           aria-label={`Quitar filtro ${option.label}`}
                         >

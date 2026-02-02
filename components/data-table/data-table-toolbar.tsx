@@ -93,7 +93,11 @@ export function DataTableToolbar<TData>({
               className="pl-8 pr-8 w-[150px] lg:w-[250px]"
             />
             {/* Botón para limpiar búsqueda */}
-            {(onSearchChange ? searchValue : enableGlobalFilter ? table.getState().globalFilter : table.getColumn(searchKey)?.getFilterValue()) && (
+            {(onSearchChange
+              ? searchValue
+              : enableGlobalFilter
+                ? table.getState().globalFilter
+                : table.getColumn(searchKey)?.getFilterValue()) && (
               <button
                 type="button"
                 onClick={() => handleSearchChange('')}

@@ -63,7 +63,10 @@ export const createColumns = ({
     accessorFn: (row) => {
       // Para sorting: usar nombre del cliente o proyecto
       if (row.payment.allocations.length === 1) {
-        return row.payment.allocations[0].project.projectName || row.payment.allocations[0].project.projectNumber
+        return (
+          row.payment.allocations[0].project.projectName ||
+          row.payment.allocations[0].project.projectNumber
+        )
       }
       return row.payment.customer.name
     },
