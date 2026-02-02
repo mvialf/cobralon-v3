@@ -32,6 +32,10 @@ interface ReconciliationResult {
   checkedProjects: number
   inconsistentProjects: number
   fixedProjects: number
+  totalCustomers: number
+  checkedCustomers: number
+  inconsistentCustomers: number
+  fixedCustomers: number
   errors: number
   duration: number
   timestamp: string
@@ -40,6 +44,13 @@ interface ReconciliationResult {
     projectNumber: string
     dbBalance: number
     calculatedBalance: number
+    difference: number
+  }>
+  customerDetails: Array<{
+    customerId: string
+    customerName: string
+    dbCreditBalance: number
+    calculatedCreditBalance: number
     difference: number
   }>
 }
@@ -64,10 +75,15 @@ export const GET = withLogging(async (request, logger) => {
       checkedProjects: 0,
       inconsistentProjects: 0,
       fixedProjects: 0,
+      totalCustomers: 0,
+      checkedCustomers: 0,
+      inconsistentCustomers: 0,
+      fixedCustomers: 0,
       errors: 0,
       duration: 0,
       timestamp: new Date().toISOString(),
       details: [],
+      customerDetails: [],
     }
 
     // Fetch todos los proyectos
@@ -166,6 +182,99 @@ export const GET = withLogging(async (request, logger) => {
       }
     }
 
+    // ================================================================
+    // Fase 3: Detectar inconsistencias de creditBalance en clientes
+    // ================================================================
+    logger.debug('Fetching customers with credit data')
+    const customers = await prisma.customer.findMany({
+      where: {
+        OR: [{ creditBalance: { gt: 0 } }, { creditTransactions: { some: {} } }],
+      },
+      select: {
+        id: true,
+        name: true,
+        creditBalance: true,
+        creditTransactions: {
+          select: { amount: true },
+        },
+      },
+    })
+
+    result.totalCustomers = customers.length
+    logger.info({ totalCustomers: customers.length }, 'Customers loaded for credit check')
+
+    const customersToFix: Array<{ id: string; creditBalance: number }> = []
+
+    for (const customer of customers) {
+      result.checkedCustomers++
+
+      try {
+        const calculatedBalance = Math.max(
+          0,
+          customer.creditTransactions.reduce((sum, ct) => sum + Number(ct.amount), 0)
+        )
+
+        const dbBalance = Number(customer.creditBalance)
+        const difference = Math.abs(dbBalance - calculatedBalance)
+
+        if (difference >= FINANCIAL.TOLERANCE) {
+          result.inconsistentCustomers++
+
+          logger.warn(
+            {
+              customerId: customer.id,
+              customerName: customer.name,
+              dbCreditBalance: dbBalance,
+              calculatedCreditBalance: calculatedBalance,
+              difference,
+            },
+            'Inconsistent credit balance detected'
+          )
+
+          result.customerDetails.push({
+            customerId: customer.id,
+            customerName: customer.name,
+            dbCreditBalance: dbBalance,
+            calculatedCreditBalance: calculatedBalance,
+            difference,
+          })
+
+          customersToFix.push({ id: customer.id, creditBalance: calculatedBalance })
+        }
+      } catch (error) {
+        result.errors++
+        logger.error(
+          { err: error, customerId: customer.id, customerName: customer.name },
+          'Error processing customer credit'
+        )
+      }
+    }
+
+    // ================================================================
+    // Fase 4: Corregir creditBalances inconsistentes en batch
+    // ================================================================
+    if (customersToFix.length > 0) {
+      try {
+        await prisma.$transaction(
+          customersToFix.map(({ id, creditBalance }) =>
+            prisma.customer.update({
+              where: { id },
+              data: { creditBalance: new Decimal(creditBalance) },
+            })
+          )
+        )
+        result.fixedCustomers = customersToFix.length
+
+        logger.info(
+          { fixedCount: customersToFix.length },
+          'Batch credit balance correction completed'
+        )
+      } catch (error) {
+        result.errors += customersToFix.length
+        logger.error({ err: error }, 'Error in batch credit balance correction')
+      }
+    }
+
     result.duration = Date.now() - startTime
 
     logger.info(
@@ -174,6 +283,10 @@ export const GET = withLogging(async (request, logger) => {
         checkedProjects: result.checkedProjects,
         inconsistentProjects: result.inconsistentProjects,
         fixedProjects: result.fixedProjects,
+        totalCustomers: result.totalCustomers,
+        checkedCustomers: result.checkedCustomers,
+        inconsistentCustomers: result.inconsistentCustomers,
+        fixedCustomers: result.fixedCustomers,
         errors: result.errors,
         duration: result.duration,
       },
@@ -184,7 +297,7 @@ export const GET = withLogging(async (request, logger) => {
     return NextResponse.json(
       {
         success: true,
-        message: `Reconciliación completada: ${result.fixedProjects} proyectos corregidos de ${result.totalProjects} revisados`,
+        message: `Reconciliación completada: ${result.fixedProjects} proyectos y ${result.fixedCustomers} clientes corregidos`,
         result,
       },
       { status: 200 }
