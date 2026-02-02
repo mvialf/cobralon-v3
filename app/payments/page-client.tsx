@@ -32,6 +32,7 @@ import {
   usePayments,
   useDeletePayment,
   useBulkDeletePayments,
+  useUpdatePaymentDate,
   type PaymentsQueryParams,
 } from '@/hooks/queries/use-payments'
 import type { Payment as APIPayment } from '@/lib/validations/payment-validations'
@@ -122,6 +123,7 @@ export function PaymentsPageClient() {
   const { data, isLoading, isPlaceholderData } = usePayments(queryParams)
   const deleteMutation = useDeletePayment()
   const bulkDeleteMutation = useBulkDeletePayments()
+  const updateDateMutation = useUpdatePaymentDate()
 
   // Extraer data del hook (con fallbacks) y cast a tipo local
   const payments = useMemo(() => (data?.payments || []) as Payment[], [data?.payments])
@@ -169,6 +171,11 @@ export function PaymentsPageClient() {
     await deleteMutation.mutateAsync(paymentId)
   }
 
+  // Handler para cambiar fecha inline (pasa via meta a columns)
+  const handleDateChange = async (paymentId: string, newDate: Date) => {
+    await updateDateMutation.mutateAsync({ paymentId, date: newDate.toISOString() })
+  }
+
   const handleSearchChange = (search: string) => {
     setSearchTerm(search)
     // Resetear a página 1 cuando cambia la búsqueda (server-side)
@@ -211,8 +218,11 @@ export function PaymentsPageClient() {
     () =>
       createColumns({
         onViewDetails: handleViewDetails,
+        updatingDatePaymentId: updateDateMutation.isPending
+          ? updateDateMutation.variables?.paymentId
+          : null,
       }),
-    []
+    [updateDateMutation.isPending, updateDateMutation.variables]
   )
 
   return (
@@ -324,6 +334,7 @@ export function PaymentsPageClient() {
             meta={{
               handleDelete,
               deletingPaymentId: deleteMutation.variables || null,
+              handleDateChange,
             }}
             // Selección múltiple y acciones masivas
             enableRowSelection

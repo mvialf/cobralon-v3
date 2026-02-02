@@ -469,6 +469,54 @@ export function useUpdatePayment() {
 }
 
 // ============================================================================
+// MUTATION: UPDATE DATE (dedicado para EditableDate inline)
+// ============================================================================
+
+/**
+ * Hook especializado para actualizar solo la fecha de un pago.
+ * Usado por EditableDate en DataTable de pagos.
+ *
+ * **⚠️ RESTRICCIÓN:** El frontend NO debe mostrar EditableDate si el pago
+ * tiene cuotas (selectedInstallments > 1). El backend también bloquea la edición.
+ */
+export function useUpdatePaymentDate() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async ({
+      paymentId,
+      date,
+    }: {
+      paymentId: string
+      date: Date | string
+    }): Promise<Payment> => {
+      const response = await fetch(`/api/payments/${paymentId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ date }),
+      })
+
+      if (!response.ok) {
+        throw await createApiError(response, 'Error al actualizar fecha')
+      }
+
+      return response.json()
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        predicate: (query) => query.queryKey[0] === 'payments',
+      })
+
+      toast.success('Fecha actualizada exitosamente')
+    },
+    onError: (error) => {
+      handleMutationError(error)
+      console.error('Error updating payment date:', error)
+    },
+  })
+}
+
+// ============================================================================
 // MUTATION: BULK DELETE (eliminar múltiples pagos)
 // ============================================================================
 

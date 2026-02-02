@@ -3,6 +3,7 @@
 import { type ColumnDef } from '@tanstack/react-table'
 import { Eye, XCircle, Loader2 } from 'lucide-react'
 import { DataTableDropdown, createSelectColumn } from '@/components/data-table'
+import { EditableDate } from '@/components/ui/editable-date'
 import {
   DropdownMenuItem,
   DropdownMenuLabel,
@@ -28,6 +29,7 @@ export interface Payment {
     id: string
     name: string
   }
+  selectedInstallments: number | null
   allocations: Array<{
     id: string
     allocatedAmount: number
@@ -50,6 +52,7 @@ export interface Payment {
 interface PaymentsTableMeta {
   handleDelete?: (paymentId: string) => void
   deletingPaymentId?: string | null
+  handleDateChange?: (paymentId: string, newDate: Date) => Promise<void>
 }
 
 /**
@@ -61,9 +64,13 @@ function getPaymentsTableMeta(table: any): PaymentsTableMeta {
 
 interface ColumnsProps {
   onViewDetails?: (payment: Payment) => void
+  updatingDatePaymentId?: string | null
 }
 
-export const createColumns = ({ onViewDetails }: ColumnsProps = {}): ColumnDef<Payment>[] => [
+export const createColumns = ({
+  onViewDetails,
+  updatingDatePaymentId = null,
+}: ColumnsProps = {}): ColumnDef<Payment>[] => [
   // Columna de selección (checkbox)
   createSelectColumn<Payment>(),
   // Cliente/Proyecto (fusionado)
@@ -197,8 +204,26 @@ export const createColumns = ({ onViewDetails }: ColumnsProps = {}): ColumnDef<P
   {
     accessorKey: 'date',
     header: ({ column }) => <DataTableColumnHeader column={column} title="Fecha" />,
-    cell: ({ row }) => {
-      return formatDate(row.getValue('date'), 'short', 'es-CL')
+    cell: ({ row, table }) => {
+      const payment = row.original
+      const hasInstallments =
+        payment.selectedInstallments !== null && payment.selectedInstallments > 1
+      const { handleDateChange } = getPaymentsTableMeta(table)
+      const isPending = updatingDatePaymentId === payment.id
+
+      if (hasInstallments) {
+        return formatDate(payment.date, 'short', 'es-CL')
+      }
+
+      return (
+        <EditableDate
+          date={payment.date}
+          onChange={
+            handleDateChange ? (newDate: Date) => handleDateChange(payment.id, newDate) : undefined
+          }
+          isPending={isPending}
+        />
+      )
     },
     enableSorting: true,
   },
