@@ -1,13 +1,11 @@
 'use client'
 
-import { useState, useEffect, useMemo, useCallback } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { type PaginationState } from '@tanstack/react-table'
 import { useQueryClient } from '@tanstack/react-query'
-import Link from 'next/link'
-import { Upload, Download, Trash2 } from 'lucide-react'
+import { Trash2 } from 'lucide-react'
 import { AppLayout } from '@/components/layout/app-layout'
 import { NewProjectDialog } from '@/components/dialogs/projects/new-project-dialog'
-import { Button } from '@/components/ui/button'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -32,8 +30,6 @@ import { useProjectStatuses } from '@/hooks/queries/use-project-statuses'
 
 export function ProjectsPageClient() {
   const queryClient = useQueryClient()
-  const [isExporting, setIsExporting] = useState(false)
-  const [showExportDialog, setShowExportDialog] = useState(false)
 
   // Estado para bulk delete
   const [showBulkDeleteDialog, setShowBulkDeleteDialog] = useState(false)
@@ -54,57 +50,6 @@ export function ProjectsPageClient() {
 
   // Estado de filtro de status (IDs seleccionados, incluyendo 'null' para sin estado)
   const [statusIds, setStatusIds] = useState<string[]>([])
-
-  // Handler para exportar proyectos a Excel
-  const handleExport = useCallback(
-    async (options?: { search?: string; projectState?: 'Activo' | 'Finalizado' | 'all' }) => {
-      setIsExporting(true)
-      setShowExportDialog(false)
-      try {
-        const params = new URLSearchParams()
-        if (options?.search) params.append('search', options.search)
-        if (options?.projectState) params.append('projectState', options.projectState)
-
-        const response = await fetch(`/api/projects/export?${params}`)
-
-        if (!response.ok) {
-          const error = await response.json()
-          throw new Error(error.error || 'Error al exportar')
-        }
-
-        // Descargar el archivo
-        const blob = await response.blob()
-        const url = URL.createObjectURL(blob)
-        const link = document.createElement('a')
-        link.href = url
-        link.download = `proyectos-${new Date().toISOString().split('T')[0]}.xlsx`
-        document.body.appendChild(link)
-        link.click()
-        document.body.removeChild(link)
-        URL.revokeObjectURL(url)
-      } catch (error) {
-        console.error('Error exportando proyectos:', error)
-        // TODO: Mostrar toast de error
-      } finally {
-        setIsExporting(false)
-      }
-    },
-    []
-  )
-
-  // Verificar si hay filtros activos
-  const hasActiveFilters = debouncedSearch || projectState !== 'all'
-
-  // Handler para click en botón exportar
-  const handleExportClick = useCallback(() => {
-    // Si hay filtros activos, mostrar diálogo de confirmación
-    if (hasActiveFilters) {
-      setShowExportDialog(true)
-    } else {
-      // Sin filtros, exportar todo directamente
-      handleExport()
-    }
-  }, [hasActiveFilters, handleExport])
 
   // Query params para useProjects (useMemo para evitar recreación en cada render)
   const queryParams: ProjectsQueryParams = useMemo(
@@ -236,21 +181,7 @@ export function ProjectsPageClient() {
     <AppLayout
       pageTitle="Proyectos"
       breadcrumbs={[{ label: 'Inicio', href: '/' }, { label: 'Proyectos' }]}
-      action={
-        <div className="flex items-center gap-2">
-          <Button variant="outline" onClick={handleExportClick} disabled={isExporting}>
-            <Download className="h-4 w-4 mr-2" />
-            {isExporting ? 'Exportando...' : 'Exportar'}
-          </Button>
-          <Button variant="outline" asChild>
-            <Link href="/settings/import?tab=projects">
-              <Upload className="h-4 w-4 mr-2" />
-              Importar
-            </Link>
-          </Button>
-          <NewProjectDialog />
-        </div>
-      }
+      action={<NewProjectDialog />}
     >
       <div className="space-y-4">
         {isLoading && !isPlaceholderData ? (
@@ -317,51 +248,6 @@ export function ProjectsPageClient() {
           />
         )}
       </div>
-
-      {/* Diálogo de confirmación de exportación */}
-      <AlertDialog open={showExportDialog} onOpenChange={setShowExportDialog}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>¿Qué deseas exportar?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Tienes filtros activos:
-              {debouncedSearch && (
-                <span className="block mt-1">• Búsqueda: &quot;{debouncedSearch}&quot;</span>
-              )}
-              {projectState !== 'all' && (
-                <span className="block mt-1">
-                  • Estado: {projectState === 'Activo' ? 'Activos' : 'Finalizados'}
-                </span>
-              )}
-              {data?.pagination.total !== undefined && (
-                <span className="block mt-2 font-medium">
-                  ({data.pagination.total} proyecto{data.pagination.total !== 1 ? 's' : ''}{' '}
-                  encontrado{data.pagination.total !== 1 ? 's' : ''})
-                </span>
-              )}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter className="flex-col sm:flex-row gap-2">
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={() => handleExport()}
-              className="bg-secondary text-secondary-foreground hover:bg-secondary/80"
-            >
-              Exportar todos
-            </AlertDialogAction>
-            <AlertDialogAction
-              onClick={() =>
-                handleExport({
-                  search: debouncedSearch || undefined,
-                  projectState: projectState,
-                })
-              }
-            >
-              Exportar filtrados
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
 
       {/* Diálogo de confirmación de eliminación masiva */}
       <AlertDialog open={showBulkDeleteDialog} onOpenChange={setShowBulkDeleteDialog}>
