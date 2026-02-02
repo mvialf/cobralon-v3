@@ -3,10 +3,11 @@
  *
  * Valida:
  * - Array de proyectos requerido
- * - Creación de customer si no existe
+ * - Creación de customer si no existe (dentro de mini-transacción)
  * - Validación de estado de proyecto
  * - Cálculo de totalAmount
  * - Respuesta Multi-status (207)
+ * - Pre-carga batch de customers vía findMany
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
@@ -33,12 +34,11 @@ vi.mock('@/lib/logger-middleware', () => ({
   },
 }))
 
-// Mock de Prisma
+// Mock de Prisma (con $transaction y customer.findMany)
 vi.mock('@/lib/db', () => ({
   prisma: {
     customer: {
-      findFirst: vi.fn(),
-      create: vi.fn(),
+      findMany: vi.fn(),
     },
     project: {
       create: vi.fn(),
@@ -46,6 +46,7 @@ vi.mock('@/lib/db', () => ({
     projectStatus: {
       findMany: vi.fn(),
     },
+    $transaction: vi.fn(),
   },
 }))
 
@@ -84,6 +85,13 @@ const validProject = {
   squareMeters: 50,
 }
 
+// Mock de customer existente
+const existingCustomer = {
+  id: 'customer-1',
+  name: 'Test Customer',
+  phone: '+56912345678',
+}
+
 describe('POST /api/projects/import', () => {
   beforeEach(() => {
     vi.clearAllMocks()
@@ -94,16 +102,28 @@ describe('POST /api/projects/import', () => {
       { id: 'status-2', name: 'Completado' },
     ] as never)
 
-    vi.mocked(prisma.customer.findFirst).mockResolvedValue({
-      id: 'customer-1',
-      name: 'Test Customer',
-      phone: '+56912345678',
-    } as never)
+    // Pre-carga batch: retorna customer existente
+    vi.mocked(prisma.customer.findMany).mockResolvedValue([existingCustomer] as never)
 
-    vi.mocked(prisma.project.create).mockResolvedValue({
-      id: 'project-1',
-      projectNumber: 'P-001',
-    } as never)
+    // $transaction: ejecuta callback con tx mock que tiene customer.create + project.create
+    vi.mocked(prisma.$transaction).mockImplementation(async (fn) => {
+      const mockTx = {
+        customer: {
+          create: vi.fn().mockResolvedValue({
+            id: 'new-customer',
+            name: 'Test Customer',
+            phone: '+56912345678',
+          }),
+        },
+        project: {
+          create: vi.fn().mockResolvedValue({
+            id: 'project-1',
+            projectNumber: 'P-001',
+          }),
+        },
+      }
+      return fn(mockTx as never)
+    })
   })
 
   describe('validaciones de entrada', () => {
@@ -128,28 +148,50 @@ describe('POST /api/projects/import', () => {
 
   describe('manejo de cliente', () => {
     it('debe crear cliente si no existe y se proporciona teléfono', async () => {
-      vi.mocked(prisma.customer.findFirst).mockResolvedValue(null)
-      vi.mocked(prisma.customer.create).mockResolvedValue({
-        id: 'new-customer',
-        name: 'Test Customer',
-        phone: '+56912345678',
-      } as never)
+      // Customer no encontrado en pre-carga batch
+      vi.mocked(prisma.customer.findMany).mockResolvedValue([] as never)
+
+      // Capturar llamada a tx.customer.create
+      let customerCreateArgs: Record<string, unknown> | null = null
+      vi.mocked(prisma.$transaction).mockImplementation(async (fn) => {
+        const mockTx = {
+          customer: {
+            create: vi.fn().mockImplementation((args: Record<string, unknown>) => {
+              customerCreateArgs = args
+              return {
+                id: 'new-customer',
+                name: 'Test Customer',
+                phone: '+56912345678',
+              }
+            }),
+          },
+          project: {
+            create: vi.fn().mockResolvedValue({
+              id: 'project-1',
+              projectNumber: 'P-001',
+            }),
+          },
+        }
+        return fn(mockTx as never)
+      })
 
       const request = createRequest({ projects: [validProject] })
       const response = await callPOST(request)
-      const data = await response.json()
 
       expect(response.status).toBe(201)
-      expect(prisma.customer.create).toHaveBeenCalledWith({
-        data: expect.objectContaining({
+      expect(customerCreateArgs).not.toBeNull()
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      expect((customerCreateArgs as any).data).toEqual(
+        expect.objectContaining({
           name: 'Test Customer',
           phone: '+56912345678',
-        }),
-      })
+        })
+      )
     })
 
     it('debe fallar si cliente no existe y no hay teléfono', async () => {
-      vi.mocked(prisma.customer.findFirst).mockResolvedValue(null)
+      // Customer no encontrado en pre-carga batch
+      vi.mocked(prisma.customer.findMany).mockResolvedValue([] as never)
 
       const projectWithoutPhone = { ...validProject, phone: undefined }
       const request = createRequest({ projects: [projectWithoutPhone] })
@@ -163,16 +205,32 @@ describe('POST /api/projects/import', () => {
     })
 
     it('debe usar cliente existente sin crear nuevo', async () => {
-      vi.mocked(prisma.customer.findFirst).mockResolvedValue({
-        id: 'existing-customer',
-        name: 'Test Customer',
-        phone: '+56912345678',
-      } as never)
+      // Customer encontrado en pre-carga batch
+      vi.mocked(prisma.customer.findMany).mockResolvedValue([existingCustomer] as never)
+
+      let customerCreateCalled = false
+      vi.mocked(prisma.$transaction).mockImplementation(async (fn) => {
+        const mockTx = {
+          customer: {
+            create: vi.fn().mockImplementation(() => {
+              customerCreateCalled = true
+              return existingCustomer
+            }),
+          },
+          project: {
+            create: vi.fn().mockResolvedValue({
+              id: 'project-1',
+              projectNumber: 'P-001',
+            }),
+          },
+        }
+        return fn(mockTx as never)
+      })
 
       const request = createRequest({ projects: [validProject] })
       await callPOST(request)
 
-      expect(prisma.customer.create).not.toHaveBeenCalled()
+      expect(customerCreateCalled).toBe(false)
     })
   })
 
@@ -207,43 +265,58 @@ describe('POST /api/projects/import', () => {
 
   describe('cálculo de totalAmount', () => {
     it('debe calcular totalAmount correctamente', async () => {
-      let createdProject: Record<string, unknown> | null = null
-      vi.mocked(prisma.project.create).mockImplementation((async (args: {
-        data: Record<string, unknown>
-      }) => {
-        createdProject = args.data
-        return { id: 'project-1' }
-      }) as never)
+      let createdProjectData: Record<string, unknown> | null = null
+      vi.mocked(prisma.$transaction).mockImplementation(async (fn) => {
+        const mockTx = {
+          customer: {
+            create: vi.fn(),
+          },
+          project: {
+            create: vi.fn().mockImplementation((args: { data: Record<string, unknown> }) => {
+              createdProjectData = args.data
+              return { id: 'project-1', projectNumber: 'P-001' }
+            }),
+          },
+        }
+        return fn(mockTx as never)
+      })
 
       const request = createRequest({ projects: [validProject] })
       await callPOST(request)
 
       // totalAmount = subtotal * (1 + taxRate/100) = 1000000 * 1.19 = 1190000
-      const totalAmount = createdProject?.['totalAmount'] as unknown as Decimal
+      const totalAmount = createdProjectData?.['totalAmount'] as unknown as Decimal
       expect(Number(totalAmount)).toBeCloseTo(1190000, 2)
     })
 
     it('debe usar teléfono del cliente como fallback', async () => {
       const projectWithoutPhone = { ...validProject, phone: undefined }
 
-      vi.mocked(prisma.customer.findFirst).mockResolvedValue({
-        id: 'customer-1',
-        name: 'Test Customer',
-        phone: '+56999999999', // Teléfono del cliente
-      } as never)
+      // Customer con teléfono diferente
+      vi.mocked(prisma.customer.findMany).mockResolvedValue([
+        { id: 'customer-1', name: 'Test Customer', phone: '+56999999999' },
+      ] as never)
 
-      let createdProject: Record<string, unknown> | null = null
-      vi.mocked(prisma.project.create).mockImplementation((async (args: {
-        data: Record<string, unknown>
-      }) => {
-        createdProject = args.data
-        return { id: 'project-1' }
-      }) as never)
+      let createdProjectData: Record<string, unknown> | null = null
+      vi.mocked(prisma.$transaction).mockImplementation(async (fn) => {
+        const mockTx = {
+          customer: {
+            create: vi.fn(),
+          },
+          project: {
+            create: vi.fn().mockImplementation((args: { data: Record<string, unknown> }) => {
+              createdProjectData = args.data
+              return { id: 'project-1', projectNumber: 'P-001' }
+            }),
+          },
+        }
+        return fn(mockTx as never)
+      })
 
       const request = createRequest({ projects: [projectWithoutPhone] })
       await callPOST(request)
 
-      expect(createdProject?.['phone']).toBe('+56999999999')
+      expect(createdProjectData?.['phone']).toBe('+56999999999')
     })
   })
 
@@ -275,10 +348,18 @@ describe('POST /api/projects/import', () => {
     })
 
     it('debe incluir projectIds en respuesta exitosa', async () => {
-      vi.mocked(prisma.project.create).mockResolvedValue({
-        id: 'new-project-id',
-        projectNumber: 'P-001',
-      } as never)
+      vi.mocked(prisma.$transaction).mockImplementation(async (fn) => {
+        const mockTx = {
+          customer: { create: vi.fn() },
+          project: {
+            create: vi.fn().mockResolvedValue({
+              id: 'new-project-id',
+              projectNumber: 'P-001',
+            }),
+          },
+        }
+        return fn(mockTx as never)
+      })
 
       const request = createRequest({ projects: [validProject] })
       const response = await callPOST(request)
@@ -290,9 +371,19 @@ describe('POST /api/projects/import', () => {
 
   describe('manejo de errores', () => {
     it('debe capturar errores por proyecto sin fallar todo el import', async () => {
-      vi.mocked(prisma.project.create)
-        .mockResolvedValueOnce({ id: 'p1', projectNumber: 'P-001' } as never)
-        .mockRejectedValueOnce(new Error('Unique constraint failed'))
+      let callCount = 0
+      vi.mocked(prisma.$transaction).mockImplementation(async (fn) => {
+        callCount++
+        const mockTx = {
+          customer: { create: vi.fn() },
+          project: {
+            create: callCount === 1
+              ? vi.fn().mockResolvedValue({ id: 'p1', projectNumber: 'P-001' })
+              : vi.fn().mockRejectedValue(new Error('Unique constraint failed')),
+          },
+        }
+        return fn(mockTx as never)
+      })
 
       const projects = [
         validProject,

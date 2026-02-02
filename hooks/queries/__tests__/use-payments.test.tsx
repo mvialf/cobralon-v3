@@ -10,6 +10,7 @@ import {
   useCustomerProjects,
   useCreatePayment,
   useUpdatePayment,
+  useUpdatePaymentDate,
   useDeletePayment,
   type PaymentsResponse,
 } from '../use-payments'
@@ -791,7 +792,117 @@ describe('useUpdatePayment', () => {
 })
 
 // ============================================================================
-// TEST GROUP 6: useDeletePayment() (CRÍTICO - Optimistic Updates)
+// TEST GROUP 6: useUpdatePaymentDate() (Edición inline de fecha)
+// ============================================================================
+
+describe('useUpdatePaymentDate', () => {
+  it('debe actualizar fecha exitosamente', async () => {
+    const mockUpdatedPayment = {
+      id: 'pay-1',
+      amount: 500000,
+      currency: 'CLP',
+      date: new Date('2025-03-15').toISOString(),
+      reference: null,
+      notes: null,
+      type: 'Project',
+      selectedInstallments: null,
+      customerId: 'cust-1',
+      paymentMethodId: 'pm-1',
+      allocations: [{ id: 'alloc-1', projectId: 'proj-1', allocatedAmount: 500000 }],
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    }
+
+    global.fetch = vi.fn().mockResolvedValueOnce({
+      ok: true,
+      json: async () => mockUpdatedPayment,
+    })
+
+    const { result } = renderHook(() => useUpdatePaymentDate(), { wrapper: createWrapper() })
+
+    const updated = await result.current.mutateAsync({
+      paymentId: 'pay-1',
+      date: new Date('2025-03-15').toISOString(),
+    })
+
+    expect(updated).toEqual(mockUpdatedPayment)
+    expect(global.fetch).toHaveBeenCalledWith(
+      '/api/payments/pay-1',
+      expect.objectContaining({
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+      })
+    )
+  })
+
+  it('debe enviar solo el campo date en el body', async () => {
+    global.fetch = vi.fn().mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ id: 'pay-1' }),
+    })
+
+    const { result } = renderHook(() => useUpdatePaymentDate(), { wrapper: createWrapper() })
+
+    const newDate = new Date('2025-06-01').toISOString()
+    await result.current.mutateAsync({ paymentId: 'pay-1', date: newDate })
+
+    const fetchCall = (global.fetch as ReturnType<typeof vi.fn>).mock.calls[0]
+    const body = JSON.parse(fetchCall[1].body)
+    expect(body).toEqual({ date: newDate })
+    expect(body).not.toHaveProperty('paymentId')
+  })
+
+  it('debe manejar error de API', async () => {
+    global.fetch = vi.fn().mockResolvedValueOnce({
+      ok: false,
+      json: async () => ({ error: 'Error al actualizar fecha' }),
+    })
+
+    const { result } = renderHook(() => useUpdatePaymentDate(), { wrapper: createWrapper() })
+
+    await expect(
+      result.current.mutateAsync({
+        paymentId: 'pay-1',
+        date: new Date('2025-03-15').toISOString(),
+      })
+    ).rejects.toThrow('Error al actualizar fecha')
+  })
+
+  it('debe manejar error 400 si pago tiene cuotas (defensa backend)', async () => {
+    global.fetch = vi.fn().mockResolvedValueOnce({
+      ok: false,
+      json: async () => ({ error: 'No se puede editar un pago con cuotas configuradas' }),
+    })
+
+    const { result } = renderHook(() => useUpdatePaymentDate(), { wrapper: createWrapper() })
+
+    await expect(
+      result.current.mutateAsync({
+        paymentId: 'pay-with-installments',
+        date: new Date('2025-03-15').toISOString(),
+      })
+    ).rejects.toThrow('No se puede editar un pago con cuotas configuradas')
+  })
+
+  it('debe aceptar Date object como parámetro', async () => {
+    global.fetch = vi.fn().mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ id: 'pay-1' }),
+    })
+
+    const { result } = renderHook(() => useUpdatePaymentDate(), { wrapper: createWrapper() })
+
+    const dateObj = new Date('2025-04-20')
+    await result.current.mutateAsync({ paymentId: 'pay-1', date: dateObj })
+
+    const fetchCall = (global.fetch as ReturnType<typeof vi.fn>).mock.calls[0]
+    const body = JSON.parse(fetchCall[1].body)
+    expect(body.date).toBeDefined()
+  })
+})
+
+// ============================================================================
+// TEST GROUP 7: useDeletePayment() (CRÍTICO - Optimistic Updates)
 // ============================================================================
 
 describe('useDeletePayment', () => {
