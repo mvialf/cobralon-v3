@@ -41,7 +41,7 @@ export async function createApiError(
   response: Response,
   fallbackMessage: string
 ): Promise<ApiError> {
-  let errorData: any = {}
+  let errorData: { error?: string; message?: string; code?: string; details?: unknown } = {}
 
   try {
     errorData = await response.json()

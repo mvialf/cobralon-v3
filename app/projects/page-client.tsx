@@ -149,7 +149,7 @@ export function ProjectsPageClient() {
   ]
 
   const columns = createColumns({
-    statuses: statuses.map((s: any) => ({
+    statuses: statuses.map((s) => ({
       id: s.id,
       label: s.name,
       color: { bgClass: s.color.bgClass },
@@ -164,7 +164,7 @@ export function ProjectsPageClient() {
   })
 
   // Formatear opciones para el filtro de status
-  const statusFilterOptions = (statuses || []).map((status: any) => ({
+  const statusFilterOptions = (statuses || []).map((status) => ({
     label: status.name,
     value: status.id,
     bgClass: status.color.bgClass,

@@ -16,7 +16,7 @@ global.IntersectionObserver = class IntersectionObserver {
     return []
   }
   unobserve() {}
-} as any
+} as unknown as typeof IntersectionObserver
 
 // Mock de ResizeObserver (usado por react-resizable-panels)
 global.ResizeObserver = class ResizeObserver {
@@ -24,7 +24,7 @@ global.ResizeObserver = class ResizeObserver {
   disconnect() {}
   observe() {}
   unobserve() {}
-} as any
+} as unknown as typeof ResizeObserver
 
 // Mock de window.matchMedia (usado por useMediaQuery y componentes responsive)
 Object.defineProperty(window, 'matchMedia', {
@@ -71,7 +71,7 @@ class MockPointerEvent extends Event {
   }
 }
 
-window.PointerEvent = MockPointerEvent as any
+window.PointerEvent = MockPointerEvent as unknown as typeof PointerEvent
 window.HTMLElement.prototype.scrollIntoView = vi.fn()
 window.HTMLElement.prototype.hasPointerCapture = vi.fn()
 window.HTMLElement.prototype.releasePointerCapture = vi.fn()
@@ -101,7 +101,7 @@ global.DOMRect = class DOMRect {
   toJSON() {
     return JSON.stringify(this)
   }
-} as any
+} as unknown as typeof DOMRect
 
 // Mock de getBoundingClientRect para elementos
 Element.prototype.getBoundingClientRect = vi.fn(() => ({

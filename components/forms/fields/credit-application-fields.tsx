@@ -13,7 +13,7 @@
 
 'use client'
 
-import { UseFormReturn } from 'react-hook-form'
+import { type UseFormReturn } from 'react-hook-form'
 import { DollarSign, TrendingDown, Wallet } from 'lucide-react'
 import { FormField, FormItem, FormLabel, FormControl, FormMessage } from '@/components/ui/form'
 import { CurrencyInput } from '@/components/ui/currency-input'
@@ -22,6 +22,7 @@ import { formatCurrency } from '@/lib/format'
 import { calculateMaxCreditApplication } from '@/lib/business-logic/credit-management'
 
 interface CreditApplicationFieldsProps {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   form: UseFormReturn<any>
   customerCredit: number
   projectBalance: number

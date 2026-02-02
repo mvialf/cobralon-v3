@@ -8,6 +8,7 @@ import { NewVisitDialog } from '@/components/dialogs/visits/new-visit-dialog'
 import { DataTable } from '@/components/data-table/data-table'
 import { createColumns } from './columns'
 import { useVisits, useUpdateVisit, type VisitsQueryParams } from '@/hooks/queries/use-visits'
+import type { VisitStatus } from '@/hooks/queries/use-visit-statuses'
 import { useDebounce } from '@/hooks/use-debounce'
 
 export function VisitsPageClient() {
@@ -39,7 +40,7 @@ export function VisitsPageClient() {
 
   // Cargar visit statuses para el filtro
   // NOTA: También pre-cargado por HydrationBoundary
-  const { data: visitStatuses } = useQuery({
+  const { data: visitStatuses } = useQuery<VisitStatus[]>({
     queryKey: ['visit-statuses'],
     queryFn: async () => {
       const response = await fetch('/api/visit-statuses')
@@ -100,7 +101,7 @@ export function VisitsPageClient() {
   }
 
   const columns = createColumns({
-    statuses: statuses.map((s: any) => ({
+    statuses: statuses.map((s) => ({
       id: s.id,
       label: s.name,
       color: { bgClass: s.color.bgClass, textClass: s.color.textClass },
@@ -109,7 +110,7 @@ export function VisitsPageClient() {
   })
 
   // Formatear opciones para el filtro de status
-  const statusFilterOptions = (statuses || []).map((status: any) => ({
+  const statusFilterOptions = (statuses || []).map((status) => ({
     label: status.name,
     value: status.id,
     bgClass: status.color.bgClass,

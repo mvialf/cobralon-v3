@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { type ColumnDef } from '@tanstack/react-table'
+import { type ColumnDef, type Table } from '@tanstack/react-table'
 import { Pencil, Eye, Trash2 } from 'lucide-react'
 import { DataTableDropdown, DataTableColumnHeader } from '@/components/data-table'
 import {
@@ -46,7 +46,7 @@ interface AftersalesTableMeta {
 /**
  * Type guard to safely access table meta with proper TypeScript inference
  */
-function getAftersalesTableMeta(table: any): AftersalesTableMeta {
+function getAftersalesTableMeta(table: Table<Aftersale>): AftersalesTableMeta {
   return (table.options.meta || {}) as AftersalesTableMeta
 }
 

@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { type ColumnDef } from '@tanstack/react-table'
+import { type ColumnDef, type Table } from '@tanstack/react-table'
 import { Pencil, Trash2, Eye } from 'lucide-react'
 import { DataTableDropdown, DataTableColumnHeader } from '@/components/data-table'
 import {
@@ -59,7 +59,7 @@ interface VisitsTableMeta {
 /**
  * Type guard to safely access table meta
  */
-function getVisitsTableMeta(table: any): VisitsTableMeta {
+function getVisitsTableMeta(table: Table<Visit>): VisitsTableMeta {
   return (table.options.meta || {}) as VisitsTableMeta
 }
 

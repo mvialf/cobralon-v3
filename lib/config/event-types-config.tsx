@@ -32,7 +32,9 @@ import type { CalendarEventType } from '@/lib/types/calendar'
  * porque obtenemos el componente correcto basado en event.type.
  */
 interface EventTypeConfig {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   Dialog: ComponentType<any>
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   Card: ComponentType<any>
 
   // Hooks de mutations (retornan UseMutationResult)
@@ -41,7 +43,7 @@ interface EventTypeConfig {
 
   // Hook para actualizar fecha (drag & drop)
   useUpdateDateMutation: () => UseMutationResult<
-    any,
+    unknown,
     Error,
     { id: string; scheduledDate: Date },
     unknown
