@@ -69,8 +69,13 @@ vi.mock('@/lib/business-logic/credit-management', () => ({
   canApplyCredit: vi.fn().mockReturnValue({ valid: true }),
 }))
 
+vi.mock('@/lib/business-logic/update-customer-credit-balance', () => ({
+  updateCustomerCreditBalance: vi.fn().mockResolvedValue(0),
+}))
+
 import { prisma } from '@/lib/db'
 import { canApplyCredit } from '@/lib/business-logic/credit-management'
+import { updateCustomerCreditBalance } from '@/lib/business-logic/update-customer-credit-balance'
 import { GET, POST } from '../route'
 
 // Helper para llamar al handler con context mock
@@ -479,8 +484,6 @@ describe('POST /api/payments', () => {
           },
           customer: {
             findUnique: vi.fn().mockResolvedValue({ creditBalance: 50000 }),
-            update: vi.fn(),
-            updateMany: vi.fn().mockResolvedValue({ count: 1 }),
           },
           creditTransaction: { create: vi.fn() },
         }
@@ -495,6 +498,8 @@ describe('POST /api/payments', () => {
       const response = await callPOST(request)
 
       expect(response.status).toBe(201)
+      // Debe recalcular creditBalance desde ledger
+      expect(updateCustomerCreditBalance).toHaveBeenCalledWith('customer-1', expect.anything())
     })
   })
 
@@ -550,11 +555,10 @@ describe('POST /api/payments', () => {
         ]),
         update: vi.fn(),
       }
-      const txCustomer = { update: vi.fn() }
       const txCreditTransaction = { create: vi.fn() }
 
       vi.mocked(prisma.$transaction).mockImplementation(async (fn) => {
-        return fn({ payment: txPayment, project: txProject, customer: txCustomer, creditTransaction: txCreditTransaction } as never)
+        return fn({ payment: txPayment, project: txProject, customer: {}, creditTransaction: txCreditTransaction } as never)
       })
 
       const request = createRequest(validPayload)
@@ -568,13 +572,6 @@ describe('POST /api/payments', () => {
           data: expect.objectContaining({ balance: expect.anything() }),
         })
       )
-      // Debe incrementar crédito del cliente
-      expect(txCustomer.update).toHaveBeenCalledWith(
-        expect.objectContaining({
-          where: { id: 'customer-1' },
-          data: { creditBalance: { increment: 5000 } },
-        })
-      )
       // Debe crear CreditTransaction tipo OVERPAYMENT
       expect(txCreditTransaction.create).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -584,6 +581,8 @@ describe('POST /api/payments', () => {
           }),
         })
       )
+      // Debe recalcular creditBalance desde ledger
+      expect(updateCustomerCreditBalance).toHaveBeenCalledWith('customer-1', expect.anything())
     })
 
     it('debe generar créditos para múltiples proyectos con sobrepago', async () => {
@@ -691,7 +690,7 @@ describe('POST /api/payments', () => {
         return fn({
           payment: { create: vi.fn().mockResolvedValue({ id: 'p1', allocations: [], installments: [] }) },
           project: { findUnique: vi.fn().mockResolvedValue({ balance: 100000 }), findMany: vi.fn(), update: vi.fn() },
-          customer: { findUnique: vi.fn().mockResolvedValue(null), update: vi.fn(), updateMany: vi.fn() },
+          customer: { findUnique: vi.fn().mockResolvedValue(null) },
           creditTransaction: { create: vi.fn() },
         } as never)
       })
@@ -710,30 +709,7 @@ describe('POST /api/payments', () => {
         return fn({
           payment: { create: vi.fn().mockResolvedValue({ id: 'p1', allocations: [], installments: [] }) },
           project: { findUnique: vi.fn().mockResolvedValue(null), findMany: vi.fn(), update: vi.fn() },
-          customer: { findUnique: vi.fn().mockResolvedValue({ creditBalance: 50000 }), update: vi.fn(), updateMany: vi.fn() },
-          creditTransaction: { create: vi.fn() },
-        } as never)
-      })
-
-      const request = createRequest({
-        ...validPayload,
-        creditApplied: 5000,
-      })
-      const response = await callPOST(request)
-
-      expect(response.status).toBe(500)
-    })
-
-    it('debe retornar 500 por race condition de crédito (count=0)', async () => {
-      vi.mocked(prisma.$transaction).mockImplementation(async (fn) => {
-        return fn({
-          payment: { create: vi.fn().mockResolvedValue({ id: 'p1', allocations: [], installments: [] }) },
-          project: { findUnique: vi.fn().mockResolvedValue({ balance: 100000 }), findMany: vi.fn(), update: vi.fn() },
-          customer: {
-            findUnique: vi.fn().mockResolvedValue({ creditBalance: 50000 }),
-            update: vi.fn(),
-            updateMany: vi.fn().mockResolvedValue({ count: 0 }),
-          },
+          customer: { findUnique: vi.fn().mockResolvedValue({ creditBalance: 50000 }) },
           creditTransaction: { create: vi.fn() },
         } as never)
       })
@@ -756,8 +732,6 @@ describe('POST /api/payments', () => {
           project: { findUnique: vi.fn().mockResolvedValue({ balance: 100000 }), findMany: vi.fn(), update: vi.fn() },
           customer: {
             findUnique: vi.fn().mockResolvedValue({ creditBalance: 50000 }),
-            update: vi.fn(),
-            updateMany: vi.fn().mockResolvedValue({ count: 1 }),
           },
           creditTransaction: { create: vi.fn() },
         } as never)

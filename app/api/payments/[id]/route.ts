@@ -5,6 +5,7 @@ import {
   updateMultipleProjectBalances,
   type PrismaTransaction,
 } from '@/lib/business-logic/update-project-balance'
+import { updateCustomerCreditBalance } from '@/lib/business-logic/update-customer-credit-balance'
 import { logger } from '@/lib/logger'
 
 /**
@@ -28,6 +29,7 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
       select: {
         id: true,
         selectedInstallments: true,
+        _count: { select: { creditTransactions: true } },
       },
     })
 
@@ -42,6 +44,14 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
           error:
             'No se puede editar un pago con cuotas. Para modificar, debe cancelar el pago y crear uno nuevo.',
         },
+        { status: 400 }
+      )
+    }
+
+    // IMPORTANTE: Bloquear edición si el pago tiene crédito asociado
+    if (existingPayment._count.creditTransactions > 0) {
+      return NextResponse.json(
+        { error: 'No se puede editar un pago con crédito asociado. Elimine y cree uno nuevo.' },
         { status: 400 }
       )
     }
@@ -165,25 +175,10 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ i
         'CreditTransactions linked to payment'
       )
 
-      // 2. Revertir cada CreditTransaction
+      // 2. Crear entradas de ADJUSTMENT para auditoría (reversión)
       for (const ct of creditTransactions) {
         const ctAmount = Number(ct.amount)
 
-        if (ct.type === 'APPLIED') {
-          // APPLIED = crédito usado (monto negativo) → devolver al cliente
-          await tx.customer.update({
-            where: { id: ct.customerId },
-            data: { creditBalance: { increment: Math.abs(ctAmount) } },
-          })
-        } else if (ct.type === 'OVERPAYMENT') {
-          // OVERPAYMENT = crédito generado (monto positivo) → retirar del cliente
-          await tx.customer.update({
-            where: { id: ct.customerId },
-            data: { creditBalance: { decrement: ctAmount } },
-          })
-        }
-
-        // Registrar reversión como ADJUSTMENT
         await tx.creditTransaction.create({
           data: {
             customerId: ct.customerId,
@@ -214,6 +209,11 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ i
       // 4. Recalcular balances de proyectos afectados
       if (projectIds.length > 0) {
         await updateMultipleProjectBalances(projectIds, tx)
+      }
+
+      // 5. Recalcular creditBalance desde ledger (si hubo credit_transactions)
+      if (creditTransactions.length > 0) {
+        await updateCustomerCreditBalance(existingPayment.customerId, tx)
       }
     })
 

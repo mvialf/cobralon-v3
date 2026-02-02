@@ -34,8 +34,13 @@ vi.mock('@/lib/business-logic/credit-management', () => ({
   canRefundCredit: vi.fn(),
 }))
 
+vi.mock('@/lib/business-logic/update-customer-credit-balance', () => ({
+  updateCustomerCreditBalance: vi.fn().mockResolvedValue(0),
+}))
+
 import { prisma } from '@/lib/db'
 import { canRefundCredit } from '@/lib/business-logic/credit-management'
+import { updateCustomerCreditBalance } from '@/lib/business-logic/update-customer-credit-balance'
 import { POST } from '../route'
 
 // Helper para crear params
@@ -76,7 +81,7 @@ describe('POST /api/customers/[id]/credit/refund', () => {
     vi.mocked(prisma.$transaction).mockImplementation(async (fn) => {
       const mockTx = {
         customer: {
-          update: vi.fn().mockResolvedValue({
+          findUnique: vi.fn().mockResolvedValue({
             id: 'customer-1',
             name: 'Test Customer',
             creditBalance: new Prisma.Decimal(50000),
@@ -88,6 +93,7 @@ describe('POST /api/customers/[id]/credit/refund', () => {
             amount: new Prisma.Decimal(-50000),
             type: 'WITHDRAWAL',
           }),
+          aggregate: vi.fn().mockResolvedValue({ _sum: { amount: new Prisma.Decimal(50000) } }),
         },
       }
       return fn(mockTx as never)
@@ -223,19 +229,20 @@ describe('POST /api/customers/[id]/credit/refund', () => {
   })
 
   describe('transacción atómica', () => {
-    it('debe decrementar crédito en transacción', async () => {
+    it('debe recalcular creditBalance desde ledger en transacción', async () => {
       let transactionFnCalled = false
       vi.mocked(prisma.$transaction).mockImplementation(async (fn) => {
         transactionFnCalled = true
         const mockTx = {
           customer: {
-            update: vi.fn().mockResolvedValue({
+            findUnique: vi.fn().mockResolvedValue({
               id: 'customer-1',
               creditBalance: new Prisma.Decimal(50000),
             }),
           },
           creditTransaction: {
             create: vi.fn().mockResolvedValue({ id: 'tx-1' }),
+            aggregate: vi.fn().mockResolvedValue({ _sum: { amount: new Prisma.Decimal(50000) } }),
           },
         }
         return fn(mockTx as never)
@@ -245,6 +252,7 @@ describe('POST /api/customers/[id]/credit/refund', () => {
       await POST(request, createParams('customer-1'))
 
       expect(transactionFnCalled).toBe(true)
+      expect(updateCustomerCreditBalance).toHaveBeenCalledWith('customer-1', expect.anything())
     })
 
     it('debe crear CreditTransaction con tipo WITHDRAWAL', async () => {
@@ -252,7 +260,7 @@ describe('POST /api/customers/[id]/credit/refund', () => {
       vi.mocked(prisma.$transaction).mockImplementation(async (fn) => {
         const mockTx = {
           customer: {
-            update: vi.fn().mockResolvedValue({
+            findUnique: vi.fn().mockResolvedValue({
               id: 'customer-1',
               creditBalance: new Prisma.Decimal(50000),
             }),
@@ -262,6 +270,7 @@ describe('POST /api/customers/[id]/credit/refund', () => {
               createdTransaction = args.data
               return { id: 'tx-1' }
             }),
+            aggregate: vi.fn().mockResolvedValue({ _sum: { amount: new Prisma.Decimal(50000) } }),
           },
         }
         return fn(mockTx as never)
@@ -280,7 +289,7 @@ describe('POST /api/customers/[id]/credit/refund', () => {
       vi.mocked(prisma.$transaction).mockImplementation(async (fn) => {
         const mockTx = {
           customer: {
-            update: vi.fn().mockResolvedValue({
+            findUnique: vi.fn().mockResolvedValue({
               id: 'customer-1',
               creditBalance: new Prisma.Decimal(50000),
             }),
@@ -290,6 +299,7 @@ describe('POST /api/customers/[id]/credit/refund', () => {
               createdTransaction = args.data
               return { id: 'tx-1' }
             }),
+            aggregate: vi.fn().mockResolvedValue({ _sum: { amount: new Prisma.Decimal(50000) } }),
           },
         }
         return fn(mockTx as never)

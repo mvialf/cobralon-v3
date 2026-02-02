@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { canRefundCredit } from '@/lib/business-logic/credit-management'
 import { Prisma } from '@prisma/client'
+import { updateCustomerCreditBalance } from '@/lib/business-logic/update-customer-credit-balance'
+import type { PrismaTransaction } from '@/lib/business-logic/update-project-balance'
 
 interface RefundCreditRequest {
   amount: number
@@ -58,18 +60,8 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     }
 
     // Procesar devolución en transacción atómica
-    const result = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
-      // 1. Reducir crédito del cliente
-      const updatedCustomer = await tx.customer.update({
-        where: { id: customerId },
-        data: {
-          creditBalance: {
-            decrement: body.amount,
-          },
-        },
-      })
-
-      // 2. Crear registro de transacción
+    const result = await prisma.$transaction(async (tx: PrismaTransaction) => {
+      // 1. Crear registro de transacción de crédito
       const transaction = await tx.creditTransaction.create({
         data: {
           customerId,
@@ -82,6 +74,14 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
             comments: body.comments,
           },
         },
+      })
+
+      // 2. Recalcular creditBalance desde ledger
+      await updateCustomerCreditBalance(customerId, tx)
+
+      // 3. Obtener customer actualizado
+      const updatedCustomer = await tx.customer.findUnique({
+        where: { id: customerId },
       })
 
       return { customer: updatedCustomer, transaction }
