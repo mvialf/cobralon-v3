@@ -9,14 +9,13 @@ Sirven como referencia para escribir y mantener tests E2E.
 |---------|--------|----------|-------------|-----------------|
 | [Customers](customers/navigation-plan.md) | **Completado** | `customers.spec.ts` | `customers.page.ts` | [Ver](customers/navigation-plan.md) |
 | [Payments 1:1](payments-1to1/navigation-plan.md) | **Completado** | `payment-to-customer.spec.ts` | `payments.page.ts` | [Ver](payments-1to1/navigation-plan.md) |
-| [Payments 1:N](payments-1toN/navigation-plan.md) | Pendiente | `payments.spec.ts` | `payments.page.ts` | [Ver](payments-1toN/navigation-plan.md) |
-| [Payment Methods](payment-methods/navigation-plan.md) | Pendiente | `payment-methods.spec.ts` | `payment-methods.page.ts` | [Ver](payment-methods/navigation-plan.md) |
-| [Import Payments](import-payments/navigation-plan.md) | Pendiente | `import-payments.spec.ts` | - | [Ver](import-payments/navigation-plan.md) |
-| [Aftersales](aftersales/navigation-plan.md) | Pendiente | `aftersales.spec.ts` | `aftersales.page.ts` | [Ver](aftersales/navigation-plan.md) |
-| [Installments](installments/navigation-plan.md) | Pendiente | `installments.spec.ts` | `installments.page.ts` | [Ver](installments/navigation-plan.md) |
-| [Visits](visits/navigation-plan.md) | Pendiente | `visits.spec.ts` | `visits.page.ts` | [Ver](visits/navigation-plan.md) |
-| [Calendar](calendar/navigation-plan.md) | Pendiente | `calendar-event-edit.spec.ts` | `calendar.page.ts` | [Ver](calendar/navigation-plan.md) |
-| [Critical Flow](critical-flow/navigation-plan.md) | Pendiente | `critical-flow.spec.ts` | - | [Ver](critical-flow/navigation-plan.md) |
+| [Payments 1:N](payments-1toN/navigation-plan.md) | **Completado** | `payments.spec.ts` | `payments.page.ts` | [Ver](payments-1toN/navigation-plan.md) |
+| [Payment Methods](payment-methods/navigation-plan.md) | **Completado** | `payment-methods.spec.ts` | `payment-methods.page.ts` | [Ver](payment-methods/navigation-plan.md) |
+| [Aftersales](aftersales/navigation-plan.md) | **Completado** | `aftersales.spec.ts` | `aftersales.page.ts` | [Ver](aftersales/navigation-plan.md) |
+| [Installments](installments/navigation-plan.md) | **Completado** | `installments.spec.ts` | `installments.page.ts` | [Ver](installments/navigation-plan.md) |
+| [Visits](visits/navigation-plan.md) | **Completado** | `visits.spec.ts` | `visits.page.ts` | [Ver](visits/navigation-plan.md) |
+| [Calendar](calendar/navigation-plan.md) | **Completado** | `calendar-event-edit.spec.ts` | `calendar.page.ts` | [Ver](calendar/navigation-plan.md) |
+| [Critical Flow](critical-flow/navigation-plan.md) | **Completado** | `critical-flow.spec.ts` | - | [Ver](critical-flow/navigation-plan.md) |
 
 ## Estructura
 
