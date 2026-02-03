@@ -280,8 +280,6 @@ test.describe('Importación de Pagos', () => {
       const fileInput = dialog.locator('input[type="file"]')
       await fileInput.setInputFiles(VALID_FILE)
 
-      await page.waitForTimeout(1000)
-
       // Verificar que existe el botón de importar (significa que hay preview)
       const importButton = dialog.getByRole('button', { name: /importar/i })
       if (await importButton.isVisible()) {

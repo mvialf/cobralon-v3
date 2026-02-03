@@ -19,7 +19,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 
 // Tablas permitidas para cleanup (whitelist de seguridad)
-const ALLOWED_TABLES = ['Customer', 'Project', 'Aftersale'] as const
+const ALLOWED_TABLES = ['Customer', 'Project', 'Aftersale', 'Payment', 'PaymentMethod'] as const
 type AllowedTable = (typeof ALLOWED_TABLES)[number]
 
 // Campos por defecto para cada tabla
@@ -27,6 +27,8 @@ const DEFAULT_FIELDS: Record<AllowedTable, string> = {
   Customer: 'name',
   Project: 'projectName',
   Aftersale: 'description',
+  Payment: 'reference',
+  PaymentMethod: 'name',
 }
 
 export async function DELETE(request: NextRequest) {
@@ -93,6 +95,20 @@ export async function DELETE(request: NextRequest) {
           where: { OR: whereConditions },
         })
         deleted = aftersaleResult.count
+        break
+
+      case 'Payment':
+        const paymentResult = await prisma.payment.deleteMany({
+          where: { OR: whereConditions },
+        })
+        deleted = paymentResult.count
+        break
+
+      case 'PaymentMethod':
+        const paymentMethodResult = await prisma.paymentMethod.deleteMany({
+          where: { OR: whereConditions },
+        })
+        deleted = paymentMethodResult.count
         break
     }
 

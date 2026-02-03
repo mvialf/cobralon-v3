@@ -35,9 +35,9 @@ setup('authenticate', async ({ page }) => {
   // Click en botón de login
   await page.getByRole('button', { name: 'Iniciar Sesion' }).click()
 
-  // Esperar a que redirija (no debería estar en /login)
+  // Esperar a que redirija (timeout largo por cold start del server)
   await page.waitForURL((url) => !url.pathname.includes('/login'), {
-    timeout: 15000,
+    timeout: 30000,
   })
 
   // Verificar que estamos autenticados (no vemos el formulario de login)

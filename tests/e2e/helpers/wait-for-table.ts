@@ -20,15 +20,12 @@ import { expect, Page } from '@playwright/test'
 /**
  * Espera a que la DataTable esté completamente cargada y lista para interactuar.
  *
- * Verifica:
- * 1. Network idle (todas las peticiones API completadas)
- * 2. Elemento <table> visible con timeout generoso
+ * Verifica que el elemento <table> sea visible.
  *
  * @param page - Página de Playwright
  * @param timeout - Timeout opcional (default: 15000ms)
  */
 export async function waitForTableReady(page: Page, timeout = 15000): Promise<void> {
-  await page.waitForLoadState('networkidle')
   await expect(page.locator('table')).toBeVisible({ timeout })
 }
 
@@ -51,22 +48,32 @@ export async function waitForTableSearch(
 }
 
 /**
- * Ejecuta una búsqueda en la tabla y espera a que se complete.
+ * Ejecuta una búsqueda en la tabla y espera la respuesta del API.
  *
- * Considera el debounce time del input (default: 500ms).
+ * En vez de usar waitForTimeout para el debounce, espera la respuesta
+ * real del servidor.
  *
  * @param page - Página de Playwright
  * @param searchTerm - Término a buscar
- * @param debounceMs - Tiempo de debounce del input (default: 600ms para safety)
+ * @param apiUrlPattern - Patrón de URL del API a esperar (default: cualquier GET a /api/)
  */
 export async function searchInTable(
   page: Page,
   searchTerm: string,
-  debounceMs = 600
+  apiUrlPattern?: string | RegExp
 ): Promise<void> {
   const searchInput = page.getByPlaceholder(/buscar/i)
   await searchInput.fill(searchTerm)
-  await page.waitForTimeout(debounceMs)
+
+  // Esperar la respuesta del API (reemplaza waitForTimeout del debounce)
+  await page.waitForResponse((r) => {
+    const urlMatch = apiUrlPattern
+      ? typeof apiUrlPattern === 'string'
+        ? r.url().includes(apiUrlPattern)
+        : apiUrlPattern.test(r.url())
+      : r.url().includes('/api/')
+    return urlMatch && r.request().method() === 'GET'
+  })
 }
 
 /**

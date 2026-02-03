@@ -1,42 +1,49 @@
 import { test, expect } from '@playwright/test'
+import { PaymentMethodsPage } from './page-objects/payment-methods.page'
+import { cleanupE2EPaymentMethods } from './helpers/cleanup'
 
 /**
- * Tests E2E para Configuración de Métodos de Pago (/settings/payments)
+ * Tests E2E para Configuracion de Metodos de Pago (/settings/payments)
  *
- * Este módulo permite gestionar los métodos de pago disponibles:
- * - CRUD de métodos (crear, editar, eliminar)
+ * Este modulo permite gestionar los metodos de pago disponibles:
+ * - CRUD de metodos (crear, editar, eliminar)
  * - Drag & drop para reordenar
  * - Toggle activo/inactivo
- * - Protección: no se puede eliminar si tiene pagos asociados
+ * - Proteccion: no se puede eliminar si tiene pagos asociados
  *
- * Criticidad: ALTA - Dependencia crítica para el sistema de pagos
+ * Criticidad: ALTA - Dependencia critica para el sistema de pagos
  */
 
-test.describe('Configuración de Métodos de Pago', () => {
+test.describe('Configuracion de Metodos de Pago', () => {
+  let methodsPage: PaymentMethodsPage
+
   test.beforeEach(async ({ page }) => {
-    // Navegar a la página de configuración de métodos de pago
-    await page.goto('/settings/payments')
-    // Esperar a que la página cargue completamente
-    await page.waitForLoadState('networkidle')
+    methodsPage = new PaymentMethodsPage(page)
+    await methodsPage.navigate()
   })
 
-  test.describe('Carga de Página', () => {
-    test('debe cargar la página correctamente', async ({ page }) => {
-      // Verificar título de la card
-      await expect(page.getByRole('heading', { name: 'Métodos de Pago' })).toBeVisible()
+  // Limpiar metodos de pago creados por tests
+  test.afterAll(async ({ request }) => {
+    await cleanupE2EPaymentMethods(request)
+  })
 
-      // Verificar descripción
+  test.describe('Carga de Pagina', () => {
+    test('debe cargar la pagina correctamente', async ({ page }) => {
+      // Verificar titulo de la card
+      await expect(methodsPage.heading).toBeVisible()
+
+      // Verificar descripcion
       await expect(
         page.getByText(/Configura los métodos de pago disponibles/i)
       ).toBeVisible()
     })
 
-    test('debe mostrar botón de crear nuevo método', async ({ page }) => {
+    test('debe mostrar boton de crear nuevo metodo', async ({ page }) => {
       const newButton = page.getByRole('button', { name: /Nuevo Método/i })
       await expect(newButton).toBeVisible()
     })
 
-    test('debe mostrar la tabla de métodos', async ({ page }) => {
+    test('debe mostrar la tabla de metodos', async ({ page }) => {
       const table = page.locator('table')
       await expect(table).toBeVisible()
 
@@ -47,59 +54,58 @@ test.describe('Configuración de Métodos de Pago', () => {
     })
   })
 
-  test.describe('Listado de Métodos', () => {
-    test('debe mostrar métodos existentes o mensaje vacío', async ({ page }) => {
-      // Esperar a que carguen los datos
-      await page.waitForTimeout(500)
+  test.describe('Listado de Metodos', () => {
+    test('debe mostrar metodos existentes o mensaje vacio', async ({ page }) => {
+      // Esperar a que las filas sean visibles o verificar mensaje vacio
+      const firstRow = page.locator('tbody tr').first()
+      const emptyMessage = page.getByText(/No hay métodos de pago configurados/i)
 
-      // Puede mostrar métodos o mensaje de "No hay métodos"
-      const hasContent =
-        (await page.locator('tbody tr').count()) > 0 ||
-        (await page.getByText(/No hay métodos de pago configurados/i).isVisible())
+      const hasRows = await firstRow.isVisible().catch(() => false)
+      const hasEmptyMessage = await emptyMessage.isVisible().catch(() => false)
 
-      expect(hasContent).toBeTruthy()
+      expect(hasRows || hasEmptyMessage).toBeTruthy()
     })
 
     test('debe mostrar badges de estado (Activo/Inactivo)', async ({ page }) => {
-      await page.waitForTimeout(500)
+      await expect(page.locator('tbody tr').first()).toBeVisible().catch(() => {
+        // Sin filas, el test pasa
+      })
 
-      const rows = page.locator('tbody tr')
+      const rows = methodsPage.rows
       const count = await rows.count()
 
       if (count > 0) {
         // Verificar que hay badges de estado
         const badges = page.locator('tbody').getByRole('status').or(page.locator('.badge, [class*="Badge"]'))
-        // Debería haber al menos un badge visible
         const badgeCount = await badges.count()
-        expect(badgeCount).toBeGreaterThanOrEqual(0) // Puede ser 0 si no hay filas
+        expect(badgeCount).toBeGreaterThanOrEqual(0)
       }
     })
 
     test('debe mostrar iconos de drag handle', async ({ page }) => {
-      await page.waitForTimeout(500)
+      await expect(page.locator('tbody tr').first()).toBeVisible().catch(() => {
+        // Sin filas, el test pasa
+      })
 
-      const rows = page.locator('tbody tr')
+      const rows = methodsPage.rows
       const count = await rows.count()
 
       if (count > 0) {
         // Buscar icono de grip/drag (GripVertical)
         const gripIcons = page.locator('svg.lucide-grip-vertical')
         const gripCount = await gripIcons.count()
-        // Cada fila debería tener un icono de drag
+        // Cada fila deberia tener un icono de drag
         expect(gripCount).toBe(count)
       }
     })
   })
 
-  test.describe('Crear Método de Pago', () => {
-    test('debe abrir dialog al hacer click en Nuevo Método', async ({ page }) => {
-      // Click en botón de nuevo método
-      await page.getByRole('button', { name: /Nuevo Método/i }).click()
+  test.describe('Crear Metodo de Pago', () => {
+    test('debe abrir dialog al hacer click en Nuevo Metodo', async ({ page }) => {
+      // Click en boton de nuevo metodo
+      await methodsPage.openNewMethodDialog()
 
-      // Verificar que se abre el dialog
-      await expect(page.getByRole('dialog')).toBeVisible()
-
-      // Verificar título del dialog
+      // Verificar titulo del dialog
       await expect(
         page.getByRole('heading', { name: /Nuevo Método|Crear Método/i })
       ).toBeVisible()
@@ -107,8 +113,7 @@ test.describe('Configuración de Métodos de Pago', () => {
 
     test('debe mostrar campo de nombre en el dialog', async ({ page }) => {
       // Abrir dialog
-      await page.getByRole('button', { name: /Nuevo Método/i }).click()
-      await expect(page.getByRole('dialog')).toBeVisible()
+      await methodsPage.openNewMethodDialog()
 
       // Verificar campo de nombre
       const nameInput = page.getByLabel(/Nombre/i).or(page.getByPlaceholder(/nombre/i))
@@ -117,48 +122,44 @@ test.describe('Configuración de Métodos de Pago', () => {
 
     test('debe validar campo obligatorio', async ({ page }) => {
       // Abrir dialog
-      await page.getByRole('button', { name: /Nuevo Método/i }).click()
-      await expect(page.getByRole('dialog')).toBeVisible()
+      await methodsPage.openNewMethodDialog()
 
       // Intentar guardar sin completar
       const saveButton = page.getByRole('button', { name: /Guardar|Crear/i })
       await saveButton.click()
 
-      // Debería mostrar error de validación
+      // Deberia mostrar error de validacion
       const error = page.getByText(/requerido|obligatorio|required/i)
       await expect(error).toBeVisible()
     })
 
-    test('debe cerrar dialog con botón Cancelar', async ({ page }) => {
+    test('debe cerrar dialog con boton Cancelar', async ({ page }) => {
       // Abrir dialog
-      await page.getByRole('button', { name: /Nuevo Método/i }).click()
-      await expect(page.getByRole('dialog')).toBeVisible()
+      await methodsPage.openNewMethodDialog()
 
       // Click en Cancelar
       await page.getByRole('button', { name: /Cancelar/i }).click()
 
       // Dialog debe cerrarse
-      await expect(page.getByRole('dialog')).not.toBeVisible()
+      await expect(methodsPage.dialog).not.toBeVisible()
     })
 
     test('debe cerrar dialog con Escape', async ({ page }) => {
       // Abrir dialog
-      await page.getByRole('button', { name: /Nuevo Método/i }).click()
-      await expect(page.getByRole('dialog')).toBeVisible()
+      await methodsPage.openNewMethodDialog()
 
       // Presionar Escape
       await page.keyboard.press('Escape')
 
       // Dialog debe cerrarse
-      await expect(page.getByRole('dialog')).not.toBeVisible()
+      await expect(methodsPage.dialog).not.toBeVisible()
     })
 
-    test('flujo completo: crear método de pago', async ({ page }) => {
-      const methodName = `Test Method ${Date.now()}`
+    test('flujo completo: crear metodo de pago', async ({ page }) => {
+      const methodName = `E2E Test Method ${Date.now()}`
 
       // Abrir dialog
-      await page.getByRole('button', { name: /Nuevo Método/i }).click()
-      await expect(page.getByRole('dialog')).toBeVisible()
+      await methodsPage.openNewMethodDialog()
 
       // Completar formulario
       const nameInput = page.getByLabel(/Nombre/i).or(page.getByPlaceholder(/nombre/i))
@@ -169,41 +170,45 @@ test.describe('Configuración de Métodos de Pago', () => {
       await saveButton.click()
 
       // Esperar a que se cierre el dialog y se actualice la tabla
-      await expect(page.getByRole('dialog')).not.toBeVisible({ timeout: 5000 })
+      await expect(methodsPage.dialog).not.toBeVisible({ timeout: 5000 })
 
       // Verificar que aparece en la tabla
       await expect(page.getByText(methodName)).toBeVisible()
     })
   })
 
-  test.describe('Acciones de Método', () => {
-    test('debe tener botones de acción por fila', async ({ page }) => {
-      await page.waitForTimeout(500)
+  test.describe('Acciones de Metodo', () => {
+    test('debe tener botones de accion por fila', async ({ page }) => {
+      await expect(page.locator('tbody tr').first()).toBeVisible().catch(() => {
+        // Sin filas, el test pasa
+      })
 
-      const rows = page.locator('tbody tr')
+      const rows = methodsPage.rows
       const count = await rows.count()
 
       if (count > 0) {
         const firstRow = rows.first()
 
-        // Verificar botón de toggle (Activar/Desactivar)
+        // Verificar boton de toggle (Activar/Desactivar)
         const toggleButton = firstRow.getByRole('button', { name: /Activar|Desactivar/i })
         await expect(toggleButton).toBeVisible()
 
-        // Verificar botón de editar (icono Pencil)
+        // Verificar boton de editar (icono Pencil)
         const editButton = firstRow.locator('button').filter({ has: page.locator('svg.lucide-pencil') })
         await expect(editButton).toBeVisible()
 
-        // Verificar botón de eliminar (icono Trash)
+        // Verificar boton de eliminar (icono Trash)
         const deleteButton = firstRow.locator('button').filter({ has: page.locator('svg.lucide-trash-2') })
         await expect(deleteButton).toBeVisible()
       }
     })
 
     test('debe poder toggle estado activo/inactivo', async ({ page }) => {
-      await page.waitForTimeout(500)
+      await expect(page.locator('tbody tr').first()).toBeVisible().catch(() => {
+        // Sin filas, el test pasa
+      })
 
-      const rows = page.locator('tbody tr')
+      const rows = methodsPage.rows
       const count = await rows.count()
 
       if (count > 0) {
@@ -212,38 +217,45 @@ test.describe('Configuración de Métodos de Pago', () => {
         // Obtener estado actual
         const currentState = await firstRow.getByText(/Activo|Inactivo/).textContent()
 
-        // Click en toggle
+        // Click en toggle y esperar respuesta del API
         const toggleButton = firstRow.getByRole('button', { name: /Activar|Desactivar/i })
-        await toggleButton.click()
+        const [toggleResponse] = await Promise.all([
+          page.waitForResponse(r => r.url().includes('/api/payment-methods')),
+          toggleButton.click(),
+        ])
 
-        // Esperar actualización
-        await page.waitForTimeout(1000)
+        // Verificar que la peticion fue exitosa
+        expect(toggleResponse.ok()).toBeTruthy()
 
-        // El estado debería haber cambiado
+        // El estado deberia haber cambiado
         const newState = await firstRow.getByText(/Activo|Inactivo/).textContent()
         expect(newState).not.toBe(currentState)
 
         // Revertir para no afectar otros tests
-        await toggleButton.click()
-        await page.waitForTimeout(500)
+        await Promise.all([
+          page.waitForResponse(r => r.url().includes('/api/payment-methods')),
+          toggleButton.click(),
+        ])
       }
     })
   })
 
-  test.describe('Editar Método', () => {
-    test('debe abrir dialog de edición al hacer click en editar', async ({ page }) => {
-      await page.waitForTimeout(500)
+  test.describe('Editar Metodo', () => {
+    test('debe abrir dialog de edicion al hacer click en editar', async ({ page }) => {
+      await expect(page.locator('tbody tr').first()).toBeVisible().catch(() => {
+        // Sin filas, el test pasa
+      })
 
-      const rows = page.locator('tbody tr')
+      const rows = methodsPage.rows
       const count = await rows.count()
 
       if (count > 0) {
-        // Click en botón de editar del primer método
+        // Click en boton de editar del primer metodo
         const editButton = rows.first().locator('button').filter({ has: page.locator('svg.lucide-pencil') })
         await editButton.click()
 
         // Verificar que se abre el dialog
-        await expect(page.getByRole('dialog')).toBeVisible()
+        await expect(methodsPage.dialog).toBeVisible()
 
         // Verificar que tiene el nombre actual precargado
         const nameInput = page.getByLabel(/Nombre/i).or(page.locator('input[name="name"]'))
@@ -253,22 +265,24 @@ test.describe('Configuración de Métodos de Pago', () => {
     })
   })
 
-  test.describe('Eliminar Método', () => {
-    test('debe mostrar confirmación al intentar eliminar', async ({ page }) => {
-      await page.waitForTimeout(500)
+  test.describe('Eliminar Metodo', () => {
+    test('debe mostrar confirmacion al intentar eliminar', async ({ page }) => {
+      await expect(page.locator('tbody tr').first()).toBeVisible().catch(() => {
+        // Sin filas, el test pasa
+      })
 
-      const rows = page.locator('tbody tr')
+      const rows = methodsPage.rows
       const count = await rows.count()
 
       if (count > 0) {
-        // Buscar un método que se pueda eliminar (sin pagos asociados)
+        // Buscar un metodo que se pueda eliminar (sin pagos asociados)
         const deleteButton = rows.first().locator('button').filter({ has: page.locator('svg.lucide-trash-2') })
 
-        // Solo si el botón no está deshabilitado
+        // Solo si el boton no esta deshabilitado
         if (!(await deleteButton.isDisabled())) {
           await deleteButton.click()
 
-          // Verificar dialog de confirmación
+          // Verificar dialog de confirmacion
           await expect(page.getByRole('alertdialog')).toBeVisible()
           await expect(page.getByText(/¿Estás seguro/i)).toBeVisible()
 
@@ -280,17 +294,15 @@ test.describe('Configuración de Métodos de Pago', () => {
     })
 
     test('debe deshabilitar eliminar si tiene pagos asociados', async ({ page }) => {
-      await page.waitForTimeout(500)
+      await expect(page.locator('tbody tr').first()).toBeVisible().catch(() => {
+        // Sin filas, el test pasa
+      })
 
-      const rows = page.locator('tbody tr')
-      const count = await rows.count()
-
-      // Buscar botón de eliminar deshabilitado
+      // Buscar boton de eliminar deshabilitado
       const disabledDeleteButtons = page.locator('button:disabled').filter({ has: page.locator('svg.lucide-trash-2') })
       const disabledCount = await disabledDeleteButtons.count()
 
-      // Este test verifica la lógica pero no falla si no hay botones deshabilitados
-      // (puede que todos los métodos no tengan pagos)
+      // Este test verifica la logica pero no falla si no hay botones deshabilitados
       if (disabledCount > 0) {
         // Verificar que tiene title explicativo
         const button = disabledDeleteButtons.first()
@@ -302,9 +314,11 @@ test.describe('Configuración de Métodos de Pago', () => {
 
   test.describe('Drag & Drop (Reordenar)', () => {
     test('debe tener elementos arrastrables', async ({ page }) => {
-      await page.waitForTimeout(500)
+      await expect(page.locator('tbody tr').first()).toBeVisible().catch(() => {
+        // Sin filas, el test pasa
+      })
 
-      const rows = page.locator('tbody tr')
+      const rows = methodsPage.rows
       const count = await rows.count()
 
       if (count >= 2) {
@@ -320,6 +334,6 @@ test.describe('Configuración de Métodos de Pago', () => {
     })
 
     // Nota: El test real de drag & drop es complejo y puede ser flaky
-    // Se recomienda testear manualmente o con un helper específico
+    // Se recomienda testear manualmente o con un helper especifico
   })
 })

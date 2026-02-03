@@ -1,46 +1,70 @@
 import { test, expect } from '@playwright/test'
+import { PaymentsPage } from './page-objects/payments.page'
+import { PaymentToProjectDialog } from './page-objects/dialogs/payment-to-project.dialog'
+import {
+  createTestCustomer,
+  createTestProject,
+  ensurePaymentMethod,
+  getFirstProjectStatus,
+} from './helpers/test-data-factory'
+import {
+  cleanupE2EPayments,
+  cleanupE2EProjects,
+  cleanupE2ECustomers,
+} from './helpers/cleanup'
 
 /**
  * Tests E2E para el Sistema de Pagos
  *
  * Flujos cubiertos:
- * - Navegación a la página de pagos
- * - Creación de pago a proyecto (1:1)
- * - Validación de formularios
- * - Visualización de detalles de pago
+ * - Navegacion a la pagina de pagos
+ * - Creacion de pago a proyecto (1:1)
+ * - Validacion de formularios
+ * - Visualizacion de detalles de pago
  *
- * Prerequisitos:
- * - Base de datos debe tener al menos:
- *   - 1 cliente con proyectos
- *   - 1 proyecto con balance pendiente
- *   - 1 método de pago configurado
- *
- * Para ejecutar:
- * - npm run test:e2e -- payments.spec.ts
- * - npm run test:e2e:ui -- payments.spec.ts (modo UI)
+ * Los datos de test se crean via API en beforeAll y se limpian en afterAll.
  */
 
-test.describe('Sistema de Pagos', () => {
-  test.beforeEach(async ({ page }) => {
-    // Navegar a la página de pagos antes de cada test
-    await page.goto('/payments')
+// Variables compartidas para los datos de test
+let testCustomer: Awaited<ReturnType<typeof createTestCustomer>>
+let testProject: Awaited<ReturnType<typeof createTestProject>>
 
-    // Esperar a que la página cargue completamente
-    await expect(page.getByRole('heading', { name: /pagos/i, level: 1 })).toBeVisible()
+test.describe('Sistema de Pagos', () => {
+  // Crear datos de test antes de todos los tests
+  test.beforeAll(async ({ request }) => {
+    const customer = await createTestCustomer(request)
+    const status = await getFirstProjectStatus(request)
+    const project = await createTestProject(request, customer.id, {
+      subtotal: 1000000,
+      projectStatusId: status?.id,
+    })
+    await ensurePaymentMethod(request)
+
+    testCustomer = customer
+    testProject = project
   })
 
-  test('debe cargar la página de pagos correctamente', async ({ page }) => {
-    // Verificar título de la página (CardTitle, no es un heading semántico)
+  // Limpiar datos de test despues de todos los tests
+  test.afterAll(async ({ request }) => {
+    await cleanupE2EPayments(request)
+    await cleanupE2EProjects(request)
+    await cleanupE2ECustomers(request)
+  })
+
+  test.beforeEach(async ({ page }) => {
+    // Navegar a la pagina de pagos usando Page Object
+    const paymentsPage = new PaymentsPage(page)
+    await paymentsPage.navigate()
+  })
+
+  test('debe cargar la pagina de pagos correctamente', async ({ page }) => {
+    // Verificar titulo de la pagina (CardTitle, no es un heading semantico)
     await expect(page.getByText('Todos los Pagos', { exact: true })).toBeVisible()
 
-    // Verificar que el botón "Nuevo Pago" existe
+    // Verificar que el boton "Nuevo Pago" existe
     await expect(page.getByRole('button', { name: /nuevo pago/i })).toBeVisible()
 
-    // Verificar que el área de contenido está presente (tabla, skeleton o mensaje de vacío)
-    // Al menos uno de estos debe estar visible:
-    // - Tabla con datos
-    // - Skeleton de carga
-    // - Mensaje "No hay pagos registrados"
+    // Verificar que el area de contenido esta presente (tabla, skeleton o mensaje de vacio)
     const contentVisible = await page
       .locator('table, .skeleton, :has-text("No hay pagos")')
       .first()
@@ -51,8 +75,10 @@ test.describe('Sistema de Pagos', () => {
   })
 
   test('debe abrir el dropdown de nuevo pago', async ({ page }) => {
-    // Click en botón "Nuevo Pago"
-    await page.getByRole('button', { name: /nuevo pago/i }).click()
+    const paymentsPage = new PaymentsPage(page)
+
+    // Abrir dropdown
+    await paymentsPage.openNewPaymentDropdown()
 
     // Verificar que se abre el dropdown con las 2 opciones
     await expect(page.getByRole('menuitem', { name: /pago a proyecto \(1:1\)/i })).toBeVisible()
@@ -60,163 +86,110 @@ test.describe('Sistema de Pagos', () => {
   })
 
   test('debe abrir el dialog de pago a proyecto (1:1)', async ({ page }) => {
-    // Abrir dropdown
-    await page.getByRole('button', { name: /nuevo pago/i }).click()
+    const paymentsPage = new PaymentsPage(page)
+    const dialog = new PaymentToProjectDialog(page)
 
-    // Click en opción "Pago a Proyecto (1:1)"
-    await page.getByRole('menuitem', { name: /pago a proyecto \(1:1\)/i }).click()
+    // Abrir dialog de pago a proyecto
+    await paymentsPage.openPaymentToProjectDialog()
 
-    // Verificar que se abre el dialog
-    const dialog = page.getByRole('dialog')
-    await expect(dialog.getByRole('heading', { name: /pago a proyecto/i })).toBeVisible()
+    // Verificar que se abre el dialog con heading y campos iniciales
+    await dialog.expectVisible()
+    await expect(dialog.projectCombobox).toBeVisible()
+    await expect(dialog.amountInput).toBeVisible()
+    // Nota: Referencia solo aparece DESPUES de seleccionar metodo de pago
 
-    // Verificar campos iniciales (antes de seleccionar proyecto/método)
-    await expect(dialog.getByRole('combobox', { name: /proyecto/i })).toBeVisible()
-    await expect(dialog.getByLabel(/monto/i)).toBeVisible() // Existe pero está disabled
-    await expect(dialog.getByLabel(/fecha/i)).toBeVisible()
-
-    // Nota: Referencia solo aparece DESPUÉS de seleccionar método de pago
-
-    // Verificar botón de submit
-    await expect(dialog.getByRole('button', { name: /registrar pago/i })).toBeVisible()
+    // Verificar boton de submit
+    await expect(dialog.submitButton).toBeVisible()
   })
 
   test('debe validar campos obligatorios del formulario', async ({ page }) => {
+    const paymentsPage = new PaymentsPage(page)
+    const dialog = new PaymentToProjectDialog(page)
+
     // Abrir dialog de pago a proyecto
-    await page.getByRole('button', { name: /nuevo pago/i }).click()
-    await page.getByRole('menuitem', { name: /pago a proyecto \(1:1\)/i }).click()
+    await paymentsPage.openPaymentToProjectDialog()
+    await dialog.expectVisible()
 
-    const dialog = page.getByRole('dialog')
-    await expect(dialog).toBeVisible()
-
-    // Verificar que el botón está deshabilitado inicialmente
+    // Verificar que el boton esta deshabilitado inicialmente
     // (no hay proyecto seleccionado, por lo tanto disabled)
-    const submitButton = dialog.getByRole('button', { name: /registrar pago/i })
-    await expect(submitButton).toBeDisabled()
+    await expect(dialog.submitButton).toBeDisabled()
 
-    // Nota: El campo monto está deshabilitado hasta seleccionar proyecto
-    // El campo referencia no aparece hasta seleccionar método de pago
+    // Nota: El campo monto esta deshabilitado hasta seleccionar proyecto
+    // El campo referencia no aparece hasta seleccionar metodo de pago
     // Este test verifica que el formulario no se puede enviar sin datos completos
   })
 
-  test.describe('Creación de Pago a Proyecto (1:1)', () => {
-    test('flujo completo de creación de pago', async ({ page }) => {
+  test.describe('Creacion de Pago a Proyecto (1:1)', () => {
+    test('flujo completo de creacion de pago', async ({ page }) => {
+      const paymentsPage = new PaymentsPage(page)
+      const dialog = new PaymentToProjectDialog(page)
+
       // PASO 1: Abrir dialog
-      await page.getByRole('button', { name: /nuevo pago/i }).click()
-      await page.getByRole('menuitem', { name: /pago a proyecto \(1:1\)/i }).click()
+      await paymentsPage.openPaymentToProjectDialog()
+      await dialog.expectVisible()
 
-      const dialog = page.getByRole('dialog')
-      await expect(dialog.getByRole('heading', { name: /pago a proyecto/i })).toBeVisible()
+      // PASO 2: Llenar formulario completo con datos del proyecto creado por factory
+      await dialog.fill({
+        projectNumber: testProject.projectNumber,
+        amount: 1000000,
+        reference: 'REF-E2E-PAYMENTS-001',
+        notes: 'Pago de prueba creado por test E2E de Playwright',
+      })
 
-      // PASO 2: Seleccionar proyecto
-      const projectCombobox = dialog.getByRole('combobox', { name: /proyecto/i })
-      await projectCombobox.click()
+      // PASO 3: Enviar formulario y esperar respuesta del API
+      await dialog.submit()
 
-      // Buscar un proyecto
-      await page.keyboard.type('PRO')
-      await page.waitForTimeout(500) // Esperar debounce
-
-      // Verificar si hay opciones disponibles
-      const options = page.locator('[role="option"]')
-      const optionsCount = await options.count()
-
-      // Si no hay proyectos, skip el resto del test
-      if (optionsCount === 0) {
-        console.log('⚠️  No hay proyectos en la base de datos - skipping test')
-        return
-      }
-
-      // Seleccionar el primer resultado
-      const firstOption = options.first()
-      await expect(firstOption).toBeVisible({ timeout: 5000 })
-      await firstOption.click()
-
-      // PASO 3: Llenar monto
-      const amountInput = dialog.getByLabel(/monto/i)
-      await amountInput.fill('1000000')
-
-      // PASO 4: Seleccionar fecha (usar la fecha por defecto)
-
-      // PASO 5: Seleccionar método de pago
-      const paymentMethodCombobox = dialog.getByRole('combobox', { name: /método de pago/i })
-      await paymentMethodCombobox.click()
-
-      // Seleccionar el primer método de pago disponible
-      const paymentOptions = page.locator('[role="option"]')
-      const firstPaymentMethod = paymentOptions.first()
-      await expect(firstPaymentMethod).toBeVisible({ timeout: 3000 })
-      await firstPaymentMethod.click()
-
-      // PASO 6: Llenar referencia
-      const referenceInput = dialog.getByLabel(/referencia/i)
-      await referenceInput.fill('REF-TEST-001')
-
-      // PASO 7: (Opcional) Llenar notas
-      const notesTextarea = dialog.getByLabel(/notas/i)
-      if (await notesTextarea.isVisible()) {
-        await notesTextarea.fill('Pago de prueba creado por test E2E de Playwright')
-      }
-
-      // PASO 8: Tomar screenshot antes de enviar
-      await page.screenshot({ path: 'test-results/payment-form-filled.png' })
-
-      // PASO 9: Enviar formulario
-      const submitButton = dialog.getByRole('button', { name: /registrar pago/i })
-      await submitButton.click()
-
-      // PASO 10: Verificar éxito
-      // Esperar a que el dialog se cierre
-      await expect(dialog).not.toBeVisible({ timeout: 5000 })
-
-      // Verificar toast o mensaje de éxito
+      // PASO 4: Verificar exito - toast o mensaje de confirmacion
       await expect(page.locator('text=/pago registrado|éxito|exitoso/i')).toBeVisible({
         timeout: 5000,
       })
 
-      // Verificar que el nuevo pago aparece en la tabla
-      await page.waitForTimeout(1000)
-      await expect(page.getByText('REF-TEST-001')).toBeVisible({ timeout: 5000 })
+      // PASO 5: Verificar que el nuevo pago aparece en la tabla
+      // Esperar a que la tabla se refresque con datos del API
+      await page.waitForResponse(
+        (r) => r.url().includes('/api/payments') && r.request().method() === 'GET'
+      )
+      await expect(page.getByText('REF-E2E-PAYMENTS-001')).toBeVisible({ timeout: 5000 })
     })
 
-    test('debe cancelar la creación de pago', async ({ page }) => {
-      // Abrir dialog
-      await page.getByRole('button', { name: /nuevo pago/i }).click()
-      await page.getByRole('menuitem', { name: /pago a proyecto \(1:1\)/i }).click()
+    test('debe cancelar la creacion de pago', async ({ page }) => {
+      const paymentsPage = new PaymentsPage(page)
+      const dialog = new PaymentToProjectDialog(page)
 
-      const dialog = page.getByRole('dialog')
-      await expect(dialog.getByRole('heading', { name: /pago a proyecto/i })).toBeVisible()
+      // Abrir dialog
+      await paymentsPage.openPaymentToProjectDialog()
+      await dialog.expectVisible()
 
       // Cerrar el dialog con Escape
       await page.keyboard.press('Escape')
 
       // Verificar que el dialog se cierra
-      await expect(dialog).not.toBeVisible({ timeout: 3000 })
+      await paymentsPage.expectDialogClosed(3000)
     })
   })
 
-  test.describe('Búsqueda y Filtros', () => {
+  test.describe('Busqueda y Filtros', () => {
     test('debe buscar pagos por cliente', async ({ page }) => {
+      const paymentsPage = new PaymentsPage(page)
+
       // Esperar a que la tabla cargue
-      await page.waitForTimeout(1000)
+      await paymentsPage.waitForTable()
 
-      // Buscar en el input de búsqueda
-      const searchInput = page.getByPlaceholder(/buscar por cliente/i)
+      // Buscar en el input de busqueda
+      const searchInput = paymentsPage.searchInput
       if (await searchInput.isVisible()) {
-        await searchInput.fill('Test')
-
-        // Esperar a que se aplique el filtro
-        await page.waitForTimeout(500)
-
-        // Tomar screenshot de resultados filtrados
-        await page.screenshot({ path: 'test-results/payments-filtered.png' })
+        // Buscar y esperar respuesta del API
+        await paymentsPage.searchInTable('Test', /buscar por cliente/i)
       }
     })
 
     test('debe filtrar pagos por estado', async ({ page }) => {
-      // Esperar a que la tabla cargue
-      await page.waitForTimeout(1000)
+      const paymentsPage = new PaymentsPage(page)
 
-      // Buscar botón de filtro de estado
+      // Esperar a que la tabla cargue
+      await paymentsPage.waitForTable()
+
+      // Buscar boton de filtro de estado
       const statusFilter = page.getByRole('button', { name: /estado/i })
       if (await statusFilter.isVisible()) {
         await statusFilter.click()
@@ -224,21 +197,25 @@ test.describe('Sistema de Pagos', () => {
         // Seleccionar "Activo"
         await page.getByRole('checkbox', { name: /activo/i }).click()
 
-        // Aplicar filtro
+        // Aplicar filtro cerrando el dropdown
         await page.keyboard.press('Escape')
 
-        // Esperar a que se aplique el filtro
-        await page.waitForTimeout(500)
+        // Esperar a que el filtro se aplique via API
+        await page.waitForResponse(
+          (r) => r.url().includes('/api/') && r.request().method() === 'GET'
+        )
       }
     })
   })
 
-  test.describe('Visualización de Detalles', () => {
+  test.describe('Visualizacion de Detalles', () => {
     test('debe abrir el dialog de detalles de un pago', async ({ page }) => {
-      // Esperar a que la tabla cargue
-      await page.waitForTimeout(1000)
+      const paymentsPage = new PaymentsPage(page)
 
-      // Click en el primer botón de "Ver detalles" (icono de ojo)
+      // Esperar a que la tabla cargue
+      await paymentsPage.waitForTable()
+
+      // Click en el primer boton de "Ver detalles" (icono de ojo)
       const detailsButton = page.getByRole('button', { name: /ver detalles/i }).first()
       if (await detailsButton.isVisible()) {
         await detailsButton.click()
@@ -248,7 +225,7 @@ test.describe('Sistema de Pagos', () => {
           timeout: 3000,
         })
 
-        // Verificar que muestra información del pago
+        // Verificar que muestra informacion del pago
         await expect(page.getByText(/cliente/i)).toBeVisible()
         await expect(page.getByText(/proyecto/i)).toBeVisible()
         await expect(page.getByText(/monto/i)).toBeVisible()

@@ -1,57 +1,54 @@
 import { test, expect } from '@playwright/test'
+import { InstallmentsPage } from './page-objects/installments.page'
 
 /**
- * Tests E2E para el módulo de Cuotas de Comercio (/payments/installments)
+ * Tests E2E para el modulo de Cuotas de Comercio (/payments/installments)
  *
- * Este módulo muestra cuotas de pagos fraccionados con:
- * - Estadísticas: Total, Pendientes, Vencidas, Pagadas
- * - DataTable con búsqueda y filtros
+ * Este modulo muestra cuotas de pagos fraccionados con:
+ * - Estadisticas: Total, Pendientes, Vencidas, Pagadas
+ * - DataTable con busqueda y filtros
  * - Acciones por cuota (marcar como pagada, copiar IDs)
  *
  * Criticidad: ALTA - Sistema financiero
  */
 
 test.describe('Cuotas de Comercio', () => {
+  let installmentsPage: InstallmentsPage
+
   test.beforeEach(async ({ page }) => {
-    // Navegar a la página de cuotas
-    await page.goto('/payments/installments')
-    // Esperar a que la página cargue completamente
-    await page.waitForLoadState('networkidle')
+    installmentsPage = new InstallmentsPage(page)
+    await installmentsPage.navigate()
   })
 
-  test.describe('Carga de Página', () => {
-    test('debe cargar la página correctamente', async ({ page }) => {
-      // Verificar título de página
-      await expect(page.getByRole('heading', { name: 'Cuotas Comercio' })).toBeVisible()
+  test.describe('Carga de Pagina', () => {
+    test('debe cargar la pagina correctamente', async ({ page }) => {
+      // Verificar titulo de pagina
+      await expect(installmentsPage.heading).toBeVisible()
 
       // Verificar breadcrumbs
       await expect(page.getByText('Inicio')).toBeVisible()
       await expect(page.getByText('Pagos')).toBeVisible()
     })
 
-    test('debe mostrar las 4 cards de estadísticas', async ({ page }) => {
+    test('debe mostrar las 4 cards de estadisticas', async ({ page }) => {
       // Card: Total Cuotas
-      const totalCard = page.locator('text=Total Cuotas').first()
-      await expect(totalCard).toBeVisible()
+      await expect(page.locator('text=Total Cuotas').first()).toBeVisible()
 
       // Card: Pendientes
-      const pendingCard = page.locator('text=Pendientes').first()
-      await expect(pendingCard).toBeVisible()
+      await expect(page.locator('text=Pendientes').first()).toBeVisible()
 
       // Card: Vencidas
-      const overdueCard = page.locator('text=Vencidas').first()
-      await expect(overdueCard).toBeVisible()
+      await expect(page.locator('text=Vencidas').first()).toBeVisible()
 
       // Card: Pagadas
-      const paidCard = page.locator('text=Pagadas').first()
-      await expect(paidCard).toBeVisible()
+      await expect(page.locator('text=Pagadas').first()).toBeVisible()
     })
 
     test('debe mostrar la tabla de cuotas', async ({ page }) => {
-      // Verificar título de la tabla
-      await expect(page.getByRole('heading', { name: 'Todas las Cuotas' })).toBeVisible()
+      // Verificar titulo de la tabla
+      await expect(installmentsPage.tableHeading).toBeVisible()
 
-      // Verificar descripción de cantidad
+      // Verificar descripcion de cantidad
       const description = page.locator('text=/\\d+ cuotas? registradas?|No hay cuotas registradas/')
       await expect(description).toBeVisible()
     })
@@ -60,8 +57,7 @@ test.describe('Cuotas de Comercio', () => {
   test.describe('Columnas de la Tabla', () => {
     test('debe mostrar las columnas correctas', async ({ page }) => {
       // Esperar a que la tabla cargue
-      const table = page.locator('table')
-      await expect(table).toBeVisible()
+      await installmentsPage.waitForTable()
 
       // Verificar headers de columnas
       await expect(page.getByRole('columnheader', { name: /Vencimiento/i })).toBeVisible()
@@ -73,38 +69,29 @@ test.describe('Cuotas de Comercio', () => {
     })
   })
 
-  test.describe('Búsqueda', () => {
-    test('debe tener campo de búsqueda por cliente', async ({ page }) => {
-      const searchInput = page.getByPlaceholder(/Buscar por cliente/i)
-      await expect(searchInput).toBeVisible()
+  test.describe('Busqueda', () => {
+    test('debe tener campo de busqueda por cliente', async () => {
+      await expect(installmentsPage.searchInput).toBeVisible()
     })
 
     test('debe filtrar cuotas al buscar', async ({ page }) => {
-      const searchInput = page.getByPlaceholder(/Buscar por cliente/i)
+      // Escribir termino de busqueda y esperar respuesta del API
+      await installmentsPage.searchInstallment('test')
 
-      // Escribir término de búsqueda
-      await searchInput.fill('test')
-
-      // Esperar a que se aplique el filtro (debounce)
-      await page.waitForTimeout(500)
-
-      // La tabla debería actualizarse (puede mostrar resultados o "sin resultados")
+      // La tabla deberia actualizarse (puede mostrar resultados o "sin resultados")
       const table = page.locator('table')
       await expect(table).toBeVisible()
     })
   })
 
   test.describe('Filtros', () => {
-    test('debe tener filtro por estado', async ({ page }) => {
-      // Buscar el botón de filtro de estado
-      const filterButton = page.getByRole('button', { name: /Estado/i })
-      await expect(filterButton).toBeVisible()
+    test('debe tener filtro por estado', async () => {
+      await expect(installmentsPage.statusFilterButton).toBeVisible()
     })
 
     test('debe mostrar opciones de filtro al hacer click', async ({ page }) => {
       // Click en el filtro de estado
-      const filterButton = page.getByRole('button', { name: /Estado/i })
-      await filterButton.click()
+      await installmentsPage.statusFilterButton.click()
 
       // Verificar que aparecen las opciones
       await expect(page.getByRole('option', { name: /Pendiente/i })).toBeVisible()
@@ -113,30 +100,23 @@ test.describe('Cuotas de Comercio', () => {
 
     test('debe filtrar por estado Pendiente', async ({ page }) => {
       // Click en el filtro de estado
-      const filterButton = page.getByRole('button', { name: /Estado/i })
-      await filterButton.click()
+      await installmentsPage.statusFilterButton.click()
 
       // Seleccionar "Pendiente"
       await page.getByRole('option', { name: /Pendiente/i }).click()
 
-      // Cerrar el popover (click fuera o escape)
+      // Cerrar el popover
       await page.keyboard.press('Escape')
 
-      // Esperar a que se aplique el filtro
-      await page.waitForTimeout(300)
-
-      // Verificar que el filtro está aplicado (badge visible)
-      const filterBadge = page.locator('[data-state="checked"]').or(page.locator('.bg-primary'))
-      // La tabla debería mostrar solo cuotas pendientes o estar vacía
+      // Verificar que el filtro se aplico - la tabla deberia mostrar solo cuotas pendientes o estar vacia
       const table = page.locator('table')
       await expect(table).toBeVisible()
     })
   })
 
-  test.describe('Estadísticas', () => {
-    test('debe mostrar valores numéricos en las cards', async ({ page }) => {
-      // Verificar que las cards tienen valores numéricos
-      // Total Cuotas - debe tener un número
+  test.describe('Estadisticas', () => {
+    test('debe mostrar valores numericos en las cards', async ({ page }) => {
+      // Verificar que las cards tienen valores numericos
       const totalValue = page.locator('.text-2xl.font-bold').first()
       await expect(totalValue).toBeVisible()
       const totalText = await totalValue.textContent()
@@ -144,16 +124,14 @@ test.describe('Cuotas de Comercio', () => {
     })
 
     test('debe mostrar montos en formato CLP', async ({ page }) => {
-      // Buscar formato de moneda CLP ($ con números)
+      // Buscar formato de moneda CLP ($ con numeros)
       const currencyValues = page.locator('text=/\\$\\s?[\\d.,]+/')
-      // Puede haber 0 o más dependiendo de si hay datos
       const count = await currencyValues.count()
-      // Si hay cuotas, debería haber al menos 2 montos (pendientes y pagadas)
-      // Si no hay, el test pasa igual
+      // Si hay cuotas, deberia haber al menos 2 montos (pendientes y pagadas)
       expect(count).toBeGreaterThanOrEqual(0)
     })
 
-    test('debe colorear correctamente las estadísticas', async ({ page }) => {
+    test('debe colorear correctamente las estadisticas', async ({ page }) => {
       // Pendientes debe ser amber/yellow
       const pendingValue = page.locator('.text-amber-600')
       await expect(pendingValue).toBeVisible()
@@ -171,24 +149,18 @@ test.describe('Cuotas de Comercio', () => {
   test.describe('Acciones de Cuota', () => {
     test('debe mostrar dropdown de acciones si hay cuotas', async ({ page }) => {
       // Esperar a que la tabla cargue
-      await page.waitForTimeout(1000)
+      await installmentsPage.waitForTable()
 
-      // Buscar botón de acciones (icono de 3 puntos)
-      const actionButtons = page.locator('[role="button"]').filter({ hasText: '' }).locator('svg')
+      // Buscar boton de acciones (icono de 3 puntos)
+      const dropdownTrigger = page.locator('button').filter({
+        has: page.locator('svg.lucide-more-horizontal, svg.lucide-ellipsis'),
+      }).first()
 
-      const count = await actionButtons.count()
+      if (await dropdownTrigger.isVisible()) {
+        await dropdownTrigger.click()
 
-      if (count > 0) {
-        // Si hay cuotas, debe haber botones de acción
-        // Click en el primer botón de acciones
-        const dropdownTrigger = page.locator('button').filter({ has: page.locator('svg.lucide-more-horizontal, svg.lucide-ellipsis') }).first()
-
-        if (await dropdownTrigger.isVisible()) {
-          await dropdownTrigger.click()
-
-          // Verificar que aparece el menú
-          await expect(page.getByRole('menuitem', { name: /Copiar ID/i }).first()).toBeVisible()
-        }
+        // Verificar que aparece el menu
+        await expect(page.getByRole('menuitem', { name: /Copiar ID/i }).first()).toBeVisible()
       }
       // Si no hay cuotas, el test pasa sin verificar acciones
     })
@@ -199,14 +171,12 @@ test.describe('Cuotas de Comercio', () => {
       // Cambiar viewport a mobile
       await page.setViewportSize({ width: 375, height: 667 })
 
-      // Recargar página
+      // Recargar pagina
       await page.goto('/payments/installments')
-      await page.waitForLoadState('networkidle')
+      // Verificar que la pagina sigue siendo funcional
+      await expect(installmentsPage.heading).toBeVisible({ timeout: 10000 })
 
-      // Verificar que la página sigue siendo funcional
-      await expect(page.getByRole('heading', { name: 'Cuotas Comercio' })).toBeVisible()
-
-      // Las cards deberían apilarse
+      // Las cards deberian apilarse
       const cards = page.locator('.grid > div').filter({ has: page.locator('text=Cuotas') })
       await expect(cards.first()).toBeVisible()
     })

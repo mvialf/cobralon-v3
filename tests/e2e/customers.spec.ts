@@ -1,4 +1,6 @@
 import { test, expect } from '@playwright/test'
+import { CustomersPage } from './page-objects/customers.page'
+import { NewCustomerDialog } from './page-objects/dialogs/new-customer.dialog'
 import { cleanupE2ECustomers } from './helpers/cleanup'
 
 /**
@@ -16,10 +18,6 @@ import { cleanupE2ECustomers } from './helpers/cleanup'
  * - Edición de cliente (botón existe pero sin funcionalidad)
  * - Eliminación de cliente (botón existe pero sin funcionalidad)
  *
- * Prerequisitos:
- * - Base de datos debe tener al menos 1 cliente existente
- * - El cliente de prueba que crearemos NO debe existir previamente
- *
  * CLEANUP: Este archivo limpia automáticamente los customers E2E
  * después de ejecutar todos los tests (afterAll).
  *
@@ -27,6 +25,12 @@ import { cleanupE2ECustomers } from './helpers/cleanup'
  * - npm run test:e2e -- customers.spec.ts
  * - npm run test:e2e:ui -- customers.spec.ts (modo UI)
  */
+
+// Timestamp compartido entre tests para referenciar el cliente creado
+const timestamp = Date.now()
+const E2E_CUSTOMER_NAME = `E2E Test Customer ${timestamp}`
+const E2E_CUSTOMER_EMAIL = `e2e-test-${timestamp}@example.com`
+const E2E_CUSTOMER_PHONE = '912345678'
 
 test.describe('Módulo de Clientes', () => {
   // Health check antes de ejecutar tests para verificar que la DB está activa
@@ -36,22 +40,16 @@ test.describe('Módulo de Clientes', () => {
 
     const data = await response.json()
     expect(data.status).toBe('ok')
-
-    // Log si hubo cold start (útil para debugging)
-    if (data.coldStart) {
-      console.info(`⚠️  Database cold start detected (${data.latency})`)
-    }
   })
 
   test.beforeEach(async ({ page }) => {
-    // Navegar a la página de clientes antes de cada test
-    await page.goto('/customer')
-
-    // Esperar a que la página cargue completamente
-    await expect(page.getByRole('heading', { name: 'Clientes', level: 1 })).toBeVisible()
+    const customersPage = new CustomersPage(page)
+    await customersPage.navigate()
   })
 
   test('debe cargar la página de clientes correctamente', async ({ page }) => {
+    const customersPage = new CustomersPage(page)
+
     // Verificar título de la página
     await expect(page.getByRole('heading', { name: 'Clientes', level: 1 })).toBeVisible()
 
@@ -59,288 +57,237 @@ test.describe('Módulo de Clientes', () => {
     await expect(page.getByRole('button', { name: /nuevo cliente/i })).toBeVisible()
 
     // Verificar que el botón "Importar" existe (es un link, no button)
-    await expect(page.getByRole('link', { name: /importar/i })).toBeVisible()
+    await expect(customersPage.importLink).toBeVisible()
 
     // Esperar a que la tabla termine de cargar (datos del API)
     // El DataTableToolbar (con el input de búsqueda) solo se renderiza cuando hay datos
-    // Usar timeout generoso porque puede haber latencia de red
-    await expect(page.getByPlaceholder(/buscar cliente.../i)).toBeVisible({ timeout: 15000 })
+    await expect(customersPage.searchInput).toBeVisible({ timeout: 15000 })
 
     // Verificar que la tabla está presente
-    const contentVisible = await page
-      .locator('table, .skeleton, :has-text("No se encontraron resultados")')
-      .first()
-      .isVisible()
-      .catch(() => false)
-
-    expect(contentVisible).toBeTruthy()
+    await customersPage.waitForTable()
   })
 
   test('debe abrir el dialog de nuevo cliente', async ({ page }) => {
+    const customersPage = new CustomersPage(page)
+    const dialog = new NewCustomerDialog(page)
+
     // Click en botón "Nuevo Cliente"
-    await page.getByRole('button', { name: /nuevo cliente/i }).click()
+    await customersPage.openNewCustomerDialog()
 
-    // Verificar que se abre el dialog
-    const dialog = page.getByRole('dialog')
-    await expect(dialog).toBeVisible()
-    await expect(dialog.getByRole('heading', { name: /nuevo cliente/i })).toBeVisible()
-
-    // Verificar descripción del dialog
-    await expect(dialog.getByText(/ingresa los datos del nuevo cliente/i)).toBeVisible()
+    // Verificar que se abre el dialog con heading y descripción
+    await dialog.expectVisible()
+    await expect(customersPage.dialog.getByText(/ingresa los datos del nuevo cliente/i)).toBeVisible()
 
     // Verificar que los 3 campos del formulario están presentes
-    await expect(dialog.getByLabel(/nombre/i)).toBeVisible()
-    await expect(dialog.getByLabel(/teléfono/i)).toBeVisible()
-    await expect(dialog.getByLabel(/correo/i)).toBeVisible()
+    await expect(dialog.nameInput).toBeVisible()
+    await expect(dialog.phoneInput).toBeVisible()
+    await expect(dialog.emailInput).toBeVisible()
 
     // Verificar botón de submit
-    await expect(dialog.getByRole('button', { name: /crear cliente/i })).toBeVisible()
+    await expect(dialog.submitButton).toBeVisible()
   })
 
   test('debe validar campos obligatorios del formulario', async ({ page }) => {
-    // Abrir dialog de nuevo cliente
-    await page.getByRole('button', { name: /nuevo cliente/i }).click()
+    const customersPage = new CustomersPage(page)
+    const dialog = new NewCustomerDialog(page)
 
-    const dialog = page.getByRole('dialog')
-    await expect(dialog).toBeVisible()
+    // Abrir dialog de nuevo cliente
+    await customersPage.openNewCustomerDialog()
+    await dialog.expectVisible()
 
     // Intentar enviar formulario vacío
-    await dialog.getByRole('button', { name: /crear cliente/i }).click()
+    await dialog.submitButton.click()
 
     // Verificar mensajes de error de validación
     // Nombre: mínimo 2 caracteres
-    await expect(dialog.getByText(/el nombre debe tener al menos 2 caracteres/i)).toBeVisible()
+    await expect(customersPage.dialog.getByText(/el nombre debe tener al menos 2 caracteres/i)).toBeVisible()
 
     // Teléfono: obligatorio
-    await expect(dialog.getByText(/el teléfono es requerido/i)).toBeVisible()
+    await expect(customersPage.dialog.getByText(/el teléfono es requerido/i)).toBeVisible()
 
     // Email: no tiene mensaje de error porque es opcional
     // (solo valida formato si se ingresa algo)
   })
 
   test('debe validar formato de teléfono chileno', async ({ page }) => {
-    // Abrir dialog de nuevo cliente
-    await page.getByRole('button', { name: /nuevo cliente/i }).click()
+    const customersPage = new CustomersPage(page)
+    const dialog = new NewCustomerDialog(page)
 
-    const dialog = page.getByRole('dialog')
-    await expect(dialog).toBeVisible()
+    // Abrir dialog de nuevo cliente
+    await customersPage.openNewCustomerDialog()
+    await dialog.expectVisible()
 
     // Llenar campos con datos válidos excepto teléfono
-    await dialog.getByLabel(/nombre/i).fill('Test Cliente')
-    await dialog.getByLabel(/teléfono/i).fill('123456789') // Formato inválido
+    await dialog.fill({ name: 'Test Cliente', phone: '123456789' })
 
     // Intentar enviar
-    await dialog.getByRole('button', { name: /crear cliente/i }).click()
+    await dialog.submitButton.click()
 
     // Verificar mensaje de error de formato
-    await expect(dialog.getByText(/formato inválido.*teléfono chileno válido/i)).toBeVisible()
+    await expect(customersPage.dialog.getByText(/formato inválido.*teléfono chileno válido/i)).toBeVisible()
   })
 
   test('debe validar formato de email si se proporciona', async ({ page }) => {
-    // Abrir dialog de nuevo cliente
-    await page.getByRole('button', { name: /nuevo cliente/i }).click()
+    const customersPage = new CustomersPage(page)
+    const dialog = new NewCustomerDialog(page)
 
-    const dialog = page.getByRole('dialog')
-    await expect(dialog).toBeVisible()
+    // Abrir dialog de nuevo cliente
+    await customersPage.openNewCustomerDialog()
+    await dialog.expectVisible()
 
     // Llenar campos con datos válidos excepto email
-    await dialog.getByLabel(/nombre/i).fill('Test Cliente')
-    await dialog.getByLabel(/teléfono/i).fill('912345678') // Formato válido chileno
-    await dialog.getByLabel(/correo/i).fill('email-invalido') // Email inválido
+    await dialog.fill({ name: 'Test Cliente', phone: '912345678', email: 'email-invalido' })
 
     // Intentar enviar
-    await dialog.getByRole('button', { name: /crear cliente/i }).click()
+    await dialog.submitButton.click()
 
     // HTML5 valida el email y muestra tooltip nativo (no accesible vía Playwright)
     // Verificamos que el formulario NO se submita: el dialog permanece abierto
-    await page.waitForTimeout(1000)
-    await expect(dialog).toBeVisible()
+    await expect(customersPage.dialog).toBeVisible()
 
     // Verificar que el campo de email sigue con el valor inválido (no se limpió)
-    await expect(dialog.getByLabel(/correo/i)).toHaveValue('email-invalido')
+    await expect(dialog.emailInput).toHaveValue('email-invalido')
   })
 
   test('debe crear un cliente completo exitosamente', async ({ page }) => {
-    // Generar datos únicos para evitar conflictos
-    const timestamp = Date.now()
-    const customerName = `E2E Test Customer ${timestamp}`
-    const customerEmail = `e2e-test-${timestamp}@example.com`
-    const customerPhone = '912345678' // Formato chileno válido
+    const customersPage = new CustomersPage(page)
+    const dialog = new NewCustomerDialog(page)
 
     // Abrir dialog de nuevo cliente
-    await page.getByRole('button', { name: /nuevo cliente/i }).click()
-
-    const dialog = page.getByRole('dialog')
-    await expect(dialog).toBeVisible()
+    await customersPage.openNewCustomerDialog()
+    await dialog.expectVisible()
 
     // Llenar formulario completo
-    await dialog.getByLabel(/nombre/i).fill(customerName)
-    await dialog.getByLabel(/teléfono/i).fill(customerPhone)
-    await dialog.getByLabel(/correo/i).fill(customerEmail)
+    await dialog.fill({
+      name: E2E_CUSTOMER_NAME,
+      phone: E2E_CUSTOMER_PHONE,
+      email: E2E_CUSTOMER_EMAIL,
+    })
 
-    // Enviar formulario
-    await dialog.getByRole('button', { name: /crear cliente/i }).click()
-
-    // Esperar a que el dialog se cierre (señal de éxito)
-    await expect(dialog).not.toBeVisible({ timeout: 10000 })
-
-    // Verificar que aparece el toast de éxito (opcional, depende de implementación)
-    // await expect(page.getByText(/cliente creado exitosamente/i)).toBeVisible()
+    // Enviar formulario y esperar cierre del dialog
+    await dialog.submit()
 
     // Buscar el cliente recién creado en la tabla
-    await page.getByPlaceholder(/buscar cliente.../i).fill(customerName)
-
-    // Esperar a que la búsqueda se ejecute (tiene debounce de 500ms)
-    await page.waitForTimeout(600)
+    await customersPage.searchCustomer(E2E_CUSTOMER_NAME)
 
     // Verificar que el cliente aparece en la tabla
-    await expect(page.getByRole('cell', { name: customerName, exact: true })).toBeVisible()
+    await expect(page.getByRole('cell', { name: E2E_CUSTOMER_NAME, exact: true })).toBeVisible()
 
     // Verificar que el teléfono está normalizado (+56 prefix)
-    // Usar .first() para evitar strict mode violation si hay múltiples clientes con mismo teléfono
-    await expect(page.getByRole('cell', { name: `+56${customerPhone}` }).first()).toBeVisible()
+    await expect(page.getByRole('cell', { name: `+56${E2E_CUSTOMER_PHONE}` }).first()).toBeVisible()
 
     // Verificar que el email aparece
-    await expect(page.getByRole('cell', { name: customerEmail })).toBeVisible()
+    await expect(page.getByRole('cell', { name: E2E_CUSTOMER_EMAIL })).toBeVisible()
   })
 
   test('debe crear un cliente sin email (campo opcional)', async ({ page }) => {
-    // Generar datos únicos
-    const timestamp = Date.now()
-    const customerName = `E2E Test No Email ${timestamp}`
+    const customersPage = new CustomersPage(page)
+    const dialog = new NewCustomerDialog(page)
+
+    const noEmailTimestamp = Date.now()
+    const customerName = `E2E Test No Email ${noEmailTimestamp}`
     const customerPhone = '987654321'
 
     // Abrir dialog de nuevo cliente
-    await page.getByRole('button', { name: /nuevo cliente/i }).click()
-
-    const dialog = page.getByRole('dialog')
-    await expect(dialog).toBeVisible()
+    await customersPage.openNewCustomerDialog()
+    await dialog.expectVisible()
 
     // Llenar solo nombre y teléfono (email vacío)
-    await dialog.getByLabel(/nombre/i).fill(customerName)
-    // Usar getByRole en lugar de getByLabel para mejor compatibilidad Firefox
-    const phoneInput = dialog.getByRole('textbox', { name: /teléfono/i })
-    await phoneInput.fill(customerPhone)
-    // NO llenar email
+    await dialog.fill({ name: customerName, phone: customerPhone })
 
-    // Enviar formulario
-    await dialog.getByRole('button', { name: /crear cliente/i }).click()
-
-    // Esperar a que el dialog se cierre
-    await expect(dialog).not.toBeVisible({ timeout: 10000 })
+    // Enviar formulario y esperar cierre del dialog
+    await dialog.submit()
 
     // Buscar el cliente recién creado
-    await page.getByPlaceholder(/buscar cliente.../i).fill(customerName)
-    await page.waitForTimeout(600)
+    await customersPage.searchCustomer(customerName)
 
     // Verificar que el cliente aparece en la tabla
     await expect(page.getByRole('cell', { name: customerName, exact: true })).toBeVisible()
   })
 
   test('debe manejar error de email duplicado (409 Conflict)', async ({ page }) => {
+    const customersPage = new CustomersPage(page)
+    const dialog = new NewCustomerDialog(page)
+
     // Generar datos únicos para el primer cliente
-    const timestamp = Date.now()
-    const customerName1 = `E2E Duplicate Test ${timestamp}`
-    const duplicateEmail = `e2e-duplicate-${timestamp}@example.com`
-    const customerPhone1 = '923456789'
+    const dupTimestamp = Date.now()
+    const duplicateEmail = `e2e-duplicate-${dupTimestamp}@example.com`
 
     // Crear el primer cliente
-    await page.getByRole('button', { name: /nuevo cliente/i }).click()
-    let dialog = page.getByRole('dialog')
-    await dialog.getByLabel(/nombre/i).fill(customerName1)
-    await dialog.getByLabel(/teléfono/i).fill(customerPhone1)
-    await dialog.getByLabel(/correo/i).fill(duplicateEmail)
-    await dialog.getByRole('button', { name: /crear cliente/i }).click()
-    await expect(dialog).not.toBeVisible({ timeout: 10000 })
+    await customersPage.openNewCustomerDialog()
+    await dialog.expectVisible()
+    await dialog.fill({
+      name: `E2E Duplicate Test ${dupTimestamp}`,
+      phone: '923456789',
+      email: duplicateEmail,
+    })
+    await dialog.submit()
 
     // Intentar crear un segundo cliente con el MISMO email
-    const customerName2 = `E2E Duplicate Test 2 ${timestamp}`
-    const customerPhone2 = '934567890'
+    await customersPage.openNewCustomerDialog()
+    await dialog.expectVisible()
 
-    await page.getByRole('button', { name: /nuevo cliente/i }).click()
-    dialog = page.getByRole('dialog')
-    await expect(dialog).toBeVisible()
+    await dialog.fill({
+      name: `E2E Duplicate Test 2 ${dupTimestamp}`,
+      phone: '934567890',
+      email: duplicateEmail,
+    })
 
-    await dialog.getByLabel(/nombre/i).fill(customerName2)
-    await dialog.getByLabel(/teléfono/i).fill(customerPhone2)
-    await dialog.getByLabel(/correo/i).fill(duplicateEmail) // Email duplicado
+    await dialog.submitButton.click()
 
-    await dialog.getByRole('button', { name: /crear cliente/i }).click()
-
-    // Verificar que aparece mensaje de error de email duplicado
-    // El dialog NO debe cerrarse
-    await expect(dialog).toBeVisible()
-
-    // Verificar que aparece un toast de error (esto puede variar según implementación)
-    // await expect(page.getByText(/el correo electrónico ya está en uso/i)).toBeVisible()
-
-    // O verificar que hay un error visible en el formulario
-    // Nota: El comportamiento exacto depende de cómo se manejen los errores 409 en el backend
+    // Verificar que el dialog NO se cierra (indica error)
+    await expect(customersPage.dialog).toBeVisible()
   })
 
   test('debe realizar búsqueda de clientes correctamente', async ({ page }) => {
-    // Esperar a que la tabla cargue
-    await page.waitForLoadState('networkidle')
+    const customersPage = new CustomersPage(page)
 
-    // Obtener un nombre de cliente existente de la tabla (si hay datos)
-    const firstCustomerCell = page.locator('table tbody tr').first().locator('td').first()
-    const customerExists = await firstCustomerCell.isVisible().catch(() => false)
+    // Buscar el cliente E2E creado en el test anterior
+    // Los tests corren secuencialmente dentro del describe
+    await customersPage.searchCustomer(E2E_CUSTOMER_NAME)
 
-    if (customerExists) {
-      const customerName = await firstCustomerCell.textContent()
+    // Verificar que hay al menos 1 resultado
+    const rowCount = await customersPage.getTableRowCount()
+    expect(rowCount).toBeGreaterThanOrEqual(1)
 
-      if (customerName) {
-        // Buscar por ese nombre
-        await page.getByPlaceholder(/buscar cliente.../i).fill(customerName.substring(0, 5))
-
-        // Esperar debounce
-        await page.waitForTimeout(600)
-
-        // Verificar que la búsqueda se ejecutó
-        // (la tabla debe mostrar resultados filtrados)
-        const tableRows = page.locator('table tbody tr')
-        const rowCount = await tableRows.count()
-
-        // Debe haber al menos 1 resultado (el cliente buscado)
-        expect(rowCount).toBeGreaterThanOrEqual(1)
-      }
-    }
+    // Verificar que el cliente aparece en los resultados
+    await expect(page.getByRole('cell', { name: E2E_CUSTOMER_NAME, exact: true })).toBeVisible()
 
     // Búsqueda con término que no existe
-    await page.getByPlaceholder(/buscar cliente.../i).clear()
-    await page.getByPlaceholder(/buscar cliente.../i).fill('ZZZZZ_NO_EXISTE_999')
-    await page.waitForTimeout(600)
+    await customersPage.searchCustomer('ZZZZZ_NO_EXISTE_999')
 
     // Verificar mensaje de "No se encontraron resultados"
     await expect(page.getByText(/no se encontraron resultados/i)).toBeVisible()
   })
 
   test('debe mostrar dropdown de acciones por cliente', async ({ page }) => {
-    // Esperar a que la tabla cargue
-    await page.waitForLoadState('networkidle')
+    const customersPage = new CustomersPage(page)
 
-    // Verificar que existe al menos un cliente en la tabla
+    // Buscar el cliente E2E creado anteriormente para asegurar datos en la tabla
+    await customersPage.searchCustomer(E2E_CUSTOMER_NAME)
+
+    // Verificar que el cliente aparece
+    await expect(page.getByRole('cell', { name: E2E_CUSTOMER_NAME, exact: true })).toBeVisible()
+
+    // Click en el botón de acciones (tres puntos) de la primera fila
     const firstRow = page.locator('table tbody tr').first()
-    const rowExists = await firstRow.isVisible().catch(() => false)
+    const actionsButton = firstRow.getByRole('button').first()
+    await actionsButton.click()
 
-    if (rowExists) {
-      // Click en el botón de acciones (tres puntos)
-      const actionsButton = firstRow.getByRole('button').first()
-      await actionsButton.click()
+    // Verificar que se abre el dropdown con las opciones
+    await expect(page.getByRole('menuitem', { name: /copiar correo/i })).toBeVisible()
+    await expect(page.getByRole('menuitem', { name: /registrar pago/i })).toBeVisible()
+    await expect(page.getByRole('menuitem', { name: /editar/i })).toBeVisible()
+    await expect(page.getByRole('menuitem', { name: /eliminar/i })).toBeVisible()
 
-      // Verificar que se abre el dropdown con las opciones
-      await expect(page.getByRole('menuitem', { name: /copiar correo/i })).toBeVisible()
-      await expect(page.getByRole('menuitem', { name: /registrar pago/i })).toBeVisible()
-      await expect(page.getByRole('menuitem', { name: /editar/i })).toBeVisible()
-      await expect(page.getByRole('menuitem', { name: /eliminar/i })).toBeVisible()
-
-      // Nota: "Devolver crédito" es condicional (solo si creditBalance > 0)
-    }
+    // Nota: "Devolver crédito" es condicional (solo si creditBalance > 0)
   })
 
   test('debe navegar entre páginas de la tabla (paginación)', async ({ page }) => {
+    const customersPage = new CustomersPage(page)
+
     // Esperar a que la tabla cargue
-    await page.waitForLoadState('networkidle')
+    await customersPage.waitForTable()
 
     // Verificar que existen controles de paginación
     const paginationControls = page
@@ -357,28 +304,27 @@ test.describe('Módulo de Clientes', () => {
       const isNextEnabled = await nextButton.isEnabled().catch(() => false)
 
       if (isNextEnabled) {
+        // Esperar la respuesta del API al cambiar de página
+        const responsePromise = page.waitForResponse(
+          (r) => r.url().includes('/api/customers') && r.request().method() === 'GET'
+        )
         await nextButton.click()
+        await responsePromise
 
-        // Esperar a que la tabla recargue
-        await page.waitForTimeout(1000)
-
-        // Verificar que cambia el indicador de página
-        // (esto depende de la implementación específica del componente de paginación)
+        // Verificar que la tabla sigue visible después del cambio de página
+        await customersPage.waitForTable()
       }
     }
   })
 
   test('debe mostrar columnas correctas en la tabla', async ({ page }) => {
-    // Esperar a que la tabla cargue completamente (datos del API)
-    await page.waitForLoadState('networkidle')
+    const customersPage = new CustomersPage(page)
 
     // Esperar a que DataTable esté completamente renderizada (el search input confirma esto)
-    await expect(page.getByPlaceholder(/buscar cliente.../i)).toBeVisible({ timeout: 15000 })
+    await expect(customersPage.searchInput).toBeVisible({ timeout: 15000 })
 
     // Verificar que la tabla tiene las columnas correctas
-    // Nota: Los headers se renderizan como botones interactivos para ordenamiento
-    const tableContainer = page.locator('table').first()
-    await expect(tableContainer).toBeVisible()
+    await customersPage.waitForTable()
 
     // Verificar headers por su texto dentro de los botones
     await expect(page.getByRole('button', { name: 'Nombre' })).toBeVisible()

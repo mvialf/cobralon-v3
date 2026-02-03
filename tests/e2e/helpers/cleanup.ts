@@ -26,98 +26,73 @@ export const E2E_PATTERNS = {
   customer: ['E2E Test Customer', 'E2E Test No Email', 'E2E Duplicate Test', 'Test MCP'],
   project: ['Test E2E Crítico', 'E2E Test Project'],
   aftersale: ['E2E Test Aftersale', 'E2E Test Delete'],
+  payment: ['REF-TEST-', 'REF-CRITICAL-', 'REF-CLIENTE-', 'REF-E2E-'],
+  paymentMethod: ['E2E Test Method'],
 } as const
 
-/**
- * Limpia customers creados por tests E2E.
- *
- * Llama al endpoint de cleanup que borra customers cuyo nombre
- * coincida con patrones de test E2E.
- *
- * @param request - APIRequestContext de Playwright
- * @returns Número de registros eliminados
- */
-export async function cleanupE2ECustomers(request: APIRequestContext): Promise<number> {
+/** Helper interno para ejecutar cleanup contra el endpoint */
+async function executeCleanup(
+  request: APIRequestContext,
+  table: string,
+  patterns: readonly string[],
+  field?: string
+): Promise<number> {
   try {
     const response = await request.delete(`${BASE_URL}/api/test/cleanup`, {
       data: {
-        table: 'Customer',
-        patterns: E2E_PATTERNS.customer,
+        table,
+        patterns: [...patterns],
+        ...(field && { field }),
       },
     })
 
     if (!response.ok()) {
-      console.warn(`⚠️  Cleanup failed: ${response.status()} ${response.statusText()}`)
+      console.warn(`⚠️  Cleanup ${table} failed: ${response.status()} ${response.statusText()}`)
       return 0
     }
 
     const result = await response.json()
-    console.log(`🧹 Cleanup: ${result.deleted} customers eliminados`)
+    console.log(`🧹 Cleanup: ${result.deleted} ${table.toLowerCase()}s eliminados`)
     return result.deleted || 0
   } catch (error) {
-    console.warn('⚠️  Cleanup error (endpoint may not exist):', error)
+    console.warn(`⚠️  Cleanup ${table} error (endpoint may not exist):`, error)
     return 0
   }
+}
+
+/**
+ * Limpia customers creados por tests E2E.
+ */
+export async function cleanupE2ECustomers(request: APIRequestContext): Promise<number> {
+  return executeCleanup(request, 'Customer', E2E_PATTERNS.customer)
 }
 
 /**
  * Limpia projects creados por tests E2E.
- *
- * @param request - APIRequestContext de Playwright
- * @returns Número de registros eliminados
  */
 export async function cleanupE2EProjects(request: APIRequestContext): Promise<number> {
-  try {
-    const response = await request.delete(`${BASE_URL}/api/test/cleanup`, {
-      data: {
-        table: 'Project',
-        patterns: E2E_PATTERNS.project,
-        field: 'projectName',
-      },
-    })
-
-    if (!response.ok()) {
-      console.warn(`⚠️  Cleanup failed: ${response.status()} ${response.statusText()}`)
-      return 0
-    }
-
-    const result = await response.json()
-    console.log(`🧹 Cleanup: ${result.deleted} projects eliminados`)
-    return result.deleted || 0
-  } catch (error) {
-    console.warn('⚠️  Cleanup error (endpoint may not exist):', error)
-    return 0
-  }
+  return executeCleanup(request, 'Project', E2E_PATTERNS.project, 'projectName')
 }
 
 /**
  * Limpia aftersales creados por tests E2E.
- *
- * @param request - APIRequestContext de Playwright
- * @returns Número de registros eliminados
  */
 export async function cleanupE2EAftersales(request: APIRequestContext): Promise<number> {
-  try {
-    const response = await request.delete(`${BASE_URL}/api/test/cleanup`, {
-      data: {
-        table: 'Aftersale',
-        patterns: E2E_PATTERNS.aftersale,
-        field: 'description',
-      },
-    })
+  return executeCleanup(request, 'Aftersale', E2E_PATTERNS.aftersale, 'description')
+}
 
-    if (!response.ok()) {
-      console.warn(`⚠️  Cleanup failed: ${response.status()} ${response.statusText()}`)
-      return 0
-    }
+/**
+ * Limpia payments creados por tests E2E.
+ */
+export async function cleanupE2EPayments(request: APIRequestContext): Promise<number> {
+  return executeCleanup(request, 'Payment', E2E_PATTERNS.payment, 'reference')
+}
 
-    const result = await response.json()
-    console.log(`🧹 Cleanup: ${result.deleted} aftersales eliminados`)
-    return result.deleted || 0
-  } catch (error) {
-    console.warn('⚠️  Cleanup error (endpoint may not exist):', error)
-    return 0
-  }
+/**
+ * Limpia payment methods creados por tests E2E.
+ */
+export async function cleanupE2EPaymentMethods(request: APIRequestContext): Promise<number> {
+  return executeCleanup(request, 'PaymentMethod', E2E_PATTERNS.paymentMethod)
 }
 
 /**
@@ -126,18 +101,21 @@ export async function cleanupE2EAftersales(request: APIRequestContext): Promise<
  * Ejecuta cleanup de todas las tablas afectadas por tests.
  * Útil para limpiar todo antes de una sesión de tests.
  *
- * @param request - APIRequestContext de Playwright
+ * El orden importa por las relaciones FK:
+ * 1. Payments (dependen de Projects y PaymentMethods)
+ * 2. Aftersales (dependen de Projects)
+ * 3. Projects (dependen de Customers)
+ * 4. Customers
+ * 5. PaymentMethods (independiente)
  */
 export async function cleanupAllE2EData(request: APIRequestContext): Promise<void> {
   console.log('🧹 Iniciando limpieza completa de datos E2E...')
 
-  // El orden importa por las relaciones FK:
-  // 1. Aftersales (dependen de Projects)
-  // 2. Projects (dependen de Customers)
-  // 3. Customers
+  await cleanupE2EPayments(request)
   await cleanupE2EAftersales(request)
   await cleanupE2EProjects(request)
   await cleanupE2ECustomers(request)
+  await cleanupE2EPaymentMethods(request)
 
   console.log('✅ Limpieza completa')
 }

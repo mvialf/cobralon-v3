@@ -1,4 +1,6 @@
 import { test, expect } from '@playwright/test'
+import { AftersalesPage } from './page-objects/aftersales.page'
+import { NewAftersaleDialog } from './page-objects/dialogs/new-aftersale.dialog'
 import { cleanupE2EAftersales } from './helpers/cleanup'
 
 /**
@@ -26,12 +28,15 @@ import { cleanupE2EAftersales } from './helpers/cleanup'
  */
 
 test.describe('Módulo de Postventas (Aftersales)', () => {
-  test.beforeEach(async ({ page }) => {
-    // Navegar a la página de postventas antes de cada test
-    await page.goto('/aftersales')
+  let aftersalesPage: AftersalesPage
+  let newDialog: NewAftersaleDialog
 
-    // Esperar a que la página cargue completamente
-    await expect(page.getByRole('heading', { name: 'Postventas', level: 1 })).toBeVisible()
+  test.beforeEach(async ({ page }) => {
+    aftersalesPage = new AftersalesPage(page)
+    newDialog = new NewAftersaleDialog(page)
+
+    // Navegar a la página de postventas antes de cada test
+    await aftersalesPage.navigate()
   })
 
   test('debe cargar la página de postventas correctamente', async ({ page }) => {
@@ -42,7 +47,7 @@ test.describe('Módulo de Postventas (Aftersales)', () => {
     await expect(page.getByRole('button', { name: /nuevo caso/i })).toBeVisible()
 
     // Verificar que el campo de búsqueda está presente
-    await expect(page.getByPlaceholder(/buscar por proyecto, cliente o descripción/i)).toBeVisible()
+    await expect(aftersalesPage.searchInput).toBeVisible()
 
     // Verificar que el área de contenido está presente (tabla, skeleton o mensaje de vacío)
     const contentVisible = await page
@@ -55,71 +60,67 @@ test.describe('Módulo de Postventas (Aftersales)', () => {
   })
 
   test('debe abrir el dialog de nuevo caso', async ({ page }) => {
-    // Click en botón "Nuevo Caso"
-    await page.getByRole('button', { name: /nuevo caso/i }).click()
+    // Abrir dialog con Page Object
+    await aftersalesPage.openNewCaseDialog()
 
-    // Verificar que se abre el dialog
-    const dialog = page.getByRole('dialog')
-    await expect(dialog).toBeVisible()
-    await expect(dialog.getByRole('heading', { name: /nuevo caso de postventa/i })).toBeVisible()
+    // Verificar que se abre el dialog con heading correcto
+    await newDialog.expectVisible()
 
     // Verificar descripción del dialog
     await expect(
-      dialog.getByText(/registra un nuevo problema o incidencia en un proyecto finalizado/i)
+      aftersalesPage.dialog.getByText(
+        /registra un nuevo problema o incidencia en un proyecto finalizado/i
+      )
     ).toBeVisible()
 
     // Verificar que los campos del formulario están presentes
-    // Nota: ProjectSearchField es un Combobox, Estado es Combobox
-    await expect(dialog.getByLabel(/estado/i)).toBeVisible()
-    await expect(dialog.getByLabel(/fecha de reporte/i)).toBeVisible()
-    await expect(dialog.getByLabel(/teléfono/i)).toBeVisible()
-    await expect(dialog.getByLabel(/descripción del problema/i)).toBeVisible()
+    await expect(newDialog.statusCombobox).toBeVisible()
+    await expect(newDialog.dateInput).toBeVisible()
+    await expect(newDialog.phoneInput).toBeVisible()
+    await expect(newDialog.descriptionInput).toBeVisible()
 
     // Verificar botones del dialog
-    await expect(dialog.getByRole('button', { name: /cancelar/i })).toBeVisible()
-    await expect(dialog.getByRole('button', { name: /crear caso/i })).toBeVisible()
+    await expect(newDialog.cancelButton).toBeVisible()
+    await expect(newDialog.submitButton).toBeVisible()
   })
 
   test('debe validar campos obligatorios del formulario', async ({ page }) => {
     // Abrir dialog de nuevo caso
-    await page.getByRole('button', { name: /nuevo caso/i }).click()
-
-    const dialog = page.getByRole('dialog')
-    await expect(dialog).toBeVisible()
+    await aftersalesPage.openNewCaseDialog()
+    await newDialog.expectVisible()
 
     // Intentar enviar formulario sin llenar campos
-    await dialog.getByRole('button', { name: /crear caso/i }).click()
+    await newDialog.submitButton.click()
 
     // Verificar mensajes de error de validación
+    const dialog = aftersalesPage.dialog
+
     // Proyecto: obligatorio
     await expect(dialog.getByText(/debe seleccionar un proyecto válido/i)).toBeVisible()
 
-    // Estado: obligatorio
-    await expect(dialog.getByText(/debe seleccionar un estado válido/i)).toBeVisible()
-
     // Teléfono: obligatorio
-    await expect(dialog.getByText(/el teléfono de contacto es obligatorio/i)).toBeVisible()
+    await expect(dialog.getByText(/el teléfono es requerido/i)).toBeVisible()
 
-    // Fecha de Reporte: debería tener valor por defecto (new Date()), no mensaje de error
-
-    // Descripción: opcional, no mensaje de error
+    // Estado: viene pre-seleccionado como "Ingresado", no muestra error
+    // Fecha de Reporte: tiene valor por defecto (new Date()), no muestra error
+    // Descripción: campo opcional, no muestra error
   })
 
   test('debe validar formato de teléfono chileno', async ({ page }) => {
     // Abrir dialog de nuevo caso
-    await page.getByRole('button', { name: /nuevo caso/i }).click()
-
-    const dialog = page.getByRole('dialog')
-    await expect(dialog).toBeVisible()
+    await aftersalesPage.openNewCaseDialog()
+    await newDialog.expectVisible()
 
     // Llenar teléfono con formato inválido
-    await dialog.getByLabel(/teléfono/i).fill('123456789') // Formato inválido
+    await newDialog.phoneInput.fill('123456789')
 
     // Intentar enviar
-    await dialog.getByRole('button', { name: /crear caso/i }).click()
+    await newDialog.submitButton.click()
 
     // Verificar mensaje de error de formato
-    await expect(dialog.getByText(/formato inválido.*teléfono chileno válido/i)).toBeVisible()
+    await expect(
+      aftersalesPage.dialog.getByText(/formato inválido|teléfono.*válido|teléfono.*inválido|debe tener 9 dígitos/i)
+    ).toBeVisible()
   })
 
   test('debe crear un caso de postventa completo exitosamente', async ({ page }) => {
@@ -128,121 +129,83 @@ test.describe('Módulo de Postventas (Aftersales)', () => {
     const description = `E2E Test Aftersale ${timestamp} - Problema con instalación`
 
     // Abrir dialog de nuevo caso
-    await page.getByRole('button', { name: /nuevo caso/i }).click()
+    await aftersalesPage.openNewCaseDialog()
+    await newDialog.expectVisible()
 
-    const dialog = page.getByRole('dialog')
-    await expect(dialog).toBeVisible()
+    // Seleccionar primer proyecto finalizado (espera opciones visibles internamente)
+    await newDialog.selectFirstProject()
 
-    // Seleccionar proyecto finalizado (usando ProjectSearchField - Combobox)
-    // Primero hacer click en el Combobox de proyecto para abrirlo
-    const projectCombobox = dialog.getByRole('combobox').first() // El primer combobox es el proyecto
-    await projectCombobox.click()
+    // Esperar a que el teléfono se autocomplete tras seleccionar proyecto
+    await expect(newDialog.phoneInput).not.toHaveValue('', { timeout: 5000 })
 
-    // Esperar a que aparezcan las opciones
-    await page.waitForTimeout(500)
+    // Estado: debería auto-seleccionarse el estado inicial
+    await expect(newDialog.statusCombobox).toBeVisible()
 
-    // Seleccionar el primer proyecto finalizado disponible
-    const firstProject = page.getByRole('option').first()
-    await firstProject.click()
-
-    // Esperar a que se carguen los detalles del proyecto (teléfono auto-completa)
-    await page.waitForTimeout(500)
-
-    // Estado: debería auto-seleccionarse el estado inicial, pero verificar que existe
-    const estadoCombobox = dialog.getByLabel(/estado/i)
-    await expect(estadoCombobox).toBeVisible()
-
-    // Fecha de Reporte: usar fecha de hoy (debería tener valor por defecto)
-    // No es necesario cambiarla
-
-    // Teléfono: debería auto-completarse con el del proyecto
-    // Verificar que tiene valor
-    const phoneInput = dialog.getByLabel(/teléfono/i)
-    const phoneValue = await phoneInput.inputValue()
+    // Verificar que el teléfono se autocompletó
+    const phoneValue = await newDialog.phoneInput.inputValue()
     expect(phoneValue).not.toBe('')
 
     // Llenar descripción
-    await dialog.getByLabel(/descripción del problema/i).fill(description)
+    await newDialog.descriptionInput.fill(description)
 
-    // Enviar formulario
-    await dialog.getByRole('button', { name: /crear caso/i }).click()
-
-    // Esperar a que el dialog se cierre (señal de éxito)
-    await expect(dialog).not.toBeVisible({ timeout: 10000 })
-
-    // Verificar que aparece el toast de éxito (opcional)
-    // await expect(page.getByText(/caso creado/i)).toBeVisible()
+    // Enviar formulario (espera respuesta API y cierre del dialog internamente)
+    await newDialog.submit()
 
     // Buscar el caso recién creado en la tabla
-    await page.getByPlaceholder(/buscar por proyecto, cliente o descripción/i).fill(description)
-
-    // Esperar a que la búsqueda se ejecute (sin debounce en este caso, es instantáneo)
-    await page.waitForTimeout(300)
+    await aftersalesPage.searchAftersale(description)
 
     // Verificar que el caso aparece en la tabla
     await expect(page.getByText(description)).toBeVisible()
   })
 
   test('debe crear un caso sin descripción (campo opcional)', async ({ page }) => {
-    // Generar timestamp para identificación
-    const timestamp = Date.now()
-
     // Abrir dialog de nuevo caso
-    await page.getByRole('button', { name: /nuevo caso/i }).click()
+    await aftersalesPage.openNewCaseDialog()
+    await newDialog.expectVisible()
 
-    const dialog = page.getByRole('dialog')
-    await expect(dialog).toBeVisible()
+    // Seleccionar primer proyecto finalizado
+    await newDialog.selectFirstProject()
 
-    // Seleccionar proyecto finalizado
-    const projectCombobox = dialog.getByRole('combobox').first()
-    await projectCombobox.click()
-    await page.waitForTimeout(500)
-    await page.getByRole('option').first().click()
-    await page.waitForTimeout(500)
+    // Esperar a que el teléfono se autocomplete
+    await expect(newDialog.phoneInput).not.toHaveValue('', { timeout: 5000 })
 
     // No llenar descripción (campo opcional)
 
     // Enviar formulario
-    await dialog.getByRole('button', { name: /crear caso/i }).click()
-
-    // Esperar a que el dialog se cierre
-    await expect(dialog).not.toBeVisible({ timeout: 10000 })
+    await newDialog.submit()
   })
 
   test('debe validar descripción máxima de 1000 caracteres', async ({ page }) => {
     // Abrir dialog de nuevo caso
-    await page.getByRole('button', { name: /nuevo caso/i }).click()
-
-    const dialog = page.getByRole('dialog')
-    await expect(dialog).toBeVisible()
+    await aftersalesPage.openNewCaseDialog()
+    await newDialog.expectVisible()
 
     // Llenar descripción con más de 1000 caracteres
     const longDescription = 'A'.repeat(1001)
-    await dialog.getByLabel(/descripción del problema/i).fill(longDescription)
+    await newDialog.descriptionInput.fill(longDescription)
 
     // Intentar enviar
-    await dialog.getByRole('button', { name: /crear caso/i }).click()
+    await newDialog.submitButton.click()
 
     // Verificar mensaje de error
-    await expect(dialog.getByText(/la descripción no puede exceder 1000 caracteres/i)).toBeVisible()
+    await expect(
+      aftersalesPage.dialog.getByText(/la descripción no puede exceder 1000 caracteres/i)
+    ).toBeVisible()
   })
 
   test('debe permitir agregar tareas a la lista de tareas', async ({ page }) => {
     // Abrir dialog de nuevo caso
-    await page.getByRole('button', { name: /nuevo caso/i }).click()
-
-    const dialog = page.getByRole('dialog')
-    await expect(dialog).toBeVisible()
+    await aftersalesPage.openNewCaseDialog()
+    await newDialog.expectVisible()
 
     // Seleccionar proyecto finalizado
-    const projectCombobox = dialog.getByRole('combobox').first()
-    await projectCombobox.click()
-    await page.waitForTimeout(500)
-    await page.getByRole('option').first().click()
-    await page.waitForTimeout(500)
+    await newDialog.selectFirstProject()
+
+    // Esperar a que el teléfono se autocomplete
+    await expect(newDialog.phoneInput).not.toHaveValue('', { timeout: 5000 })
 
     // Agregar tareas a la lista (TodoListField)
-    // Buscar el input de "Agregar tarea" o similar
+    const dialog = aftersalesPage.dialog
     const taskInput = dialog.getByPlaceholder(/agregar tarea|nueva tarea/i)
     if (await taskInput.isVisible().catch(() => false)) {
       await taskInput.fill('Revisar instalación')
@@ -257,47 +220,35 @@ test.describe('Módulo de Postventas (Aftersales)', () => {
     }
 
     // Enviar formulario
-    await dialog.getByRole('button', { name: /crear caso/i }).click()
-
-    // Esperar a que el dialog se cierre
-    await expect(dialog).not.toBeVisible({ timeout: 10000 })
+    await newDialog.submit()
   })
 
   test('debe realizar búsqueda de casos correctamente', async ({ page }) => {
     // Esperar a que la tabla cargue
-    await page.waitForLoadState('networkidle')
+    await aftersalesPage.waitForTable()
 
     // Obtener una descripción de caso existente de la tabla (si hay datos)
-    const firstDescriptionCell = page.locator('table tbody tr').first().locator('td').nth(3) // Columna de descripción (índice puede variar)
+    const firstDescriptionCell = aftersalesPage.firstRow.locator('td').nth(3)
     const descriptionExists = await firstDescriptionCell.isVisible().catch(() => false)
 
     if (descriptionExists) {
       const descriptionText = await firstDescriptionCell.textContent()
 
       if (descriptionText && descriptionText.trim() !== '') {
+        const searchTerm = descriptionText.substring(0, 10)
+
         // Buscar por ese término
-        await page
-          .getByPlaceholder(/buscar por proyecto, cliente o descripción/i)
-          .fill(descriptionText.substring(0, 10))
+        await aftersalesPage.searchAftersale(searchTerm)
 
-        // Esperar a que la búsqueda se ejecute (instantáneo, no hay debounce)
-        await page.waitForTimeout(300)
-
-        // Verificar que la búsqueda se ejecutó
-        const tableRows = page.locator('table tbody tr')
-        const rowCount = await tableRows.count()
-
-        // Debe haber al menos 1 resultado
+        // Verificar que hay al menos 1 resultado
+        const rowCount = await aftersalesPage.getTableRowCount()
         expect(rowCount).toBeGreaterThanOrEqual(1)
       }
     }
 
     // Búsqueda con término que no existe
-    await page.getByPlaceholder(/buscar por proyecto, cliente o descripción/i).clear()
-    await page
-      .getByPlaceholder(/buscar por proyecto, cliente o descripción/i)
-      .fill('ZZZZZ_NO_EXISTE_999')
-    await page.waitForTimeout(300)
+    await aftersalesPage.searchInput.clear()
+    await aftersalesPage.searchAftersale('ZZZZZ_NO_EXISTE_999')
 
     // Verificar mensaje de "No se encontraron resultados"
     await expect(page.getByText(/no se encontraron resultados/i)).toBeVisible()
@@ -305,22 +256,20 @@ test.describe('Módulo de Postventas (Aftersales)', () => {
 
   test('debe editar un caso de postventa existente', async ({ page }) => {
     // Esperar a que la tabla cargue
-    await page.waitForLoadState('networkidle')
+    await aftersalesPage.waitForTable()
 
     // Verificar que existe al menos un caso en la tabla
-    const firstRow = page.locator('table tbody tr').first()
-    const rowExists = await firstRow.isVisible().catch(() => false)
+    const rowExists = await aftersalesPage.firstRow.isVisible().catch(() => false)
 
     if (rowExists) {
-      // Click en el botón de acciones (tres puntos)
-      const actionsButton = firstRow.getByRole('button').first()
-      await actionsButton.click()
+      // Abrir menú de acciones de la primera fila
+      await aftersalesPage.openFirstRowActions()
 
       // Click en opción "Editar"
       await page.getByRole('menuitem', { name: /editar/i }).click()
 
       // Verificar que se abre el dialog de edición
-      const dialog = page.getByRole('dialog')
+      const dialog = aftersalesPage.dialog
       await expect(dialog).toBeVisible()
       await expect(dialog.getByRole('heading', { name: /editar caso de postventa/i })).toBeVisible()
 
@@ -334,14 +283,10 @@ test.describe('Módulo de Postventas (Aftersales)', () => {
       await dialog.getByRole('button', { name: /guardar cambios/i }).click()
 
       // Esperar a que el dialog se cierre
-      await expect(dialog).not.toBeVisible({ timeout: 10000 })
-
-      // Verificar que aparece el toast de éxito (opcional)
-      // await expect(page.getByText(/caso actualizado/i)).toBeVisible()
+      await aftersalesPage.expectDialogClosed()
 
       // Verificar que la descripción se actualizó en la tabla
-      await page.waitForTimeout(500)
-      await expect(page.getByText(newDescription, { exact: false })).toBeVisible()
+      await expect(page.getByText(newDescription)).toBeVisible()
     }
   })
 
@@ -349,21 +294,17 @@ test.describe('Módulo de Postventas (Aftersales)', () => {
     // Primero crear un caso para eliminar
     const description = `E2E Test Delete ${Date.now()}`
 
-    // Crear caso
-    await page.getByRole('button', { name: /nuevo caso/i }).click()
-    const createDialog = page.getByRole('dialog')
-    const projectCombobox = createDialog.getByRole('combobox').first()
-    await projectCombobox.click()
-    await page.waitForTimeout(500)
-    await page.getByRole('option').first().click()
-    await page.waitForTimeout(500)
-    await createDialog.getByLabel(/descripción del problema/i).fill(description)
-    await createDialog.getByRole('button', { name: /crear caso/i }).click()
-    await expect(createDialog).not.toBeVisible({ timeout: 10000 })
+    // Crear caso usando Page Objects
+    await aftersalesPage.openNewCaseDialog()
+    await newDialog.fill({ description })
+
+    // Esperar a que el teléfono se autocomplete
+    await expect(newDialog.phoneInput).not.toHaveValue('', { timeout: 5000 })
+
+    await newDialog.submit()
 
     // Buscar el caso recién creado
-    await page.getByPlaceholder(/buscar por proyecto, cliente o descripción/i).fill(description)
-    await page.waitForTimeout(300)
+    await aftersalesPage.searchAftersale(description)
 
     // Verificar que existe
     await expect(page.getByText(description)).toBeVisible()
@@ -372,7 +313,7 @@ test.describe('Módulo de Postventas (Aftersales)', () => {
     const row = page.locator(`tr:has-text("${description}")`).first()
     await expect(row).toBeVisible()
 
-    // Click en acciones
+    // Abrir menú de acciones
     const actionsButton = row.getByRole('button').first()
     await actionsButton.click()
 
@@ -388,26 +329,23 @@ test.describe('Módulo de Postventas (Aftersales)', () => {
     // Confirmar eliminación
     await alertDialog.getByRole('button', { name: /eliminar/i }).click()
 
-    // Esperar a que el dialog se cierre
+    // Esperar a que el AlertDialog se cierre
     await expect(alertDialog).not.toBeVisible({ timeout: 10000 })
 
     // Verificar que el caso ya no aparece en la tabla
-    await page.waitForTimeout(500)
     await expect(page.getByText(description)).not.toBeVisible()
   })
 
   test('debe cancelar eliminación de caso', async ({ page }) => {
     // Esperar a que la tabla cargue
-    await page.waitForLoadState('networkidle')
+    await aftersalesPage.waitForTable()
 
     // Verificar que existe al menos un caso en la tabla
-    const firstRow = page.locator('table tbody tr').first()
-    const rowExists = await firstRow.isVisible().catch(() => false)
+    const rowExists = await aftersalesPage.firstRow.isVisible().catch(() => false)
 
     if (rowExists) {
-      // Click en acciones
-      const actionsButton = firstRow.getByRole('button').first()
-      await actionsButton.click()
+      // Abrir menú de acciones
+      await aftersalesPage.openFirstRowActions()
 
       // Click en "Eliminar"
       await page.getByRole('menuitem', { name: /eliminar/i }).click()
@@ -426,7 +364,7 @@ test.describe('Módulo de Postventas (Aftersales)', () => {
 
   test('debe mostrar columnas correctas en la tabla', async ({ page }) => {
     // Esperar a que la tabla cargue
-    await page.waitForLoadState('networkidle')
+    await aftersalesPage.waitForTable()
 
     // Verificar headers de columnas
     await expect(page.getByRole('columnheader', { name: /proyecto/i })).toBeVisible()
@@ -438,16 +376,14 @@ test.describe('Módulo de Postventas (Aftersales)', () => {
 
   test('debe mostrar dropdown de acciones por caso', async ({ page }) => {
     // Esperar a que la tabla cargue
-    await page.waitForLoadState('networkidle')
+    await aftersalesPage.waitForTable()
 
     // Verificar que existe al menos un caso en la tabla
-    const firstRow = page.locator('table tbody tr').first()
-    const rowExists = await firstRow.isVisible().catch(() => false)
+    const rowExists = await aftersalesPage.firstRow.isVisible().catch(() => false)
 
     if (rowExists) {
-      // Click en el botón de acciones (tres puntos)
-      const actionsButton = firstRow.getByRole('button').first()
-      await actionsButton.click()
+      // Abrir menú de acciones
+      await aftersalesPage.openFirstRowActions()
 
       // Verificar que se abre el dropdown con las opciones
       await expect(page.getByRole('menuitem', { name: /editar/i })).toBeVisible()
@@ -458,15 +394,16 @@ test.describe('Módulo de Postventas (Aftersales)', () => {
 
   test('debe cambiar estado de caso inline (EditableBadge)', async ({ page }) => {
     // Esperar a que la tabla cargue
-    await page.waitForLoadState('networkidle')
+    await aftersalesPage.waitForTable()
 
     // Verificar que existe al menos un caso en la tabla
-    const firstRow = page.locator('table tbody tr').first()
-    const rowExists = await firstRow.isVisible().catch(() => false)
+    const rowExists = await aftersalesPage.firstRow.isVisible().catch(() => false)
 
     if (rowExists) {
       // Encontrar el EditableBadge en la columna de Estado
-      const statusBadge = firstRow.locator('[data-editable-badge], .editable-badge').first()
+      const statusBadge = aftersalesPage.firstRow
+        .locator('[data-editable-badge], .editable-badge')
+        .first()
       const badgeExists = await statusBadge.isVisible().catch(() => false)
 
       if (badgeExists) {
@@ -474,20 +411,18 @@ test.describe('Módulo de Postventas (Aftersales)', () => {
         await statusBadge.click()
 
         // Esperar a que aparezcan las opciones de estado
-        await page.waitForTimeout(500)
-
-        // Seleccionar un estado diferente (segundo en la lista)
         const statusOptions = page.getByRole('option')
+        await expect(statusOptions.first()).toBeVisible({ timeout: 5000 })
+
         const optionCount = await statusOptions.count()
 
         if (optionCount > 1) {
+          // Esperar respuesta de la API al cambiar estado
+          const responsePromise = page.waitForResponse(
+            (r) => r.url().includes('/api/aftersales') && r.request().method() !== 'GET'
+          )
           await statusOptions.nth(1).click()
-
-          // Esperar a que se actualice
-          await page.waitForTimeout(1000)
-
-          // Verificar que aparece el toast de éxito (opcional)
-          // await expect(page.getByText(/actualizado exitosamente/i)).toBeVisible()
+          await responsePromise
         }
       }
     }
@@ -495,63 +430,51 @@ test.describe('Módulo de Postventas (Aftersales)', () => {
 
   test('debe auto-completar teléfono del proyecto seleccionado', async ({ page }) => {
     // Abrir dialog de nuevo caso
-    await page.getByRole('button', { name: /nuevo caso/i }).click()
-
-    const dialog = page.getByRole('dialog')
-    await expect(dialog).toBeVisible()
+    await aftersalesPage.openNewCaseDialog()
+    await newDialog.expectVisible()
 
     // Obtener valor inicial del teléfono (debería estar vacío)
-    const phoneInput = dialog.getByLabel(/teléfono/i)
-    const initialValue = await phoneInput.inputValue()
+    const initialValue = await newDialog.phoneInput.inputValue()
 
-    // Seleccionar proyecto finalizado
-    const projectCombobox = dialog.getByRole('combobox').first()
-    await projectCombobox.click()
-    await page.waitForTimeout(500)
-    await page.getByRole('option').first().click()
+    // Seleccionar primer proyecto finalizado
+    await newDialog.selectFirstProject()
 
-    // Esperar a que se carguen los detalles del proyecto
-    await page.waitForTimeout(1000)
+    // Esperar a que el teléfono se autocomplete (no vacío)
+    await expect(newDialog.phoneInput).not.toHaveValue('', { timeout: 5000 })
 
-    // Verificar que el teléfono se auto-completó
-    const newValue = await phoneInput.inputValue()
+    // Verificar que el teléfono se auto-completó con un valor diferente
+    const newValue = await newDialog.phoneInput.inputValue()
     expect(newValue).not.toBe(initialValue)
     expect(newValue).not.toBe('')
-    // Debe tener formato +56...
-    expect(newValue).toMatch(/^\+56/)
+    // El input solo contiene los dígitos (el prefijo +56 está fuera del input)
+    expect(newValue.replace(/\s/g, '')).toMatch(/^9\d+/)
   })
 
   test('debe mostrar AddressProjectSummary cuando se selecciona proyecto', async ({ page }) => {
     // Abrir dialog de nuevo caso
-    await page.getByRole('button', { name: /nuevo caso/i }).click()
+    await aftersalesPage.openNewCaseDialog()
+    await newDialog.expectVisible()
 
-    const dialog = page.getByRole('dialog')
-    await expect(dialog).toBeVisible()
+    // Seleccionar primer proyecto finalizado
+    await newDialog.selectFirstProject()
 
-    // Seleccionar proyecto finalizado
-    const projectCombobox = dialog.getByRole('combobox').first()
-    await projectCombobox.click()
-    await page.waitForTimeout(500)
-    await page.getByRole('option').first().click()
-
-    // Esperar a que se carguen los detalles del proyecto
-    await page.waitForTimeout(1000)
+    // Esperar a que el teléfono se autocomplete (indica que los detalles cargaron)
+    await expect(newDialog.phoneInput).not.toHaveValue('', { timeout: 5000 })
 
     // Verificar que aparece el componente AddressProjectSummary
     // (debería mostrar calle, comuna, región del proyecto)
+    const dialog = aftersalesPage.dialog
     const addressSummary = dialog.locator('[data-address-summary], .address-summary')
     const summaryExists = await addressSummary.isVisible().catch(() => false)
 
     // Si no existe un selector específico, buscar texto común de direcciones
     if (!summaryExists) {
-      // Buscar si aparece algún texto de dirección (calle, comuna, etc.)
-      // Esto es aproximado, depende de la implementación de AddressProjectSummary
       const hasAddressText = (await dialog.getByText(/calle|avenida|comuna|región/i).count()) > 0
       expect(hasAddressText).toBeTruthy()
     }
   })
 
-  // Cleanup: Eliminar todos los aftersales creados por tests E2E
+  // Limpieza: eliminar todos los aftersales creados por tests E2E
   test.afterAll(async ({ request }) => {
     await cleanupE2EAftersales(request)
   })

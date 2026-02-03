@@ -1,4 +1,17 @@
 import { test, expect } from '@playwright/test'
+import { PaymentsPage } from './page-objects/payments.page'
+import { PaymentToCustomerDialog } from './page-objects/dialogs/payment-to-customer.dialog'
+import {
+  createTestCustomer,
+  createTestProject,
+  ensurePaymentMethod,
+  getFirstProjectStatus,
+} from './helpers/test-data-factory'
+import {
+  cleanupE2EPayments,
+  cleanupE2EProjects,
+  cleanupE2ECustomers,
+} from './helpers/cleanup'
 
 /**
  * Tests E2E para Pago a Cliente (1:N)
@@ -11,517 +24,308 @@ import { test, expect } from '@playwright/test'
  * - Validación de suma de allocations
  * - Creación exitosa de pago distribuido
  *
- * Prerequisitos:
- * - Base de datos debe tener al menos:
- *   - 1 cliente con 2+ proyectos que tengan balance pendiente
- *   - 1 método de pago configurado (preferiblemente que requiera referencia)
- *
- * Para ejecutar:
- * - npm run test:e2e -- payment-to-customer.spec.ts
- * - npm run test:e2e:ui -- payment-to-customer.spec.ts (modo UI)
+ * Los datos de test se crean en beforeAll vía API y se limpian en afterAll.
  */
 
+// Datos compartidos entre tests, creados en beforeAll
+let customerId: string
+const CUSTOMER_NAME = 'E2E Test Customer PTC'
+
 test.describe('Pago a Cliente (1:N)', () => {
+  test.beforeAll(async ({ request }) => {
+    // Crear datos de test vía API
+    const customer = await createTestCustomer(request, { name: CUSTOMER_NAME })
+    customerId = customer.id
+
+    const status = await getFirstProjectStatus(request)
+
+    // Crear dos proyectos con balance pendiente para el cliente
+    await createTestProject(request, customerId, {
+      subtotal: 500000,
+      projectStatusId: status?.id,
+    })
+    await createTestProject(request, customerId, {
+      subtotal: 300000,
+      projectStatusId: status?.id,
+    })
+
+    // Asegurar que exista al menos un método de pago
+    await ensurePaymentMethod(request)
+  })
+
+  test.afterAll(async ({ request }) => {
+    // Limpiar datos de test en orden correcto (FK)
+    await cleanupE2EPayments(request)
+    await cleanupE2EProjects(request)
+    await cleanupE2ECustomers(request)
+  })
+
   test.beforeEach(async ({ page }) => {
     // Navegar a la página de pagos antes de cada test
-    await page.goto('/payments')
-
-    // Esperar a que la página cargue completamente
-    await expect(page.getByRole('heading', { name: /pagos/i, level: 1 })).toBeVisible()
+    const paymentsPage = new PaymentsPage(page)
+    await paymentsPage.navigate()
   })
 
   test('debe abrir el dialog de pago a cliente (1:N)', async ({ page }) => {
-    // Abrir dropdown de "Nuevo Pago"
-    await page.getByRole('button', { name: /nuevo pago/i }).click()
+    const paymentsPage = new PaymentsPage(page)
+    const ptcDialog = new PaymentToCustomerDialog(page)
 
-    // Click en opción "Pago a Cliente (1:N)"
-    await page.getByRole('menuitem', { name: /pago a cliente \(1:N\)/i }).click()
+    // Abrir dialog de pago a cliente
+    await paymentsPage.openPaymentToCustomerDialog()
 
-    // Verificar que se abre el dialog
-    const dialog = page.getByRole('dialog')
-    await expect(dialog.getByRole('heading', { name: /registrar pago a cliente/i })).toBeVisible()
-
-    // Verificar descripción del dialog
+    // Verificar que se abre el dialog con título y descripción
+    await ptcDialog.expectVisible()
     await expect(
-      dialog.getByText(/registre un pago y distribúyalo entre múltiples proyectos/i)
+      ptcDialog['dialog'].getByText(/registre un pago y distribúyalo entre múltiples proyectos/i)
     ).toBeVisible()
 
     // Verificar campos iniciales
-    await expect(dialog.getByRole('combobox', { name: /cliente/i })).toBeVisible()
-    await expect(dialog.getByLabel(/monto total del pago/i)).toBeVisible()
-    await expect(dialog.getByLabel(/fecha del pago/i)).toBeVisible()
+    await expect(ptcDialog.customerCombobox).toBeVisible()
+    await expect(ptcDialog.amountInput).toBeVisible()
 
-    // Nota: Los tabs de distribución (FIFO/Manual) solo aparecen DESPUÉS de:
-    // 1. Seleccionar un cliente
-    // 2. Que el cliente tenga proyectos con balance
-    // 3. Ingresar un monto > 0
+    // Nota: Los tabs de distribución solo aparecen DESPUÉS de seleccionar cliente con proyectos
 
     // Verificar botón de submit (debe estar deshabilitado inicialmente)
-    const submitButton = dialog.getByRole('button', { name: /registrar pago/i })
-    await expect(submitButton).toBeVisible()
-    await expect(submitButton).toBeDisabled()
+    await expect(ptcDialog.submitButton).toBeVisible()
+    await expect(ptcDialog.submitButton).toBeDisabled()
   })
 
   test('debe buscar y seleccionar un cliente', async ({ page }) => {
+    const paymentsPage = new PaymentsPage(page)
+    const ptcDialog = new PaymentToCustomerDialog(page)
+
     // Abrir dialog
-    await page.getByRole('button', { name: /nuevo pago/i }).click()
-    await page.getByRole('menuitem', { name: /pago a cliente \(1:N\)/i }).click()
+    await paymentsPage.openPaymentToCustomerDialog()
 
-    const dialog = page.getByRole('dialog')
-
-    // Click en combobox de cliente
-    const customerCombobox = dialog.getByRole('combobox', { name: /cliente/i })
-    await customerCombobox.click()
-
-    // Buscar cliente (mínimo 2 caracteres para activar búsqueda)
-    await page.keyboard.type('cli')
-
-    // Esperar debounce (300ms) + tiempo de respuesta del API
-    await page.waitForTimeout(800)
-
-    // Verificar si hay opciones disponibles
-    const options = page.locator('[role="option"]')
-    const optionsCount = await options.count()
-
-    if (optionsCount === 0) {
-      console.log('⚠️  No se encontraron clientes - verifica que existan clientes en la DB')
-      return
-    }
-
-    // Seleccionar el primer cliente
-    const firstOption = options.first()
-    await expect(firstOption).toBeVisible({ timeout: 5000 })
-    await firstOption.click()
+    // Buscar nuestro cliente E2E por nombre
+    await ptcDialog.selectCustomer(CUSTOMER_NAME)
 
     // Verificar que se muestra el card de cliente seleccionado
-    await expect(dialog.getByText(/cliente seleccionado/i)).toBeVisible({ timeout: 3000 })
+    await expect(ptcDialog.clienteSeleccionadoText).toBeVisible({ timeout: 5000 })
 
-    // Esperar a que carguen los proyectos del cliente
-    await page.waitForTimeout(1000)
+    // Verificar que se muestra info sobre proyectos del cliente
+    // El cliente tiene 2 proyectos con balance, así que se muestra la sección de distribución
+    const distributionSection = ptcDialog['dialog'].getByText(/distribución del pago/i)
+    const noProjects = ptcDialog['dialog'].getByText(/no tiene proyectos con saldo pendiente/i)
 
-    // Verificar que se muestra info sobre proyectos (o mensaje de error si no hay)
-    const hasProjects = await dialog
-      .getByText(/proyecto.*con balance pendiente/i)
-      .isVisible()
-      .catch(() => false)
+    const hasDistribution = await distributionSection.isVisible().catch(() => false)
+    const hasNoProjects = await noProjects.isVisible().catch(() => false)
 
-    const noProjects = await dialog
-      .getByText(/no tiene proyectos con balance pendiente/i)
-      .isVisible()
-      .catch(() => false)
-
-    expect(hasProjects || noProjects).toBeTruthy()
+    expect(hasDistribution || hasNoProjects).toBeTruthy()
   })
 
   test.describe('Distribución FIFO Automática', () => {
     test('flujo completo con distribución FIFO', async ({ page }) => {
+      const paymentsPage = new PaymentsPage(page)
+      const ptcDialog = new PaymentToCustomerDialog(page)
+
       // PASO 1: Abrir dialog
-      await page.getByRole('button', { name: /nuevo pago/i }).click()
-      await page.getByRole('menuitem', { name: /pago a cliente \(1:N\)/i }).click()
+      await paymentsPage.openPaymentToCustomerDialog()
+      await ptcDialog.expectVisible()
 
-      const dialog = page.getByRole('dialog')
-      await expect(dialog.getByRole('heading', { name: /registrar pago a cliente/i })).toBeVisible()
-
-      // PASO 2: Seleccionar cliente
-      const customerCombobox = dialog.getByRole('combobox', { name: /cliente/i })
-      await customerCombobox.click()
-
-      await page.keyboard.type('cli')
-      await page.waitForTimeout(800)
-
-      const options = page.locator('[role="option"]')
-      const optionsCount = await options.count()
-
-      if (optionsCount === 0) {
-        console.log('⚠️  No hay clientes en la base de datos - skipping test')
-        return
-      }
-
-      const firstOption = options.first()
-      await expect(firstOption).toBeVisible({ timeout: 5000 })
-      await firstOption.click()
-
-      // Esperar a que carguen proyectos
-      await page.waitForTimeout(1000)
-
-      // Verificar si el cliente tiene proyectos
-      const hasProjects = await dialog
-        .getByText(/proyecto.*con balance pendiente/i)
-        .isVisible()
-        .catch(() => false)
-
-      if (!hasProjects) {
-        console.log('⚠️  El cliente no tiene proyectos con balance - skipping test')
-        return
-      }
+      // PASO 2: Seleccionar cliente E2E
+      await ptcDialog.selectCustomer(CUSTOMER_NAME)
 
       // PASO 3: Ingresar monto total
-      const amountInput = dialog.getByLabel(/monto total del pago/i)
-      await amountInput.fill('500000')
+      await ptcDialog.amountInput.fill('500000')
 
-      // PASO 4: Seleccionar fecha (usar la fecha por defecto - hoy)
-      // No hacer nada, la fecha por defecto es hoy
+      // PASO 4: Seleccionar método de pago
+      await ptcDialog.selectFirstPaymentMethod()
 
-      // PASO 5: Seleccionar método de pago
-      const paymentMethodSelect = dialog.getByRole('combobox', { name: /método de pago/i })
-      await paymentMethodSelect.click()
-
-      const paymentOptions = page.locator('[role="option"]')
-      const firstPaymentMethod = paymentOptions.first()
-      await expect(firstPaymentMethod).toBeVisible({ timeout: 3000 })
-      await firstPaymentMethod.click()
-
-      // PASO 6: Esperar a que aparezca el campo de referencia (si el método lo requiere)
-      await page.waitForTimeout(500)
-
-      const referenceInput = dialog.getByLabel(/referencia/i)
-      if (await referenceInput.isVisible()) {
-        await referenceInput.fill('REF-CLIENTE-FIFO-001')
+      // PASO 5: Llenar referencia si es visible
+      if (await ptcDialog.referenceInput.isVisible()) {
+        await ptcDialog.referenceInput.fill('REF-E2E-FIFO-001')
       }
 
-      // PASO 7: Calcular distribución FIFO
-      // Verificar que el tab FIFO está seleccionado por defecto
-      await expect(dialog.getByRole('tab', { name: /fifo automático/i })).toHaveAttribute(
-        'data-state',
-        'active'
-      )
+      // PASO 6: Verificar que el tab FIFO está seleccionado por defecto
+      await expect(ptcDialog.fifoTab).toHaveAttribute('data-state', 'active')
 
-      // Click en botón "Calcular Distribución FIFO"
-      const fifoButton = dialog.getByRole('button', { name: /calcular distribución fifo/i })
-      await expect(fifoButton).toBeVisible()
-      await fifoButton.click()
+      // PASO 7: Calcular distribución FIFO (espera automáticamente la tabla)
+      await ptcDialog.calculateFIFO()
 
-      // PASO 8: Verificar que se generó la tabla de allocations
-      await page.waitForTimeout(500)
-
-      const allocationTable = dialog.locator('table')
-      await expect(allocationTable).toBeVisible({ timeout: 3000 })
-
-      // Verificar headers de la tabla
+      // PASO 8: Verificar headers de la tabla de allocations
+      const dialog = ptcDialog['dialog']
       await expect(dialog.getByRole('columnheader', { name: /proyecto/i })).toBeVisible()
       await expect(dialog.getByRole('columnheader', { name: /balance/i })).toBeVisible()
       await expect(dialog.getByRole('columnheader', { name: /monto asignado/i })).toBeVisible()
 
-      // PASO 9: Verificar validación visual (debe estar en verde)
-      const validationCard = dialog.locator('.border-green-500')
-      await expect(validationCard).toBeVisible({ timeout: 3000 })
+      // PASO 9: Verificar validación visual (distribución correcta)
+      await ptcDialog.expectAllocationValid()
 
-      // Verificar que muestra "Total del pago" y "Total asignado"
-      await expect(dialog.getByText(/total del pago/i)).toBeVisible()
-      await expect(dialog.getByText(/total asignado/i)).toBeVisible()
-
-      // PASO 10: (Opcional) Agregar notas
-      const notesTextarea = dialog.getByLabel(/notas/i)
-      if (await notesTextarea.isVisible()) {
-        await notesTextarea.fill('Pago distribuido automáticamente con FIFO - Test E2E Playwright')
+      // PASO 10: Agregar notas (opcional)
+      if (await ptcDialog.notesTextarea.isVisible()) {
+        await ptcDialog.notesTextarea.fill('Pago distribuido automáticamente con FIFO - Test E2E')
       }
 
-      // PASO 11: Tomar screenshot antes de enviar
-      await page.screenshot({ path: 'test-results/payment-customer-fifo-filled.png' })
+      // PASO 11: Verificar que el botón submit está habilitado
+      await expect(ptcDialog.submitButton).toBeEnabled({ timeout: 3000 })
 
-      // PASO 12: Verificar que el botón submit está habilitado
-      const submitButton = dialog.getByRole('button', { name: /registrar pago/i })
-      await expect(submitButton).toBeEnabled({ timeout: 3000 })
+      // PASO 12: Enviar formulario (espera respuesta del API y cierre del dialog)
+      await ptcDialog.submit()
 
-      // PASO 13: Enviar formulario
-      await submitButton.click()
-
-      // PASO 14: Verificar éxito
-      // Esperar a que el dialog se cierre
-      await expect(dialog).not.toBeVisible({ timeout: 10000 })
-
-      // Verificar toast de éxito
+      // PASO 13: Verificar toast de éxito
       await expect(page.locator('text=/pago registrado|éxito|exitoso|distribuido/i')).toBeVisible({
         timeout: 5000,
       })
-
-      // Verificar que el nuevo pago aparece en la tabla
-      await page.waitForTimeout(1500)
-      const hasReference = await referenceInput.isVisible().catch(() => false)
-      if (hasReference) {
-        await expect(page.getByText('REF-CLIENTE-FIFO-001')).toBeVisible({ timeout: 5000 })
-      }
-
-      // Tomar screenshot final
-      await page.screenshot({ path: 'test-results/payment-customer-fifo-success.png' })
     })
   })
 
   test.describe('Distribución Manual', () => {
     test('flujo completo con distribución manual', async ({ page }) => {
+      const paymentsPage = new PaymentsPage(page)
+      const ptcDialog = new PaymentToCustomerDialog(page)
+      const dialog = ptcDialog['dialog']
+
       // PASO 1: Abrir dialog
-      await page.getByRole('button', { name: /nuevo pago/i }).click()
-      await page.getByRole('menuitem', { name: /pago a cliente \(1:N\)/i }).click()
+      await paymentsPage.openPaymentToCustomerDialog()
 
-      const dialog = page.getByRole('dialog')
-
-      // PASO 2: Seleccionar cliente
-      const customerCombobox = dialog.getByRole('combobox', { name: /cliente/i })
-      await customerCombobox.click()
-
-      await page.keyboard.type('cli')
-      await page.waitForTimeout(800)
-
-      const options = page.locator('[role="option"]')
-      const optionsCount = await options.count()
-
-      if (optionsCount === 0) {
-        console.log('⚠️  No hay clientes - skipping test')
-        return
-      }
-
-      await options.first().click()
-      await page.waitForTimeout(1000)
-
-      const hasProjects = await dialog
-        .getByText(/proyecto.*con balance pendiente/i)
-        .isVisible()
-        .catch(() => false)
-
-      if (!hasProjects) {
-        console.log('⚠️  Cliente sin proyectos - skipping test')
-        return
-      }
+      // PASO 2: Seleccionar cliente E2E
+      await ptcDialog.selectCustomer(CUSTOMER_NAME)
 
       // PASO 3: Ingresar monto total
-      const amountInput = dialog.getByLabel(/monto total del pago/i)
-      await amountInput.fill('300000')
+      await ptcDialog.amountInput.fill('300000')
 
       // PASO 4: Seleccionar método de pago
-      const paymentMethodSelect = dialog.getByRole('combobox', { name: /método de pago/i })
-      await paymentMethodSelect.click()
-      await page.locator('[role="option"]').first().click()
+      await ptcDialog.selectFirstPaymentMethod()
 
-      await page.waitForTimeout(500)
-
-      const referenceInput = dialog.getByLabel(/referencia/i)
-      if (await referenceInput.isVisible()) {
-        await referenceInput.fill('REF-CLIENTE-MANUAL-001')
+      // Llenar referencia si es visible
+      if (await ptcDialog.referenceInput.isVisible()) {
+        await ptcDialog.referenceInput.fill('REF-E2E-MANUAL-001')
       }
 
       // PASO 5: Cambiar a tab "Distribución Manual"
-      const manualTab = dialog.getByRole('tab', { name: /distribución manual/i })
-      await manualTab.click()
-
-      // Verificar que el tab está activo
-      await expect(manualTab).toHaveAttribute('data-state', 'active')
+      await ptcDialog.manualTab.click()
+      await expect(ptcDialog.manualTab).toHaveAttribute('data-state', 'active')
 
       // PASO 6: Agregar primer proyecto manualmente
-      // Verificar que existe el combobox para agregar proyectos
-      const projectComboboxes = dialog.getByRole('combobox').all()
-      // El primer combobox es para cliente, el segundo es para agregar proyectos
-      const addProjectCombobox = (await projectComboboxes)[2] // 0: cliente, 1: método pago, 2: agregar proyecto
-
-      if (!addProjectCombobox) {
-        console.log('⚠️  No se encontró el combobox de proyectos')
-        return
-      }
+      // Comboboxes en el dialog: 0=cliente, 1=método pago, 2=agregar proyecto
+      const allComboboxes = await dialog.getByRole('combobox').all()
+      const addProjectCombobox = allComboboxes[2] // Tercer combobox: selector de proyectos
 
       await addProjectCombobox.click()
 
       // Esperar a que se muestren los proyectos disponibles
-      await page.waitForTimeout(500)
-
       const projectOptions = page.locator('[role="option"]')
-      const projectCount = await projectOptions.count()
-
-      if (projectCount === 0) {
-        console.log('⚠️  No hay proyectos disponibles para agregar')
-        return
-      }
+      await expect(projectOptions.first()).toBeVisible({ timeout: 5000 })
 
       // Seleccionar el primer proyecto
       await projectOptions.first().click()
 
       // PASO 7: Verificar que apareció la tabla con el proyecto
-      await page.waitForTimeout(500)
-      const allocationTable = dialog.locator('table')
-      await expect(allocationTable).toBeVisible()
+      await expect(ptcDialog.allocationTable).toBeVisible({ timeout: 5000 })
 
       // PASO 8: Ingresar monto asignado al primer proyecto
-      // Buscar el input de monto dentro de la tabla
-      const amountInputs = allocationTable.locator('input[type="number"]')
+      const amountInputs = ptcDialog.allocationTable.locator('input[type="number"]')
       const firstAmountInput = amountInputs.first()
       await firstAmountInput.fill('150000')
 
-      // PASO 9: Agregar segundo proyecto (si hay más disponibles)
-      await page.waitForTimeout(300)
+      // PASO 9: Agregar segundo proyecto
       await addProjectCombobox.click()
-      await page.waitForTimeout(300)
+      await expect(page.locator('[role="option"]').first()).toBeVisible({ timeout: 5000 })
 
-      const remainingProjects = await page.locator('[role="option"]').count()
+      const remainingCount = await page.locator('[role="option"]').count()
 
-      if (remainingProjects > 0) {
+      if (remainingCount > 0) {
         await page.locator('[role="option"]').first().click()
-        await page.waitForTimeout(300)
+        // Esperar a que aparezca el segundo input en la tabla
+        await expect(amountInputs.nth(1)).toBeVisible({ timeout: 5000 })
 
-        // Ingresar monto para el segundo proyecto
-        const secondAmountInput = amountInputs.nth(1)
-        await secondAmountInput.fill('150000')
+        // Ingresar monto para el segundo proyecto (150000 + 150000 = 300000)
+        await amountInputs.nth(1).fill('150000')
       } else {
-        // Si no hay más proyectos, ajustar el primer monto al total
+        // Si no hay más proyectos, ajustar al total
         await firstAmountInput.fill('300000')
       }
 
-      // PASO 10: Verificar validación visual (debe estar en verde cuando suma es correcta)
-      await page.waitForTimeout(500)
-
-      // Buscar el card de validación (debería estar verde si la suma es correcta)
-      const validationCard = dialog.locator('.border-green-500, .border-red-500')
-      await expect(validationCard).toBeVisible()
-
-      // Verificar que muestra los totales
-      await expect(dialog.getByText(/total del pago/i)).toBeVisible()
-      await expect(dialog.getByText(/total asignado/i)).toBeVisible()
+      // PASO 10: Verificar validación visual (textos de totales)
+      await ptcDialog.expectAllocationValid()
       await expect(dialog.getByText(/diferencia/i)).toBeVisible()
 
-      // PASO 11: Tomar screenshot
-      await page.screenshot({ path: 'test-results/payment-customer-manual-filled.png' })
+      // PASO 11: Verificar que el botón submit está habilitado
+      await expect(ptcDialog.submitButton).toBeEnabled()
 
-      // PASO 12: Enviar formulario (solo si la suma es correcta - verde)
-      const isValid = await dialog
-        .locator('.border-green-500')
-        .isVisible()
-        .catch(() => false)
+      // PASO 12: Enviar formulario
+      await ptcDialog.submit()
 
-      if (!isValid) {
-        console.log('⚠️  La suma de allocations no es válida - test parcial completado')
-        return
-      }
-
-      const submitButton = dialog.getByRole('button', { name: /registrar pago/i })
-      await expect(submitButton).toBeEnabled()
-      await submitButton.click()
-
-      // PASO 13: Verificar éxito
-      await expect(dialog).not.toBeVisible({ timeout: 10000 })
-
+      // PASO 13: Verificar toast de éxito
       await expect(page.locator('text=/pago registrado|éxito|exitoso|distribuido/i')).toBeVisible({
         timeout: 5000,
       })
-
-      await page.screenshot({ path: 'test-results/payment-customer-manual-success.png' })
     })
   })
 
   test.describe('Validaciones', () => {
     test('debe validar que la suma de allocations sea igual al monto total', async ({ page }) => {
+      const paymentsPage = new PaymentsPage(page)
+      const ptcDialog = new PaymentToCustomerDialog(page)
+      const dialog = ptcDialog['dialog']
+
       // Abrir dialog
-      await page.getByRole('button', { name: /nuevo pago/i }).click()
-      await page.getByRole('menuitem', { name: /pago a cliente \(1:N\)/i }).click()
+      await paymentsPage.openPaymentToCustomerDialog()
 
-      const dialog = page.getByRole('dialog')
-
-      // Seleccionar cliente
-      const customerCombobox = dialog.getByRole('combobox', { name: /cliente/i })
-      await customerCombobox.click()
-      await page.keyboard.type('cli')
-      await page.waitForTimeout(800)
-
-      const optionsCount = await page.locator('[role="option"]').count()
-      if (optionsCount === 0) {
-        console.log('⚠️  No hay clientes - skipping test')
-        return
-      }
-
-      await page.locator('[role="option"]').first().click()
-      await page.waitForTimeout(1000)
-
-      const hasProjects = await dialog
-        .getByText(/proyecto.*con balance pendiente/i)
-        .isVisible()
-        .catch(() => false)
-
-      if (!hasProjects) {
-        console.log('⚠️  Cliente sin proyectos - skipping test')
-        return
-      }
+      // Seleccionar cliente E2E
+      await ptcDialog.selectCustomer(CUSTOMER_NAME)
 
       // Ingresar monto total
-      await dialog.getByLabel(/monto total del pago/i).fill('1000000')
+      await ptcDialog.amountInput.fill('1000000')
 
       // Seleccionar método de pago
-      await dialog.getByRole('combobox', { name: /método de pago/i }).click()
-      await page.locator('[role="option"]').first().click()
+      await ptcDialog.selectFirstPaymentMethod()
 
-      // Calcular FIFO
-      await dialog.getByRole('button', { name: /calcular distribución fifo/i }).click()
-      await page.waitForTimeout(500)
+      // Calcular FIFO (espera la tabla automáticamente)
+      await ptcDialog.calculateFIFO()
 
       // Verificar que hay tabla de allocations
-      const allocationTable = dialog.locator('table')
-      await expect(allocationTable).toBeVisible()
+      await expect(ptcDialog.allocationTable).toBeVisible()
 
       // MODIFICAR un monto manualmente para que NO coincida con el total
-      const amountInputs = allocationTable.locator('input[type="number"]')
+      const amountInputs = ptcDialog.allocationTable.locator('input[type="number"]')
       const firstInput = amountInputs.first()
-      await firstInput.fill('999999') // Un valor incorrecto
+      await firstInput.fill('999999')
 
-      // Esperar a que se actualice la validación
-      await page.waitForTimeout(500)
+      // Verificar que el texto de validación muestra error (falta asignar o sobrepasado)
+      await ptcDialog.expectAllocationInvalid()
 
-      // Verificar que el card de validación está ROJO
-      const redCard = dialog.locator('.border-red-500')
-      await expect(redCard).toBeVisible()
-
-      // Verificar que muestra mensaje de diferencia
-      await expect(dialog.locator('text=/falta asignar|sobrepasado/i')).toBeVisible()
+      // Verificar mensaje de diferencia con texto rojo
+      await expect(dialog.getByText(/falta asignar|sobrepasado/i)).toBeVisible()
 
       // Verificar que el botón submit está DESHABILITADO
-      const submitButton = dialog.getByRole('button', { name: /registrar pago/i })
-      await expect(submitButton).toBeDisabled()
-
-      // Tomar screenshot de la validación fallida
-      await page.screenshot({ path: 'test-results/payment-customer-validation-error.png' })
+      await expect(ptcDialog.submitButton).toBeDisabled()
     })
 
     test('debe deshabilitar campos hasta seleccionar cliente', async ({ page }) => {
-      // Abrir dialog
-      await page.getByRole('button', { name: /nuevo pago/i }).click()
-      await page.getByRole('menuitem', { name: /pago a cliente \(1:N\)/i }).click()
+      const paymentsPage = new PaymentsPage(page)
+      const ptcDialog = new PaymentToCustomerDialog(page)
 
-      const dialog = page.getByRole('dialog')
+      // Abrir dialog
+      await paymentsPage.openPaymentToCustomerDialog()
 
       // Verificar que el campo de monto está DESHABILITADO sin cliente seleccionado
-      const amountInput = dialog.getByLabel(/monto total del pago/i)
-      await expect(amountInput).toBeDisabled()
+      await expect(ptcDialog.amountInput).toBeDisabled()
 
-      // Verificar que el botón FIFO no existe aún (no hay cliente seleccionado)
-      const fifoButton = dialog.getByRole('button', { name: /calcular distribución fifo/i })
-      await expect(fifoButton).not.toBeVisible()
+      // Verificar que el botón FIFO no existe aún
+      await expect(ptcDialog.calculateFifoButton).not.toBeVisible()
 
-      // Seleccionar un cliente
-      const customerCombobox = dialog.getByRole('combobox', { name: /cliente/i })
-      await customerCombobox.click()
-      await page.keyboard.type('cli')
-      await page.waitForTimeout(800)
-
-      const optionsCount = await page.locator('[role="option"]').count()
-      if (optionsCount === 0) {
-        console.log('⚠️  No hay clientes - test parcial completado')
-        return
-      }
-
-      await page.locator('[role="option"]').first().click()
-      await page.waitForTimeout(1000)
+      // Seleccionar cliente E2E
+      await ptcDialog.selectCustomer(CUSTOMER_NAME)
 
       // Verificar que ahora el campo de monto está HABILITADO
-      await expect(amountInput).toBeEnabled()
+      await expect(ptcDialog.amountInput).toBeEnabled()
     })
   })
 
   test.describe('Cancelación', () => {
     test('debe cancelar la creación con Escape', async ({ page }) => {
-      // Abrir dialog
-      await page.getByRole('button', { name: /nuevo pago/i }).click()
-      await page.getByRole('menuitem', { name: /pago a cliente \(1:N\)/i }).click()
+      const paymentsPage = new PaymentsPage(page)
+      const ptcDialog = new PaymentToCustomerDialog(page)
+      const dialog = ptcDialog['dialog']
 
-      const dialog = page.getByRole('dialog')
-      await expect(dialog).toBeVisible()
+      // Abrir dialog
+      await paymentsPage.openPaymentToCustomerDialog()
+      await ptcDialog.expectVisible()
 
       // Presionar Escape para cerrar (puede necesitar 2 veces si hay popovers abiertos)
       await page.keyboard.press('Escape')
-      await page.waitForTimeout(300)
 
       // Si el dialog sigue visible, presionar Escape de nuevo
       const isStillVisible = await dialog.isVisible().catch(() => false)
@@ -534,49 +338,32 @@ test.describe('Pago a Cliente (1:N)', () => {
     })
 
     test('debe limpiar datos al cerrar y reabrir', async ({ page }) => {
-      // Abrir dialog
-      await page.getByRole('button', { name: /nuevo pago/i }).click()
-      await page.getByRole('menuitem', { name: /pago a cliente \(1:N\)/i }).click()
+      const paymentsPage = new PaymentsPage(page)
+      const ptcDialog = new PaymentToCustomerDialog(page)
+      const dialog = ptcDialog['dialog']
 
-      const dialog = page.getByRole('dialog')
+      // Abrir dialog y seleccionar un cliente
+      await paymentsPage.openPaymentToCustomerDialog()
+      await ptcDialog.selectCustomer(CUSTOMER_NAME)
 
-      // Seleccionar un cliente
-      const customerCombobox = dialog.getByRole('combobox', { name: /cliente/i })
-      await customerCombobox.click()
-      await page.keyboard.type('cli')
-      await page.waitForTimeout(800)
-
-      const optionsCount = await page.locator('[role="option"]').count()
-      if (optionsCount > 0) {
-        await page.locator('[role="option"]').first().click()
-        await page.waitForTimeout(500)
-      }
-
-      // Cerrar dialog (asegurarse de que todos los popovers estén cerrados primero)
+      // Cerrar dialog (Escape puede cerrar un popover primero, luego el dialog)
       await page.keyboard.press('Escape')
-      await page.waitForTimeout(300)
 
-      // Si el dialog sigue visible (porque cerró un popover), presionar Escape de nuevo
       const isStillVisible = await dialog.isVisible().catch(() => false)
       if (isStillVisible) {
         await page.keyboard.press('Escape')
-        await page.waitForTimeout(300)
       }
 
       await expect(dialog).not.toBeVisible({ timeout: 3000 })
 
       // Reabrir dialog
-      await page.getByRole('button', { name: /nuevo pago/i }).click()
-      await page.getByRole('menuitem', { name: /pago a cliente \(1:N\)/i }).click()
+      await paymentsPage.openPaymentToCustomerDialog()
 
-      // Verificar que el combobox de cliente está vacío
-      // (puede tener placeholder pero no valor seleccionado)
-      const reopenedCombobox = dialog.getByRole('combobox', { name: /cliente/i })
-      await expect(reopenedCombobox).toBeVisible()
+      // Verificar que el combobox de cliente está vacío (sin valor seleccionado)
+      await expect(ptcDialog.customerCombobox).toBeVisible()
 
-      // Verificar que no hay tabla de allocations
-      const allocationTable = dialog.locator('table')
-      await expect(allocationTable).not.toBeVisible()
+      // Verificar que no hay tabla de allocations (datos limpiados)
+      await expect(ptcDialog.allocationTable).not.toBeVisible()
     })
   })
 })
