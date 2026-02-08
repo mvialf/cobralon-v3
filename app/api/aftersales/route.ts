@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
-import { withLogging } from '@/lib/logger-middleware'
 import { withApiHandler, BusinessError } from '@/lib/api-handler'
 import {
   createAftersaleApiSchema,
@@ -13,8 +12,8 @@ import { getRegionByCodigo } from '@/lib/regiones-chile'
  *
  * Obtiene todos los casos de postventa con información de proyecto y estado
  */
-export const GET = withLogging(async (_request, logger) => {
-  try {
+export const GET = withApiHandler(
+  async () => {
     const aftersales = await prisma.aftersale.findMany({
       relationLoadStrategy: 'join',
       orderBy: {
@@ -49,11 +48,9 @@ export const GET = withLogging(async (_request, logger) => {
     })
 
     return NextResponse.json({ aftersales })
-  } catch (error) {
-    logger.error({ err: error }, 'Error fetching aftersales')
-    return NextResponse.json({ error: 'Error al obtener los casos de postventa' }, { status: 500 })
-  }
-})
+  },
+  { fallbackError: 'Error al obtener los casos de postventa' }
+)
 
 /**
  * POST /api/aftersales

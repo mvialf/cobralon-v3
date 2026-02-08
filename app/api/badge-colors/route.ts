@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
-import { withLogging } from '@/lib/logger-middleware'
+import { withApiHandler } from '@/lib/api-handler'
 
 /**
  * GET /api/badge-colors
@@ -9,26 +9,9 @@ import { withLogging } from '@/lib/logger-middleware'
  *
  * Query params:
  * - includeInactive: "true" para incluir colores inactivos (default: false)
- *
- * Response:
- * ```json
- * {
- *   "badgeColors": [
- *     {
- *       "id": "uuid",
- *       "name": "Azul",
- *       "key": "blue",
- *       "bgClass": "bg-blue-500",
- *       "textClass": "text-white",
- *       "order": 6,
- *       "isActive": true
- *     }
- *   ]
- * }
- * ```
  */
-export const GET = withLogging(async (request, logger) => {
-  try {
+export const GET = withApiHandler(
+  async (request) => {
     const { searchParams } = new URL(request.url)
     const includeInactive = searchParams.get('includeInactive') === 'true'
 
@@ -47,8 +30,6 @@ export const GET = withLogging(async (request, logger) => {
     })
 
     return NextResponse.json({ badgeColors })
-  } catch (error) {
-    logger.error({ err: error }, 'Error fetching badge colors')
-    return NextResponse.json({ error: 'Error al obtener los colores de badge' }, { status: 500 })
-  }
-})
+  },
+  { fallbackError: 'Error al obtener los colores de badge' }
+)

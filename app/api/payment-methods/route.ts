@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
-import { withLogging } from '@/lib/logger-middleware'
 import { withApiHandler, BusinessError } from '@/lib/api-handler'
 import {
   paymentMethodSchema,
@@ -11,8 +10,8 @@ import {
  * GET /api/payment-methods
  * Lista todos los métodos de pago ordenados por orden
  */
-export const GET = withLogging(async (_request, logger) => {
-  try {
+export const GET = withApiHandler(
+  async () => {
     const paymentMethods = await prisma.paymentMethod.findMany({
       orderBy: [{ active: 'desc' }, { order: 'asc' }, { name: 'asc' }],
       include: {
@@ -23,11 +22,9 @@ export const GET = withLogging(async (_request, logger) => {
     })
 
     return NextResponse.json({ paymentMethods })
-  } catch (error) {
-    logger.error({ err: error }, 'Error fetching payment methods')
-    return NextResponse.json({ error: 'Error al obtener los métodos de pago' }, { status: 500 })
-  }
-})
+  },
+  { fallbackError: 'Error al obtener los métodos de pago' }
+)
 
 /**
  * POST /api/payment-methods
