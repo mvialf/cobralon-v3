@@ -12,6 +12,11 @@ import {
 import { calculateProjectTotal } from '@/lib/business-logic/totals'
 import { FINANCIAL } from '@/lib/constants/financial-constants'
 import type { ProjectListFilters } from '@/types/project-list'
+import { withApiHandler, BusinessError } from '@/lib/api-handler'
+import {
+  createProjectApiSchema,
+  type CreateProjectApiBody,
+} from '@/lib/validations/project-validations'
 
 /**
  * Zod schema for projectState validation
@@ -170,175 +175,102 @@ export const GET = withLogging(async (request, logger) => {
  *
  * Crea un nuevo proyecto
  *
- * Body:
- *   - customerId: string (requerido)
- *   - projectNumber: string (requerido)
- *   - projectName: string (opcional)
- *   - phone: string (requerido)
- *   - projectStatusId: string (opcional - FK a ProjectStatus)
- *   - date: ISO date string
- *   - subtotal: number (requerido)
- *   - taxRate: number (default: 19)
- *   - total: number (calculado)
- *   - windowsCount: number (default: 0)
- *   - squareMeters: number (default: 0)
- *   - description: string (opcional)
+ * Body validado con createProjectApiSchema:
+ *   - customerId, projectNumber, phone, street, comuna, region (requeridos)
+ *   - projectName, projectStatusId, description (opcionales)
+ *   - date: ISO date string (coerced a Date)
+ *   - subtotal: number positivo (requerido)
+ *   - taxRate: number 0-100 (default: 19)
+ *   - totalAmount: ignorado, recalculado en servidor
  */
-export const POST = withLogging(async (request, logger) => {
-  const body = await request.json()
-  const {
-    customerId,
-    projectNumber,
-    projectName,
-    phone,
-    street,
-    apartment,
-    comuna,
-    region,
-    projectStatusId,
-    date,
-    subtotal,
-    taxRate,
-    total: _clientTotal, // Ignorado: siempre calculamos en servidor por seguridad
-    totalAmount,
-    currency,
-    windowsCount,
-    squareMeters,
-    description,
-    uninstallTagIds,
-  } = body
+export const POST = withApiHandler<CreateProjectApiBody>(
+  async (_request, logger, { body }) => {
+    const {
+      customerId,
+      projectNumber,
+      projectName,
+      phone,
+      street,
+      apartment,
+      comuna,
+      region,
+      projectStatusId,
+      date,
+      subtotal,
+      taxRate,
+      totalAmount: clientTotalAmount,
+      currency,
+      windowsCount,
+      squareMeters,
+      description,
+      uninstallTagIds,
+    } = body
 
-  // Child logger con contexto de negocio
-  const projectLogger = logger.child({
-    customerId,
-    projectNumber,
-    subtotal,
-    currency: currency || 'CLP',
-  })
-
-  projectLogger.info('Project creation requested')
-
-  try {
-    // Defer: iniciar query a DB antes de validaciones sync
-    const customerPromise = prisma.customer.findUnique({
-      where: { id: customerId },
+    const projectLogger = logger.child({
+      customerId,
+      projectNumber,
+      subtotal,
+      currency: currency || 'CLP',
     })
 
-    // Validaciones básicas
-    projectLogger.debug('Starting basic validations')
+    projectLogger.info('Project creation requested')
 
-    if (!customerId || typeof customerId !== 'string') {
-      projectLogger.warn('Missing or invalid customerId')
-      return NextResponse.json({ error: 'El cliente es requerido' }, { status: 400 })
-    }
-
-    if (!projectNumber || typeof projectNumber !== 'string' || projectNumber.trim().length === 0) {
-      projectLogger.warn('Missing or invalid projectNumber')
-      return NextResponse.json({ error: 'El número de proyecto es requerido' }, { status: 400 })
-    }
-
-    if (!phone || typeof phone !== 'string' || phone.trim().length === 0) {
-      projectLogger.warn('Missing or invalid phone')
-      return NextResponse.json({ error: 'El teléfono es requerido' }, { status: 400 })
-    }
-
-    if (!street || typeof street !== 'string' || street.trim().length === 0) {
-      projectLogger.warn('Missing or invalid street')
-      return NextResponse.json({ error: 'La calle es obligatoria' }, { status: 400 })
-    }
-
-    if (!comuna || typeof comuna !== 'string' || comuna.trim().length === 0) {
-      projectLogger.warn('Missing or invalid comuna')
-      return NextResponse.json({ error: 'La comuna es obligatoria' }, { status: 400 })
-    }
-
-    if (!region || typeof region !== 'string' || region.trim().length === 0) {
-      projectLogger.warn('Missing or invalid region')
-      return NextResponse.json({ error: 'La región es obligatoria' }, { status: 400 })
-    }
-
-    if (subtotal === undefined || subtotal === null || typeof subtotal !== 'number') {
-      projectLogger.warn({ subtotal }, 'Missing or invalid subtotal')
-      return NextResponse.json({ error: 'El subtotal es requerido' }, { status: 400 })
-    }
-
-    if (subtotal <= 0) {
-      projectLogger.warn({ subtotal }, 'Subtotal must be positive')
-      return NextResponse.json({ error: 'El subtotal debe ser mayor a 0' }, { status: 400 })
-    }
-
-    projectLogger.debug('Basic validations passed')
-
-    // Await de la query iniciada antes de validaciones
-    projectLogger.debug({ customerId }, 'Validating customer exists')
-    const customerExists = await customerPromise
-
+    // Verificar que el customer existe
+    const customerExists = await prisma.customer.findUnique({
+      where: { id: customerId },
+    })
     if (!customerExists) {
-      projectLogger.warn('Customer not found')
-      return NextResponse.json({ error: 'El cliente no existe' }, { status: 404 })
+      throw new BusinessError('El cliente no existe', 404)
     }
 
     // SEGURIDAD: Siempre calcular totalAmount en el servidor
-    // Ignoramos cualquier totalAmount enviado por el cliente para prevenir manipulación
-    // Ver: lib/business-logic/totals.ts para la lógica canónica
     const finalTaxRate = taxRate ?? 19
     const calculatedTotal = calculateProjectTotal(subtotal, finalTaxRate)
-
-    // totalAmount siempre es el calculado (ignoramos el valor del cliente)
     const finalTotalAmount = calculatedTotal
 
     // Auditoría: Loggear si el cliente envió un totalAmount diferente
     if (
-      totalAmount !== undefined &&
-      Math.abs(totalAmount - calculatedTotal) > FINANCIAL.TOLERANCE
+      clientTotalAmount !== undefined &&
+      Math.abs(clientTotalAmount - calculatedTotal) > FINANCIAL.TOLERANCE
     ) {
       projectLogger.warn(
         {
-          clientTotalAmount: totalAmount,
+          clientTotalAmount,
           serverCalculatedTotal: calculatedTotal,
-          difference: totalAmount - calculatedTotal,
+          difference: clientTotalAmount - calculatedTotal,
         },
         'Client sent different totalAmount than server calculated - using server value'
       )
     }
 
-    projectLogger.info(
-      {
-        calculatedTotal,
-        taxRate: finalTaxRate,
-      },
-      'Creating project in database'
-    )
+    projectLogger.info({ calculatedTotal, taxRate: finalTaxRate }, 'Creating project in database')
 
     // Crear proyecto usando transacción (para crear relaciones M:M de uninstallTags)
     const project = await prisma.$transaction(async (tx) => {
-      // 1. Crear el proyecto
       const newProject = await tx.project.create({
         data: {
           customerId,
-          projectNumber: projectNumber.trim(),
-          projectName: projectName?.trim() || null,
-          phone: phone.trim(),
-          street: street.trim(),
-          apartment: apartment?.trim() || null,
-          comuna: comuna.trim(),
-          region: region.trim(),
+          projectNumber,
+          projectName: projectName || null,
+          phone,
+          street,
+          apartment: apartment || null,
+          comuna,
+          region,
           projectStatusId: projectStatusId || null,
-          date: date ? new Date(date) : new Date(),
+          date: date ?? new Date(),
           subtotal: new Decimal(subtotal),
           taxRate: new Decimal(finalTaxRate),
           total: new Decimal(calculatedTotal),
-          totalAmount: finalTotalAmount ? new Decimal(finalTotalAmount) : null,
-          // Balance inicial = totalAmount (no hay pagos aún)
-          balance: new Decimal(finalTotalAmount || calculatedTotal),
+          totalAmount: new Decimal(finalTotalAmount),
+          balance: new Decimal(finalTotalAmount),
           currency: currency || 'CLP',
           windowsCount: windowsCount || 0,
           squareMeters: new Decimal(squareMeters || 0),
-          description: description?.trim() || null,
+          description: description || null,
         },
       })
 
-      // 2. Crear relaciones M:M con UninstallTags si hay tags
       if (uninstallTagIds && uninstallTagIds.length > 0) {
         await tx.projectUninstallTag.createMany({
           data: uninstallTagIds.map((tagId: string) => ({
@@ -348,57 +280,33 @@ export const POST = withLogging(async (request, logger) => {
         })
       }
 
-      // 3. Retornar proyecto con todas las relaciones
       return tx.project.findUnique({
         where: { id: newProject.id },
         include: {
-          customer: {
-            select: {
-              id: true,
-              name: true,
-              phone: true,
-            },
-          },
+          customer: { select: { id: true, name: true, phone: true } },
           projectStatus: {
-            select: {
-              id: true,
-              name: true,
-              color: {
-                select: {
-                  bgClass: true,
-                },
-              },
-            },
+            select: { id: true, name: true, color: { select: { bgClass: true } } },
           },
           uninstallTags: {
-            include: {
-              uninstallTag: {
-                include: {
-                  color: true,
-                },
-              },
-            },
+            include: { uninstallTag: { include: { color: true } } },
           },
         },
       })
     })
 
-    // Project no puede ser null porque acabamos de crearlo
     if (!project) {
       throw new Error('Error inesperado: proyecto no encontrado después de crear')
     }
 
     projectLogger.info(
-      {
-        projectId: project.id,
-        projectNumber: project.projectNumber,
-      },
+      { projectId: project.id, projectNumber: project.projectNumber },
       'Project created successfully'
     )
 
     return NextResponse.json(project, { status: 201 })
-  } catch (error) {
-    projectLogger.error({ err: error }, 'Error creating project')
-    return NextResponse.json({ error: 'Error al crear proyecto' }, { status: 500 })
+  },
+  {
+    bodySchema: createProjectApiSchema,
+    fallbackError: 'Error al crear proyecto',
   }
-})
+)

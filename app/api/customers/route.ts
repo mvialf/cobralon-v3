@@ -3,6 +3,8 @@ import { prisma } from '@/lib/db'
 import { Prisma } from '@prisma/client'
 import { z } from 'zod'
 import { withLogging } from '@/lib/logger-middleware'
+import { withApiHandler, BusinessError } from '@/lib/api-handler'
+import { customerSchema, type CustomerFormData } from '@/lib/validations/customer-validations'
 
 /**
  * GET /api/customers
@@ -92,80 +94,47 @@ export const GET = withLogging(async (request, logger) => {
  *
  * Crea un nuevo cliente
  *
- * Body:
- *   - name: string (requerido)
+ * Body validado con customerSchema:
+ *   - name: string (min 2 chars)
+ *   - phone: string (teléfono chileno, normalizado a E.164)
  *   - email: string (opcional)
- *   - phone: string (opcional)
  */
-export const POST = withLogging(async (request, logger) => {
-  const body = await request.json()
-  const { name, email, phone } = body
+export const POST = withApiHandler<CustomerFormData>(
+  async (_request, logger, { body }) => {
+    const { name, email, phone } = body
 
-  // Child logger con contexto de negocio
-  const customerLogger = logger.child({
-    name,
-    email: email || undefined,
-    phone,
-  })
+    const customerLogger = logger.child({
+      name,
+      email: email || undefined,
+      phone,
+    })
 
-  customerLogger.info('Customer creation requested')
+    customerLogger.info('Customer creation requested')
 
-  try {
-    // Validación básica
-    customerLogger.debug('Starting validations')
-
-    if (!name || typeof name !== 'string' || name.trim().length === 0) {
-      customerLogger.warn('Missing or invalid name')
-      return NextResponse.json({ error: 'El nombre es requerido' }, { status: 400 })
-    }
-
-    // Validar teléfono (obligatorio)
-    if (!phone || typeof phone !== 'string' || phone.trim().length === 0) {
-      customerLogger.warn('Missing or invalid phone')
-      return NextResponse.json({ error: 'El teléfono es requerido' }, { status: 400 })
-    }
-
-    // Validar email si se proporciona (opcional)
-    if (email && typeof email === 'string') {
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-      if (!emailRegex.test(email)) {
-        customerLogger.warn({ email }, 'Invalid email format')
-        return NextResponse.json({ error: 'El email no es válido' }, { status: 400 })
-      }
-
-      // Verificar si el email ya existe
-      customerLogger.debug({ email }, 'Checking for duplicate email')
+    // Check email duplicado con mensaje explícito (mejor que P2002 genérico)
+    if (email) {
       const existingCustomer = await prisma.customer.findFirst({
         where: { email },
       })
       if (existingCustomer) {
-        customerLogger.warn({ email }, 'Email already exists')
-        return NextResponse.json({ error: 'Ya existe un cliente con ese email' }, { status: 409 })
+        throw new BusinessError('Ya existe un cliente con ese email', 409, 'EMAIL_DUPLICATE')
       }
     }
 
-    customerLogger.debug('Validations passed')
-
-    // Crear cliente
-    customerLogger.info('Creating customer in database')
     const customer = await prisma.customer.create({
       data: {
-        name: name.trim(),
-        phone: phone.trim(), // Obligatorio
-        email: email?.trim() || null, // Opcional
+        name,
+        phone,
+        email: email || null,
       },
     })
 
-    customerLogger.info(
-      {
-        customerId: customer.id,
-      },
-      'Customer created successfully'
-    )
+    customerLogger.info({ customerId: customer.id }, 'Customer created successfully')
 
     return NextResponse.json(customer, { status: 201 })
-  } catch (error) {
-    customerLogger.error({ err: error }, 'Error creating customer')
-    return NextResponse.json({ error: 'Error al crear cliente' }, { status: 500 })
+  },
+  {
+    bodySchema: customerSchema,
+    fallbackError: 'Error al crear cliente',
   }
-})
+)
