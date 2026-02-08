@@ -70,6 +70,9 @@ export const createVisitApiSchema = z.object({
 
 export type CreateVisitApiBody = z.infer<typeof createVisitApiSchema>
 
+export const updateVisitApiSchema = createVisitApiSchema.partial()
+export type UpdateVisitApiBody = z.infer<typeof updateVisitApiSchema>
+
 /**
  * Type para el payload de creación (API)
  * Las fechas se envían como strings ISO en JSON
