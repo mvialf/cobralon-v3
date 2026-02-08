@@ -11,7 +11,7 @@
 | 0 - Preparación + patrón base | ✅ Completa | 10 | 10 crear | +1570/-1390 |
 | 1 - Migración masiva | ✅ Completa | 13 | 6 actualizar, 5 crear | +1909/-1283 |
 | 2 - Routes mecánicas | ✅ Completa | ~20 | actualizar existentes | — |
-| 3 - Routes complejas + dedup | Pendiente | ~10 | crear/actualizar | — |
+| 3 - Routes complejas + dedup | ✅ Completa | ~10 | crear/actualizar | — |
 | **Total** | | **~53** | | |
 
 ---
@@ -68,47 +68,16 @@
 
 ---
 
-## Fase 3: Routes complejas + dedup (pendiente)
+## Fase 3: Routes complejas + dedup ✅
 
-### 3a. Routes *-with-update
+5 commits migrando routes con lógica compleja y deduplicación de schemas.
 
-Routes con lógica transaccional compleja que usan el anti-patrón `throw new Error('CODE_STRING')` + switch manual en catch. Requiere refactorizar a `BusinessError`.
-
-| Archivo | Método | Complejidad |
-|---------|--------|-------------|
-| `visit-events-with-update/route.ts` | POST | Alta - transacción + `throw Error('CODE')` |
-| `aftersale-events-with-update/route.ts` | POST | Alta - transacción + `throw Error('CODE')` |
-| `project-events-with-update/route.ts` | POST | Media - ya usa `withLogging` pero tiene el anti-patrón |
-
-### 3b. Adjustments routes
-
-Routes con `console.error` y `safeParse` manual.
-
-| Archivo | Método | Complejidad |
-|---------|--------|-------------|
-| `projects/[id]/adjustments/route.ts` | GET/POST | Media - `safeParse` manual + `console.error` |
-| `projects/[id]/adjustments/[adjustmentId]/route.ts` | DELETE | Baja |
-
-### 3c. Reorder routes → migrar + centralizar schema
-
-4 reorder routes casi idénticas (~560 líneas). Solo cambia el modelo Prisma.
-
-| Archivo | Líneas |
-|---------|--------|
-| `project-status/reorder/route.ts` | 147 |
-| `visit-status/reorder/route.ts` | 144 |
-| `aftersale-status/reorder/route.ts` | 147 |
-| `uninstall-tags/reorder/route.ts` | 125 |
-
-**Referencia:** `payment-methods/reorder/route.ts` ya migrado en Fase 1.
-
-**Decisión:** Centralizar solo schemas en `lib/validations/reorder-validations.ts`. No crear handler genérico (diferencias sutiles en modelos hacen el helper complejo vs ~65 líneas por route).
-
-### 3d. Route residual de Fase 2
-
-| Archivo | Método | Notas |
-|---------|--------|-------|
-| `payments/customer-projects/route.ts` | GET | UUID regex manual → `BusinessError`. `customerId` es query param, no path param |
+| # | Commit | Descripción | Routes | Tests |
+|---|--------|-------------|--------|-------|
+| 1 | `e6f8a8d` | Migrar 3 routes *-with-update a withApiHandler | 3 | — |
+| 2 | `d94e604` | Migrar adjustments routes a withApiHandler | 2 | — |
+| 3 | `e1bff03` | Crear schema centralizado + migrar 4 reorder routes | 4 | 2 actualizar |
+| 4 | `72543a9` | Migrar payments/customer-projects a withApiHandler | 1 | 1 actualizar |
 
 ---
 
