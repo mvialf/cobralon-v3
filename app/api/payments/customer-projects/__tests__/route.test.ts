@@ -2,11 +2,11 @@
  * Tests para app/api/payments/customer-projects/route.ts (GET)
  *
  * Valida:
- * - Proyectos del cliente con balance > 0
- * - Validación de customerId requerido y UUID
+ * - Validación de customerId requerido y UUID (BusinessError)
  * - Cliente no existe → 404
+ * - Proyectos del cliente con balance > 0
  * - Orden FIFO (createdAt ASC)
- * - Filtrado en memoria por balance calculado
+ * - Filtrado en DB por balance > 0
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
@@ -46,8 +46,10 @@ vi.mock('@/lib/db', () => ({
 import { prisma } from '@/lib/db'
 import { GET as _GET } from '../route'
 
-// Wrapper para pasar context vacío requerido por withLogging
-const GET = (request: NextRequest) => _GET(request, { params: Promise.resolve({}) })
+function callGET(request: NextRequest) {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return (_GET as any)(request, { params: Promise.resolve({}) })
+}
 
 const validCustomerId = '00000000-0000-0000-0000-000000000001'
 
@@ -85,7 +87,7 @@ describe('GET /api/payments/customer-projects', () => {
       },
     ] as never)
 
-    const response = await GET(createRequest({ customerId: validCustomerId }))
+    const response = await callGET(createRequest({ customerId: validCustomerId }))
     const data = await response.json()
 
     expect(response.status).toBe(200)
@@ -94,7 +96,7 @@ describe('GET /api/payments/customer-projects', () => {
   })
 
   it('debe retornar 400 sin customerId', async () => {
-    const response = await GET(createRequest())
+    const response = await callGET(createRequest())
     const data = await response.json()
 
     expect(response.status).toBe(400)
@@ -102,7 +104,7 @@ describe('GET /api/payments/customer-projects', () => {
   })
 
   it('debe retornar 400 con customerId no UUID', async () => {
-    const response = await GET(createRequest({ customerId: 'not-a-uuid' }))
+    const response = await callGET(createRequest({ customerId: 'not-a-uuid' }))
     const data = await response.json()
 
     expect(response.status).toBe(400)
@@ -112,7 +114,7 @@ describe('GET /api/payments/customer-projects', () => {
   it('debe retornar 404 cuando cliente no existe', async () => {
     vi.mocked(prisma.customer.findUnique).mockResolvedValue(null)
 
-    const response = await GET(createRequest({ customerId: validCustomerId }))
+    const response = await callGET(createRequest({ customerId: validCustomerId }))
     const data = await response.json()
 
     expect(response.status).toBe(404)
@@ -126,7 +128,7 @@ describe('GET /api/payments/customer-projects', () => {
     } as never)
     vi.mocked(prisma.project.findMany).mockResolvedValue([] as never)
 
-    const response = await GET(createRequest({ customerId: validCustomerId }))
+    const response = await callGET(createRequest({ customerId: validCustomerId }))
     const data = await response.json()
 
     expect(response.status).toBe(200)
@@ -140,7 +142,7 @@ describe('GET /api/payments/customer-projects', () => {
     } as never)
     vi.mocked(prisma.project.findMany).mockResolvedValue([] as never)
 
-    await GET(createRequest({ customerId: validCustomerId }))
+    await callGET(createRequest({ customerId: validCustomerId }))
 
     expect(prisma.project.findMany).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -158,7 +160,7 @@ describe('GET /api/payments/customer-projects', () => {
     } as never)
     vi.mocked(prisma.project.findMany).mockResolvedValue([] as never)
 
-    await GET(createRequest({ customerId: validCustomerId }))
+    await callGET(createRequest({ customerId: validCustomerId }))
 
     expect(prisma.project.findMany).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -167,13 +169,13 @@ describe('GET /api/payments/customer-projects', () => {
     )
   })
 
-  it('debe retornar 500 cuando ocurre un error', async () => {
+  it('debe retornar 500 cuando ocurre un error inesperado', async () => {
     vi.mocked(prisma.customer.findUnique).mockRejectedValue(new Error('DB Error'))
 
-    const response = await GET(createRequest({ customerId: validCustomerId }))
+    const response = await callGET(createRequest({ customerId: validCustomerId }))
     const data = await response.json()
 
     expect(response.status).toBe(500)
-    expect(data.error).toContain('Error al obtener')
+    expect(data.error).toBe('Error al obtener proyectos del cliente')
   })
 })

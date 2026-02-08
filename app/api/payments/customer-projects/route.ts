@@ -1,73 +1,49 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
-import { withLogging } from '@/lib/logger-middleware'
+import { withApiHandler, BusinessError } from '@/lib/api-handler'
+
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
 /**
  * GET /api/payments/customer-projects
  *
  * Obtiene todos los proyectos de un cliente que tienen balance pendiente.
  * Utilizado para el formulario "Pago a Cliente (1:N)".
- *
- * Query params:
- * - customerId: UUID del cliente (requerido)
- *
- * Retorna:
- * - Array de proyectos con balance > 0
- * - Ordenados por createdAt ASC (más antiguos primero, para FIFO)
- * - Incluye: id, projectNumber, projectName, totalAmount, currency, balance, createdAt, customer
- *
- * Validaciones:
- * - customerId es requerido y debe ser UUID válido
- * - Solo retorna proyectos con totalAmount > 0 y balance > 0
- * - Solo cuenta pagos activos (status = 'ACTIVE')
  */
-export const GET = withLogging(async (request, logger) => {
-  try {
+export const GET = withApiHandler(
+  async (request) => {
     const { searchParams } = new URL(request.url)
     const customerId = searchParams.get('customerId')
 
-    // Validar customerId
     if (!customerId) {
-      return NextResponse.json({ error: 'El parámetro customerId es requerido' }, { status: 400 })
+      throw new BusinessError('El parámetro customerId es requerido', 400)
     }
 
-    // Validar formato UUID (simple regex)
-    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
-    if (!uuidRegex.test(customerId)) {
-      return NextResponse.json({ error: 'customerId debe ser un UUID válido' }, { status: 400 })
+    if (!UUID_REGEX.test(customerId)) {
+      throw new BusinessError('customerId debe ser un UUID válido', 400)
     }
 
-    // Verificar que el cliente existe
     const customer = await prisma.customer.findUnique({
       where: { id: customerId },
       select: { id: true, name: true },
     })
 
     if (!customer) {
-      return NextResponse.json({ error: 'Cliente no encontrado' }, { status: 404 })
+      throw new BusinessError('Cliente no encontrado', 404)
     }
 
-    // Buscar proyectos del cliente
     const projects = await prisma.project.findMany({
       where: {
         customerId,
-        totalAmount: { gt: 0 }, // Solo proyectos con monto definido
-        balance: { gt: 0 }, // Solo proyectos con balance pendiente (usa índice)
+        totalAmount: { gt: 0 },
+        balance: { gt: 0 },
       },
       include: {
-        customer: {
-          select: {
-            id: true,
-            name: true,
-          },
-        },
+        customer: { select: { id: true, name: true } },
       },
-      orderBy: {
-        createdAt: 'asc', // ← Más antiguos primero (para FIFO)
-      },
+      orderBy: { createdAt: 'asc' },
     })
 
-    // Mapear respuesta (balance ya filtrado en DB)
     const projectsWithBalance = projects.map((project) => ({
       id: project.id,
       projectNumber: project.projectNumber,
@@ -75,7 +51,7 @@ export const GET = withLogging(async (request, logger) => {
       totalAmount: Number(project.totalAmount),
       currency: project.currency,
       balance: Number(project.balance),
-      createdAt: project.createdAt, // ← Para FIFO
+      createdAt: project.createdAt,
       customer: {
         id: project.customer.id,
         name: project.customer.name,
@@ -83,8 +59,6 @@ export const GET = withLogging(async (request, logger) => {
     }))
 
     return NextResponse.json(projectsWithBalance)
-  } catch (error) {
-    logger.error({ err: error }, 'Error fetching customer projects')
-    return NextResponse.json({ error: 'Error al obtener proyectos del cliente' }, { status: 500 })
-  }
-})
+  },
+  { fallbackError: 'Error al obtener proyectos del cliente' }
+)
