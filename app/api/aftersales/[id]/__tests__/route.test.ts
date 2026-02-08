@@ -2,12 +2,34 @@
  * Tests para app/api/aftersales/[id]/route.ts (GET/PUT/DELETE)
  *
  * Valida:
+ * - UUID validation (withApiHandler)
  * - GET: Obtener un aftersale específico
  * - PUT: Actualización con validaciones
  * - DELETE: Eliminación permanente
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { NextRequest } from 'next/server'
+
+// Mock de logger-middleware (requerido por withApiHandler)
+vi.mock('@/lib/logger-middleware', () => ({
+  withLogging: (handler: Function) => {
+    return async (
+      request: NextRequest,
+      context?: { params: Promise<Record<string, string>> }
+    ) => {
+      const mockLogger = {
+        debug: vi.fn(),
+        info: vi.fn(),
+        warn: vi.fn(),
+        error: vi.fn(),
+        child: vi.fn().mockReturnThis(),
+      }
+      const mockContext = context || { params: Promise.resolve({}) }
+      return handler(request, mockLogger, mockContext)
+    }
+  },
+}))
 
 vi.mock('@/lib/db', () => ({
   prisma: {
@@ -34,24 +56,29 @@ vi.mock('@/lib/regiones-chile', () => ({
 import { prisma } from '@/lib/db'
 import { GET, PUT, DELETE } from '../route'
 
-function createParams(id: string): { params: Promise<{ id: string }> } {
+const VALID_UUID = '00000000-0000-0000-0000-000000000001'
+
+function createContext(id: string = VALID_UUID) {
   return { params: Promise.resolve({ id }) }
 }
 
-function createGetRequest(): Request {
-  return new Request('http://localhost:3000/api/aftersales/af-1', { method: 'GET' })
+async function callGET(id: string = VALID_UUID) {
+  const request = new NextRequest('http://localhost:3000/api/aftersales/' + id, { method: 'GET' })
+  return (GET as any)(request, createContext(id))
 }
 
-function createPutRequest(body: Record<string, unknown>): Request {
-  return new Request('http://localhost:3000/api/aftersales/af-1', {
+async function callPUT(body: Record<string, unknown>, id: string = VALID_UUID) {
+  const request = new NextRequest('http://localhost:3000/api/aftersales/' + id, {
     method: 'PUT',
     body: JSON.stringify(body),
     headers: { 'Content-Type': 'application/json' },
   })
+  return (PUT as any)(request, createContext(id))
 }
 
-function createDeleteRequest(): Request {
-  return new Request('http://localhost:3000/api/aftersales/af-1', { method: 'DELETE' })
+async function callDELETE(id: string = VALID_UUID) {
+  const request = new NextRequest('http://localhost:3000/api/aftersales/' + id, { method: 'DELETE' })
+  return (DELETE as any)(request, createContext(id))
 }
 
 const mockAftersale = {
@@ -78,6 +105,16 @@ const mockAftersale = {
   },
 }
 
+describe('UUID validation', () => {
+  it('debe rechazar UUID inválido', async () => {
+    const response = await callGET('not-a-uuid')
+    const data = await response.json()
+
+    expect(response.status).toBe(400)
+    expect(data.error).toContain('UUID inválido')
+  })
+})
+
 describe('GET /api/aftersales/[id]', () => {
   beforeEach(() => {
     vi.clearAllMocks()
@@ -86,7 +123,7 @@ describe('GET /api/aftersales/[id]', () => {
   it('debe retornar aftersale con relaciones', async () => {
     vi.mocked(prisma.aftersale.findUnique).mockResolvedValue(mockAftersale as never)
 
-    const response = await GET(createGetRequest(), createParams('af-1'))
+    const response = await callGET()
     const data = await response.json()
 
     expect(response.status).toBe(200)
@@ -98,7 +135,7 @@ describe('GET /api/aftersales/[id]', () => {
   it('debe retornar 404 si no existe', async () => {
     vi.mocked(prisma.aftersale.findUnique).mockResolvedValue(null)
 
-    const response = await GET(createGetRequest(), createParams('not-found'))
+    const response = await callGET()
     const data = await response.json()
 
     expect(response.status).toBe(404)
@@ -108,7 +145,7 @@ describe('GET /api/aftersales/[id]', () => {
   it('debe retornar 500 en error', async () => {
     vi.mocked(prisma.aftersale.findUnique).mockRejectedValue(new Error('DB'))
 
-    const response = await GET(createGetRequest(), createParams('af-1'))
+    const response = await callGET()
 
     expect(response.status).toBe(500)
   })
@@ -139,10 +176,7 @@ describe('PUT /api/aftersales/[id]', () => {
   })
 
   it('debe actualizar aftersale con cambio de dirección', async () => {
-    const response = await PUT(
-      createPutRequest({ street: 'Calle Nueva 456', comuna: 'Providencia', region: '13' }),
-      createParams('af-1')
-    )
+    const response = await callPUT({ street: 'Calle Nueva 456', comuna: 'Providencia', region: '13' })
     const data = await response.json()
 
     expect(response.status).toBe(200)
@@ -151,10 +185,7 @@ describe('PUT /api/aftersales/[id]', () => {
   })
 
   it('debe actualizar aftersale sin cambio de dirección', async () => {
-    const response = await PUT(
-      createPutRequest({ description: 'Descripción actualizada' }),
-      createParams('af-1')
-    )
+    const response = await callPUT({ description: 'Descripción actualizada' })
 
     expect(response.status).toBe(200)
   })
@@ -162,10 +193,7 @@ describe('PUT /api/aftersales/[id]', () => {
   it('debe retornar 404 si proyecto no existe', async () => {
     vi.mocked(prisma.project.findUnique).mockResolvedValue(null)
 
-    const response = await PUT(
-      createPutRequest({ projectId: '00000000-0000-0000-0000-000000000099' }),
-      createParams('af-1')
-    )
+    const response = await callPUT({ projectId: '00000000-0000-0000-0000-000000000099' })
     const data = await response.json()
 
     expect(response.status).toBe(404)
@@ -178,10 +206,7 @@ describe('PUT /api/aftersales/[id]', () => {
       isActive: false,
     } as never)
 
-    const response = await PUT(
-      createPutRequest({ aftersaleStatusId: '00000000-0000-0000-0000-000000000002' }),
-      createParams('af-1')
-    )
+    const response = await callPUT({ aftersaleStatusId: '00000000-0000-0000-0000-000000000002' })
     const data = await response.json()
 
     expect(response.status).toBe(400)
@@ -191,19 +216,13 @@ describe('PUT /api/aftersales/[id]', () => {
   it('debe retornar 404 si aftersale no existe', async () => {
     vi.mocked(prisma.aftersale.findUnique).mockResolvedValue(null)
 
-    const response = await PUT(
-      createPutRequest({ description: 'Test' }),
-      createParams('not-found')
-    )
+    const response = await callPUT({ description: 'Test' })
 
     expect(response.status).toBe(404)
   })
 
   it('debe retornar 400 en error Zod', async () => {
-    const response = await PUT(
-      createPutRequest({ contactPhone: '12345' }),
-      createParams('af-1')
-    )
+    const response = await callPUT({ contactPhone: '12345' })
     const data = await response.json()
 
     expect(response.status).toBe(400)
@@ -220,7 +239,7 @@ describe('DELETE /api/aftersales/[id]', () => {
   })
 
   it('debe eliminar aftersale exitosamente', async () => {
-    const response = await DELETE(createDeleteRequest(), createParams('af-1'))
+    const response = await callDELETE()
     const data = await response.json()
 
     expect(response.status).toBe(200)
@@ -231,7 +250,7 @@ describe('DELETE /api/aftersales/[id]', () => {
   it('debe retornar 404 si no existe', async () => {
     vi.mocked(prisma.aftersale.findUnique).mockResolvedValue(null)
 
-    const response = await DELETE(createDeleteRequest(), createParams('not-found'))
+    const response = await callDELETE()
 
     expect(response.status).toBe(404)
   })
@@ -239,7 +258,7 @@ describe('DELETE /api/aftersales/[id]', () => {
   it('debe retornar 500 en error', async () => {
     vi.mocked(prisma.aftersale.delete).mockRejectedValue(new Error('DB'))
 
-    const response = await DELETE(createDeleteRequest(), createParams('af-1'))
+    const response = await callDELETE()
 
     expect(response.status).toBe(500)
   })

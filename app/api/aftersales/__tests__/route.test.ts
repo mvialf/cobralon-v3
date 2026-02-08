@@ -7,6 +7,27 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { NextRequest } from 'next/server'
+
+// Mock de logger-middleware (requerido por withApiHandler)
+vi.mock('@/lib/logger-middleware', () => ({
+  withLogging: (handler: Function) => {
+    return async (
+      request: NextRequest,
+      context?: { params: Promise<Record<string, string>> }
+    ) => {
+      const mockLogger = {
+        debug: vi.fn(),
+        info: vi.fn(),
+        warn: vi.fn(),
+        error: vi.fn(),
+        child: vi.fn().mockReturnThis(),
+      }
+      const mockContext = context || { params: Promise.resolve({}) }
+      return handler(request, mockLogger, mockContext)
+    }
+  },
+}))
 
 vi.mock('@/lib/db', () => ({
   prisma: {
@@ -32,18 +53,6 @@ vi.mock('@/lib/regiones-chile', () => ({
 import { prisma } from '@/lib/db'
 import { GET, POST } from '../route'
 
-function createRequest(
-  method: 'GET' | 'POST',
-  body?: Record<string, unknown>
-): Request {
-  const url = new URL('http://localhost:3000/api/aftersales')
-  return new Request(url, {
-    method,
-    body: body ? JSON.stringify(body) : undefined,
-    headers: body ? { 'Content-Type': 'application/json' } : {},
-  })
-}
-
 const validBody = {
   projectId: '00000000-0000-0000-0000-000000000001',
   aftersaleStatusId: '00000000-0000-0000-0000-000000000002',
@@ -54,6 +63,19 @@ const validBody = {
   street: 'Av. Principal 123',
   comuna: 'Santiago',
   region: '13',
+}
+
+async function callGET() {
+  return (GET as any)(new NextRequest('http://localhost:3000/api/aftersales'))
+}
+
+async function callPOST(body: Record<string, unknown>) {
+  const request = new NextRequest('http://localhost:3000/api/aftersales', {
+    method: 'POST',
+    body: JSON.stringify(body),
+    headers: { 'Content-Type': 'application/json' },
+  })
+  return (POST as any)(request)
 }
 
 describe('GET /api/aftersales', () => {
@@ -72,7 +94,7 @@ describe('GET /api/aftersales', () => {
       },
     ] as never)
 
-    const response = await GET()
+    const response = await callGET()
     const data = await response.json()
 
     expect(response.status).toBe(200)
@@ -82,7 +104,7 @@ describe('GET /api/aftersales', () => {
   it('debe retornar 500 cuando falla', async () => {
     vi.mocked(prisma.aftersale.findMany).mockRejectedValue(new Error('DB'))
 
-    const response = await GET()
+    const response = await callGET()
     const data = await response.json()
 
     expect(response.status).toBe(500)
@@ -121,7 +143,7 @@ describe('POST /api/aftersales', () => {
   })
 
   it('debe crear aftersale exitosamente', async () => {
-    const response = await POST(createRequest('POST', validBody))
+    const response = await callPOST(validBody)
     const data = await response.json()
 
     expect(response.status).toBe(201)
@@ -134,7 +156,7 @@ describe('POST /api/aftersales', () => {
       projectStatus: { isFinal: false },
     } as never)
 
-    const response = await POST(createRequest('POST', validBody))
+    const response = await callPOST(validBody)
     const data = await response.json()
 
     expect(response.status).toBe(400)
@@ -144,7 +166,7 @@ describe('POST /api/aftersales', () => {
   it('debe retornar 404 si proyecto no existe', async () => {
     vi.mocked(prisma.project.findUnique).mockResolvedValue(null)
 
-    const response = await POST(createRequest('POST', validBody))
+    const response = await callPOST(validBody)
     const data = await response.json()
 
     expect(response.status).toBe(404)
@@ -154,7 +176,7 @@ describe('POST /api/aftersales', () => {
   it('debe retornar 404 si status no existe', async () => {
     vi.mocked(prisma.aftersaleStatus.findUnique).mockResolvedValue(null)
 
-    const response = await POST(createRequest('POST', validBody))
+    const response = await callPOST(validBody)
     const data = await response.json()
 
     expect(response.status).toBe(404)
@@ -167,7 +189,7 @@ describe('POST /api/aftersales', () => {
       isActive: false,
     } as never)
 
-    const response = await POST(createRequest('POST', validBody))
+    const response = await callPOST(validBody)
     const data = await response.json()
 
     expect(response.status).toBe(400)
@@ -175,10 +197,10 @@ describe('POST /api/aftersales', () => {
   })
 
   it('debe rechazar teléfono inválido (Zod)', async () => {
-    const response = await POST(createRequest('POST', {
+    const response = await callPOST({
       ...validBody,
       contactPhone: '12345',
-    }))
+    })
     const data = await response.json()
 
     expect(response.status).toBe(400)
@@ -186,10 +208,9 @@ describe('POST /api/aftersales', () => {
   })
 
   it('debe rechazar sin campos requeridos (Zod)', async () => {
-    const response = await POST(createRequest('POST', {
+    const response = await callPOST({
       projectId: validBody.projectId,
-      // Falta aftersaleStatusId, contactPhone, street, comuna, region, reportedAt
-    }))
+    })
     const data = await response.json()
 
     expect(response.status).toBe(400)
@@ -201,7 +222,7 @@ describe('POST /api/aftersales', () => {
       throw new Error('TX failed')
     })
 
-    const response = await POST(createRequest('POST', validBody))
+    const response = await callPOST(validBody)
     const data = await response.json()
 
     expect(response.status).toBe(500)

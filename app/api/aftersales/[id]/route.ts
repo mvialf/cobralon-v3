@@ -1,46 +1,27 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
-import { z } from 'zod'
-import { optionalChilePhoneSchema } from '@/lib/validations/common'
-import { todoListOptionalSchema } from '@/lib/validations/todo-validations'
+import { withApiHandler, BusinessError } from '@/lib/api-handler'
+import {
+  updateAftersaleApiSchema,
+  type UpdateAftersaleApiBody,
+} from '@/lib/validations/aftersale-validations'
 import { getRegionByCodigo } from '@/lib/regiones-chile'
-
-/**
- * Schema de validación para actualizar Aftersale
- * Incluye campos de dirección del proyecto (editables desde aftersale)
- */
-const updateAftersaleSchema = z.object({
-  projectId: z.string().uuid().optional(),
-  aftersaleStatusId: z.string().uuid().optional(),
-  contactPhone: optionalChilePhoneSchema,
-  description: z.string().max(1000).optional(),
-  reportedAt: z.string().datetime().optional(),
-  tasks: todoListOptionalSchema.optional(), // Lista de tareas para resolver el caso
-  // Campos de dirección del proyecto
-  street: z.string().min(1).optional(),
-  apartment: z.string().nullable().optional(),
-  comuna: z.string().min(1).optional(),
-  region: z.string().min(1).optional(),
-})
 
 /**
  * GET /api/aftersales/[id]
  *
  * Obtiene un caso de postventa específico
  */
-export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
-  try {
-    const { id } = await params
-
+export const GET = withApiHandler(
+  async (_request, _logger, { params }) => {
     const aftersale = await prisma.aftersale.findUnique({
-      where: { id },
+      where: { id: params.id },
       include: {
         project: {
           select: {
             id: true,
             projectNumber: true,
             projectName: true,
-            // Campos de dirección del proyecto
             street: true,
             apartment: true,
             comuna: true,
@@ -69,35 +50,22 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
     })
 
     if (!aftersale) {
-      return NextResponse.json({ error: 'Caso de postventa no encontrado' }, { status: 404 })
+      throw new BusinessError('Caso de postventa no encontrado', 404)
     }
 
     return NextResponse.json(aftersale)
-  } catch (error) {
-    console.error('Error fetching aftersale:', error)
-    return NextResponse.json({ error: 'Error al obtener el caso de postventa' }, { status: 500 })
-  }
-}
+  },
+  { validateUuidParams: ['id'], fallbackError: 'Error al obtener el caso de postventa' }
+)
 
 /**
  * PUT /api/aftersales/[id]
  *
  * Actualiza un caso de postventa existente
- *
- * Body: Campos opcionales a actualizar
- * ```json
- * {
- *   "aftersaleStatusId": "uuid",
- *   "description": "Descripción actualizada",
- *   "reportedAt": "2024-01-16T10:00:00Z"
- * }
- * ```
  */
-export async function PUT(request: Request, { params }: { params: Promise<{ id: string }> }) {
-  try {
-    const { id } = await params
-    const body = await request.json()
-    const validatedData = updateAftersaleSchema.parse(body)
+export const PUT = withApiHandler<UpdateAftersaleApiBody>(
+  async (_request, _logger, { params, body }) => {
+    const { id } = params
 
     // Verificar que el caso de postventa existe
     const existingAftersale = await prisma.aftersale.findUnique({
@@ -105,62 +73,56 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
     })
 
     if (!existingAftersale) {
-      return NextResponse.json({ error: 'Caso de postventa no encontrado' }, { status: 404 })
+      throw new BusinessError('Caso de postventa no encontrado', 404)
     }
 
     // Validación: si se cambia el proyecto, debe existir
-    if (validatedData.projectId) {
+    if (body.projectId) {
       const project = await prisma.project.findUnique({
-        where: { id: validatedData.projectId },
+        where: { id: body.projectId },
       })
 
       if (!project) {
-        return NextResponse.json({ error: 'El proyecto seleccionado no existe' }, { status: 404 })
+        throw new BusinessError('El proyecto seleccionado no existe', 404)
       }
     }
 
     // Validación: si se cambia el estado, debe existir y estar activo
-    if (validatedData.aftersaleStatusId) {
+    if (body.aftersaleStatusId) {
       const status = await prisma.aftersaleStatus.findUnique({
-        where: { id: validatedData.aftersaleStatusId },
+        where: { id: body.aftersaleStatusId },
       })
 
       if (!status) {
-        return NextResponse.json({ error: 'El estado seleccionado no existe' }, { status: 404 })
+        throw new BusinessError('El estado seleccionado no existe', 404)
       }
 
       if (!status.isActive) {
-        return NextResponse.json(
-          { error: 'El estado seleccionado no está activo' },
-          { status: 400 }
-        )
+        throw new BusinessError('El estado seleccionado no está activo')
       }
     }
 
     // Determinar projectId a usar (el nuevo o el existente)
-    const targetProjectId = validatedData.projectId || existingAftersale.projectId
+    const targetProjectId = body.projectId || existingAftersale.projectId
 
     // Convertir código de región a nombre si se proporcionó
-    const regionNombre = validatedData.region
-      ? getRegionByCodigo(validatedData.region)?.nombre || validatedData.region
+    const regionNombre = body.region
+      ? getRegionByCodigo(body.region)?.nombre || body.region
       : undefined
 
     // Usar transacción para actualizar aftersale y proyecto
     const result = await prisma.$transaction(async (tx) => {
       // 1. Actualizar el proyecto con la nueva dirección (si se proporcionó)
       const hasAddressUpdate =
-        validatedData.street ||
-        validatedData.apartment !== undefined ||
-        validatedData.comuna ||
-        validatedData.region
+        body.street || body.apartment !== undefined || body.comuna || body.region
 
       if (hasAddressUpdate) {
         await tx.project.update({
           where: { id: targetProjectId },
           data: {
-            ...(validatedData.street && { street: validatedData.street }),
-            ...(validatedData.apartment !== undefined && { apartment: validatedData.apartment }),
-            ...(validatedData.comuna && { comuna: validatedData.comuna }),
+            ...(body.street && { street: body.street }),
+            ...(body.apartment !== undefined && { apartment: body.apartment }),
+            ...(body.comuna && { comuna: body.comuna }),
             ...(regionNombre && { region: regionNombre }),
           },
         })
@@ -170,16 +132,16 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
       const updatedAftersale = await tx.aftersale.update({
         where: { id },
         data: {
-          ...(validatedData.projectId && { projectId: validatedData.projectId }),
-          ...(validatedData.aftersaleStatusId && {
-            aftersaleStatusId: validatedData.aftersaleStatusId,
+          ...(body.projectId && { projectId: body.projectId }),
+          ...(body.aftersaleStatusId && {
+            aftersaleStatusId: body.aftersaleStatusId,
           }),
-          ...(validatedData.contactPhone && { contactPhone: validatedData.contactPhone }),
-          ...(validatedData.description !== undefined && {
-            description: validatedData.description,
+          ...(body.contactPhone && { contactPhone: body.contactPhone }),
+          ...(body.description !== undefined && {
+            description: body.description,
           }),
-          ...(validatedData.reportedAt && { reportedAt: new Date(validatedData.reportedAt) }),
-          ...(validatedData.tasks !== undefined && { tasks: validatedData.tasks }),
+          ...(body.reportedAt && { reportedAt: new Date(body.reportedAt) }),
+          ...(body.tasks !== undefined && { tasks: body.tasks }),
         },
         include: {
           project: {
@@ -218,24 +180,22 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
     })
 
     return NextResponse.json({ aftersale: result })
-  } catch (error) {
-    if (error instanceof z.ZodError) {
-      return NextResponse.json({ error: 'Datos inválidos', details: error.errors }, { status: 400 })
-    }
-
-    console.error('Error updating aftersale:', error)
-    return NextResponse.json({ error: 'Error al actualizar el caso de postventa' }, { status: 500 })
+  },
+  {
+    bodySchema: updateAftersaleApiSchema,
+    validateUuidParams: ['id'],
+    fallbackError: 'Error al actualizar el caso de postventa',
   }
-}
+)
 
 /**
  * DELETE /api/aftersales/[id]
  *
  * Elimina permanentemente un caso de postventa
  */
-export async function DELETE(request: Request, { params }: { params: Promise<{ id: string }> }) {
-  try {
-    const { id } = await params
+export const DELETE = withApiHandler(
+  async (_request, _logger, { params }) => {
+    const { id } = params
 
     // Verificar que el caso de postventa existe
     const existingAftersale = await prisma.aftersale.findUnique({
@@ -243,7 +203,7 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ i
     })
 
     if (!existingAftersale) {
-      return NextResponse.json({ error: 'Caso de postventa no encontrado' }, { status: 404 })
+      throw new BusinessError('Caso de postventa no encontrado', 404)
     }
 
     // Eliminar el caso de postventa (hard delete)
@@ -252,8 +212,6 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ i
     })
 
     return NextResponse.json({ success: true, message: 'Caso de postventa eliminado' })
-  } catch (error) {
-    console.error('Error deleting aftersale:', error)
-    return NextResponse.json({ error: 'Error al eliminar el caso de postventa' }, { status: 500 })
-  }
-}
+  },
+  { validateUuidParams: ['id'], fallbackError: 'Error al eliminar el caso de postventa' }
+)
