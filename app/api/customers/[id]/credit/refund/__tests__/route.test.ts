@@ -15,6 +15,26 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { NextRequest } from 'next/server'
 import { Prisma } from '@prisma/client'
 
+// Mock de logger-middleware (requerido por withApiHandler)
+vi.mock('@/lib/logger-middleware', () => ({
+  withLogging: (handler: Function) => {
+    return async (
+      request: NextRequest,
+      context?: { params: Promise<Record<string, string>> }
+    ) => {
+      const mockLogger = {
+        debug: vi.fn(),
+        info: vi.fn(),
+        warn: vi.fn(),
+        error: vi.fn(),
+        child: vi.fn().mockReturnThis(),
+      }
+      const mockContext = context || { params: Promise.resolve({}) }
+      return handler(request, mockLogger, mockContext)
+    }
+  },
+}))
+
 // Mock de Prisma
 vi.mock('@/lib/db', () => ({
   prisma: {
@@ -43,14 +63,14 @@ import { canRefundCredit } from '@/lib/business-logic/credit-management'
 import { updateCustomerCreditBalance } from '@/lib/business-logic/update-customer-credit-balance'
 import { POST } from '../route'
 
-// Helper para crear params
-function createParams(id: string) {
+const VALID_UUID = '00000000-0000-0000-0000-000000000001'
+
+function createParams(id: string = VALID_UUID) {
   return { params: Promise.resolve({ id }) }
 }
 
-// Helper para crear request
 function createRequest(body: Record<string, unknown>): NextRequest {
-  return new NextRequest('http://localhost:3000/api/customers/test-id/credit/refund', {
+  return new NextRequest(`http://localhost:3000/api/customers/${VALID_UUID}/credit/refund`, {
     method: 'POST',
     body: JSON.stringify(body),
     headers: { 'Content-Type': 'application/json' },
@@ -71,7 +91,7 @@ describe('POST /api/customers/[id]/credit/refund', () => {
 
     // Setup mocks por defecto
     vi.mocked(prisma.customer.findUnique).mockResolvedValue({
-      id: 'customer-1',
+      id: VALID_UUID,
       name: 'Test Customer',
       creditBalance: new Prisma.Decimal(100000),
     } as never)
@@ -82,7 +102,7 @@ describe('POST /api/customers/[id]/credit/refund', () => {
       const mockTx = {
         customer: {
           findUnique: vi.fn().mockResolvedValue({
-            id: 'customer-1',
+            id: VALID_UUID,
             name: 'Test Customer',
             creditBalance: new Prisma.Decimal(50000),
           }),
@@ -100,35 +120,44 @@ describe('POST /api/customers/[id]/credit/refund', () => {
     })
   })
 
-  describe('validaciones de campos requeridos', () => {
+  describe('validaciones de campos requeridos (Zod)', () => {
     it('debe rechazar sin amount', async () => {
       const { amount: _, ...noAmount } = validPayload
       const request = createRequest(noAmount)
-      const response = await POST(request, createParams('customer-1'))
+      const response = await POST(request, createParams())
       const data = await response.json()
 
       expect(response.status).toBe(400)
-      expect(data.error).toContain('amount')
+      expect(data.error).toBe('Datos inválidos')
     })
 
     it('debe rechazar sin refundDate', async () => {
       const { refundDate: _, ...noDate } = validPayload
       const request = createRequest(noDate)
-      const response = await POST(request, createParams('customer-1'))
+      const response = await POST(request, createParams())
       const data = await response.json()
 
       expect(response.status).toBe(400)
-      expect(data.error).toContain('refundDate')
+      expect(data.error).toBe('Datos inválidos')
     })
 
     it('debe rechazar sin refundMethod', async () => {
       const { refundMethod: _, ...noMethod } = validPayload
       const request = createRequest(noMethod)
-      const response = await POST(request, createParams('customer-1'))
+      const response = await POST(request, createParams())
       const data = await response.json()
 
       expect(response.status).toBe(400)
-      expect(data.error).toContain('refundMethod')
+      expect(data.error).toBe('Datos inválidos')
+    })
+
+    it('debe rechazar monto negativo (Zod .positive())', async () => {
+      const request = createRequest({ ...validPayload, amount: -1000 })
+      const response = await POST(request, createParams())
+      const data = await response.json()
+
+      expect(response.status).toBe(400)
+      expect(data.error).toBe('Datos inválidos')
     })
   })
 
@@ -137,7 +166,7 @@ describe('POST /api/customers/[id]/credit/refund', () => {
       vi.mocked(prisma.customer.findUnique).mockResolvedValue(null)
 
       const request = createRequest(validPayload)
-      const response = await POST(request, createParams('nonexistent'))
+      const response = await POST(request, createParams())
       const data = await response.json()
 
       expect(response.status).toBe(404)
@@ -153,7 +182,7 @@ describe('POST /api/customers/[id]/credit/refund', () => {
       })
 
       const request = createRequest({ ...validPayload, amount: 200000 })
-      const response = await POST(request, createParams('customer-1'))
+      const response = await POST(request, createParams())
       const data = await response.json()
 
       expect(response.status).toBe(400)
@@ -169,21 +198,7 @@ describe('POST /api/customers/[id]/credit/refund', () => {
       })
 
       const request = createRequest({ ...validPayload, amount: 0.001 })
-      const response = await POST(request, createParams('customer-1'))
-      const data = await response.json()
-
-      expect(response.status).toBe(400)
-      expect(data.error).toContain('mayor a 0')
-    })
-
-    it('debe rechazar monto negativo', async () => {
-      vi.mocked(canRefundCredit).mockReturnValue({
-        valid: false,
-        error: 'El monto debe ser mayor a 0',
-      })
-
-      const request = createRequest({ ...validPayload, amount: -1000 })
-      const response = await POST(request, createParams('customer-1'))
+      const response = await POST(request, createParams())
       const data = await response.json()
 
       expect(response.status).toBe(400)
@@ -192,14 +207,14 @@ describe('POST /api/customers/[id]/credit/refund', () => {
 
     it('debe permitir refund igual al crédito disponible', async () => {
       vi.mocked(prisma.customer.findUnique).mockResolvedValue({
-        id: 'customer-1',
+        id: VALID_UUID,
         name: 'Test',
         creditBalance: new Prisma.Decimal(50000),
       } as never)
       vi.mocked(canRefundCredit).mockReturnValue({ valid: true })
 
       const request = createRequest({ ...validPayload, amount: 50000 })
-      const response = await POST(request, createParams('customer-1'))
+      const response = await POST(request, createParams())
 
       expect(response.status).toBe(200)
     })
@@ -208,21 +223,21 @@ describe('POST /api/customers/[id]/credit/refund', () => {
   describe('métodos de devolución', () => {
     it('debe aceptar EFECTIVO', async () => {
       const request = createRequest({ ...validPayload, refundMethod: 'EFECTIVO' })
-      const response = await POST(request, createParams('customer-1'))
+      const response = await POST(request, createParams())
 
       expect(response.status).toBe(200)
     })
 
     it('debe aceptar TRANSFERENCIA', async () => {
       const request = createRequest({ ...validPayload, refundMethod: 'TRANSFERENCIA' })
-      const response = await POST(request, createParams('customer-1'))
+      const response = await POST(request, createParams())
 
       expect(response.status).toBe(200)
     })
 
     it('debe aceptar CHEQUE', async () => {
       const request = createRequest({ ...validPayload, refundMethod: 'CHEQUE' })
-      const response = await POST(request, createParams('customer-1'))
+      const response = await POST(request, createParams())
 
       expect(response.status).toBe(200)
     })
@@ -236,7 +251,7 @@ describe('POST /api/customers/[id]/credit/refund', () => {
         const mockTx = {
           customer: {
             findUnique: vi.fn().mockResolvedValue({
-              id: 'customer-1',
+              id: VALID_UUID,
               creditBalance: new Prisma.Decimal(50000),
             }),
           },
@@ -249,10 +264,10 @@ describe('POST /api/customers/[id]/credit/refund', () => {
       })
 
       const request = createRequest(validPayload)
-      await POST(request, createParams('customer-1'))
+      await POST(request, createParams())
 
       expect(transactionFnCalled).toBe(true)
-      expect(updateCustomerCreditBalance).toHaveBeenCalledWith('customer-1', expect.anything())
+      expect(updateCustomerCreditBalance).toHaveBeenCalledWith(VALID_UUID, expect.anything())
     })
 
     it('debe crear CreditTransaction con tipo WITHDRAWAL', async () => {
@@ -261,7 +276,7 @@ describe('POST /api/customers/[id]/credit/refund', () => {
         const mockTx = {
           customer: {
             findUnique: vi.fn().mockResolvedValue({
-              id: 'customer-1',
+              id: VALID_UUID,
               creditBalance: new Prisma.Decimal(50000),
             }),
           },
@@ -277,7 +292,7 @@ describe('POST /api/customers/[id]/credit/refund', () => {
       })
 
       const request = createRequest(validPayload)
-      await POST(request, createParams('customer-1'))
+      await POST(request, createParams())
 
       expect(createdTransaction).not.toBeNull()
       expect(createdTransaction?.['type']).toBe('WITHDRAWAL')
@@ -290,7 +305,7 @@ describe('POST /api/customers/[id]/credit/refund', () => {
         const mockTx = {
           customer: {
             findUnique: vi.fn().mockResolvedValue({
-              id: 'customer-1',
+              id: VALID_UUID,
               creditBalance: new Prisma.Decimal(50000),
             }),
           },
@@ -306,7 +321,7 @@ describe('POST /api/customers/[id]/credit/refund', () => {
       })
 
       const request = createRequest({ ...validPayload, refundMethod: 'TRANSFERENCIA' })
-      await POST(request, createParams('customer-1'))
+      await POST(request, createParams())
 
       const metadata = createdTransaction?.['metadata'] as unknown as Record<string, unknown>
       expect(metadata?.['refundMethod']).toBe('TRANSFERENCIA')
@@ -316,7 +331,7 @@ describe('POST /api/customers/[id]/credit/refund', () => {
   describe('respuesta exitosa', () => {
     it('debe retornar customer actualizado y transaction', async () => {
       const request = createRequest(validPayload)
-      const response = await POST(request, createParams('customer-1'))
+      const response = await POST(request, createParams())
       const data = await response.json()
 
       expect(response.status).toBe(200)
@@ -330,7 +345,7 @@ describe('POST /api/customers/[id]/credit/refund', () => {
         ...validPayload,
         comments: 'Devolución por cancelación de proyecto',
       })
-      const response = await POST(request, createParams('customer-1'))
+      const response = await POST(request, createParams())
 
       expect(response.status).toBe(200)
     })
@@ -338,7 +353,7 @@ describe('POST /api/customers/[id]/credit/refund', () => {
     it('debe funcionar sin comentarios', async () => {
       const { comments: _, ...noComments } = validPayload
       const request = createRequest(noComments)
-      const response = await POST(request, createParams('customer-1'))
+      const response = await POST(request, createParams())
 
       expect(response.status).toBe(200)
     })
@@ -349,7 +364,7 @@ describe('POST /api/customers/[id]/credit/refund', () => {
       vi.mocked(prisma.$transaction).mockRejectedValue(new Error('Transaction failed'))
 
       const request = createRequest(validPayload)
-      const response = await POST(request, createParams('customer-1'))
+      const response = await POST(request, createParams())
       const data = await response.json()
 
       expect(response.status).toBe(500)
@@ -364,11 +379,11 @@ describe('POST /api/customers/[id]/credit/refund', () => {
       vi.mocked(prisma.$transaction).mockRejectedValue(prismaError)
 
       const request = createRequest(validPayload)
-      const response = await POST(request, createParams('customer-1'))
+      const response = await POST(request, createParams())
       const data = await response.json()
 
       expect(response.status).toBe(404)
-      expect(data.error).toBe('Cliente no encontrado')
+      expect(data.error).toBe('Registro no encontrado')
     })
   })
 })

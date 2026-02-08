@@ -1,43 +1,20 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
-import { canRefundCredit } from '@/lib/business-logic/credit-management'
+import { withApiHandler, BusinessError } from '@/lib/api-handler'
 import { Prisma } from '@prisma/client'
+import { canRefundCredit } from '@/lib/business-logic/credit-management'
 import { updateCustomerCreditBalance } from '@/lib/business-logic/update-customer-credit-balance'
 import type { PrismaTransaction } from '@/lib/db/types'
-
-interface RefundCreditRequest {
-  amount: number
-  refundDate: string // ISO date string
-  refundMethod: 'EFECTIVO' | 'TRANSFERENCIA' | 'CHEQUE'
-  comments?: string
-}
+import { refundCreditSchema, type RefundCreditFormData } from '@/lib/validations/credit-validations'
 
 /**
  * POST /api/customers/[id]/credit/refund
  *
  * Procesa una devolución de crédito a un cliente
- *
- * @body {
- *   amount: number,
- *   refundDate: string,
- *   refundMethod: 'EFECTIVO' | 'TRANSFERENCIA' | 'CHEQUE',
- *   comments?: string
- * }
- *
- * @returns Updated customer with new credit balance
  */
-export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  try {
-    const { id: customerId } = await params
-    const body: RefundCreditRequest = await request.json()
-
-    // Validar body
-    if (!body.amount || !body.refundDate || !body.refundMethod) {
-      return NextResponse.json(
-        { error: 'Faltan campos requeridos: amount, refundDate, refundMethod' },
-        { status: 400 }
-      )
-    }
+export const POST = withApiHandler<RefundCreditFormData>(
+  async (_request, logger, { params, body }) => {
+    const customerId = params.id
 
     // Obtener cliente actual
     const customer = await prisma.customer.findUnique({
@@ -46,7 +23,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     })
 
     if (!customer) {
-      return NextResponse.json({ error: 'Cliente no encontrado' }, { status: 404 })
+      throw new BusinessError('Cliente no encontrado', 404)
     }
 
     // Convertir Decimal a number para validación
@@ -56,7 +33,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     const validation = canRefundCredit(body.amount, creditBalance)
 
     if (!validation.valid) {
-      return NextResponse.json({ error: validation.error }, { status: 400 })
+      throw new BusinessError(validation.error!)
     }
 
     // Procesar devolución en transacción atómica
@@ -65,7 +42,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       const transaction = await tx.creditTransaction.create({
         data: {
           customerId,
-          amount: new Prisma.Decimal(-body.amount), // Negativo = salida de crédito
+          amount: new Prisma.Decimal(-body.amount),
           type: 'WITHDRAWAL',
           description: body.comments || `Devolución vía ${body.refundMethod.toLowerCase()}`,
           metadata: {
@@ -87,30 +64,20 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       return { customer: updatedCustomer, transaction }
     })
 
-    // Log de auditoría
-    console.log(
-      `[CREDIT REFUND] Customer ${customer.name} (${customerId}): ` +
-        `$${body.amount} refunded via ${body.refundMethod}`
+    logger.info(
+      { customerId, amount: body.amount, method: body.refundMethod },
+      `Credit refund processed for ${customer.name}`
     )
 
-    return NextResponse.json(
-      {
-        success: true,
-        customer: result.customer,
-        transaction: result.transaction,
-      },
-      { status: 200 }
-    )
-  } catch (error) {
-    console.error('[POST /api/customers/[id]/credit/refund] Error:', error)
-
-    // Manejar errores específicos de Prisma
-    if (error instanceof Prisma.PrismaClientKnownRequestError) {
-      if (error.code === 'P2025') {
-        return NextResponse.json({ error: 'Cliente no encontrado' }, { status: 404 })
-      }
-    }
-
-    return NextResponse.json({ error: 'Error al procesar devolución de crédito' }, { status: 500 })
+    return NextResponse.json({
+      success: true,
+      customer: result.customer,
+      transaction: result.transaction,
+    })
+  },
+  {
+    bodySchema: refundCreditSchema,
+    validateUuidParams: ['id'],
+    fallbackError: 'Error al procesar devolución de crédito',
   }
-}
+)

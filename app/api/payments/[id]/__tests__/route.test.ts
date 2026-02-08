@@ -12,16 +12,26 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { NextRequest } from 'next/server'
 import { Decimal } from '@prisma/client/runtime/library'
 
-// Mock de logger (antes de imports del proyecto)
-vi.mock('@/lib/logger', () => ({
-  logger: {
-    child: vi.fn().mockReturnThis(),
-    debug: vi.fn(),
-    info: vi.fn(),
-    warn: vi.fn(),
-    error: vi.fn(),
+// Mock de logger-middleware (requerido por withApiHandler)
+vi.mock('@/lib/logger-middleware', () => ({
+  withLogging: (handler: Function) => {
+    return async (
+      request: NextRequest,
+      context?: { params: Promise<Record<string, string>> }
+    ) => {
+      const mockLogger = {
+        debug: vi.fn(),
+        info: vi.fn(),
+        warn: vi.fn(),
+        error: vi.fn(),
+        child: vi.fn().mockReturnThis(),
+      }
+      const mockContext = context || { params: Promise.resolve({}) }
+      return handler(request, mockLogger, mockContext)
+    }
   },
 }))
 
@@ -58,17 +68,17 @@ import { updateMultipleProjectBalances } from '@/lib/business-logic/update-proje
 import { updateCustomerCreditBalance } from '@/lib/business-logic/update-customer-credit-balance'
 import { PUT, DELETE } from '../route'
 
-// Helper para crear params
-function createParams(id: string) {
+const VALID_UUID = '00000000-0000-0000-0000-000000000001'
+
+function createContext(id: string = VALID_UUID) {
   return { params: Promise.resolve({ id }) }
 }
 
-// Helper para crear request
 function createRequest(
   method: 'PUT' | 'DELETE',
   body?: Record<string, unknown>
-): Request {
-  return new Request(`http://localhost:3000/api/payments/test-id`, {
+): NextRequest {
+  return new NextRequest(`http://localhost:3000/api/payments/${VALID_UUID}`, {
     method,
     body: body ? JSON.stringify(body) : undefined,
     headers: body ? { 'Content-Type': 'application/json' } : {},
@@ -77,7 +87,7 @@ function createRequest(
 
 // Mock base de pago actualizado (retorno de tx.payment.update)
 const mockUpdatedPayment = {
-  id: 'payment-1',
+  id: VALID_UUID,
   amount: new Decimal(100000),
   date: new Date('2025-01-15'),
   customer: { id: 'c1', name: 'Test', phone: '+56912345678' },
@@ -91,7 +101,7 @@ describe('PUT /api/payments/[id]', () => {
 
     // Mock por defecto: pago sin cuotas y sin crédito
     vi.mocked(prisma.payment.findUnique).mockResolvedValue({
-      id: 'payment-1',
+      id: VALID_UUID,
       selectedInstallments: null,
       _count: { creditTransactions: 0 },
     } as never)
@@ -112,7 +122,7 @@ describe('PUT /api/payments/[id]', () => {
       vi.mocked(prisma.payment.findUnique).mockResolvedValue(null)
 
       const request = createRequest('PUT', { amount: 100000 })
-      const response = await PUT(request, createParams('nonexistent'))
+      const response = await PUT(request, createContext())
       const data = await response.json()
 
       expect(response.status).toBe(404)
@@ -123,13 +133,13 @@ describe('PUT /api/payments/[id]', () => {
   describe('⚠️ bloqueo de pagos con cuotas', () => {
     it('debe rechazar edición si selectedInstallments > 1', async () => {
       vi.mocked(prisma.payment.findUnique).mockResolvedValue({
-        id: 'payment-1',
+        id: VALID_UUID,
         selectedInstallments: 3,
         _count: { creditTransactions: 0 },
       } as never)
 
       const request = createRequest('PUT', { amount: 200000 })
-      const response = await PUT(request, createParams('payment-1'))
+      const response = await PUT(request, createContext())
       const data = await response.json()
 
       expect(response.status).toBe(400)
@@ -138,26 +148,26 @@ describe('PUT /api/payments/[id]', () => {
 
     it('debe permitir edición si selectedInstallments es null', async () => {
       vi.mocked(prisma.payment.findUnique).mockResolvedValue({
-        id: 'payment-1',
+        id: VALID_UUID,
         selectedInstallments: null,
         _count: { creditTransactions: 0 },
       } as never)
 
       const request = createRequest('PUT', { amount: 200000 })
-      const response = await PUT(request, createParams('payment-1'))
+      const response = await PUT(request, createContext())
 
       expect(response.status).toBe(200)
     })
 
     it('debe permitir edición si selectedInstallments es 1 (contado)', async () => {
       vi.mocked(prisma.payment.findUnique).mockResolvedValue({
-        id: 'payment-1',
+        id: VALID_UUID,
         selectedInstallments: 1,
         _count: { creditTransactions: 0 },
       } as never)
 
       const request = createRequest('PUT', { amount: 200000 })
-      const response = await PUT(request, createParams('payment-1'))
+      const response = await PUT(request, createContext())
 
       expect(response.status).toBe(200)
     })
@@ -166,13 +176,13 @@ describe('PUT /api/payments/[id]', () => {
   describe('bloqueo de pagos con crédito asociado', () => {
     it('debe rechazar edición si tiene credit_transactions', async () => {
       vi.mocked(prisma.payment.findUnique).mockResolvedValue({
-        id: 'payment-1',
+        id: VALID_UUID,
         selectedInstallments: null,
         _count: { creditTransactions: 2 },
       } as never)
 
       const request = createRequest('PUT', { amount: 200000 })
-      const response = await PUT(request, createParams('payment-1'))
+      const response = await PUT(request, createContext())
       const data = await response.json()
 
       expect(response.status).toBe(400)
@@ -181,40 +191,40 @@ describe('PUT /api/payments/[id]', () => {
 
     it('debe permitir edición si no tiene credit_transactions', async () => {
       vi.mocked(prisma.payment.findUnique).mockResolvedValue({
-        id: 'payment-1',
+        id: VALID_UUID,
         selectedInstallments: null,
         _count: { creditTransactions: 0 },
       } as never)
 
       const request = createRequest('PUT', { amount: 200000 })
-      const response = await PUT(request, createParams('payment-1'))
+      const response = await PUT(request, createContext())
 
       expect(response.status).toBe(200)
     })
   })
 
-  describe('validaciones de campos', () => {
+  describe('validaciones de campos (Zod)', () => {
     it('debe rechazar amount <= 0', async () => {
       const request = createRequest('PUT', { amount: 0 })
-      const response = await PUT(request, createParams('payment-1'))
+      const response = await PUT(request, createContext())
       const data = await response.json()
 
       expect(response.status).toBe(400)
-      expect(data.error).toContain('mayor a 0')
+      expect(data.error).toBe('Datos inválidos')
     })
 
     it('debe rechazar amount negativo', async () => {
       const request = createRequest('PUT', { amount: -1000 })
-      const response = await PUT(request, createParams('payment-1'))
+      const response = await PUT(request, createContext())
       const data = await response.json()
 
       expect(response.status).toBe(400)
-      expect(data.error).toContain('mayor a 0')
+      expect(data.error).toBe('Datos inválidos')
     })
 
     it('debe permitir actualizar solo algunos campos', async () => {
       const request = createRequest('PUT', { notes: 'Nueva nota' })
-      const response = await PUT(request, createParams('payment-1'))
+      const response = await PUT(request, createContext())
 
       expect(response.status).toBe(200)
     })
@@ -223,14 +233,14 @@ describe('PUT /api/payments/[id]', () => {
   describe('actualización de fecha (flujo EditableDate)', () => {
     it('debe actualizar solo la fecha exitosamente', async () => {
       const request = createRequest('PUT', { date: '2025-03-15T00:00:00.000Z' })
-      const response = await PUT(request, createParams('payment-1'))
+      const response = await PUT(request, createContext())
 
       expect(response.status).toBe(200)
     })
 
     it('no debe actualizar balance de proyectos si solo cambia fecha', async () => {
       const request = createRequest('PUT', { date: '2025-03-15T00:00:00.000Z' })
-      await PUT(request, createParams('payment-1'))
+      await PUT(request, createContext())
 
       expect(updateMultipleProjectBalances).not.toHaveBeenCalled()
     })
@@ -260,14 +270,14 @@ describe('PUT /api/payments/[id]', () => {
       })
 
       const request = createRequest('PUT', { amount: 200000 })
-      await PUT(request, createParams('payment-1'))
+      await PUT(request, createContext())
 
       expect(updateMultipleProjectBalances).toHaveBeenCalledWith(['p1'], expect.anything())
     })
 
     it('no debe actualizar balance si no hay allocations', async () => {
       const request = createRequest('PUT', { amount: 200000 })
-      await PUT(request, createParams('payment-1'))
+      await PUT(request, createContext())
 
       expect(updateMultipleProjectBalances).not.toHaveBeenCalled()
     })
@@ -278,7 +288,7 @@ describe('PUT /api/payments/[id]', () => {
       vi.mocked(prisma.$transaction).mockRejectedValue(new Error('Transaction Error'))
 
       const request = createRequest('PUT', { amount: 100000 })
-      const response = await PUT(request, createParams('payment-1'))
+      const response = await PUT(request, createContext())
       const data = await response.json()
 
       expect(response.status).toBe(500)
@@ -292,7 +302,7 @@ describe('DELETE /api/payments/[id]', () => {
     vi.clearAllMocks()
 
     vi.mocked(prisma.payment.findUnique).mockResolvedValue({
-      id: 'payment-1',
+      id: VALID_UUID,
       customerId: 'c1',
       selectedInstallments: null,
       allocations: [{ projectId: 'p1' }, { projectId: 'p2' }],
@@ -321,7 +331,7 @@ describe('DELETE /api/payments/[id]', () => {
       vi.mocked(prisma.payment.findUnique).mockResolvedValue(null)
 
       const request = createRequest('DELETE')
-      const response = await DELETE(request, createParams('nonexistent'))
+      const response = await DELETE(request, createContext())
       const data = await response.json()
 
       expect(response.status).toBe(404)
@@ -332,17 +342,17 @@ describe('DELETE /api/payments/[id]', () => {
   describe('eliminación exitosa', () => {
     it('debe eliminar pago y retornar success', async () => {
       const request = createRequest('DELETE')
-      const response = await DELETE(request, createParams('payment-1'))
+      const response = await DELETE(request, createContext())
       const data = await response.json()
 
       expect(response.status).toBe(200)
       expect(data.success).toBe(true)
-      expect(data.deletedPaymentId).toBe('payment-1')
+      expect(data.deletedPaymentId).toBe(VALID_UUID)
     })
 
     it('debe ejecutar transacción con delete', async () => {
       const request = createRequest('DELETE')
-      await DELETE(request, createParams('payment-1'))
+      await DELETE(request, createContext())
 
       expect(prisma.$transaction).toHaveBeenCalled()
     })
@@ -351,21 +361,21 @@ describe('DELETE /api/payments/[id]', () => {
   describe('actualización de balance', () => {
     it('debe actualizar balance de proyectos afectados', async () => {
       const request = createRequest('DELETE')
-      await DELETE(request, createParams('payment-1'))
+      await DELETE(request, createContext())
 
       expect(updateMultipleProjectBalances).toHaveBeenCalledWith(['p1', 'p2'], expect.anything())
     })
 
     it('no debe actualizar balance si no hay allocations', async () => {
       vi.mocked(prisma.payment.findUnique).mockResolvedValue({
-        id: 'payment-1',
+        id: VALID_UUID,
         customerId: 'c1',
         selectedInstallments: null,
         allocations: [],
       } as never)
 
       const request = createRequest('DELETE')
-      await DELETE(request, createParams('payment-1'))
+      await DELETE(request, createContext())
 
       expect(updateMultipleProjectBalances).not.toHaveBeenCalled()
     })
@@ -395,11 +405,11 @@ describe('DELETE /api/payments/[id]', () => {
       })
 
       const request = createRequest('DELETE')
-      await DELETE(request, createParams('payment-1'))
+      await DELETE(request, createContext())
 
       // Verificar findMany con args correctos
       expect(mockTx!.creditTransaction.findMany).toHaveBeenCalledWith({
-        where: { paymentId: 'payment-1' },
+        where: { paymentId: VALID_UUID },
         select: { id: true, type: true, amount: true, customerId: true },
       })
 
@@ -444,7 +454,7 @@ describe('DELETE /api/payments/[id]', () => {
       })
 
       const request = createRequest('DELETE')
-      await DELETE(request, createParams('payment-1'))
+      await DELETE(request, createContext())
 
       // Debe crear ADJUSTMENT de reversión
       expect(mockTx!.creditTransaction.create).toHaveBeenCalledWith({
@@ -488,7 +498,7 @@ describe('DELETE /api/payments/[id]', () => {
       })
 
       const request = createRequest('DELETE')
-      await DELETE(request, createParams('payment-1'))
+      await DELETE(request, createContext())
 
       // 2 ADJUSTMENTs creados (uno por cada credit_transaction)
       expect(mockTx!.creditTransaction.create).toHaveBeenCalledTimes(2)
@@ -523,7 +533,7 @@ describe('DELETE /api/payments/[id]', () => {
       })
 
       const request = createRequest('DELETE')
-      await DELETE(request, createParams('payment-1'))
+      await DELETE(request, createContext())
 
       // 3 ADJUSTMENTs creados
       expect(mockTx!.creditTransaction.create).toHaveBeenCalledTimes(3)
@@ -538,7 +548,7 @@ describe('DELETE /api/payments/[id]', () => {
       vi.mocked(prisma.$transaction).mockRejectedValue(new Error('Transaction Error'))
 
       const request = createRequest('DELETE')
-      const response = await DELETE(request, createParams('payment-1'))
+      const response = await DELETE(request, createContext())
       const data = await response.json()
 
       expect(response.status).toBe(500)
@@ -572,7 +582,7 @@ describe('DELETE /api/payments/[id]', () => {
       })
 
       const request = createRequest('DELETE')
-      const response = await DELETE(request, createParams('payment-1'))
+      const response = await DELETE(request, createContext())
       const data = await response.json()
 
       // La transacción falla → 500

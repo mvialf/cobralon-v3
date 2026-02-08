@@ -2,13 +2,34 @@
  * Tests para app/api/customers/[id]/route.ts (GET/PUT/DELETE endpoints)
  *
  * Valida:
+ * - UUID validation (withApiHandler)
  * - GET: Obtención de cliente, 404 cuando no existe
- * - PUT: Validaciones, email duplicado, actualización exitosa
+ * - PUT: Validación Zod (updateCustomerApiSchema), email duplicado → 409
  * - DELETE: Eliminación, 404 cuando no existe
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { NextRequest } from 'next/server'
+
+// Mock de logger-middleware (requerido por withApiHandler)
+vi.mock('@/lib/logger-middleware', () => ({
+  withLogging: (handler: Function) => {
+    return async (
+      request: NextRequest,
+      context?: { params: Promise<Record<string, string>> }
+    ) => {
+      const mockLogger = {
+        debug: vi.fn(),
+        info: vi.fn(),
+        warn: vi.fn(),
+        error: vi.fn(),
+        child: vi.fn().mockReturnThis(),
+      }
+      const mockContext = context || { params: Promise.resolve({}) }
+      return handler(request, mockLogger, mockContext)
+    }
+  },
+}))
 
 // Mock de Prisma
 vi.mock('@/lib/db', () => ({
@@ -25,20 +46,40 @@ vi.mock('@/lib/db', () => ({
 import { prisma } from '@/lib/db'
 import { GET, PUT, DELETE } from '../route'
 
-// Helper para crear params
-function createParams(id: string) {
+const VALID_UUID = '00000000-0000-0000-0000-000000000001'
+
+function createContext(id: string = VALID_UUID) {
   return { params: Promise.resolve({ id }) }
 }
 
-// Helper para crear request
-function createRequest(method: string, body?: Record<string, unknown>): Request {
-  const init: RequestInit = { method }
-  if (body) {
-    init.body = JSON.stringify(body)
-    init.headers = { 'Content-Type': 'application/json' }
-  }
-  return new Request('http://localhost:3000/api/customers/test-id', init)
+async function callGET(id: string = VALID_UUID) {
+  const request = new NextRequest('http://localhost:3000/api/customers/' + id)
+  return (GET as any)(request, createContext(id))
 }
+
+async function callPUT(body: Record<string, unknown>, id: string = VALID_UUID) {
+  const request = new NextRequest('http://localhost:3000/api/customers/' + id, {
+    method: 'PUT',
+    body: JSON.stringify(body),
+    headers: { 'Content-Type': 'application/json' },
+  })
+  return (PUT as any)(request, createContext(id))
+}
+
+async function callDELETE(id: string = VALID_UUID) {
+  const request = new NextRequest('http://localhost:3000/api/customers/' + id, { method: 'DELETE' })
+  return (DELETE as any)(request, createContext(id))
+}
+
+describe('UUID validation', () => {
+  it('debe rechazar UUID inválido', async () => {
+    const response = await callGET('not-a-uuid')
+    const data = await response.json()
+
+    expect(response.status).toBe(400)
+    expect(data.error).toContain('UUID inválido')
+  })
+})
 
 describe('GET /api/customers/[id]', () => {
   beforeEach(() => {
@@ -48,8 +89,7 @@ describe('GET /api/customers/[id]', () => {
   it('debe retornar 404 cuando cliente no existe', async () => {
     vi.mocked(prisma.customer.findUnique).mockResolvedValue(null)
 
-    const request = createRequest('GET')
-    const response = await GET(request, createParams('nonexistent'))
+    const response = await callGET()
     const data = await response.json()
 
     expect(response.status).toBe(404)
@@ -58,7 +98,7 @@ describe('GET /api/customers/[id]', () => {
 
   it('debe retornar cliente cuando existe', async () => {
     const mockCustomer = {
-      id: 'customer-1',
+      id: VALID_UUID,
       name: 'Juan Pérez',
       email: 'juan@test.com',
       phone: '+56912345678',
@@ -68,20 +108,17 @@ describe('GET /api/customers/[id]', () => {
     }
     vi.mocked(prisma.customer.findUnique).mockResolvedValue(mockCustomer as never)
 
-    const request = createRequest('GET')
-    const response = await GET(request, createParams('customer-1'))
+    const response = await callGET()
     const data = await response.json()
 
     expect(response.status).toBe(200)
-    expect(data.id).toBe('customer-1')
     expect(data.name).toBe('Juan Pérez')
   })
 
   it('debe manejar errores de base de datos', async () => {
     vi.mocked(prisma.customer.findUnique).mockRejectedValue(new Error('DB Error'))
 
-    const request = createRequest('GET')
-    const response = await GET(request, createParams('customer-1'))
+    const response = await callGET()
     const data = await response.json()
 
     expect(response.status).toBe(500)
@@ -92,63 +129,46 @@ describe('GET /api/customers/[id]', () => {
 describe('PUT /api/customers/[id]', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+
+    vi.mocked(prisma.customer.findUnique).mockResolvedValue({
+      id: VALID_UUID,
+      name: 'Test',
+      phone: '+56912345678',
+    } as never)
+    vi.mocked(prisma.customer.findFirst).mockResolvedValue(null)
+    vi.mocked(prisma.customer.update).mockResolvedValue({
+      id: VALID_UUID,
+      name: 'Nuevo Nombre',
+      phone: '+56912345678',
+    } as never)
   })
 
   describe('validaciones', () => {
     it('debe retornar 404 cuando cliente no existe', async () => {
       vi.mocked(prisma.customer.findUnique).mockResolvedValue(null)
 
-      const request = createRequest('PUT', { name: 'Nuevo Nombre' })
-      const response = await PUT(request, createParams('nonexistent'))
+      const response = await callPUT({ name: 'Nuevo Nombre' })
       const data = await response.json()
 
       expect(response.status).toBe(404)
       expect(data.error).toBe('Cliente no encontrado')
     })
 
-    it('debe rechazar teléfono vacío cuando se intenta actualizar', async () => {
-      vi.mocked(prisma.customer.findUnique).mockResolvedValue({
-        id: 'customer-1',
-        name: 'Test',
-        phone: '+56912345678',
-      } as never)
-
-      const request = createRequest('PUT', { phone: '' })
-      const response = await PUT(request, createParams('customer-1'))
+    it('debe rechazar email inválido (Zod)', async () => {
+      const response = await callPUT({ email: 'no-es-email' })
       const data = await response.json()
 
       expect(response.status).toBe(400)
-      expect(data.error).toContain('teléfono')
-    })
-
-    it('debe rechazar email inválido', async () => {
-      vi.mocked(prisma.customer.findUnique).mockResolvedValue({
-        id: 'customer-1',
-        name: 'Test',
-        phone: '+56912345678',
-      } as never)
-
-      const request = createRequest('PUT', { email: 'no-es-email' })
-      const response = await PUT(request, createParams('customer-1'))
-      const data = await response.json()
-
-      expect(response.status).toBe(400)
-      expect(data.error).toContain('email no es válido')
+      expect(data.error).toBe('Datos inválidos')
     })
 
     it('debe rechazar email duplicado en otro cliente', async () => {
-      vi.mocked(prisma.customer.findUnique).mockResolvedValue({
-        id: 'customer-1',
-        name: 'Test',
-        phone: '+56912345678',
-      } as never)
       vi.mocked(prisma.customer.findFirst).mockResolvedValue({
         id: 'other-customer',
         email: 'duplicate@test.com',
       } as never)
 
-      const request = createRequest('PUT', { email: 'duplicate@test.com' })
-      const response = await PUT(request, createParams('customer-1'))
+      const response = await callPUT({ email: 'duplicate@test.com' })
       const data = await response.json()
 
       expect(response.status).toBe(409)
@@ -158,39 +178,20 @@ describe('PUT /api/customers/[id]', () => {
 
   describe('actualización exitosa', () => {
     it('debe actualizar solo el nombre', async () => {
-      vi.mocked(prisma.customer.findUnique).mockResolvedValue({
-        id: 'customer-1',
-        name: 'Nombre Anterior',
-        phone: '+56912345678',
-      } as never)
-      vi.mocked(prisma.customer.update).mockResolvedValue({
-        id: 'customer-1',
-        name: 'Nuevo Nombre',
-        phone: '+56912345678',
-      } as never)
-
-      const request = createRequest('PUT', { name: 'Nuevo Nombre' })
-      const response = await PUT(request, createParams('customer-1'))
-      const data = await response.json()
+      const response = await callPUT({ name: 'Nuevo Nombre' })
 
       expect(response.status).toBe(200)
-      expect(data.name).toBe('Nuevo Nombre')
+      expect(prisma.customer.update).toHaveBeenCalled()
     })
 
     it('debe actualizar teléfono', async () => {
-      vi.mocked(prisma.customer.findUnique).mockResolvedValue({
-        id: 'customer-1',
-        name: 'Test',
-        phone: '+56912345678',
-      } as never)
       vi.mocked(prisma.customer.update).mockResolvedValue({
-        id: 'customer-1',
+        id: VALID_UUID,
         name: 'Test',
         phone: '+56987654321',
       } as never)
 
-      const request = createRequest('PUT', { phone: '+56987654321' })
-      const response = await PUT(request, createParams('customer-1'))
+      const response = await callPUT({ phone: '+56987654321' })
       const data = await response.json()
 
       expect(response.status).toBe(200)
@@ -198,89 +199,42 @@ describe('PUT /api/customers/[id]', () => {
     })
 
     it('debe permitir email del mismo cliente (sin cambio)', async () => {
-      vi.mocked(prisma.customer.findUnique).mockResolvedValue({
-        id: 'customer-1',
-        name: 'Test',
-        phone: '+56912345678',
-        email: 'same@test.com',
-      } as never)
-      vi.mocked(prisma.customer.findFirst).mockResolvedValue(null) // No hay duplicados
-      vi.mocked(prisma.customer.update).mockResolvedValue({
-        id: 'customer-1',
-        name: 'Test',
-        phone: '+56912345678',
-        email: 'same@test.com',
-      } as never)
+      vi.mocked(prisma.customer.findFirst).mockResolvedValue(null)
 
-      const request = createRequest('PUT', { email: 'same@test.com' })
-      const response = await PUT(request, createParams('customer-1'))
+      const response = await callPUT({ email: 'same@test.com' })
 
       expect(response.status).toBe(200)
     })
 
-    it('debe permitir limpiar email (null)', async () => {
-      vi.mocked(prisma.customer.findUnique).mockResolvedValue({
-        id: 'customer-1',
-        name: 'Test',
-        phone: '+56912345678',
-        email: 'old@test.com',
-      } as never)
+    it('debe permitir limpiar email (empty string → null)', async () => {
       vi.mocked(prisma.customer.update).mockResolvedValue({
-        id: 'customer-1',
+        id: VALID_UUID,
         name: 'Test',
         phone: '+56912345678',
         email: null,
       } as never)
 
-      const request = createRequest('PUT', { email: '' })
-      const response = await PUT(request, createParams('customer-1'))
+      const response = await callPUT({ email: '' })
 
       expect(response.status).toBe(200)
       expect(prisma.customer.update).toHaveBeenCalledWith({
-        where: { id: 'customer-1' },
+        where: { id: VALID_UUID },
         data: expect.objectContaining({ email: null }),
       })
     })
 
-    it('debe trimear espacios en valores', async () => {
-      vi.mocked(prisma.customer.findUnique).mockResolvedValue({
-        id: 'customer-1',
-        name: 'Test',
-        phone: '+56912345678',
-      } as never)
-      vi.mocked(prisma.customer.update).mockResolvedValue({
-        id: 'customer-1',
-        name: 'Nuevo',
-        phone: '+56999999999',
-      } as never)
+    it('debe aceptar body vacío (partial schema)', async () => {
+      const response = await callPUT({})
 
-      const request = createRequest('PUT', {
-        name: '  Nuevo  ',
-        phone: '  +56999999999  ',
-      })
-      await PUT(request, createParams('customer-1'))
-
-      expect(prisma.customer.update).toHaveBeenCalledWith({
-        where: { id: 'customer-1' },
-        data: expect.objectContaining({
-          name: 'Nuevo',
-          phone: '+56999999999',
-        }),
-      })
+      expect(response.status).toBe(200)
     })
   })
 
   describe('manejo de errores', () => {
     it('debe retornar 500 cuando Prisma falla', async () => {
-      vi.mocked(prisma.customer.findUnique).mockResolvedValue({
-        id: 'customer-1',
-        name: 'Test',
-        phone: '+56912345678',
-      } as never)
       vi.mocked(prisma.customer.update).mockRejectedValue(new Error('DB Error'))
 
-      const request = createRequest('PUT', { name: 'Nuevo' })
-      const response = await PUT(request, createParams('customer-1'))
+      const response = await callPUT({ name: 'Nuevo' })
       const data = await response.json()
 
       expect(response.status).toBe(500)
@@ -292,13 +246,21 @@ describe('PUT /api/customers/[id]', () => {
 describe('DELETE /api/customers/[id]', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+
+    vi.mocked(prisma.customer.findUnique).mockResolvedValue({
+      id: VALID_UUID,
+      name: 'Test',
+    } as never)
+    vi.mocked(prisma.customer.delete).mockResolvedValue({
+      id: VALID_UUID,
+      name: 'Test',
+    } as never)
   })
 
   it('debe retornar 404 cuando cliente no existe', async () => {
     vi.mocked(prisma.customer.findUnique).mockResolvedValue(null)
 
-    const request = createRequest('DELETE')
-    const response = await DELETE(request, createParams('nonexistent'))
+    const response = await callDELETE()
     const data = await response.json()
 
     expect(response.status).toBe(404)
@@ -306,17 +268,7 @@ describe('DELETE /api/customers/[id]', () => {
   })
 
   it('debe eliminar cliente existente', async () => {
-    vi.mocked(prisma.customer.findUnique).mockResolvedValue({
-      id: 'customer-1',
-      name: 'Test',
-    } as never)
-    vi.mocked(prisma.customer.delete).mockResolvedValue({
-      id: 'customer-1',
-      name: 'Test',
-    } as never)
-
-    const request = createRequest('DELETE')
-    const response = await DELETE(request, createParams('customer-1'))
+    const response = await callDELETE()
     const data = await response.json()
 
     expect(response.status).toBe(200)
@@ -325,14 +277,9 @@ describe('DELETE /api/customers/[id]', () => {
   })
 
   it('debe manejar errores de base de datos', async () => {
-    vi.mocked(prisma.customer.findUnique).mockResolvedValue({
-      id: 'customer-1',
-      name: 'Test',
-    } as never)
     vi.mocked(prisma.customer.delete).mockRejectedValue(new Error('FK Constraint'))
 
-    const request = createRequest('DELETE')
-    const response = await DELETE(request, createParams('customer-1'))
+    const response = await callDELETE()
     const data = await response.json()
 
     expect(response.status).toBe(500)

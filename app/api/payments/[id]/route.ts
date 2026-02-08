@@ -1,10 +1,14 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { Decimal } from '@prisma/client/runtime/library'
+import { withApiHandler, BusinessError } from '@/lib/api-handler'
 import { updateMultipleProjectBalances } from '@/lib/business-logic/update-project-balance'
 import type { PrismaTransaction } from '@/lib/db/types'
 import { updateCustomerCreditBalance } from '@/lib/business-logic/update-customer-credit-balance'
-import { logger } from '@/lib/logger'
+import {
+  updatePaymentApiSchema,
+  type UpdatePaymentApiBody,
+} from '@/lib/validations/payment-validations'
 
 /**
  * PUT /api/payments/[id]
@@ -13,13 +17,11 @@ import { logger } from '@/lib/logger'
  *
  * IMPORTANTE:
  * - Bloquea la edición si el pago tiene cuotas configuradas (selectedInstallments > 1)
- * - Solo permite editar pagos sin cuotas o de contado (selectedInstallments = null or 1)
- * - Esto previene inconsistencias entre el pago y sus installments ya generados
+ * - Bloquea la edición si el pago tiene crédito asociado
  */
-export async function PUT(request: Request, { params }: { params: Promise<{ id: string }> }) {
-  try {
-    const { id } = await params
-    const body = await request.json()
+export const PUT = withApiHandler<UpdatePaymentApiBody>(
+  async (_request, _logger, { params, body }) => {
+    const { id } = params
 
     // Verificar que el pago existe
     const existingPayment = await prisma.payment.findUnique({
@@ -32,34 +34,21 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
     })
 
     if (!existingPayment) {
-      return NextResponse.json({ error: 'Pago no encontrado' }, { status: 404 })
+      throw new BusinessError('Pago no encontrado', 404)
     }
 
     // IMPORTANTE: Bloquear edición si el pago tiene cuotas
     if (existingPayment.selectedInstallments && existingPayment.selectedInstallments > 1) {
-      return NextResponse.json(
-        {
-          error:
-            'No se puede editar un pago con cuotas. Para modificar, debe cancelar el pago y crear uno nuevo.',
-        },
-        { status: 400 }
+      throw new BusinessError(
+        'No se puede editar un pago con cuotas. Para modificar, debe cancelar el pago y crear uno nuevo.'
       )
     }
 
     // IMPORTANTE: Bloquear edición si el pago tiene crédito asociado
     if (existingPayment._count.creditTransactions > 0) {
-      return NextResponse.json(
-        { error: 'No se puede editar un pago con crédito asociado. Elimine y cree uno nuevo.' },
-        { status: 400 }
+      throw new BusinessError(
+        'No se puede editar un pago con crédito asociado. Elimine y cree uno nuevo.'
       )
-    }
-
-    // Extraer campos editables del body
-    const { amount, date, paymentMethodId, reference, notes } = body
-
-    // Validaciones básicas (solo de campos que se están editando)
-    if (amount !== undefined && (typeof amount !== 'number' || amount <= 0)) {
-      return NextResponse.json({ error: 'El monto debe ser mayor a 0' }, { status: 400 })
     }
 
     // Transacción atómica: actualizar pago + recalcular balances
@@ -68,11 +57,10 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
         relationLoadStrategy: 'join',
         where: { id },
         data: {
-          ...(amount !== undefined && { amount }),
-          ...(date !== undefined && { date: new Date(date) }),
-          ...(paymentMethodId !== undefined && { paymentMethodId }),
-          ...(reference !== undefined && { reference: reference?.trim() || null }),
-          ...(notes !== undefined && { notes: notes?.trim() || null }),
+          ...(body.amount !== undefined && { amount: body.amount }),
+          ...(body.date !== undefined && { date: body.date }),
+          ...(body.paymentMethodId !== undefined && { paymentMethodId: body.paymentMethodId }),
+          ...(body.notes !== undefined && { notes: body.notes?.trim() || null }),
         },
         include: {
           customer: {
@@ -109,7 +97,7 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
       })
 
       // Recalcular balances dentro de la transacción
-      if (amount !== undefined && updated.allocations.length > 0) {
+      if (body.amount !== undefined && updated.allocations.length > 0) {
         const projectIds = updated.allocations.map((alloc) => alloc.projectId)
         await updateMultipleProjectBalances(projectIds, tx)
       }
@@ -118,11 +106,13 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
     })
 
     return NextResponse.json(payment)
-  } catch (error) {
-    logger.error({ err: error }, 'Error updating payment')
-    return NextResponse.json({ error: 'Error al actualizar pago' }, { status: 500 })
+  },
+  {
+    bodySchema: updatePaymentApiSchema,
+    validateUuidParams: ['id'],
+    fallbackError: 'Error al actualizar pago',
   }
-}
+)
 
 /**
  * DELETE /api/payments/[id]
@@ -130,14 +120,13 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
  * Elimina un pago (hard delete)
  *
  * IMPORTANTE:
- * - Los Installments se eliminan automáticamente por cascade delete (configurado en schema.prisma)
+ * - Los Installments se eliminan automáticamente por cascade delete
  * - Los PaymentAllocations también se eliminan automáticamente por cascade delete
  */
-export async function DELETE(request: Request, { params }: { params: Promise<{ id: string }> }) {
-  let deleteLogger = logger.child({ operation: 'delete-payment' })
-  try {
-    const { id } = await params
-    deleteLogger = logger.child({ operation: 'delete-payment', paymentId: id })
+export const DELETE = withApiHandler(
+  async (_request, logger, { params }) => {
+    const { id } = params
+    const deleteLogger = logger.child({ operation: 'delete-payment', paymentId: id })
 
     // Verificar que el pago existe y obtener datos necesarios antes de la transacción
     const existingPayment = await prisma.payment.findUnique({
@@ -155,7 +144,7 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ i
     })
 
     if (!existingPayment) {
-      return NextResponse.json({ error: 'Pago no encontrado' }, { status: 404 })
+      throw new BusinessError('Pago no encontrado', 404)
     }
 
     const projectIds = existingPayment.allocations.map((alloc) => alloc.projectId)
@@ -225,8 +214,6 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ i
       },
       { status: 200 }
     )
-  } catch (error) {
-    deleteLogger.error({ err: error }, 'Failed to delete payment')
-    return NextResponse.json({ error: 'Error al eliminar pago' }, { status: 500 })
-  }
-}
+  },
+  { validateUuidParams: ['id'], fallbackError: 'Error al eliminar pago' }
+)
