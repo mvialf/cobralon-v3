@@ -11,6 +11,10 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { NextRequest } from 'next/server'
 import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library'
 
+// UUIDs de prueba
+const TEST_UUID = '550e8400-e29b-41d4-a716-446655440000'
+const NONEXISTENT_UUID = '00000000-0000-0000-0000-000000000000'
+
 // Mock del logger middleware
 vi.mock('@/lib/logger-middleware', () => ({
   withLogging: (handler: Function) => {
@@ -54,7 +58,7 @@ function createRequest(
   method: 'GET' | 'PUT' | 'DELETE',
   body?: Record<string, unknown>
 ): NextRequest {
-  return new NextRequest(`http://localhost:3000/api/visits/test-id`, {
+  return new NextRequest(`http://localhost:3000/api/visits/${TEST_UUID}`, {
     method,
     body: body ? JSON.stringify(body) : undefined,
     headers: body ? { 'Content-Type': 'application/json' } : {},
@@ -68,23 +72,23 @@ describe('GET /api/visits/[id]', () => {
 
   it('debe retornar visita por ID', async () => {
     vi.mocked(prisma.visit.findUnique).mockResolvedValue({
-      id: 'v-1',
+      id: TEST_UUID,
       name: 'Test Visit',
       visitStatus: { id: 's1', name: 'Pendiente' },
     } as never)
 
-    const response = await GET(createRequest('GET'), createParams('v-1'))
+    const response = await GET(createRequest('GET'), createParams(TEST_UUID))
     const data = await response.json()
 
     expect(response.status).toBe(200)
-    expect(data.id).toBe('v-1')
+    expect(data.id).toBe(TEST_UUID)
     expect(data.name).toBe('Test Visit')
   })
 
   it('debe retornar 404 si no existe', async () => {
     vi.mocked(prisma.visit.findUnique).mockResolvedValue(null)
 
-    const response = await GET(createRequest('GET'), createParams('nonexistent'))
+    const response = await GET(createRequest('GET'), createParams(NONEXISTENT_UUID))
     const data = await response.json()
 
     expect(response.status).toBe(404)
@@ -93,7 +97,7 @@ describe('GET /api/visits/[id]', () => {
 
   it('debe incluir visitStatus', async () => {
     vi.mocked(prisma.visit.findUnique).mockResolvedValue({
-      id: 'v-1',
+      id: TEST_UUID,
       name: 'Test',
       visitStatus: {
         id: 's1',
@@ -102,7 +106,7 @@ describe('GET /api/visits/[id]', () => {
       },
     } as never)
 
-    const response = await GET(createRequest('GET'), createParams('v-1'))
+    const response = await GET(createRequest('GET'), createParams(TEST_UUID))
     const data = await response.json()
 
     expect(data.visitStatus.name).toBe('Pendiente')
@@ -111,7 +115,7 @@ describe('GET /api/visits/[id]', () => {
   it('debe manejar errores de base de datos', async () => {
     vi.mocked(prisma.visit.findUnique).mockRejectedValue(new Error('DB Error'))
 
-    const response = await GET(createRequest('GET'), createParams('v-1'))
+    const response = await GET(createRequest('GET'), createParams(TEST_UUID))
     const data = await response.json()
 
     expect(response.status).toBe(500)
@@ -124,7 +128,7 @@ describe('PUT /api/visits/[id]', () => {
     vi.clearAllMocks()
 
     vi.mocked(prisma.visit.update).mockResolvedValue({
-      id: 'v-1',
+      id: TEST_UUID,
       name: 'Actualizada',
       visitStatus: {},
     } as never)
@@ -132,7 +136,7 @@ describe('PUT /api/visits/[id]', () => {
 
   it('debe actualizar visita', async () => {
     const request = createRequest('PUT', { name: 'Actualizada' })
-    const response = await PUT(request, createParams('v-1'))
+    const response = await PUT(request, createParams(TEST_UUID))
     const data = await response.json()
 
     expect(response.status).toBe(200)
@@ -147,16 +151,16 @@ describe('PUT /api/visits/[id]', () => {
     vi.mocked(prisma.visit.update).mockRejectedValue(prismaError)
 
     const request = createRequest('PUT', { name: 'Test' })
-    const response = await PUT(request, createParams('nonexistent'))
+    const response = await PUT(request, createParams(NONEXISTENT_UUID))
     const data = await response.json()
 
     expect(response.status).toBe(404)
-    expect(data.error).toBe('Visita no encontrada')
+    expect(data.error).toBe('Registro no encontrado')
   })
 
   it('debe actualizar solo campos provistos', async () => {
     const request = createRequest('PUT', { name: 'Nuevo Nombre' })
-    await PUT(request, createParams('v-1'))
+    await PUT(request, createParams(TEST_UUID))
 
     expect(prisma.visit.update).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -166,8 +170,8 @@ describe('PUT /api/visits/[id]', () => {
   })
 
   it('debe convertir date string a Date', async () => {
-    const request = createRequest('PUT', { date: '2024-06-15' })
-    await PUT(request, createParams('v-1'))
+    const request = createRequest('PUT', { date: '2024-06-15T00:00:00.000Z' })
+    await PUT(request, createParams(TEST_UUID))
 
     expect(prisma.visit.update).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -180,7 +184,7 @@ describe('PUT /api/visits/[id]', () => {
 
   it('debe actualizar visitStatusId usando connect', async () => {
     const request = createRequest('PUT', { visitStatusId: 'new-status' })
-    await PUT(request, createParams('v-1'))
+    await PUT(request, createParams(TEST_UUID))
 
     expect(prisma.visit.update).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -195,7 +199,7 @@ describe('PUT /api/visits/[id]', () => {
     vi.mocked(prisma.visit.update).mockRejectedValue(new Error('DB Error'))
 
     const request = createRequest('PUT', { name: 'Test' })
-    const response = await PUT(request, createParams('v-1'))
+    const response = await PUT(request, createParams(TEST_UUID))
     const data = await response.json()
 
     expect(response.status).toBe(500)
@@ -208,12 +212,12 @@ describe('DELETE /api/visits/[id]', () => {
     vi.clearAllMocks()
 
     vi.mocked(prisma.visit.delete).mockResolvedValue({
-      id: 'v-1',
+      id: TEST_UUID,
     } as never)
   })
 
   it('debe eliminar visita', async () => {
-    const response = await DELETE(createRequest('DELETE'), createParams('v-1'))
+    const response = await DELETE(createRequest('DELETE'), createParams(TEST_UUID))
     const data = await response.json()
 
     expect(response.status).toBe(200)
@@ -227,25 +231,25 @@ describe('DELETE /api/visits/[id]', () => {
     })
     vi.mocked(prisma.visit.delete).mockRejectedValue(prismaError)
 
-    const response = await DELETE(createRequest('DELETE'), createParams('nonexistent'))
+    const response = await DELETE(createRequest('DELETE'), createParams(NONEXISTENT_UUID))
     const data = await response.json()
 
     expect(response.status).toBe(404)
-    expect(data.error).toBe('Visita no encontrada')
+    expect(data.error).toBe('Registro no encontrado')
   })
 
   it('debe llamar a prisma.visit.delete', async () => {
-    await DELETE(createRequest('DELETE'), createParams('v-1'))
+    await DELETE(createRequest('DELETE'), createParams(TEST_UUID))
 
     expect(prisma.visit.delete).toHaveBeenCalledWith({
-      where: { id: 'v-1' },
+      where: { id: TEST_UUID },
     })
   })
 
   it('debe manejar errores de base de datos', async () => {
     vi.mocked(prisma.visit.delete).mockRejectedValue(new Error('DB Error'))
 
-    const response = await DELETE(createRequest('DELETE'), createParams('v-1'))
+    const response = await DELETE(createRequest('DELETE'), createParams(TEST_UUID))
     const data = await response.json()
 
     expect(response.status).toBe(500)

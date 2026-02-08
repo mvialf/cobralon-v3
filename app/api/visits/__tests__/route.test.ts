@@ -72,6 +72,16 @@ async function callPOST(request: NextRequest) {
   return (POST as any)(request, context)
 }
 
+// Body válido para POST (reutilizable)
+const validVisitBody = {
+  name: 'Nueva Visita',
+  street: 'Calle 123',
+  comuna: 'Santiago',
+  region: 'Metropolitana',
+  visitStatusId: 'status-1',
+  date: '2024-01-15T00:00:00.000Z',
+}
+
 describe('GET /api/visits', () => {
   beforeEach(() => {
     vi.clearAllMocks()
@@ -175,14 +185,7 @@ describe('POST /api/visits', () => {
   })
 
   it('debe crear visita y retornar 201', async () => {
-    const request = createPostRequest({
-      name: 'Nueva Visita',
-      street: 'Calle 123',
-      comuna: 'Santiago',
-      region: 'Metropolitana',
-      visitStatusId: 'status-1',
-      date: '2024-01-15',
-    })
+    const request = createPostRequest(validVisitBody)
     const response = await callPOST(request)
     const data = await response.json()
 
@@ -191,14 +194,7 @@ describe('POST /api/visits', () => {
   })
 
   it('debe convertir date string a Date', async () => {
-    const request = createPostRequest({
-      name: 'Test',
-      street: 'Calle',
-      comuna: 'Comuna',
-      region: 'Region',
-      visitStatusId: 'status-1',
-      date: '2024-01-15',
-    })
+    const request = createPostRequest(validVisitBody)
     await callPOST(request)
 
     expect(prisma.visit.create).toHaveBeenCalledWith(
@@ -212,12 +208,7 @@ describe('POST /api/visits', () => {
 
   it('debe manejar campos opcionales', async () => {
     const request = createPostRequest({
-      name: 'Test',
-      street: 'Calle',
-      comuna: 'Comuna',
-      region: 'Region',
-      visitStatusId: 'status-1',
-      date: '2024-01-15',
+      ...validVisitBody,
       phone: '+56912345678',
       apartment: 'Depto 5',
       scheduledTime: '10:00',
@@ -239,12 +230,7 @@ describe('POST /api/visits', () => {
 
   it('debe convertir campos vacíos a null', async () => {
     const request = createPostRequest({
-      name: 'Test',
-      street: 'Calle',
-      comuna: 'Comuna',
-      region: 'Region',
-      visitStatusId: 'status-1',
-      date: '2024-01-15',
+      ...validVisitBody,
       phone: '',
       apartment: '',
     })
@@ -263,14 +249,7 @@ describe('POST /api/visits', () => {
   it('debe manejar errores de base de datos', async () => {
     vi.mocked(prisma.visit.create).mockRejectedValue(new Error('DB Error'))
 
-    const request = createPostRequest({
-      name: 'Test',
-      street: 'Calle',
-      comuna: 'Comuna',
-      region: 'Region',
-      visitStatusId: 'status-1',
-      date: '2024-01-15',
-    })
+    const request = createPostRequest(validVisitBody)
     const response = await callPOST(request)
     const data = await response.json()
 

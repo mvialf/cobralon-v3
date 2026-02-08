@@ -229,7 +229,10 @@ describe('POST /api/customers', () => {
       const data = await response.json()
 
       expect(response.status).toBe(400)
-      expect(data.error).toContain('nombre')
+      expect(data.error).toBe('Datos inválidos')
+      expect(data.details).toEqual(
+        expect.arrayContaining([expect.objectContaining({ path: ['name'] })])
+      )
     })
 
     it('debe rechazar nombre vacío', async () => {
@@ -238,7 +241,10 @@ describe('POST /api/customers', () => {
       const data = await response.json()
 
       expect(response.status).toBe(400)
-      expect(data.error).toContain('nombre')
+      expect(data.error).toBe('Datos inválidos')
+      expect(data.details).toEqual(
+        expect.arrayContaining([expect.objectContaining({ path: ['name'] })])
+      )
     })
 
     it('debe rechazar sin teléfono', async () => {
@@ -247,7 +253,10 @@ describe('POST /api/customers', () => {
       const data = await response.json()
 
       expect(response.status).toBe(400)
-      expect(data.error).toContain('teléfono')
+      expect(data.error).toBe('Datos inválidos')
+      expect(data.details).toEqual(
+        expect.arrayContaining([expect.objectContaining({ path: ['phone'] })])
+      )
     })
 
     it('debe rechazar teléfono vacío', async () => {
@@ -256,7 +265,10 @@ describe('POST /api/customers', () => {
       const data = await response.json()
 
       expect(response.status).toBe(400)
-      expect(data.error).toContain('teléfono')
+      expect(data.error).toBe('Datos inválidos')
+      expect(data.details).toEqual(
+        expect.arrayContaining([expect.objectContaining({ path: ['phone'] })])
+      )
     })
   })
 
@@ -285,7 +297,10 @@ describe('POST /api/customers', () => {
       const data = await response.json()
 
       expect(response.status).toBe(400)
-      expect(data.error).toContain('email no es válido')
+      expect(data.error).toBe('Datos inválidos')
+      expect(data.details).toEqual(
+        expect.arrayContaining([expect.objectContaining({ path: ['email'] })])
+      )
     })
 
     it('debe rechazar email duplicado', async () => {
