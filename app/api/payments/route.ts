@@ -5,6 +5,7 @@ import { Prisma } from '@prisma/client'
 import { z } from 'zod'
 import { AllocationInput, PaymentWhereInput } from '@/types/api'
 import { withLogging } from '@/lib/logger-middleware'
+import { withApiHandler, BusinessError } from '@/lib/api-handler'
 import { canApplyCredit } from '@/lib/business-logic/credit-management'
 import { generatePrismaInstallmentsCreate } from '@/lib/business-logic/installments'
 import {
@@ -15,7 +16,7 @@ import {
   validateSameCurrency,
 } from '@/lib/validations/payment-business-rules'
 import {
-  updateProjectBalance,
+  updateMultipleProjectBalances,
   type PrismaTransaction,
 } from '@/lib/business-logic/update-project-balance'
 import { updateCustomerCreditBalance } from '@/lib/business-logic/update-customer-credit-balance'
@@ -321,34 +322,34 @@ export const GET = withLogging(async (request, logger) => {
  *   - notes: string (opcional)
  *   - allocations: Array<{ projectId: string, allocatedAmount: number }> (min 1)
  */
-export const POST = withLogging(async (request, logger) => {
-  const body = await request.json()
-  const {
-    type,
-    customerId,
-    amount,
-    currency,
-    date,
-    paymentMethodId,
-    reference,
-    notes,
-    allocations,
-    selectedInstallments,
-    creditApplied, // ← Nuevo campo opcional
-  } = body
+export const POST = withApiHandler(
+  async (request, logger) => {
+    const body = await request.json()
+    const {
+      type,
+      customerId,
+      amount,
+      currency,
+      date,
+      paymentMethodId,
+      reference,
+      notes,
+      allocations,
+      selectedInstallments,
+      creditApplied, // ← Nuevo campo opcional
+    } = body
 
-  // Child logger con contexto de negocio
-  const paymentLogger = logger.child({
-    type,
-    customerId,
-    amount,
-    currency,
-    allocationCount: allocations?.length,
-  })
+    // Child logger con contexto de negocio
+    const paymentLogger = logger.child({
+      type,
+      customerId,
+      amount,
+      currency,
+      allocationCount: allocations?.length,
+    })
 
-  paymentLogger.info('Payment creation requested')
+    paymentLogger.info('Payment creation requested')
 
-  try {
     // Pre-calcular projectIds para query en paralelo
     const projectIds = allocations?.map((a: AllocationInput) => a.projectId) ?? []
 
@@ -615,7 +616,10 @@ export const POST = withLogging(async (request, logger) => {
         ])
 
         if (!customer || !creditProject) {
-          throw new Error('Cliente o proyecto no encontrado durante validación de crédito')
+          throw new BusinessError(
+            'Cliente o proyecto no encontrado durante validación de crédito',
+            404
+          )
         }
 
         const customerCreditBalance = Number(customer.creditBalance)
@@ -628,7 +632,7 @@ export const POST = withLogging(async (request, logger) => {
           projectBalance
         )
         if (!creditValidation.valid) {
-          throw new Error(creditValidation.error)
+          throw new BusinessError(creditValidation.error!, 400)
         }
 
         // Crear registro de transacción de crédito
@@ -663,9 +667,7 @@ export const POST = withLogging(async (request, logger) => {
       // ====================================================================
       paymentLogger.debug({ projectIds }, 'Updating project balances in transaction')
 
-      for (const projectId of projectIds) {
-        await updateProjectBalance(projectId, tx)
-      }
+      await updateMultipleProjectBalances(projectIds, tx)
 
       paymentLogger.debug('Project balances updated successfully in transaction')
 
@@ -761,8 +763,6 @@ export const POST = withLogging(async (request, logger) => {
     )
 
     return NextResponse.json(payment, { status: 201 })
-  } catch (error) {
-    paymentLogger.error({ err: error }, 'Error creating payment')
-    return NextResponse.json({ error: 'Error al crear pago' }, { status: 500 })
-  }
-})
+  },
+  { fallbackError: 'Error al crear pago' }
+)
