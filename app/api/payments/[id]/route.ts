@@ -121,7 +121,7 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
 
     return NextResponse.json(payment)
   } catch (error) {
-    console.error('Error updating payment:', error)
+    logger.error({ err: error }, 'Error updating payment')
     return NextResponse.json({ error: 'Error al actualizar pago' }, { status: 500 })
   }
 }

@@ -336,7 +336,7 @@ export const POST = withApiHandler(
       notes,
       allocations,
       selectedInstallments,
-      creditApplied, // ← Nuevo campo opcional
+      creditApplied,
     } = body
 
     // Child logger con contexto de negocio

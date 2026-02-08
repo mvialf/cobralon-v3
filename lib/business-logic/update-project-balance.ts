@@ -130,14 +130,11 @@ export async function updateMultipleProjectBalances(
   projectIds: string[],
   tx?: PrismaTransaction
 ): Promise<number> {
-  let updated = 0
-
   for (const projectId of projectIds) {
     await updateProjectBalance(projectId, tx)
-    updated++
   }
 
-  return updated
+  return projectIds.length
 }
 
 /**
@@ -231,7 +228,7 @@ export async function updateProjectBalanceWithAdjustments(
 
   // Calcular balance base (sin ajustes)
   const { balance: baseBalance } = calculateProjectBalance({
-    totalAmount: Number(project.totalAmount || project.total),
+    totalAmount: Number(project.totalAmount ?? project.total),
     allocations: project.paymentAllocations.map((alloc) => ({
       allocatedAmount: Number(alloc.allocatedAmount),
     })),
