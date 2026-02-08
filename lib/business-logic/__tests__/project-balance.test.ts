@@ -7,7 +7,11 @@
  */
 
 import { describe, it, expect } from 'vitest'
-import { calculateProjectBalance, getTotalPendingBalance } from '../project-balance'
+import {
+  calculateProjectBalance,
+  derivePaymentProgress,
+  getTotalPendingBalance,
+} from '../project-balance'
 
 describe('calculateProjectBalance', () => {
   it('debe calcular balance correcto con allocations', () => {
@@ -180,6 +184,40 @@ describe('calculateProjectBalance', () => {
     expect(result.balance).toBeCloseTo(0.005, 5)
     expect(result.percentPaid).toBe(50)
     expect(result.isFullyPaid).toBe(false)
+  })
+})
+
+describe('derivePaymentProgress', () => {
+  it('debe derivar progreso normal', () => {
+    const result = derivePaymentProgress(1000000, 300000)
+
+    expect(result.totalPaid).toBe(700000)
+    expect(result.percentPaid).toBe(70)
+    expect(result.isFullyPaid).toBe(false)
+  })
+
+  it('debe marcar isFullyPaid cuando balance = 0', () => {
+    const result = derivePaymentProgress(1000000, 0)
+
+    expect(result.totalPaid).toBe(1000000)
+    expect(result.percentPaid).toBe(100)
+    expect(result.isFullyPaid).toBe(true)
+  })
+
+  it('debe manejar sobrepago (balance negativo)', () => {
+    const result = derivePaymentProgress(1000000, -200000)
+
+    expect(result.totalPaid).toBe(1200000)
+    expect(result.percentPaid).toBe(120)
+    expect(result.isFullyPaid).toBe(true)
+  })
+
+  it('debe manejar total = 0', () => {
+    const result = derivePaymentProgress(0, 0)
+
+    expect(result.totalPaid).toBe(0)
+    expect(result.percentPaid).toBe(0)
+    expect(result.isFullyPaid).toBe(true)
   })
 })
 

@@ -19,12 +19,7 @@ vi.mock('@/lib/db', () => ({
   },
 }))
 
-vi.mock('@/lib/business-logic/project-balance', () => ({
-  calculateProjectBalance: vi.fn(),
-}))
-
 import { prisma } from '@/lib/db'
-import { calculateProjectBalance } from '@/lib/business-logic/project-balance'
 import { GET } from '../route'
 
 function createRequest(searchParams?: Record<string, string>): NextRequest {
@@ -49,26 +44,12 @@ describe('GET /api/payments/search-projects', () => {
         projectNumber: '1001',
         projectName: 'Proyecto 1',
         totalAmount: 100000,
+        balance: 50000,
         currency: 'CLP',
         createdAt: new Date('2024-01-01'),
         customer: { id: 'c1', name: 'Cliente 1' },
-        paymentAllocations: [{ allocatedAmount: 50000 }],
-      },
-      {
-        id: 'p2',
-        projectNumber: '1002',
-        projectName: 'Proyecto 2',
-        totalAmount: 100000,
-        currency: 'CLP',
-        createdAt: new Date('2024-01-02'),
-        customer: { id: 'c1', name: 'Cliente 1' },
-        paymentAllocations: [{ allocatedAmount: 100000 }],
       },
     ] as never)
-
-    vi.mocked(calculateProjectBalance)
-      .mockReturnValueOnce({ balance: 50000 } as never) // p1: tiene balance
-      .mockReturnValueOnce({ balance: 0 } as never) // p2: sin balance
 
     const response = await GET(createRequest({ q: 'Cliente' }))
     const data = await response.json()
@@ -77,6 +58,20 @@ describe('GET /api/payments/search-projects', () => {
     expect(data).toHaveLength(1)
     expect(data[0].id).toBe('p1')
     expect(data[0].balance).toBe(50000)
+  })
+
+  it('debe filtrar por balance > 0 en la query de DB', async () => {
+    vi.mocked(prisma.project.findMany).mockResolvedValue([] as never)
+
+    await GET(createRequest({ q: 'test' }))
+
+    expect(prisma.project.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          balance: { gt: 0 },
+        }),
+      })
+    )
   })
 
   it('debe retornar 400 cuando query < 2 caracteres', async () => {

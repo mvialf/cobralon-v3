@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { Decimal } from '@prisma/client/runtime/library'
 import { ProjectUpdateInput } from '@/types/api'
-import { calculateProjectBalance } from '@/lib/business-logic/project-balance'
+import { derivePaymentProgress } from '@/lib/business-logic/project-balance'
 import { calculateProjectTotal } from '@/lib/business-logic/totals'
 import { FINANCIAL } from '@/lib/constants/financial-constants'
 
@@ -40,11 +40,6 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
             },
           },
         },
-        paymentAllocations: {
-          select: {
-            allocatedAmount: true,
-          },
-        },
         uninstallTags: {
           include: {
             uninstallTag: {
@@ -61,21 +56,19 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
       return NextResponse.json({ error: 'Proyecto no encontrado' }, { status: 404 })
     }
 
-    // SIEMPRE calcular totalPaid y balance
-    const { totalPaid, balance, percentPaid } = calculateProjectBalance({
-      totalAmount: Number(project.totalAmount),
-      allocations: project.paymentAllocations.map((alloc: { allocatedAmount: Decimal }) => ({
-        allocatedAmount: Number(alloc.allocatedAmount),
-      })),
-    })
+    // Derivar campos de display desde balance persistido
+    const { totalPaid, percentPaid } = derivePaymentProgress(
+      Number(project.totalAmount),
+      Number(project.balance)
+    )
 
-    // Retornar proyecto con balance calculado
+    // Retornar proyecto con balance derivado
     return NextResponse.json({
       ...project,
       totalAmount: Number(project.totalAmount),
       total: Number(project.total),
+      balance: Number(project.balance),
       totalPaid,
-      balance,
       percentPaid,
     })
   } catch (error) {

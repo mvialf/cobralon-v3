@@ -2,6 +2,7 @@ import { dehydrate, HydrationBoundary, QueryClient } from '@tanstack/react-query
 import { prisma } from '@/lib/db'
 import { serialize } from '@/lib/utils/serialize'
 import { getActiveProjectsWhere } from '@/lib/business-logic/project-state'
+import { derivePaymentProgress } from '@/lib/business-logic/project-balance'
 import { ProjectsPageClient } from './page-client'
 
 /**
@@ -55,10 +56,7 @@ async function getInitialProjects() {
 
   // Agregar campos calculados (igual que transformRawToProjectListItem)
   const projects = rawProjects.map((p) => {
-    const totalNum = Number(p.total)
-    const balanceNum = Number(p.balance)
-    const totalPaid = totalNum - balanceNum
-    const percentPaid = totalNum > 0 ? (totalPaid / totalNum) * 100 : 0
+    const { totalPaid, percentPaid } = derivePaymentProgress(Number(p.total), Number(p.balance))
     return {
       ...p,
       totalPaid,

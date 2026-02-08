@@ -155,6 +155,31 @@ export interface ProjectWithFullAllocations {
  *
  * @see {@link docs/project/analysis/frontend-calculations.md#5} - Análisis exhaustivo
  */
+/**
+ * Resultado de derivación de progreso de pago desde columna balance persistida
+ */
+export interface PaymentProgressResult {
+  totalPaid: number
+  percentPaid: number
+  isFullyPaid: boolean
+}
+
+/**
+ * Deriva totalPaid, percentPaid e isFullyPaid a partir de total y balance persistido.
+ *
+ * Usar en endpoints GET que leen Project.balance de la DB.
+ * NO recalcula balance — solo deriva campos de display.
+ *
+ * @param total - Monto total del proyecto (Number(project.total))
+ * @param balance - Balance persistido en DB (Number(project.balance))
+ */
+export function derivePaymentProgress(total: number, balance: number): PaymentProgressResult {
+  const totalPaid = total - balance
+  const percentPaid = total > 0 ? (totalPaid / total) * 100 : 0
+  const isFullyPaid = balance <= 0
+  return { totalPaid, percentPaid, isFullyPaid }
+}
+
 export function getTotalPendingBalance(projects: ProjectWithFullAllocations[]): number {
   return projects.reduce((sum, project) => {
     // Calcular balance de este proyecto

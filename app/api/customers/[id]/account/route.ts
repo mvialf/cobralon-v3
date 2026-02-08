@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
-import { calculateProjectBalance } from '@/lib/business-logic/project-balance'
+import { derivePaymentProgress } from '@/lib/business-logic/project-balance'
 
 /**
  * GET /api/customers/[id]/account
@@ -34,13 +34,6 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
           where: {
             totalAmount: { gt: 0 }, // Solo proyectos con monto definido
           },
-          include: {
-            paymentAllocations: {
-              select: {
-                allocatedAmount: true,
-              },
-            },
-          },
           orderBy: {
             createdAt: 'asc', // Más antiguos primero
           },
@@ -52,14 +45,12 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
       return NextResponse.json({ error: 'Cliente no encontrado' }, { status: 404 })
     }
 
-    // Calcular balance de cada proyecto
+    // Derivar campos de display desde balance persistido
     const projectsWithBalance = customer.projects.map((project) => {
-      const { balance, totalPaid } = calculateProjectBalance({
-        totalAmount: Number(project.totalAmount),
-        allocations: project.paymentAllocations.map((alloc) => ({
-          allocatedAmount: Number(alloc.allocatedAmount),
-        })),
-      })
+      const { totalPaid } = derivePaymentProgress(
+        Number(project.totalAmount),
+        Number(project.balance)
+      )
 
       return {
         id: project.id,
@@ -67,7 +58,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
         projectName: project.projectName,
         totalAmount: Number(project.totalAmount),
         totalPaid,
-        balance,
+        balance: Number(project.balance),
         currency: project.currency,
       }
     })

@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
-import { calculateProjectBalance } from '@/lib/business-logic/project-balance'
 
 /**
  * GET /api/payments/customer-projects
@@ -52,6 +51,7 @@ export async function GET(req: NextRequest) {
       where: {
         customerId,
         totalAmount: { gt: 0 }, // Solo proyectos con monto definido
+        balance: { gt: 0 }, // Solo proyectos con balance pendiente (usa índice)
       },
       include: {
         customer: {
@@ -60,43 +60,26 @@ export async function GET(req: NextRequest) {
             name: true,
           },
         },
-        paymentAllocations: {
-          select: {
-            allocatedAmount: true,
-          },
-        },
       },
       orderBy: {
         createdAt: 'asc', // ← Más antiguos primero (para FIFO)
       },
     })
 
-    // Calcular balance de cada proyecto
-    const projectsWithBalance = projects
-      .map((project) => {
-        const { balance } = calculateProjectBalance({
-          totalAmount: Number(project.totalAmount),
-          allocations: project.paymentAllocations.map((alloc) => ({
-            allocatedAmount: Number(alloc.allocatedAmount),
-          })),
-        })
-
-        return {
-          id: project.id,
-          projectNumber: project.projectNumber,
-          projectName: project.projectName,
-          totalAmount: Number(project.totalAmount),
-          currency: project.currency,
-          balance,
-          createdAt: project.createdAt, // ← Para FIFO
-          customer: {
-            id: project.customer.id,
-            name: project.customer.name,
-          },
-        }
-      })
-      // Filtrar solo proyectos con balance > 0
-      .filter((p) => p.balance > 0)
+    // Mapear respuesta (balance ya filtrado en DB)
+    const projectsWithBalance = projects.map((project) => ({
+      id: project.id,
+      projectNumber: project.projectNumber,
+      projectName: project.projectName,
+      totalAmount: Number(project.totalAmount),
+      currency: project.currency,
+      balance: Number(project.balance),
+      createdAt: project.createdAt, // ← Para FIFO
+      customer: {
+        id: project.customer.id,
+        name: project.customer.name,
+      },
+    }))
 
     return NextResponse.json(projectsWithBalance)
   } catch (error) {

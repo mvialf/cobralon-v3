@@ -34,12 +34,12 @@ vi.mock('@/lib/db', () => ({
   },
 }))
 
-// Mock de business logic
+// Mock de business logic (derivePaymentProgress se usa en GET)
 vi.mock('@/lib/business-logic/project-balance', () => ({
-  calculateProjectBalance: vi.fn().mockReturnValue({
+  derivePaymentProgress: vi.fn().mockReturnValue({
     totalPaid: 500000,
-    balance: 690000,
     percentPaid: 42,
+    isFullyPaid: false,
   }),
 }))
 
@@ -50,7 +50,7 @@ vi.mock('@/lib/business-logic/totals', () => ({
 }))
 
 import { prisma } from '@/lib/db'
-import { calculateProjectBalance } from '@/lib/business-logic/project-balance'
+import { derivePaymentProgress } from '@/lib/business-logic/project-balance'
 import { calculateProjectTotal } from '@/lib/business-logic/totals'
 import { GET, PUT, DELETE } from '../route'
 
@@ -91,9 +91,6 @@ const mockProject = {
   description: null,
   customer: { id: 'customer-1', name: 'Test Customer', phone: '+56912345678' },
   projectStatus: { id: 'status-1', name: 'En progreso', isFinal: false, color: null },
-  paymentAllocations: [
-    { allocatedAmount: new Decimal(500000) },
-  ],
   uninstallTags: [],
 }
 
@@ -127,13 +124,13 @@ describe('GET /api/projects/[id]', () => {
     expect(data.percentPaid).toBeDefined()
   })
 
-  it('debe llamar a calculateProjectBalance', async () => {
+  it('debe llamar a derivePaymentProgress', async () => {
     vi.mocked(prisma.project.findUnique).mockResolvedValue(mockProject as never)
 
     const request = createRequest('GET')
     await GET(request, createParams('project-1'))
 
-    expect(calculateProjectBalance).toHaveBeenCalled()
+    expect(derivePaymentProgress).toHaveBeenCalled()
   })
 
   it('debe convertir Decimal a number en respuesta', async () => {

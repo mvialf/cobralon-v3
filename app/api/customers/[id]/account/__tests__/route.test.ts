@@ -19,13 +19,7 @@ vi.mock('@/lib/db', () => ({
   },
 }))
 
-// Mock de business logic
-vi.mock('@/lib/business-logic/project-balance', () => ({
-  calculateProjectBalance: vi.fn(),
-}))
-
 import { prisma } from '@/lib/db'
-import { calculateProjectBalance } from '@/lib/business-logic/project-balance'
 import { GET } from '../route'
 
 // Helper para crear params
@@ -71,7 +65,7 @@ describe('GET /api/customers/[id]/account', () => {
     expect(data.projects).toEqual([])
   })
 
-  it('debe calcular balance de cada proyecto', async () => {
+  it('debe derivar balance y totalPaid de cada proyecto', async () => {
     vi.mocked(prisma.customer.findUnique).mockResolvedValue({
       id: 'customer-1',
       name: 'Test Customer',
@@ -81,34 +75,29 @@ describe('GET /api/customers/[id]/account', () => {
           projectNumber: 'P-001',
           projectName: 'Mi Proyecto',
           totalAmount: new Decimal(1190000),
+          balance: new Decimal(690000),
           currency: 'CLP',
-          paymentAllocations: [
-            { allocatedAmount: new Decimal(500000) },
-          ],
         },
         {
           id: 'project-2',
           projectNumber: 'P-002',
           projectName: null,
           totalAmount: new Decimal(500000),
+          balance: new Decimal(500000),
           currency: 'CLP',
-          paymentAllocations: [],
         },
       ],
     } as never)
-
-    vi.mocked(calculateProjectBalance)
-      .mockReturnValueOnce({ balance: 690000, totalPaid: 500000, percentPaid: 42, isFullyPaid: false })
-      .mockReturnValueOnce({ balance: 500000, totalPaid: 0, percentPaid: 0, isFullyPaid: false })
 
     const response = await GET(createRequest(), createParams('customer-1'))
     const data = await response.json()
 
     expect(response.status).toBe(200)
-    expect(calculateProjectBalance).toHaveBeenCalledTimes(2)
     expect(data.projects).toHaveLength(2)
     expect(data.projects[0].balance).toBe(690000)
+    expect(data.projects[0].totalPaid).toBe(500000)
     expect(data.projects[1].balance).toBe(500000)
+    expect(data.projects[1].totalPaid).toBe(0)
   })
 
   it('debe incluir totalPaid en cada proyecto', async () => {
@@ -121,20 +110,11 @@ describe('GET /api/customers/[id]/account', () => {
           projectNumber: 'P-001',
           projectName: 'Test',
           totalAmount: new Decimal(1000000),
+          balance: new Decimal(700000),
           currency: 'CLP',
-          paymentAllocations: [
-            { allocatedAmount: new Decimal(300000) },
-          ],
         },
       ],
     } as never)
-
-    vi.mocked(calculateProjectBalance).mockReturnValue({
-      balance: 700000,
-      totalPaid: 300000,
-      percentPaid: 30,
-      isFullyPaid: false,
-    })
 
     const response = await GET(createRequest(), createParams('customer-1'))
     const data = await response.json()
@@ -152,18 +132,11 @@ describe('GET /api/customers/[id]/account', () => {
           projectNumber: 'P-001',
           projectName: null,
           totalAmount: new Decimal(1000000),
+          balance: new Decimal(1000000),
           currency: 'CLP',
-          paymentAllocations: [],
         },
       ],
     } as never)
-
-    vi.mocked(calculateProjectBalance).mockReturnValue({
-      balance: 1000000,
-      totalPaid: 0,
-      percentPaid: 0,
-      isFullyPaid: false,
-    })
 
     const response = await GET(createRequest(), createParams('customer-1'))
     const data = await response.json()

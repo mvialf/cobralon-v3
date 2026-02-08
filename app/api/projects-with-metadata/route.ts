@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { ProjectWhereInput } from '@/types/api'
-import { calculateProjectBalance } from '@/lib/business-logic/project-balance'
+import { derivePaymentProgress } from '@/lib/business-logic/project-balance'
 import { getProjectStateWhere, type ProjectStateFilter } from '@/lib/business-logic/project-state'
 import { anyFieldMatchesSearch } from '@/lib/utils/normalize'
 
@@ -71,11 +71,6 @@ export async function GET(request: Request) {
               },
             },
           },
-          paymentAllocations: {
-            select: {
-              allocatedAmount: true,
-            },
-          },
         },
       }),
 
@@ -94,21 +89,17 @@ export async function GET(request: Request) {
       }),
     ])
 
-    // Calcular balance para cada proyecto
+    // Derivar campos de display desde balance persistido
     const projectsWithCalculations = allProjects.map((project) => {
-      const { totalPaid, balance } = calculateProjectBalance({
-        totalAmount: Number(project.total),
-        allocations: project.paymentAllocations.map((alloc) => ({
-          allocatedAmount: Number(alloc.allocatedAmount),
-        })),
-      })
-
-      const percentPaid = Number(project.total) > 0 ? (totalPaid / Number(project.total)) * 100 : 0
+      const { totalPaid, percentPaid } = derivePaymentProgress(
+        Number(project.total),
+        Number(project.balance)
+      )
 
       return {
         ...project,
         totalPaid,
-        balance,
+        balance: Number(project.balance),
         percentPaid,
       }
     })

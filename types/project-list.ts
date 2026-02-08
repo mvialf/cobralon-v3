@@ -5,6 +5,7 @@
  */
 
 import { Decimal } from '@prisma/client/runtime/library'
+import { derivePaymentProgress } from '@/lib/business-logic/project-balance'
 
 /**
  * Resultado raw de la query SQL para listado de proyectos
@@ -128,8 +129,7 @@ export interface ProjectListFilters {
 export function transformRawToProjectListItem(row: ProjectListRawRow): ProjectListItem {
   const total = Number(row.total)
   const balance = Number(row.balance)
-  const totalPaid = total - balance
-  const percentPaid = total > 0 ? (totalPaid / total) * 100 : 0
+  const { totalPaid, percentPaid } = derivePaymentProgress(total, balance)
 
   return {
     id: row.id,

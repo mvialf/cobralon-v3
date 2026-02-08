@@ -23,12 +23,7 @@ vi.mock('@/lib/db', () => ({
   },
 }))
 
-vi.mock('@/lib/business-logic/project-balance', () => ({
-  calculateProjectBalance: vi.fn(),
-}))
-
 import { prisma } from '@/lib/db'
-import { calculateProjectBalance } from '@/lib/business-logic/project-balance'
 import { GET } from '../route'
 
 const validCustomerId = '00000000-0000-0000-0000-000000000001'
@@ -60,14 +55,12 @@ describe('GET /api/payments/customer-projects', () => {
         projectNumber: '1001',
         projectName: null,
         totalAmount: 100000,
+        balance: 70000,
         currency: 'CLP',
         createdAt: new Date('2024-01-01'),
         customer: { id: validCustomerId, name: 'Cliente Test' },
-        paymentAllocations: [{ allocatedAmount: 30000 }],
       },
     ] as never)
-
-    vi.mocked(calculateProjectBalance).mockReturnValue({ balance: 70000 } as never)
 
     const response = await GET(createRequest({ customerId: validCustomerId }))
     const data = await response.json()
@@ -103,30 +96,36 @@ describe('GET /api/payments/customer-projects', () => {
     expect(data.error).toContain('Cliente no encontrado')
   })
 
-  it('debe retornar array vacío cuando todos los proyectos tienen balance 0', async () => {
+  it('debe retornar array vacío cuando no hay proyectos con balance pendiente', async () => {
     vi.mocked(prisma.customer.findUnique).mockResolvedValue({
       id: validCustomerId,
       name: 'Cliente',
     } as never)
-    vi.mocked(prisma.project.findMany).mockResolvedValue([
-      {
-        id: 'p1',
-        projectNumber: '1001',
-        projectName: null,
-        totalAmount: 50000,
-        currency: 'CLP',
-        createdAt: new Date(),
-        customer: { id: validCustomerId, name: 'Cliente' },
-        paymentAllocations: [{ allocatedAmount: 50000 }],
-      },
-    ] as never)
-    vi.mocked(calculateProjectBalance).mockReturnValue({ balance: 0 } as never)
+    vi.mocked(prisma.project.findMany).mockResolvedValue([] as never)
 
     const response = await GET(createRequest({ customerId: validCustomerId }))
     const data = await response.json()
 
     expect(response.status).toBe(200)
     expect(data).toEqual([])
+  })
+
+  it('debe filtrar por balance > 0 en la query de DB', async () => {
+    vi.mocked(prisma.customer.findUnique).mockResolvedValue({
+      id: validCustomerId,
+      name: 'Cliente',
+    } as never)
+    vi.mocked(prisma.project.findMany).mockResolvedValue([] as never)
+
+    await GET(createRequest({ customerId: validCustomerId }))
+
+    expect(prisma.project.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          balance: { gt: 0 },
+        }),
+      })
+    )
   })
 
   it('debe ordenar por createdAt ASC (FIFO)', async () => {
