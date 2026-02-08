@@ -509,7 +509,7 @@ describe('customerSchema', () => {
   })
 
   describe('edge cases', () => {
-    it('debe manejar nombre con solo espacios alrededor', () => {
+    it('debe trimear nombre con espacios alrededor', () => {
       const result = customerSchema.safeParse({
         ...validCustomer,
         name: '  Juan Pérez  ',
@@ -517,7 +517,7 @@ describe('customerSchema', () => {
 
       expect(result.success).toBe(true)
       if (result.success) {
-        expect(result.data.name).toBe('  Juan Pérez  ')
+        expect(result.data.name).toBe('Juan Pérez')
       }
     })
 
