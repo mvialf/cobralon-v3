@@ -57,7 +57,10 @@ export function DataTableToolbar<TData>({
   manualFiltering: _manualFiltering = false,
   serverFacets,
 }: DataTableToolbarProps<TData>) {
-  const isFiltered = table.getState().columnFilters.length > 0 || !!table.getState().globalFilter
+  const isFiltered =
+    table.getState().columnFilters.length > 0 ||
+    !!table.getState().globalFilter ||
+    table.getState().sorting.length > 0
 
   // Manejar cambio de búsqueda
   const handleSearchChange = (value: string) => {
@@ -130,7 +133,10 @@ export function DataTableToolbar<TData>({
         {isFiltered && (
           <Button
             variant="ghost"
-            onClick={() => table.resetColumnFilters()}
+            onClick={() => {
+              table.resetColumnFilters()
+              table.resetSorting()
+            }}
             className="h-8 px-2 lg:px-3"
           >
             Limpiar

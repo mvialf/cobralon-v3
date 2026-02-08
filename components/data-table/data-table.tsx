@@ -90,6 +90,10 @@ interface DataTableProps<TData, TValue> {
   // Server-side filtering props
   manualFiltering?: boolean
   serverFacets?: ServerFacets
+  // Server-side sorting props
+  manualSorting?: boolean
+  sorting?: SortingState
+  onSortingChange?: (sorting: SortingState) => void
   // Bulk actions
   bulkActions?: BulkAction<TData>[]
 }
@@ -115,10 +119,14 @@ export function DataTable<TData, TValue>({
   // Server-side filtering
   manualFiltering = false,
   serverFacets,
+  // Server-side sorting
+  manualSorting = false,
+  sorting: controlledSorting,
+  onSortingChange,
   // Bulk actions
   bulkActions,
 }: DataTableProps<TData, TValue>) {
-  const [sorting, setSorting] = React.useState<SortingState>([])
+  const [internalSorting, setInternalSorting] = React.useState<SortingState>([])
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([])
   const [globalFilter, setGlobalFilter] = React.useState('')
   const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({})
@@ -134,6 +142,9 @@ export function DataTable<TData, TValue>({
   // Si se pasa una custom, usarla. Si no, usar normalizedGlobalFilter por defecto.
   const effectiveGlobalFilterFn = globalFilterFn ?? normalizedGlobalFilter
 
+  // Sorting: usar controlado (server-side) o interno (client-side)
+  const effectiveSorting = manualSorting ? (controlledSorting ?? internalSorting) : internalSorting
+
   const table = useReactTable({
     data,
     columns,
@@ -142,6 +153,8 @@ export function DataTable<TData, TValue>({
     pageCount: manualPagination ? (controlledPageCount ?? -1) : undefined,
     // Configuración de filtrado server-side
     manualFiltering,
+    // Configuración de sorting server-side
+    manualSorting,
     // Funciones de filtrado: siempre registrar (TanStack las ignora si manualFiltering=true)
     filterFns: {
       normalized: normalizedIncludesString,
@@ -153,7 +166,7 @@ export function DataTable<TData, TValue>({
           filterFn: 'normalized',
         },
     state: {
-      sorting,
+      sorting: effectiveSorting,
       columnFilters,
       globalFilter,
       columnVisibility,
@@ -165,7 +178,17 @@ export function DataTable<TData, TValue>({
     },
     enableRowSelection,
     onRowSelectionChange: setRowSelection,
-    onSortingChange: setSorting,
+    onSortingChange: manualSorting
+      ? (updaterOrValue) => {
+          if (onSortingChange) {
+            const newSorting =
+              typeof updaterOrValue === 'function'
+                ? updaterOrValue(controlledSorting ?? internalSorting)
+                : updaterOrValue
+            onSortingChange(newSorting)
+          }
+        }
+      : setInternalSorting,
     onColumnFiltersChange: setColumnFilters,
     onGlobalFilterChange: setGlobalFilter,
     onColumnVisibilityChange: setColumnVisibility,
