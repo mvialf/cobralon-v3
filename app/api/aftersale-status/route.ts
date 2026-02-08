@@ -1,18 +1,11 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
-import { z } from 'zod'
-
-/**
- * Schema de validación para crear/actualizar AftersaleStatus
- */
-const aftersaleStatusSchema = z.object({
-  name: z.string().min(1, 'El nombre es obligatorio').max(50, 'Máximo 50 caracteres'),
-  colorId: z.string().uuid('Color ID inválido'),
-  order: z.number().int().min(0, 'El orden debe ser >= 0').optional(),
-  isInitial: z.boolean().optional(),
-  isFinal: z.boolean().optional(),
-  isActive: z.boolean().optional(),
-})
+import { withLogging } from '@/lib/logger-middleware'
+import { withApiHandler, BusinessError } from '@/lib/api-handler'
+import {
+  createStatusApiSchema,
+  type CreateStatusApiBody,
+} from '@/lib/validations/base-status-validations'
 
 /**
  * GET /api/aftersale-status
@@ -22,27 +15,8 @@ const aftersaleStatusSchema = z.object({
  * Query params:
  * - includeInactive: "true" para incluir estados inactivos (default: false)
  * - includeColor: "true" para incluir datos del color (default: true)
- *
- * Response:
- * ```json
- * {
- *   "aftersaleStatuses": [
- *     {
- *       "id": "uuid",
- *       "name": "Abierto",
- *       "order": 1,
- *       "colorId": "uuid",
- *       "color": { "name": "Amarillo", "bgClass": "bg-yellow-500", ... },
- *       "isInitial": true,
- *       "isFinal": false,
- *       "isActive": true,
- *       "_count": { "aftersales": 5 }
- *     }
- *   ]
- * }
- * ```
  */
-export async function GET(request: Request) {
+export const GET = withLogging(async (request, logger) => {
   try {
     const { searchParams } = new URL(request.url)
     const includeInactive = searchParams.get('includeInactive') === 'true'
@@ -80,29 +54,18 @@ export async function GET(request: Request) {
 
     return NextResponse.json({ aftersaleStatuses })
   } catch (error) {
-    console.error('Error fetching aftersale statuses:', error)
+    logger.error({ err: error }, 'Error fetching aftersale statuses')
     return NextResponse.json(
       { error: 'Error al obtener los estados de postventa' },
       { status: 500 }
     )
   }
-}
+})
 
 /**
  * POST /api/aftersale-status
  *
  * Crea un nuevo estado de postventa
- *
- * Body:
- * ```json
- * {
- *   "name": "En Revisión",
- *   "colorId": "uuid-del-color",
- *   "order": 5,
- *   "isInitial": false,
- *   "isFinal": false
- * }
- * ```
  *
  * Validaciones:
  * - Solo puede haber un estado con isInitial=true
@@ -110,111 +73,89 @@ export async function GET(request: Request) {
  * - El nombre debe ser único
  * - El colorId debe existir en BadgeColor
  */
-export async function POST(request: Request) {
-  try {
-    const body = await request.json()
-    const validatedData = aftersaleStatusSchema.parse(body)
-
+export const POST = withApiHandler<CreateStatusApiBody>(
+  async (_request, logger, { body }) => {
     // Validación: nombre único
     const existingByName = await prisma.aftersaleStatus.findUnique({
-      where: { name: validatedData.name },
+      where: { name: body.name },
     })
 
     if (existingByName) {
-      return NextResponse.json(
-        { error: `Ya existe un estado con el nombre "${validatedData.name}"` },
-        { status: 400 }
-      )
+      throw new BusinessError(`Ya existe un estado con el nombre "${body.name}"`)
     }
 
     // Validación: solo un estado inicial
-    if (validatedData.isInitial) {
+    if (body.isInitial) {
       const currentInitial = await prisma.aftersaleStatus.findFirst({
         where: { isInitial: true, isActive: true },
       })
 
       if (currentInitial) {
-        return NextResponse.json(
-          {
-            error: `Ya existe un estado inicial: "${currentInitial.name}". Solo puede haber uno.`,
-          },
-          { status: 400 }
+        throw new BusinessError(
+          `Ya existe un estado inicial: "${currentInitial.name}". Solo puede haber uno.`
         )
       }
     }
 
     // Validación: solo un estado final
-    if (validatedData.isFinal) {
+    if (body.isFinal) {
       const currentFinal = await prisma.aftersaleStatus.findFirst({
         where: { isFinal: true, isActive: true },
       })
 
       if (currentFinal) {
-        return NextResponse.json(
-          { error: `Ya existe un estado final: "${currentFinal.name}". Solo puede haber uno.` },
-          { status: 400 }
+        throw new BusinessError(
+          `Ya existe un estado final: "${currentFinal.name}". Solo puede haber uno.`
         )
       }
     }
 
     // Validación: colorId existe
     const colorExists = await prisma.badgeColor.findUnique({
-      where: { id: validatedData.colorId },
+      where: { id: body.colorId },
     })
 
     if (!colorExists) {
-      return NextResponse.json({ error: 'El color seleccionado no existe' }, { status: 400 })
+      throw new BusinessError('El color seleccionado no existe')
     }
 
     // Calcular order automáticamente según tipo de estado
     let order: number
 
-    if (validatedData.isInitial) {
-      // Estado inicial: siempre primero (order = 0)
+    if (body.isInitial) {
       order = 0
-    } else if (validatedData.isFinal) {
-      // Estado final: siempre último (order = 999)
+    } else if (body.isFinal) {
       order = 999
     } else {
-      // Estado normal: calcular siguiente order disponible en el medio
-      // Buscar el máximo order de estados normales (excluir inicial=0 y final=999)
       const maxNormalOrder = await prisma.aftersaleStatus.findFirst({
         where: {
           isInitial: false,
           isFinal: false,
-          order: { lt: 999 }, // Excluir final
+          order: { lt: 999 },
         },
         orderBy: { order: 'desc' },
         select: { order: true },
       })
 
-      // Si no hay estados normales, empezar en 10
-      // Si hay, sumar 10 al máximo (gaps para reordenar)
       order = maxNormalOrder ? maxNormalOrder.order + 10 : 10
     }
 
-    // Crear el estado
     const newStatus = await prisma.aftersaleStatus.create({
       data: {
-        name: validatedData.name,
-        colorId: validatedData.colorId,
+        name: body.name,
+        colorId: body.colorId,
         order,
-        isInitial: validatedData.isInitial ?? false,
-        isFinal: validatedData.isFinal ?? false,
-        isActive: validatedData.isActive ?? true,
+        isInitial: body.isInitial ?? false,
+        isFinal: body.isFinal ?? false,
+        isActive: body.isActive ?? true,
       },
       include: {
         color: true,
       },
     })
 
+    logger.info({ statusId: newStatus.id }, 'Aftersale status created')
     return NextResponse.json({ aftersaleStatus: newStatus }, { status: 201 })
-  } catch (error) {
-    if (error instanceof z.ZodError) {
-      return NextResponse.json({ error: 'Datos inválidos', details: error.errors }, { status: 400 })
-    }
-
-    console.error('Error creating aftersale status:', error)
-    return NextResponse.json({ error: 'Error al crear el estado de postventa' }, { status: 500 })
-  }
-}
+  },
+  { bodySchema: createStatusApiSchema, fallbackError: 'Error al crear el estado de postventa' }
+)

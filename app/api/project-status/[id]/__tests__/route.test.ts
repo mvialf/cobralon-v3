@@ -12,6 +12,27 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { NextRequest } from 'next/server'
+
+// Mock del logger middleware
+vi.mock('@/lib/logger-middleware', () => ({
+  withLogging: (handler: Function) => {
+    return async (
+      request: NextRequest,
+      context?: { params: Promise<Record<string, string>> }
+    ) => {
+      const mockLogger = {
+        debug: vi.fn(),
+        info: vi.fn(),
+        warn: vi.fn(),
+        error: vi.fn(),
+        child: vi.fn().mockReturnThis(),
+      }
+      const mockContext = context || { params: Promise.resolve({}) }
+      return handler(request, mockLogger, mockContext)
+    }
+  },
+}))
 
 // Mock de Prisma
 vi.mock('@/lib/db', () => ({
@@ -32,28 +53,31 @@ vi.mock('@/lib/db', () => ({
 import { prisma } from '@/lib/db'
 import { PUT, DELETE } from '../route'
 
-// Helper para crear params
-function createParams(id: string) {
-  return { params: Promise.resolve({ id }) }
+const VALID_UUID = '00000000-0000-0000-0000-000000000001'
+
+// Helper para llamar handlers con context
+async function callPUT(body: Record<string, unknown>, id: string = VALID_UUID) {
+  const request = new NextRequest('http://localhost:3000/api/project-status/' + id, {
+    method: 'PUT',
+    body: JSON.stringify(body),
+    headers: { 'Content-Type': 'application/json' },
+  })
+  const context = { params: Promise.resolve({ id }) }
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return (PUT as any)(request, context)
 }
 
-// Helper para crear request
-function createRequest(
-  method: 'PUT' | 'DELETE',
-  body?: Record<string, unknown>,
-  searchParams?: Record<string, string>
-): Request {
-  const url = new URL('http://localhost:3000/api/project-status/test-id')
+async function callDELETE(id: string = VALID_UUID, searchParams?: Record<string, string>) {
+  const url = new URL('http://localhost:3000/api/project-status/' + id)
   if (searchParams) {
     Object.entries(searchParams).forEach(([key, value]) => {
       url.searchParams.set(key, value)
     })
   }
-  return new Request(url, {
-    method,
-    body: body ? JSON.stringify(body) : undefined,
-    headers: body ? { 'Content-Type': 'application/json' } : {},
-  })
+  const request = new NextRequest(url, { method: 'DELETE' })
+  const context = { params: Promise.resolve({ id }) }
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return (DELETE as any)(request, context)
 }
 
 describe('PUT /api/project-status/[id]', () => {
@@ -61,17 +85,14 @@ describe('PUT /api/project-status/[id]', () => {
     vi.clearAllMocks()
 
     vi.mocked(prisma.projectStatus.findUnique).mockResolvedValue({
-      id: 'ps-1',
+      id: VALID_UUID,
       name: 'En progreso',
       isInitial: false,
       isFinal: false,
     } as never)
 
-    // Por defecto NO mockeamos badgeColor para que no sea validado
-    // Solo se mockea cuando el test incluye colorId
-
     vi.mocked(prisma.projectStatus.update).mockResolvedValue({
-      id: 'ps-1',
+      id: VALID_UUID,
       name: 'Actualizado',
       color: {},
       _count: { projects: 0 },
@@ -84,8 +105,7 @@ describe('PUT /api/project-status/[id]', () => {
     it('debe retornar 404 si estado no existe', async () => {
       vi.mocked(prisma.projectStatus.findUnique).mockResolvedValue(null)
 
-      const request = createRequest('PUT', { name: 'Test' })
-      const response = await PUT(request, createParams('nonexistent'))
+      const response = await callPUT({ name: 'Test' })
       const data = await response.json()
 
       expect(response.status).toBe(404)
@@ -96,11 +116,10 @@ describe('PUT /api/project-status/[id]', () => {
   describe('nombre único', () => {
     it('debe rechazar si otro estado tiene el mismo nombre', async () => {
       vi.mocked(prisma.projectStatus.findUnique)
-        .mockResolvedValueOnce({ id: 'ps-1', name: 'En progreso' } as never)
+        .mockResolvedValueOnce({ id: VALID_UUID, name: 'En progreso' } as never)
         .mockResolvedValueOnce({ id: 'ps-2', name: 'Pendiente' } as never)
 
-      const request = createRequest('PUT', { name: 'Pendiente' })
-      const response = await PUT(request, createParams('ps-1'))
+      const response = await callPUT({ name: 'Pendiente' })
       const data = await response.json()
 
       expect(response.status).toBe(400)
@@ -108,8 +127,7 @@ describe('PUT /api/project-status/[id]', () => {
     })
 
     it('debe permitir mantener el mismo nombre', async () => {
-      const request = createRequest('PUT', { name: 'En progreso' })
-      const response = await PUT(request, createParams('ps-1'))
+      const response = await callPUT({ name: 'En progreso' })
 
       expect(response.status).toBe(200)
     })
@@ -117,19 +135,17 @@ describe('PUT /api/project-status/[id]', () => {
 
   describe('validación colorId', () => {
     it('debe rechazar si colorId no existe', async () => {
-      // Primero mock del estado existente, luego color no encontrado
       vi.mocked(prisma.projectStatus.findUnique).mockResolvedValue({
-        id: 'ps-1',
+        id: VALID_UUID,
         name: 'En progreso',
         isInitial: false,
         isFinal: false,
       } as never)
       vi.mocked(prisma.badgeColor.findUnique).mockResolvedValue(null)
 
-      const request = createRequest('PUT', {
-        colorId: '00000000-0000-0000-0000-000000000001',
+      const response = await callPUT({
+        colorId: '00000000-0000-0000-0000-000000000002',
       })
-      const response = await PUT(request, createParams('ps-1'))
       const data = await response.json()
 
       expect(response.status).toBe(400)
@@ -140,14 +156,13 @@ describe('PUT /api/project-status/[id]', () => {
   describe('auto-desmarca estado inicial/final', () => {
     it('debe desmarcar estado inicial anterior al marcar nuevo', async () => {
       vi.mocked(prisma.projectStatus.findUnique).mockResolvedValue({
-        id: 'ps-1',
+        id: VALID_UUID,
         name: 'Normal',
         isInitial: false,
         isFinal: false,
       } as never)
 
-      const request = createRequest('PUT', { isInitial: true })
-      await PUT(request, createParams('ps-1'))
+      await callPUT({ isInitial: true })
 
       expect(prisma.projectStatus.updateMany).toHaveBeenCalledWith({
         where: { isInitial: true, isActive: true },
@@ -157,14 +172,13 @@ describe('PUT /api/project-status/[id]', () => {
 
     it('debe desmarcar estado final anterior al marcar nuevo', async () => {
       vi.mocked(prisma.projectStatus.findUnique).mockResolvedValue({
-        id: 'ps-1',
+        id: VALID_UUID,
         name: 'Normal',
         isInitial: false,
         isFinal: false,
       } as never)
 
-      const request = createRequest('PUT', { isFinal: true })
-      await PUT(request, createParams('ps-1'))
+      await callPUT({ isFinal: true })
 
       expect(prisma.projectStatus.updateMany).toHaveBeenCalledWith({
         where: { isFinal: true, isActive: true },
@@ -175,18 +189,16 @@ describe('PUT /api/project-status/[id]', () => {
 
   describe('actualización exitosa', () => {
     it('debe actualizar estado y retornar datos', async () => {
-      // Mock: primero existencia, luego verificar nombre duplicado (null = no hay)
       vi.mocked(prisma.projectStatus.findUnique)
         .mockResolvedValueOnce({
-          id: 'ps-1',
+          id: VALID_UUID,
           name: 'En progreso',
           isInitial: false,
           isFinal: false,
         } as never)
         .mockResolvedValueOnce(null) // No hay duplicado
 
-      const request = createRequest('PUT', { name: 'Actualizado' })
-      const response = await PUT(request, createParams('ps-1'))
+      const response = await callPUT({ name: 'Actualizado' })
       const data = await response.json()
 
       expect(response.status).toBe(200)
@@ -196,10 +208,9 @@ describe('PUT /api/project-status/[id]', () => {
 
   describe('manejo de errores', () => {
     it('debe retornar 500 cuando update falla', async () => {
-      // Mock: primero existencia, luego verificar nombre duplicado (null = no hay)
       vi.mocked(prisma.projectStatus.findUnique)
         .mockResolvedValueOnce({
-          id: 'ps-1',
+          id: VALID_UUID,
           name: 'En progreso',
           isInitial: false,
           isFinal: false,
@@ -208,8 +219,7 @@ describe('PUT /api/project-status/[id]', () => {
 
       vi.mocked(prisma.projectStatus.update).mockRejectedValue(new Error('DB Error'))
 
-      const request = createRequest('PUT', { name: 'Test' })
-      const response = await PUT(request, createParams('ps-1'))
+      const response = await callPUT({ name: 'Test' })
       const data = await response.json()
 
       expect(response.status).toBe(500)
@@ -223,7 +233,7 @@ describe('DELETE /api/project-status/[id]', () => {
     vi.clearAllMocks()
 
     vi.mocked(prisma.projectStatus.findUnique).mockResolvedValue({
-      id: 'ps-1',
+      id: VALID_UUID,
       name: 'Test',
       isInitial: false,
       isFinal: false,
@@ -234,12 +244,12 @@ describe('DELETE /api/project-status/[id]', () => {
     vi.mocked(prisma.projectStatus.findFirst).mockResolvedValue(null)
 
     vi.mocked(prisma.projectStatus.update).mockResolvedValue({
-      id: 'ps-1',
+      id: VALID_UUID,
       isActive: false,
     } as never)
 
     vi.mocked(prisma.projectStatus.delete).mockResolvedValue({
-      id: 'ps-1',
+      id: VALID_UUID,
     } as never)
   })
 
@@ -247,8 +257,7 @@ describe('DELETE /api/project-status/[id]', () => {
     it('debe retornar 404 si estado no existe', async () => {
       vi.mocked(prisma.projectStatus.findUnique).mockResolvedValue(null)
 
-      const request = createRequest('DELETE')
-      const response = await DELETE(request, createParams('nonexistent'))
+      const response = await callDELETE()
       const data = await response.json()
 
       expect(response.status).toBe(404)
@@ -256,16 +265,15 @@ describe('DELETE /api/project-status/[id]', () => {
     })
   })
 
-  describe('⚠️ protección de datos', () => {
+  describe('protección de datos', () => {
     it('debe rechazar si tiene proyectos asignados', async () => {
       vi.mocked(prisma.projectStatus.findUnique).mockResolvedValue({
-        id: 'ps-1',
+        id: VALID_UUID,
         name: 'En uso',
         _count: { projects: 5 },
       } as never)
 
-      const request = createRequest('DELETE')
-      const response = await DELETE(request, createParams('ps-1'))
+      const response = await callDELETE()
       const data = await response.json()
 
       expect(response.status).toBe(400)
@@ -274,7 +282,7 @@ describe('DELETE /api/project-status/[id]', () => {
 
     it('debe rechazar si es el único estado inicial activo', async () => {
       vi.mocked(prisma.projectStatus.findUnique).mockResolvedValue({
-        id: 'ps-1',
+        id: VALID_UUID,
         name: 'Pendiente',
         isInitial: true,
         isActive: true,
@@ -283,8 +291,7 @@ describe('DELETE /api/project-status/[id]', () => {
 
       vi.mocked(prisma.projectStatus.findFirst).mockResolvedValue(null)
 
-      const request = createRequest('DELETE')
-      const response = await DELETE(request, createParams('ps-1'))
+      const response = await callDELETE()
       const data = await response.json()
 
       expect(response.status).toBe(400)
@@ -293,7 +300,7 @@ describe('DELETE /api/project-status/[id]', () => {
 
     it('debe rechazar si es el único estado final activo', async () => {
       vi.mocked(prisma.projectStatus.findUnique).mockResolvedValue({
-        id: 'ps-1',
+        id: VALID_UUID,
         name: 'Completado',
         isInitial: false,
         isFinal: true,
@@ -303,8 +310,7 @@ describe('DELETE /api/project-status/[id]', () => {
 
       vi.mocked(prisma.projectStatus.findFirst).mockResolvedValue(null)
 
-      const request = createRequest('DELETE')
-      const response = await DELETE(request, createParams('ps-1'))
+      const response = await callDELETE()
       const data = await response.json()
 
       expect(response.status).toBe(400)
@@ -314,14 +320,13 @@ describe('DELETE /api/project-status/[id]', () => {
 
   describe('soft delete (default)', () => {
     it('debe desactivar estado sin force', async () => {
-      const request = createRequest('DELETE')
-      const response = await DELETE(request, createParams('ps-1'))
+      const response = await callDELETE()
       const data = await response.json()
 
       expect(response.status).toBe(200)
       expect(data.message).toContain('desactivado')
       expect(prisma.projectStatus.update).toHaveBeenCalledWith({
-        where: { id: 'ps-1' },
+        where: { id: VALID_UUID },
         data: { isActive: false },
       })
     })
@@ -329,14 +334,13 @@ describe('DELETE /api/project-status/[id]', () => {
 
   describe('hard delete (force=true)', () => {
     it('debe eliminar permanentemente con force=true', async () => {
-      const request = createRequest('DELETE', undefined, { force: 'true' })
-      const response = await DELETE(request, createParams('ps-1'))
+      const response = await callDELETE(VALID_UUID, { force: 'true' })
       const data = await response.json()
 
       expect(response.status).toBe(200)
       expect(data.message).toContain('permanentemente')
       expect(prisma.projectStatus.delete).toHaveBeenCalledWith({
-        where: { id: 'ps-1' },
+        where: { id: VALID_UUID },
       })
     })
   })
@@ -345,8 +349,7 @@ describe('DELETE /api/project-status/[id]', () => {
     it('debe retornar 500 cuando delete falla', async () => {
       vi.mocked(prisma.projectStatus.update).mockRejectedValue(new Error('DB Error'))
 
-      const request = createRequest('DELETE')
-      const response = await DELETE(request, createParams('ps-1'))
+      const response = await callDELETE()
       const data = await response.json()
 
       expect(response.status).toBe(500)

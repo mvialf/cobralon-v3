@@ -11,6 +11,27 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { NextRequest } from 'next/server'
+
+// Mock del logger middleware
+vi.mock('@/lib/logger-middleware', () => ({
+  withLogging: (handler: Function) => {
+    return async (
+      request: NextRequest,
+      context?: { params: Promise<Record<string, string>> }
+    ) => {
+      const mockLogger = {
+        debug: vi.fn(),
+        info: vi.fn(),
+        warn: vi.fn(),
+        error: vi.fn(),
+        child: vi.fn().mockReturnThis(),
+      }
+      const mockContext = context || { params: Promise.resolve({}) }
+      return handler(request, mockLogger, mockContext)
+    }
+  },
+}))
 
 // Mock de Prisma
 vi.mock('@/lib/db', () => ({
@@ -30,22 +51,36 @@ vi.mock('@/lib/db', () => ({
 import { prisma } from '@/lib/db'
 import { GET, POST } from '../route'
 
-// Helper para crear request
-function createRequest(
-  method: 'GET' | 'POST',
-  body?: Record<string, unknown>,
-  searchParams?: Record<string, string>
-): Request {
+// Helper para llamar al handler con context mock
+async function callGET(request: NextRequest) {
+  const context = { params: Promise.resolve({}) }
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return (GET as any)(request, context)
+}
+
+async function callPOST(request: NextRequest) {
+  const context = { params: Promise.resolve({}) }
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return (POST as any)(request, context)
+}
+
+// Helper para crear request GET
+function createGetRequest(searchParams?: Record<string, string>): NextRequest {
   const url = new URL('http://localhost:3000/api/project-status')
   if (searchParams) {
     Object.entries(searchParams).forEach(([key, value]) => {
       url.searchParams.set(key, value)
     })
   }
-  return new Request(url, {
-    method,
-    body: body ? JSON.stringify(body) : undefined,
-    headers: body ? { 'Content-Type': 'application/json' } : {},
+  return new NextRequest(url)
+}
+
+// Helper para crear request POST
+function createPostRequest(body: Record<string, unknown>): NextRequest {
+  return new NextRequest('http://localhost:3000/api/project-status', {
+    method: 'POST',
+    body: JSON.stringify(body),
+    headers: { 'Content-Type': 'application/json' },
   })
 }
 
@@ -60,7 +95,7 @@ describe('GET /api/project-status', () => {
       { id: 'ps2', name: 'En progreso', order: 10, isInitial: false, _count: { projects: 3 } },
     ] as never)
 
-    const response = await GET(createRequest('GET'))
+    const response = await callGET(createGetRequest())
     const data = await response.json()
 
     expect(response.status).toBe(200)
@@ -70,7 +105,7 @@ describe('GET /api/project-status', () => {
   it('debe filtrar estados inactivos por defecto', async () => {
     vi.mocked(prisma.projectStatus.findMany).mockResolvedValue([])
 
-    await GET(createRequest('GET'))
+    await callGET(createGetRequest())
 
     expect(prisma.projectStatus.findMany).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -82,7 +117,7 @@ describe('GET /api/project-status', () => {
   it('debe incluir estados inactivos si includeInactive=true', async () => {
     vi.mocked(prisma.projectStatus.findMany).mockResolvedValue([])
 
-    await GET(createRequest('GET', undefined, { includeInactive: 'true' }))
+    await callGET(createGetRequest({ includeInactive: 'true' }))
 
     expect(prisma.projectStatus.findMany).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -94,7 +129,7 @@ describe('GET /api/project-status', () => {
   it('debe ordenar por order asc', async () => {
     vi.mocked(prisma.projectStatus.findMany).mockResolvedValue([])
 
-    await GET(createRequest('GET'))
+    await callGET(createGetRequest())
 
     expect(prisma.projectStatus.findMany).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -106,7 +141,7 @@ describe('GET /api/project-status', () => {
   it('debe manejar errores de base de datos', async () => {
     vi.mocked(prisma.projectStatus.findMany).mockRejectedValue(new Error('DB Error'))
 
-    const response = await GET(createRequest('GET'))
+    const response = await callGET(createGetRequest())
     const data = await response.json()
 
     expect(response.status).toBe(500)
@@ -135,8 +170,8 @@ describe('POST /api/project-status', () => {
 
   describe('validaciones Zod', () => {
     it('debe rechazar sin nombre', async () => {
-      const request = createRequest('POST', { colorId: 'color-1' })
-      const response = await POST(request)
+      const request = createPostRequest({ colorId: 'color-1' })
+      const response = await callPOST(request)
       const data = await response.json()
 
       expect(response.status).toBe(400)
@@ -144,8 +179,8 @@ describe('POST /api/project-status', () => {
     })
 
     it('debe rechazar sin colorId', async () => {
-      const request = createRequest('POST', { name: 'Test' })
-      const response = await POST(request)
+      const request = createPostRequest({ name: 'Test' })
+      const response = await callPOST(request)
       const data = await response.json()
 
       expect(response.status).toBe(400)
@@ -153,8 +188,8 @@ describe('POST /api/project-status', () => {
     })
 
     it('debe rechazar colorId inválido (no UUID)', async () => {
-      const request = createRequest('POST', { name: 'Test', colorId: 'not-a-uuid' })
-      const response = await POST(request)
+      const request = createPostRequest({ name: 'Test', colorId: 'not-a-uuid' })
+      const response = await callPOST(request)
       const data = await response.json()
 
       expect(response.status).toBe(400)
@@ -168,11 +203,11 @@ describe('POST /api/project-status', () => {
         name: 'Pendiente',
       } as never)
 
-      const request = createRequest('POST', {
+      const request = createPostRequest({
         name: 'Pendiente',
         colorId: '00000000-0000-0000-0000-000000000001',
       })
-      const response = await POST(request)
+      const response = await callPOST(request)
       const data = await response.json()
 
       expect(response.status).toBe(400)
@@ -188,12 +223,12 @@ describe('POST /api/project-status', () => {
         isInitial: true,
       } as never)
 
-      const request = createRequest('POST', {
+      const request = createPostRequest({
         name: 'Nuevo Inicial',
         colorId: '00000000-0000-0000-0000-000000000001',
         isInitial: true,
       })
-      const response = await POST(request)
+      const response = await callPOST(request)
       const data = await response.json()
 
       expect(response.status).toBe(400)
@@ -208,12 +243,12 @@ describe('POST /api/project-status', () => {
         isFinal: true,
       } as never)
 
-      const request = createRequest('POST', {
+      const request = createPostRequest({
         name: 'Nuevo Final',
         colorId: '00000000-0000-0000-0000-000000000001',
         isFinal: true,
       })
-      const response = await POST(request)
+      const response = await callPOST(request)
       const data = await response.json()
 
       expect(response.status).toBe(400)
@@ -225,11 +260,11 @@ describe('POST /api/project-status', () => {
     it('debe rechazar si colorId no existe', async () => {
       vi.mocked(prisma.badgeColor.findUnique).mockResolvedValue(null)
 
-      const request = createRequest('POST', {
+      const request = createPostRequest({
         name: 'Test',
         colorId: '00000000-0000-0000-0000-000000000001',
       })
-      const response = await POST(request)
+      const response = await callPOST(request)
       const data = await response.json()
 
       expect(response.status).toBe(400)
@@ -239,9 +274,8 @@ describe('POST /api/project-status', () => {
 
   describe('auto-cálculo de order', () => {
     it('debe usar order=0 para estado inicial', async () => {
-      // Reset mocks y configurar para permitir crear estado inicial
-      vi.mocked(prisma.projectStatus.findUnique).mockResolvedValue(null) // Nombre no existe
-      vi.mocked(prisma.projectStatus.findFirst).mockResolvedValue(null) // No hay estado inicial
+      vi.mocked(prisma.projectStatus.findUnique).mockResolvedValue(null)
+      vi.mocked(prisma.projectStatus.findFirst).mockResolvedValue(null)
       vi.mocked(prisma.badgeColor.findUnique).mockResolvedValue({ id: 'color-1' } as never)
       vi.mocked(prisma.projectStatus.create).mockResolvedValue({
         id: 'ps-new',
@@ -249,12 +283,12 @@ describe('POST /api/project-status', () => {
         order: 0,
       } as never)
 
-      const request = createRequest('POST', {
+      const request = createPostRequest({
         name: 'Inicial',
         colorId: '00000000-0000-0000-0000-000000000001',
         isInitial: true,
       })
-      await POST(request)
+      await callPOST(request)
 
       expect(prisma.projectStatus.create).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -266,9 +300,8 @@ describe('POST /api/project-status', () => {
     })
 
     it('debe usar order=999 para estado final', async () => {
-      // Reset mocks y configurar para permitir crear estado final
       vi.mocked(prisma.projectStatus.findUnique).mockResolvedValue(null)
-      vi.mocked(prisma.projectStatus.findFirst).mockResolvedValue(null) // No hay estado final
+      vi.mocked(prisma.projectStatus.findFirst).mockResolvedValue(null)
       vi.mocked(prisma.badgeColor.findUnique).mockResolvedValue({ id: 'color-1' } as never)
       vi.mocked(prisma.projectStatus.create).mockResolvedValue({
         id: 'ps-new',
@@ -276,12 +309,12 @@ describe('POST /api/project-status', () => {
         order: 999,
       } as never)
 
-      const request = createRequest('POST', {
+      const request = createPostRequest({
         name: 'Final',
         colorId: '00000000-0000-0000-0000-000000000001',
         isFinal: true,
       })
-      await POST(request)
+      await callPOST(request)
 
       expect(prisma.projectStatus.create).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -297,11 +330,11 @@ describe('POST /api/project-status', () => {
         order: 20,
       } as never)
 
-      const request = createRequest('POST', {
+      const request = createPostRequest({
         name: 'Normal',
         colorId: '00000000-0000-0000-0000-000000000001',
       })
-      await POST(request)
+      await callPOST(request)
 
       expect(prisma.projectStatus.create).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -315,11 +348,11 @@ describe('POST /api/project-status', () => {
 
   describe('creación exitosa', () => {
     it('debe crear estado y retornar 201', async () => {
-      const request = createRequest('POST', {
+      const request = createPostRequest({
         name: 'Nuevo Estado',
         colorId: '00000000-0000-0000-0000-000000000001',
       })
-      const response = await POST(request)
+      const response = await callPOST(request)
       const data = await response.json()
 
       expect(response.status).toBe(201)
@@ -331,11 +364,11 @@ describe('POST /api/project-status', () => {
     it('debe retornar 500 cuando create falla', async () => {
       vi.mocked(prisma.projectStatus.create).mockRejectedValue(new Error('DB Error'))
 
-      const request = createRequest('POST', {
+      const request = createPostRequest({
         name: 'Test',
         colorId: '00000000-0000-0000-0000-000000000001',
       })
-      const response = await POST(request)
+      const response = await callPOST(request)
       const data = await response.json()
 
       expect(response.status).toBe(500)

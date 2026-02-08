@@ -38,6 +38,31 @@ export const baseStatusSchema = z.object({
 export type BaseStatusFormValues = z.infer<typeof baseStatusSchema>
 
 /**
+ * Schema API para crear estados (POST /api/*-status)
+ * Extiende el schema base con campos opcionales de la API
+ */
+export const createStatusApiSchema = z.object({
+  name: z
+    .string()
+    .min(1, 'El nombre es obligatorio')
+    .max(50, 'El nombre no puede exceder 50 caracteres')
+    .trim(),
+  colorId: z.string().uuid('Debe seleccionar un color válido'),
+  order: z.number().int().min(0).optional(),
+  isInitial: z.boolean().optional(),
+  isFinal: z.boolean().optional(),
+  isActive: z.boolean().optional(),
+})
+export type CreateStatusApiBody = z.infer<typeof createStatusApiSchema>
+
+/**
+ * Schema API para actualizar estados (PUT /api/*-status/[id])
+ * Todos los campos son opcionales
+ */
+export const updateStatusApiSchema = createStatusApiSchema.partial()
+export type UpdateStatusApiBody = z.infer<typeof updateStatusApiSchema>
+
+/**
  * Type para el payload de creación/actualización (API)
  */
 export type StatusPayload = {
