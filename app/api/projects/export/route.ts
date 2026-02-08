@@ -4,13 +4,10 @@ import { ProjectWhereInput } from '@/types/api'
 import { matchesProjectState, ProjectStateFilter } from '@/lib/business-logic/project-state'
 import { generateProjectsExcelBuffer } from '@/lib/excel/project-exporter'
 import { logger } from '@/lib/logger'
-import { z } from 'zod'
 import { anyFieldMatchesSearch } from '@/lib/utils/normalize'
+import { projectStateValues } from '@/lib/validations/project-validations'
 
-/**
- * Zod schema for projectState validation
- */
-const projectStateSchema = z.enum(['Activo', 'Finalizado', 'all']).default('all')
+const projectStateSchema = projectStateValues.default('all')
 
 /**
  * GET /api/projects/export

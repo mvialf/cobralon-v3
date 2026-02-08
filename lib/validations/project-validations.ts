@@ -2,6 +2,11 @@ import { z } from 'zod'
 import { chilePhoneSchema, addressWithOptionalApartmentSchema } from './common'
 
 /**
+ * Valores válidos para filtro de estado de proyecto
+ */
+export const projectStateValues = z.enum(['Activo', 'Finalizado', 'all'])
+
+/**
  * Schema base compartido (campos de entrada del usuario)
  */
 const projectBaseSchema = z.object({

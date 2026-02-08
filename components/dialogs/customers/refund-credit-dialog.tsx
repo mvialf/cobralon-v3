@@ -3,8 +3,8 @@
 import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import * as z from 'zod'
 import { Loader2, Banknote, CreditCard, FileText } from 'lucide-react'
+import { refundCreditSchema, type RefundCreditFormData } from '@/lib/validations/credit-validations'
 import {
   Dialog,
   DialogContent,
@@ -35,27 +35,6 @@ import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
 import { toast } from 'sonner'
 import { formatCurrency } from '@/lib/format'
-
-const refundCreditSchema = z.object({
-  amount: z
-    .number({
-      required_error: 'Monto es requerido',
-      invalid_type_error: 'Debe ser un número',
-    })
-    .positive('Monto debe ser positivo'),
-
-  refundDate: z.string({
-    required_error: 'Fecha de devolución es requerida',
-  }),
-
-  refundMethod: z.enum(['EFECTIVO', 'TRANSFERENCIA', 'CHEQUE'], {
-    required_error: 'Método de devolución es requerido',
-  }),
-
-  comments: z.string().optional(),
-})
-
-type RefundCreditFormData = z.infer<typeof refundCreditSchema>
 
 interface RefundCreditDialogProps {
   customerId: string

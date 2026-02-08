@@ -3,6 +3,7 @@ import {
   projectFormSchema,
   projectSchema,
   projectFormToPayload,
+  projectStateValues,
   type ProjectFormData,
   type ProjectData,
 } from '../project-validations'
@@ -767,5 +768,32 @@ describe('integración completa', () => {
     expect(payload.projectNumber).toBe(formData.projectNumber)
     expect(payload.subtotal).toBe(formData.subtotal)
     expect(payload.taxRate).toBe(formData.taxRate)
+  })
+})
+
+describe('projectStateValues', () => {
+  it('debe aceptar "Activo"', () => {
+    const result = projectStateValues.safeParse('Activo')
+    expect(result.success).toBe(true)
+  })
+
+  it('debe aceptar "Finalizado"', () => {
+    const result = projectStateValues.safeParse('Finalizado')
+    expect(result.success).toBe(true)
+  })
+
+  it('debe aceptar "all"', () => {
+    const result = projectStateValues.safeParse('all')
+    expect(result.success).toBe(true)
+  })
+
+  it('debe rechazar valores no válidos', () => {
+    const result = projectStateValues.safeParse('Pendiente')
+    expect(result.success).toBe(false)
+  })
+
+  it('debe rechazar string vacío', () => {
+    const result = projectStateValues.safeParse('')
+    expect(result.success).toBe(false)
   })
 })

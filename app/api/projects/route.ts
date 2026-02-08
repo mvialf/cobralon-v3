@@ -15,13 +15,11 @@ import type { ProjectListFilters } from '@/types/project-list'
 import { withApiHandler, BusinessError } from '@/lib/api-handler'
 import {
   createProjectApiSchema,
+  projectStateValues,
   type CreateProjectApiBody,
 } from '@/lib/validations/project-validations'
 
-/**
- * Zod schema for projectState validation
- */
-const projectStateSchema = z.enum(['Activo', 'Finalizado', 'all']).default('Activo')
+const projectStateSchema = projectStateValues.default('Activo')
 
 /**
  * GET /api/projects
