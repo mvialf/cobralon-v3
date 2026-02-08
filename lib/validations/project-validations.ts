@@ -118,6 +118,27 @@ export type UpdateProjectAPIPayload = Partial<CreateProjectAPIPayload> & {
 }
 
 /**
+ * Schema para creación vía API (acepta ISO strings para dates, projectStatusId nullable)
+ * totalAmount se ignora y recalcula en servidor por seguridad
+ */
+export const createProjectApiSchema = projectBaseSchema.extend({
+  projectStatusId: z.string().min(1).nullable().default(null),
+  date: z.coerce.date({
+    required_error: 'La fecha de ingreso es requerida',
+  }),
+  totalAmount: z.number().positive().optional(),
+})
+
+export type CreateProjectApiBody = z.infer<typeof createProjectApiSchema>
+
+/**
+ * Schema para actualización vía API (todos los campos opcionales)
+ */
+export const updateProjectApiSchema = createProjectApiSchema.partial()
+
+export type UpdateProjectApiBody = z.infer<typeof updateProjectApiSchema>
+
+/**
  * Helper para convertir form values a API payload
  */
 export function projectFormToPayload(values: ProjectData): CreateProjectAPIPayload {
