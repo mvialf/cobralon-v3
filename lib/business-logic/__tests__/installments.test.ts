@@ -5,6 +5,7 @@
  * - calculateInstallments()
  * - validateInstallmentsSum()
  * - getTotalPendingInstallments()
+ * - generatePrismaInstallmentsCreate()
  */
 
 import { describe, it, expect } from 'vitest'
@@ -12,6 +13,7 @@ import {
   calculateInstallments,
   validateInstallmentsSum,
   getTotalPendingInstallments,
+  generatePrismaInstallmentsCreate,
 } from '../installments'
 
 describe('calculateInstallments', () => {
@@ -250,5 +252,71 @@ describe('getTotalPendingInstallments', () => {
     const totalPending = getTotalPendingInstallments(installments)
 
     expect(totalPending).toBe(100) // Solo "pending"
+  })
+})
+
+// Clase mock que simula Decimal de Prisma
+class MockDecimal {
+  value: number
+  constructor(v: number | string) {
+    this.value = Number(v)
+  }
+}
+
+describe('generatePrismaInstallmentsCreate', () => {
+  const baseDate = new Date('2025-01-15')
+
+  it('debe retornar undefined cuando selectedInstallments es null', () => {
+    const result = generatePrismaInstallmentsCreate(1000, null, baseDate, MockDecimal)
+    expect(result).toBeUndefined()
+  })
+
+  it('debe retornar undefined cuando selectedInstallments es undefined', () => {
+    const result = generatePrismaInstallmentsCreate(1000, undefined, baseDate, MockDecimal)
+    expect(result).toBeUndefined()
+  })
+
+  it('debe retornar undefined cuando selectedInstallments es 0', () => {
+    const result = generatePrismaInstallmentsCreate(1000, 0, baseDate, MockDecimal)
+    expect(result).toBeUndefined()
+  })
+
+  it('debe retornar undefined cuando selectedInstallments es 1', () => {
+    const result = generatePrismaInstallmentsCreate(1000, 1, baseDate, MockDecimal)
+    expect(result).toBeUndefined()
+  })
+
+  it('debe retornar { create: [...] } con installments correctos para 3 cuotas', () => {
+    const result = generatePrismaInstallmentsCreate(1000, 3, baseDate, MockDecimal)
+
+    expect(result).toBeDefined()
+    expect(result!.create).toHaveLength(3)
+    expect(result!.create[0].installmentNumber).toBe(1)
+    expect(result!.create[1].installmentNumber).toBe(2)
+    expect(result!.create[2].installmentNumber).toBe(3)
+  })
+
+  it('debe crear amounts como instancias de la DecimalClass proporcionada', () => {
+    const result = generatePrismaInstallmentsCreate(1000, 3, baseDate, MockDecimal)
+
+    result!.create.forEach((inst) => {
+      expect(inst.amount).toBeInstanceOf(MockDecimal)
+    })
+  })
+
+  it('debe asignar status "pending" a todas las cuotas', () => {
+    const result = generatePrismaInstallmentsCreate(1000, 3, baseDate, MockDecimal)
+
+    result!.create.forEach((inst) => {
+      expect(inst.status).toBe('pending')
+    })
+  })
+
+  it('debe generar fechas de vencimiento mensuales (cada 30 días)', () => {
+    const result = generatePrismaInstallmentsCreate(900, 3, baseDate, MockDecimal)
+
+    expect(result!.create[0].dueDate).toEqual(new Date('2025-01-15'))
+    expect(result!.create[1].dueDate).toEqual(new Date('2025-02-14'))
+    expect(result!.create[2].dueDate).toEqual(new Date('2025-03-16'))
   })
 })
