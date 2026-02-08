@@ -60,6 +60,32 @@ Registrar **implementaciones significativas** de este proyecto con:
 
 ---
 
+### 🏭 Simplificación Completa de API Routes
+
+- **Status:** ✅ Complete | **Date:** 2026-02-08 | **Impact:** Medium
+- **Context:** Tras migrar todas las API routes a `withApiHandler`/`withLogging`, quedaban ~1300 líneas de código duplicado/boilerplate. Se implementaron 5 refactors incrementales para eliminarlo.
+- **Benefits:**
+  - **~1100 líneas netas eliminadas** en total
+  - **Factory de status routes:** 9 routes × ~150 líneas → factory 440 líneas + 9 routes × 8 líneas = **-827 líneas**
+  - **Unified search route:** 2 routes (search-active/search-finished) → 1 route con `?status=active|finished`
+  - **Helpers reutilizables:** `parsePaginationParams`, `buildPaginationResponse`, `serializeProjectDecimals`
+  - **Validación Zod en payments POST:** -40 líneas de if-chains manuales
+  - **Consistencia:** 3 GETs simples migrados a `withApiHandler`
+- **Implementación:**
+  - **Commit 1:** Dead code (`visit-statuses/`) + merge search routes (-237 líneas)
+  - **Commit 2:** Payments POST con Zod schema en vez de if-chains (-13 líneas)
+  - **Commit 3:** Helpers de paginación + serialización Decimal (-24 líneas)
+  - **Commit 4:** Migrar badge-colors, payment-methods, aftersales GET a withApiHandler (-25 líneas)
+  - **Commit 5:** Factory `status-route-factory.ts` para 9 status routes (-827 líneas)
+- **Archivos clave creados:**
+  - `lib/api/status-route-factory.ts` - Factory con 5 handlers parametrizados
+  - `lib/utils/pagination.ts` - Helpers de paginación
+  - `lib/validations/payment-validations.ts` - Schema Zod para payments POST
+  - `app/api/projects/search/route.ts` - Search unificado
+- **Validación:** ✅ 665 API tests pass | Lint: 0 errors | Typecheck: pass
+
+---
+
 ### 📊 Migración DataTable a Server-Side Pagination Escalable
 
 - **Status:** ✅ Complete | **Date:** 2025-11-14 | **Impact:** High
