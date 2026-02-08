@@ -2,8 +2,8 @@
  * Tests para app/api/visit-status/reorder/route.ts (POST)
  *
  * Valida:
- * - Validación Zod (statusIds array de UUIDs)
- * - IDs no existen → 404
+ * - Validación Zod vía bodySchema (statusIds array de UUIDs)
+ * - IDs no existen → 404 (BusinessError)
  * - No reordenar inicial/final → 400
  * - No reordenar inactivos → 400
  * - Recalcula order: (index+1)*10
@@ -11,6 +11,27 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { NextRequest } from 'next/server'
+
+// Mock del logger middleware
+vi.mock('@/lib/logger-middleware', () => ({
+  withLogging: (handler: Function) => {
+    return async (
+      request: NextRequest,
+      context?: { params: Promise<Record<string, string>> }
+    ) => {
+      const mockLogger = {
+        debug: vi.fn(),
+        info: vi.fn(),
+        warn: vi.fn(),
+        error: vi.fn(),
+        child: vi.fn().mockReturnThis(),
+      }
+      const mockContext = context || { params: Promise.resolve({}) }
+      return handler(request, mockLogger, mockContext)
+    }
+  },
+}))
 
 // Mock de Prisma
 vi.mock('@/lib/db', () => ({
@@ -24,11 +45,16 @@ vi.mock('@/lib/db', () => ({
 }))
 
 import { prisma } from '@/lib/db'
-import { POST } from '../route'
+import { POST as _POST } from '../route'
 
-// Helper para crear request
-function createRequest(body: Record<string, unknown>): Request {
-  return new Request('http://localhost:3000/api/visit-status/reorder', {
+// Wrapper para pasar context requerido por withApiHandler → withLogging
+function callPOST(request: NextRequest) {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return (_POST as any)(request, { params: Promise.resolve({}) })
+}
+
+function createRequest(body: Record<string, unknown>): NextRequest {
+  return new NextRequest(new URL('http://localhost:3000/api/visit-status/reorder'), {
     method: 'POST',
     body: JSON.stringify(body),
     headers: { 'Content-Type': 'application/json' },
@@ -42,7 +68,7 @@ describe('POST /api/visit-status/reorder', () => {
 
   describe('validaciones Zod', () => {
     it('debe rechazar sin statusIds', async () => {
-      const response = await POST(createRequest({}))
+      const response = await callPOST(createRequest({}))
       const data = await response.json()
 
       expect(response.status).toBe(400)
@@ -50,7 +76,7 @@ describe('POST /api/visit-status/reorder', () => {
     })
 
     it('debe rechazar statusIds vacío', async () => {
-      const response = await POST(createRequest({ statusIds: [] }))
+      const response = await callPOST(createRequest({ statusIds: [] }))
       const data = await response.json()
 
       expect(response.status).toBe(400)
@@ -58,7 +84,7 @@ describe('POST /api/visit-status/reorder', () => {
     })
 
     it('debe rechazar statusIds con valores no UUID', async () => {
-      const response = await POST(createRequest({ statusIds: ['not-a-uuid'] }))
+      const response = await callPOST(createRequest({ statusIds: ['not-a-uuid'] }))
       const data = await response.json()
 
       expect(response.status).toBe(400)
@@ -66,7 +92,7 @@ describe('POST /api/visit-status/reorder', () => {
     })
 
     it('debe rechazar statusIds mixto (válidos e inválidos)', async () => {
-      const response = await POST(
+      const response = await callPOST(
         createRequest({
           statusIds: ['00000000-0000-0000-0000-000000000001', 'invalid'],
         })
@@ -80,18 +106,17 @@ describe('POST /api/visit-status/reorder', () => {
 
   describe('validación de existencia', () => {
     it('debe rechazar si algún ID no existe', async () => {
-      // Solo encuentra 2 de 3 IDs
       vi.mocked(prisma.visitStatus.findMany).mockResolvedValue([
         { id: '00000000-0000-0000-0000-000000000001', name: 'Estado 1', isInitial: false, isFinal: false, isActive: true },
         { id: '00000000-0000-0000-0000-000000000002', name: 'Estado 2', isInitial: false, isFinal: false, isActive: true },
       ] as never)
 
-      const response = await POST(
+      const response = await callPOST(
         createRequest({
           statusIds: [
             '00000000-0000-0000-0000-000000000001',
             '00000000-0000-0000-0000-000000000002',
-            '00000000-0000-0000-0000-000000000003', // No existe
+            '00000000-0000-0000-0000-000000000003',
           ],
         })
       )
@@ -110,7 +135,7 @@ describe('POST /api/visit-status/reorder', () => {
         { id: '00000000-0000-0000-0000-000000000002', name: 'En Proceso', isInitial: false, isFinal: false, isActive: true },
       ] as never)
 
-      const response = await POST(
+      const response = await callPOST(
         createRequest({
           statusIds: [
             '00000000-0000-0000-0000-000000000001',
@@ -131,7 +156,7 @@ describe('POST /api/visit-status/reorder', () => {
         { id: '00000000-0000-0000-0000-000000000002', name: 'Completada', isInitial: false, isFinal: true, isActive: true },
       ] as never)
 
-      const response = await POST(
+      const response = await callPOST(
         createRequest({
           statusIds: [
             '00000000-0000-0000-0000-000000000001',
@@ -152,7 +177,7 @@ describe('POST /api/visit-status/reorder', () => {
         { id: '00000000-0000-0000-0000-000000000002', name: 'Completada', isInitial: false, isFinal: true, isActive: true },
       ] as never)
 
-      const response = await POST(
+      const response = await callPOST(
         createRequest({
           statusIds: [
             '00000000-0000-0000-0000-000000000001',
@@ -175,7 +200,7 @@ describe('POST /api/visit-status/reorder', () => {
         { id: '00000000-0000-0000-0000-000000000002', name: 'Archivado', isInitial: false, isFinal: false, isActive: false },
       ] as never)
 
-      const response = await POST(
+      const response = await callPOST(
         createRequest({
           statusIds: [
             '00000000-0000-0000-0000-000000000001',
@@ -208,7 +233,7 @@ describe('POST /api/visit-status/reorder', () => {
         { id: '00000000-0000-0000-0000-000000000003', order: 30 },
       ] as never)
 
-      const response = await POST(
+      const response = await callPOST(
         createRequest({
           statusIds: [
             '00000000-0000-0000-0000-000000000001',
@@ -223,7 +248,6 @@ describe('POST /api/visit-status/reorder', () => {
     })
 
     it('debe mantener el orden especificado en statusIds', async () => {
-      // El orden en statusIds determina el nuevo order - usar UUIDs válidos
       const statuses = [
         { id: '00000000-0000-0000-0000-000000000003', name: 'Estado C', isInitial: false, isFinal: false, isActive: true },
         { id: '00000000-0000-0000-0000-000000000001', name: 'Estado A', isInitial: false, isFinal: false, isActive: true },
@@ -235,12 +259,12 @@ describe('POST /api/visit-status/reorder', () => {
 
       vi.mocked(prisma.$transaction).mockResolvedValue([] as never)
 
-      const response = await POST(
+      const response = await callPOST(
         createRequest({
           statusIds: [
-            '00000000-0000-0000-0000-000000000003', // C primero
-            '00000000-0000-0000-0000-000000000001', // A segundo
-            '00000000-0000-0000-0000-000000000002', // B tercero
+            '00000000-0000-0000-0000-000000000003',
+            '00000000-0000-0000-0000-000000000001',
+            '00000000-0000-0000-0000-000000000002',
           ],
         })
       )
@@ -268,7 +292,7 @@ describe('POST /api/visit-status/reorder', () => {
 
       vi.mocked(prisma.$transaction).mockResolvedValue([] as never)
 
-      const response = await POST(
+      const response = await callPOST(
         createRequest({
           statusIds: [
             '00000000-0000-0000-0000-000000000001',
@@ -284,7 +308,6 @@ describe('POST /api/visit-status/reorder', () => {
 
   describe('respuesta exitosa', () => {
     it('debe retornar mensaje de éxito y lista completa ordenada', async () => {
-      // Usar UUIDs válidos
       const statusId = '00000000-0000-0000-0000-000000000001'
       const statuses = [
         { id: statusId, name: 'Estado 1', isInitial: false, isFinal: false, isActive: true },
@@ -295,11 +318,11 @@ describe('POST /api/visit-status/reorder', () => {
           { id: 'vs-initial', name: 'Inicial', order: 0, isInitial: true, color: {}, _count: { visits: 0 } },
           { id: statusId, name: 'Estado 1', order: 10, isInitial: false, isFinal: false, color: {}, _count: { visits: 0 } },
           { id: 'vs-final', name: 'Final', order: 999, isFinal: true, color: {}, _count: { visits: 0 } },
-        ] as never) // Lista completa
+        ] as never)
 
       vi.mocked(prisma.$transaction).mockResolvedValue([] as never)
 
-      const response = await POST(
+      const response = await callPOST(
         createRequest({
           statusIds: [statusId],
         })
@@ -334,7 +357,7 @@ describe('POST /api/visit-status/reorder', () => {
 
       vi.mocked(prisma.$transaction).mockResolvedValue([] as never)
 
-      const response = await POST(
+      const response = await callPOST(
         createRequest({
           statusIds: [statusId],
         })
@@ -356,7 +379,7 @@ describe('POST /api/visit-status/reorder', () => {
       vi.mocked(prisma.visitStatus.findMany).mockResolvedValue(statuses as never)
       vi.mocked(prisma.$transaction).mockRejectedValue(new Error('Transaction failed'))
 
-      const response = await POST(
+      const response = await callPOST(
         createRequest({
           statusIds: [statusId],
         })

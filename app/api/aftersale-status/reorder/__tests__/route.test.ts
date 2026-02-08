@@ -5,6 +5,27 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { NextRequest } from 'next/server'
+
+// Mock del logger middleware
+vi.mock('@/lib/logger-middleware', () => ({
+  withLogging: (handler: Function) => {
+    return async (
+      request: NextRequest,
+      context?: { params: Promise<Record<string, string>> }
+    ) => {
+      const mockLogger = {
+        debug: vi.fn(),
+        info: vi.fn(),
+        warn: vi.fn(),
+        error: vi.fn(),
+        child: vi.fn().mockReturnThis(),
+      }
+      const mockContext = context || { params: Promise.resolve({}) }
+      return handler(request, mockLogger, mockContext)
+    }
+  },
+}))
 
 vi.mock('@/lib/db', () => ({
   prisma: {
@@ -17,10 +38,15 @@ vi.mock('@/lib/db', () => ({
 }))
 
 import { prisma } from '@/lib/db'
-import { POST } from '../route'
+import { POST as _POST } from '../route'
 
-function createRequest(body: Record<string, unknown>): Request {
-  return new Request('http://localhost:3000/api/aftersale-status/reorder', {
+function callPOST(request: NextRequest) {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return (_POST as any)(request, { params: Promise.resolve({}) })
+}
+
+function createRequest(body: Record<string, unknown>): NextRequest {
+  return new NextRequest(new URL('http://localhost:3000/api/aftersale-status/reorder'), {
     method: 'POST',
     body: JSON.stringify(body),
     headers: { 'Content-Type': 'application/json' },
@@ -33,7 +59,7 @@ describe('POST /api/aftersale-status/reorder', () => {
   })
 
   it('debe rechazar statusIds vacío', async () => {
-    const response = await POST(createRequest({ statusIds: [] }))
+    const response = await callPOST(createRequest({ statusIds: [] }))
     const data = await response.json()
 
     expect(response.status).toBe(400)
@@ -45,7 +71,7 @@ describe('POST /api/aftersale-status/reorder', () => {
       { id: '00000000-0000-0000-0000-000000000001', name: 'Estado 1', isInitial: false, isFinal: false, isActive: true },
     ] as never)
 
-    const response = await POST(
+    const response = await callPOST(
       createRequest({
         statusIds: [
           '00000000-0000-0000-0000-000000000001',
@@ -65,7 +91,7 @@ describe('POST /api/aftersale-status/reorder', () => {
       { id: '00000000-0000-0000-0000-000000000002', name: 'Normal', isInitial: false, isFinal: false, isActive: true },
     ] as never)
 
-    const response = await POST(
+    const response = await callPOST(
       createRequest({
         statusIds: [
           '00000000-0000-0000-0000-000000000001',
@@ -85,7 +111,7 @@ describe('POST /api/aftersale-status/reorder', () => {
       { id: '00000000-0000-0000-0000-000000000002', name: 'Archivado', isInitial: false, isFinal: false, isActive: false },
     ] as never)
 
-    const response = await POST(
+    const response = await callPOST(
       createRequest({
         statusIds: [
           '00000000-0000-0000-0000-000000000001',
@@ -110,7 +136,7 @@ describe('POST /api/aftersale-status/reorder', () => {
 
     vi.mocked(prisma.$transaction).mockResolvedValue([] as never)
 
-    const response = await POST(
+    const response = await callPOST(
       createRequest({
         statusIds: [
           '00000000-0000-0000-0000-000000000001',
@@ -132,7 +158,7 @@ describe('POST /api/aftersale-status/reorder', () => {
     vi.mocked(prisma.aftersaleStatus.findMany).mockResolvedValue(statuses as never)
     vi.mocked(prisma.$transaction).mockRejectedValue(new Error('TX failed'))
 
-    const response = await POST(
+    const response = await callPOST(
       createRequest({
         statusIds: ['00000000-0000-0000-0000-000000000001'],
       })
