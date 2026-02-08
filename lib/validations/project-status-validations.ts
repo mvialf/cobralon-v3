@@ -1,15 +1,7 @@
-import { z } from 'zod'
+import { type BadgeColor } from './common'
+import { baseStatusSchema, type BaseStatusFormValues } from './base-status-validations'
 
-/**
- * Type para los colores de badge disponibles
- */
-export type BadgeColor = {
-  id: string
-  name: string
-  key: string
-  bgClass: string
-  textClass: string
-}
+export type { BadgeColor }
 
 /**
  * Type para el conteo de proyectos asociados a un estado
@@ -35,22 +27,14 @@ export type ProjectStatus = {
 
 /**
  * Schema de validación para crear/editar estados de proyecto
- * Nota: El campo 'type' (isInitial/isFinal) se maneja en la capa del dialog,
- * no en el formulario, para prevenir creación de estados inicial/final duplicados.
+ * Usa baseStatusSchema compartido (name + colorId)
  */
-export const projectStatusSchema = z.object({
-  name: z
-    .string()
-    .min(1, 'El nombre es obligatorio')
-    .max(50, 'El nombre no puede exceder 50 caracteres')
-    .trim(),
-  colorId: z.string().uuid('Debe seleccionar un color válido'),
-})
+export const projectStatusSchema = baseStatusSchema
 
 /**
  * Type inferido del schema (para formularios)
  */
-export type ProjectStatusFormValues = z.infer<typeof projectStatusSchema>
+export type ProjectStatusFormValues = BaseStatusFormValues
 
 /**
  * Type para el payload de creación (API)

@@ -1,16 +1,7 @@
 import { z } from 'zod'
+import { type BadgeColor } from './common'
 
-/**
- * Type para los colores de badge disponibles
- * Compartido por todos los tipos de status
- */
-export type BadgeColor = {
-  id: string
-  name: string
-  key: string
-  bgClass: string
-  textClass: string
-}
+export type { BadgeColor }
 
 /**
  * Type base para todos los status (Visit, Project, Aftersale)
