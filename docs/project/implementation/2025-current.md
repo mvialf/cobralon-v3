@@ -1,6 +1,6 @@
 # Implementation Log - 2025 Q2-Q4 (Actual)
 
-> **Implementaciones recientes:** #15-29 (Octubre - Diciembre 2025)
+> **Implementaciones recientes:** #15-30 (Octubre 2025 - Febrero 2026)
 >
 > **Ver implementaciones anteriores:** [@2025-q1.md](./2025-q1.md) (#1-14)
 
@@ -35,6 +35,30 @@ Registrar **implementaciones significativas** de este proyecto con:
 ---
 
 ## Implementaciones
+
+### 🧪 Simplificación Post-Migración: Mock Automático de Logger en Tests
+
+- **Status:** ✅ Complete | **Date:** 2026-02-08 | **Impact:** Low
+- **Context:** Tras migrar todas las API routes a `withApiHandler`/`withLogging`, cada test file repetía ~15 líneas de mock verbose para `@/lib/logger-middleware`. Con 15+ test files, esto sumaba ~280 líneas de boilerplate idéntico.
+- **Benefits:**
+  - **-282 líneas eliminadas:** Mock centralizado en `lib/__mocks__/logger-middleware.ts`
+  - **1 línea por test:** `vi.mock('@/lib/logger-middleware')` reemplaza 15 líneas
+  - **Cambio único:** Actualizar el mock en un solo lugar afecta todos los tests
+  - **Convención Vitest:** Usa `__mocks__/` (auto-discovery), no requiere config extra
+- **Implementación:**
+  - Crear `lib/__mocks__/logger-middleware.ts` con mock de `withLogging`
+  - Crear `lib/test-utils/api-test-helpers.ts` con helpers `createRequest` y `callHandler`
+  - Migrar 15 test files del patrón verbose al auto-mock
+- **Archivos creados:**
+  - `lib/__mocks__/logger-middleware.ts` - Mock automático de withLogging
+  - `lib/test-utils/api-test-helpers.ts` - Helpers compartidos para tests de API
+- **Archivos modificados (15 tests):**
+  - `app/api/{aftersale-events,aftersales,customers,installments,payment-methods,payments,projects,uninstall-tags,visit-events,visits}/__tests__/route.test.ts`
+  - `app/api/{aftersale-status,project-status,visit-status}/__tests__/route.test.ts`
+  - `app/api/{project-status/[id],visit-status/reorder}/__tests__/route.test.ts`
+- **Validación:** ✅ 193 tests pass | Lint: 0 errors | Typecheck: pass
+
+---
 
 ### 📊 Migración DataTable a Server-Side Pagination Escalable
 
