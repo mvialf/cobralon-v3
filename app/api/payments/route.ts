@@ -15,10 +15,8 @@ import {
   validateSameCustomer,
   validateSameCurrency,
 } from '@/lib/validations/payment-business-rules'
-import {
-  updateMultipleProjectBalances,
-  type PrismaTransaction,
-} from '@/lib/business-logic/update-project-balance'
+import { updateMultipleProjectBalances } from '@/lib/business-logic/update-project-balance'
+import type { PrismaTransaction } from '@/lib/db/types'
 import { updateCustomerCreditBalance } from '@/lib/business-logic/update-customer-credit-balance'
 
 /**

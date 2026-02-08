@@ -18,57 +18,24 @@ import { FINANCIAL } from '../constants/financial-constants'
 import { prisma } from '@/lib/db'
 import { calculateProjectBalance } from './project-balance'
 import { Decimal } from '@prisma/client/runtime/library'
-import { PrismaClient } from '@prisma/client'
+import type { PrismaTransaction } from '@/lib/db/types'
+
+export type { PrismaTransaction } from '@/lib/db/types'
 
 /**
- * Type para transacción de Prisma
+ * Lógica interna compartida para actualizar balance de proyecto
  *
- * Este tipo representa el cliente de Prisma disponible dentro de una transacción.
- * Excluye métodos que no están disponibles en transacciones.
- *
- * @example
- * ```ts
- * await prisma.$transaction(async (tx: PrismaTransaction) => {
- *   await updateProjectBalance(projectId, tx)
- * })
- * ```
+ * @param projectId - ID del proyecto
+ * @param includeAdjustments - Si true, resta ajustes del balance
+ * @param tx - Transacción de Prisma opcional
  */
-export type PrismaTransaction = Omit<
-  PrismaClient,
-  '$connect' | '$disconnect' | '$on' | '$transaction' | '$use' | '$extends'
->
-
-/**
- * Actualiza el balance de un proyecto en la DB basándose en sus allocations
- *
- * @param projectId - ID del proyecto a actualizar
- * @param tx - Transacción de Prisma (opcional, usa prisma global si no se proporciona)
- * @returns Balance actualizado
- *
- * @example
- * // Después de crear un pago (sin transacción)
- * const payment = await prisma.payment.create({ ... })
- * await updateProjectBalance(payment.projectId)
- *
- * @example
- * // Dentro de una transacción (recomendado para atomicidad)
- * await prisma.$transaction(async (tx) => {
- *   await tx.payment.create({ ... })
- *   await updateProjectBalance(projectId, tx)
- * })
- *
- * @example
- * // Después de eliminar un pago
- * await prisma.payment.delete({ where: { id } })
- * await updateProjectBalance(projectId)
- */
-export async function updateProjectBalance(
+async function _updateBalanceInternal(
   projectId: string,
+  includeAdjustments: boolean,
   tx?: PrismaTransaction
 ): Promise<number> {
   const db = tx || prisma
 
-  // Fetch project con allocations
   const project = await db.project.findUnique({
     where: { id: projectId },
     select: {
@@ -76,10 +43,13 @@ export async function updateProjectBalance(
       total: true,
       totalAmount: true,
       paymentAllocations: {
-        select: {
-          allocatedAmount: true,
-        },
+        select: { allocatedAmount: true },
       },
+      ...(includeAdjustments && {
+        adjustments: {
+          select: { amount: true },
+        },
+      }),
     },
   })
 
@@ -87,23 +57,42 @@ export async function updateProjectBalance(
     throw new Error(`Project ${projectId} not found`)
   }
 
-  // Calcular balance usando helper compartido
-  const { balance } = calculateProjectBalance({
+  const { balance: baseBalance } = calculateProjectBalance({
     totalAmount: Number(project.totalAmount ?? project.total),
     allocations: project.paymentAllocations.map((alloc) => ({
       allocatedAmount: Number(alloc.allocatedAmount),
     })),
   })
 
-  // Actualizar en DB
+  const totalAdjustments = includeAdjustments
+    ? (((project as Record<string, unknown>).adjustments as Array<{ amount: unknown }>)?.reduce(
+        (sum, adj) => sum + Number(adj.amount),
+        0
+      ) ?? 0)
+    : 0
+
+  const finalBalance = baseBalance - totalAdjustments
+
   await db.project.update({
     where: { id: projectId },
-    data: {
-      balance: new Decimal(balance),
-    },
+    data: { balance: new Decimal(finalBalance) },
   })
 
-  return balance
+  return finalBalance
+}
+
+/**
+ * Actualiza el balance de un proyecto en la DB basándose en sus allocations
+ *
+ * @param projectId - ID del proyecto a actualizar
+ * @param tx - Transacción de Prisma (opcional, usa prisma global si no se proporciona)
+ * @returns Balance actualizado
+ */
+export async function updateProjectBalance(
+  projectId: string,
+  tx?: PrismaTransaction
+): Promise<number> {
+  return _updateBalanceInternal(projectId, false, tx)
 }
 
 /**
@@ -188,65 +177,10 @@ export async function verifyProjectBalance(projectId: string): Promise<boolean> 
  * @param projectId - ID del proyecto a actualizar
  * @param tx - Transacción de Prisma (opcional, usa prisma global si no se proporciona)
  * @returns Balance actualizado
- *
- * @example
- * // Después de crear un ajuste
- * await prisma.$transaction(async (tx) => {
- *   await tx.projectAdjustment.create({ ... })
- *   await updateProjectBalanceWithAdjustments(projectId, tx)
- * })
  */
 export async function updateProjectBalanceWithAdjustments(
   projectId: string,
   tx?: PrismaTransaction
 ): Promise<number> {
-  const db = tx || prisma
-
-  // Fetch project con allocations y ajustes
-  const project = await db.project.findUnique({
-    where: { id: projectId },
-    select: {
-      id: true,
-      total: true,
-      totalAmount: true,
-      paymentAllocations: {
-        select: {
-          allocatedAmount: true,
-        },
-      },
-      adjustments: {
-        select: {
-          amount: true,
-        },
-      },
-    },
-  })
-
-  if (!project) {
-    throw new Error(`Project ${projectId} not found`)
-  }
-
-  // Calcular balance base (sin ajustes)
-  const { balance: baseBalance } = calculateProjectBalance({
-    totalAmount: Number(project.totalAmount ?? project.total),
-    allocations: project.paymentAllocations.map((alloc) => ({
-      allocatedAmount: Number(alloc.allocatedAmount),
-    })),
-  })
-
-  // Sumar todos los ajustes (los ajustes reducen el balance)
-  const totalAdjustments = project.adjustments.reduce((sum, adj) => sum + Number(adj.amount), 0)
-
-  // Calcular balance final: balance base - ajustes
-  const finalBalance = baseBalance - totalAdjustments
-
-  // Actualizar en DB
-  await db.project.update({
-    where: { id: projectId },
-    data: {
-      balance: new Decimal(finalBalance),
-    },
-  })
-
-  return finalBalance
+  return _updateBalanceInternal(projectId, true, tx)
 }

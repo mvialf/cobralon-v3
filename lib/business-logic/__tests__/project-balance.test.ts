@@ -226,15 +226,15 @@ describe('getTotalPendingBalance', () => {
     const projects = [
       {
         totalAmount: 1000000,
-        paymentAllocations: [{ allocatedAmount: 600000, payment: { status: 'ACTIVE' } }],
+        allocations: [{ allocatedAmount: 600000 }],
       },
       {
         totalAmount: 500000,
-        paymentAllocations: [{ allocatedAmount: 500000, payment: { status: 'ACTIVE' } }], // Balance 0
+        allocations: [{ allocatedAmount: 500000 }], // Balance 0
       },
       {
         totalAmount: 2000000,
-        paymentAllocations: [{ allocatedAmount: 800000, payment: { status: 'ACTIVE' } }],
+        allocations: [{ allocatedAmount: 800000 }],
       },
     ]
 
@@ -250,11 +250,11 @@ describe('getTotalPendingBalance', () => {
     const projects = [
       {
         totalAmount: 1000000,
-        paymentAllocations: [{ allocatedAmount: 1200000, payment: { status: 'ACTIVE' } }], // Sobrepago
+        allocations: [{ allocatedAmount: 1200000 }], // Sobrepago
       },
       {
         totalAmount: 500000,
-        paymentAllocations: [{ allocatedAmount: 300000, payment: { status: 'ACTIVE' } }],
+        allocations: [{ allocatedAmount: 300000 }],
       },
     ]
 
@@ -269,11 +269,11 @@ describe('getTotalPendingBalance', () => {
     const projects = [
       {
         totalAmount: 1000000,
-        paymentAllocations: [{ allocatedAmount: 1000000, payment: { status: 'ACTIVE' } }],
+        allocations: [{ allocatedAmount: 1000000 }],
       },
       {
         totalAmount: 500000,
-        paymentAllocations: [{ allocatedAmount: 500000, payment: { status: 'ACTIVE' } }],
+        allocations: [{ allocatedAmount: 500000 }],
       },
     ]
 

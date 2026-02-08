@@ -3,7 +3,7 @@ import { prisma } from '@/lib/db'
 import { canRefundCredit } from '@/lib/business-logic/credit-management'
 import { Prisma } from '@prisma/client'
 import { updateCustomerCreditBalance } from '@/lib/business-logic/update-customer-credit-balance'
-import type { PrismaTransaction } from '@/lib/business-logic/update-project-balance'
+import type { PrismaTransaction } from '@/lib/db/types'
 
 interface RefundCreditRequest {
   amount: number

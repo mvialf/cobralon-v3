@@ -17,7 +17,7 @@ import { FINANCIAL } from '../constants/financial-constants'
 
 import { prisma } from '@/lib/db'
 import { Decimal } from '@prisma/client/runtime/library'
-import type { PrismaTransaction } from './update-project-balance'
+import type { PrismaTransaction } from '@/lib/db/types'
 
 /**
  * Recalcula y actualiza el creditBalance de un cliente desde credit_transactions

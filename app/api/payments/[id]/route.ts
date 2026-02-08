@@ -1,10 +1,8 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { Decimal } from '@prisma/client/runtime/library'
-import {
-  updateMultipleProjectBalances,
-  type PrismaTransaction,
-} from '@/lib/business-logic/update-project-balance'
+import { updateMultipleProjectBalances } from '@/lib/business-logic/update-project-balance'
+import type { PrismaTransaction } from '@/lib/db/types'
 import { updateCustomerCreditBalance } from '@/lib/business-logic/update-customer-credit-balance'
 import { logger } from '@/lib/logger'
 

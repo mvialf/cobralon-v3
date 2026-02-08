@@ -11,6 +11,20 @@
 
 import { FINANCIAL } from '../constants/financial-constants'
 
+function validateNonNegativeAmount(amount: number, fieldName: string) {
+  if (amount < 0) {
+    throw new Error(`El ${fieldName} no puede ser negativo`)
+  }
+}
+
+function validateTaxRate(taxRate: number) {
+  if (taxRate < FINANCIAL.MIN_TAX_RATE || taxRate > FINANCIAL.MAX_TAX_RATE) {
+    throw new Error(
+      `La tasa de impuesto debe estar entre ${FINANCIAL.MIN_TAX_RATE}% y ${FINANCIAL.MAX_TAX_RATE}%`
+    )
+  }
+}
+
 /**
  * Calcula el total de un proyecto aplicando tasa de impuesto
  *
@@ -51,21 +65,10 @@ export function calculateProjectTotal(
   subtotal: number,
   taxRate: number = FINANCIAL.DEFAULT_TAX_RATE
 ): number {
-  // Validaciones
-  if (subtotal < 0) {
-    throw new Error('El subtotal no puede ser negativo')
-  }
+  validateNonNegativeAmount(subtotal, 'subtotal')
+  validateTaxRate(taxRate)
 
-  if (taxRate < FINANCIAL.MIN_TAX_RATE || taxRate > FINANCIAL.MAX_TAX_RATE) {
-    throw new Error(
-      `La tasa de impuesto debe estar entre ${FINANCIAL.MIN_TAX_RATE}% y ${FINANCIAL.MAX_TAX_RATE}%`
-    )
-  }
-
-  // Calcular impuesto
   const tax = subtotal * (taxRate / 100)
-
-  // Retornar total
   return subtotal + tax
 }
 
@@ -86,15 +89,8 @@ export function calculateTax(
   subtotal: number,
   taxRate: number = FINANCIAL.DEFAULT_TAX_RATE
 ): number {
-  if (subtotal < 0) {
-    throw new Error('El subtotal no puede ser negativo')
-  }
-
-  if (taxRate < FINANCIAL.MIN_TAX_RATE || taxRate > FINANCIAL.MAX_TAX_RATE) {
-    throw new Error(
-      `La tasa de impuesto debe estar entre ${FINANCIAL.MIN_TAX_RATE}% y ${FINANCIAL.MAX_TAX_RATE}%`
-    )
-  }
+  validateNonNegativeAmount(subtotal, 'subtotal')
+  validateTaxRate(taxRate)
 
   return subtotal * (taxRate / 100)
 }
@@ -155,15 +151,8 @@ export function calculateSubtotalFromTotal(
   total: number,
   taxRate: number = FINANCIAL.DEFAULT_TAX_RATE
 ): number {
-  if (total < 0) {
-    throw new Error('El total no puede ser negativo')
-  }
-
-  if (taxRate < FINANCIAL.MIN_TAX_RATE || taxRate > FINANCIAL.MAX_TAX_RATE) {
-    throw new Error(
-      `La tasa de impuesto debe estar entre ${FINANCIAL.MIN_TAX_RATE}% y ${FINANCIAL.MAX_TAX_RATE}%`
-    )
-  }
+  validateNonNegativeAmount(total, 'total')
+  validateTaxRate(taxRate)
 
   return total / (1 + taxRate / 100)
 }

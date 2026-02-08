@@ -106,55 +106,11 @@ export function calculateProjectBalance(project: ProjectWithAllocations): Projec
  */
 export interface ProjectWithFullAllocations {
   totalAmount: number | null
-  paymentAllocations?: Array<{
+  allocations?: Array<{
     allocatedAmount: number
-    payment?: { status: string }
   }>
 }
 
-/**
- * Calcula el balance total pendiente de múltiples proyectos
- *
- * Suma solo los balances POSITIVOS (pendientes de pago).
- * Los proyectos con balance ≤ 0 (pagados o sobrepagados) se ignoran.
- *
- * Útil para:
- * - Mostrar deuda total de un cliente
- * - Calcular capacidad de pago disponible
- * - Reportes financieros agregados
- *
- * @param projects - Array de proyectos con totalAmount y allocations
- * @returns Suma total de balances pendientes (solo positivos)
- *
- * @example
- * ```ts
- * const projects = [
- *   {
- *     id: 'P1',
- *     totalAmount: 1000000,
- *     paymentAllocations: [{ allocatedAmount: 600000 }]
- *   },
- *   {
- *     id: 'P2',
- *     totalAmount: 500000,
- *     paymentAllocations: [{ allocatedAmount: 500000 }] // Pagado completo
- *   },
- *   {
- *     id: 'P3',
- *     totalAmount: 2000000,
- *     paymentAllocations: [{ allocatedAmount: 800000 }]
- *   }
- * ]
- *
- * const totalPending = getTotalPendingBalance(projects)
- * // => 1,600,000
- * // P1: 400,000 (pendiente) ✅
- * // P2: 0 (pagado completo) ❌ no se suma
- * // P3: 1,200,000 (pendiente) ✅
- * ```
- *
- * @see {@link docs/project/analysis/frontend-calculations.md#5} - Análisis exhaustivo
- */
 /**
  * Resultado de derivación de progreso de pago desde columna balance persistida
  */
@@ -180,16 +136,16 @@ export function derivePaymentProgress(total: number, balance: number): PaymentPr
   return { totalPaid, percentPaid, isFullyPaid }
 }
 
+/**
+ * Suma los balances positivos (pendientes) de múltiples proyectos.
+ * Proyectos pagados o sobrepagados (balance ≤ 0) se ignoran.
+ */
 export function getTotalPendingBalance(projects: ProjectWithFullAllocations[]): number {
   return projects.reduce((sum, project) => {
-    // Calcular balance de este proyecto
     const { balance } = calculateProjectBalance({
       totalAmount: project.totalAmount,
-      allocations: project.paymentAllocations,
+      allocations: project.allocations,
     })
-
-    // Sumar solo balances positivos (pendientes)
-    // Math.max(0, balance) convierte balances negativos a 0
     return sum + Math.max(0, balance)
   }, 0)
 }
