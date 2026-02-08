@@ -3,7 +3,6 @@
 import * as React from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { format } from 'date-fns'
 
 import {
   createProjectEventWithProjectUpdateSchema,
@@ -21,10 +20,10 @@ import { AddressFields } from '@/components/forms/fields/address-fields'
 import { ProjectDetailsFields } from '@/components/forms/fields/project-details-fields'
 import { TagSelector } from '@/components/custom/tag-system'
 import { useUninstallTags } from '@/hooks/use-uninstall-tags'
-import { useTeamTags, type TeamTag } from '@/hooks/use-team-tags'
+import { TeamTagsField } from '@/components/forms/fields/team-tags-field'
 import type { UninstallTag } from '@/components/custom/tag-system/types'
 import { TodoListField } from '@/components/custom/todo'
-import { cn } from '@/lib/utils'
+import { cn, formatDateForInput } from '@/lib/utils'
 import { getRegionCodigoByNombre } from '@/lib/regiones-chile'
 import {
   Form,
@@ -60,15 +59,6 @@ export const ProjectEventForm = React.forwardRef<ProjectEventFormHandle, Project
       deleteTag,
       loading: _loadingTags,
     } = useUninstallTags()
-
-    // Hook para team tags (integrantes del equipo)
-    const {
-      availableTags: availableTeamTags,
-      availableColors: teamTagColors,
-      createTag: createTeamTag,
-      editTag: editTeamTag,
-      deleteTag: deleteTeamTag,
-    } = useTeamTags()
 
     // State para detalles del proyecto seleccionado
     const [projectDetails, setProjectDetails] = React.useState<{
@@ -220,19 +210,6 @@ export const ProjectEventForm = React.forwardRef<ProjectEventFormHandle, Project
       // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [projectId])
 
-    // Formatear fecha para el input type="date"
-    // IMPORTANTE: Si ya es string yyyy-MM-dd, devolverlo directo (evita bugs de timezone)
-    const formatDateForInput = (date: Date | string): string => {
-      if (!date) return ''
-      // Si ya es string con formato correcto (yyyy-MM-dd), devolverlo directo
-      if (typeof date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(date)) {
-        return date
-      }
-      // Solo convertir si es Date object
-      const d = typeof date === 'string' ? new Date(date) : date
-      return format(d, 'yyyy-MM-dd')
-    }
-
     return (
       <Form {...form}>
         <div className="space-y-4">
@@ -376,43 +353,7 @@ export const ProjectEventForm = React.forwardRef<ProjectEventFormHandle, Project
             />
 
             {/* Team Tags - Integrantes asignados al evento */}
-            <FormField
-              control={form.control}
-              name="teamTagIds"
-              render={({ field }) => {
-                // Transformar IDs a objetos TeamTag completos para TagSelector
-                const selectedTeamTagObjects =
-                  (field.value
-                    ?.map((id) => availableTeamTags.find((tag) => tag.id === id))
-                    .filter(Boolean) as TeamTag[]) || []
-
-                // Handler: recibir objetos TeamTag, enviar IDs al form
-                const handleTeamTagChange = (tags: TeamTag[]) => {
-                  field.onChange(tags.map((t) => t.id))
-                }
-
-                return (
-                  <FormItem>
-                    <FormControl>
-                      <div className={cn(!projectDetails && 'opacity-50 pointer-events-none')}>
-                        <TagSelector
-                          selectedTags={selectedTeamTagObjects}
-                          availableTags={availableTeamTags}
-                          availableColors={teamTagColors}
-                          onTagsChange={handleTeamTagChange}
-                          onCreateTag={createTeamTag}
-                          onEditTag={editTeamTag}
-                          onDeleteTag={deleteTeamTag}
-                          label="Integrantes"
-                          showFullNameInSelected
-                        />
-                      </div>
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )
-              }}
-            />
+            <TeamTagsField control={form.control} disabled={!projectDetails} />
 
             {/* Tareas del Evento */}
             <FormField

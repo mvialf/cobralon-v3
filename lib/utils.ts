@@ -1,5 +1,6 @@
 import { clsx, type ClassValue } from 'clsx'
 import { twMerge } from 'tailwind-merge'
+import { format } from 'date-fns'
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
@@ -56,4 +57,23 @@ export function parseDateValue(value: string): Date | undefined {
   // Create date using local timezone (month is 0-indexed)
   const date = new Date(year, month - 1, day)
   return isNaN(date.getTime()) ? undefined : date
+}
+
+/**
+ * Formats a Date or string to 'YYYY-MM-DD' for HTML date inputs.
+ * If the value is already a correctly formatted string, returns it as-is (avoids timezone bugs).
+ *
+ * Use this for event form schemas that use z.string() for dates.
+ * For schemas using z.date(), use formatDateValue() instead.
+ *
+ * @param date - Date object or date string
+ * @returns 'YYYY-MM-DD' string or empty string
+ */
+export function formatDateForInput(date: Date | string): string {
+  if (!date) return ''
+  if (typeof date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(date)) {
+    return date
+  }
+  const d = typeof date === 'string' ? new Date(date) : date
+  return format(d, 'yyyy-MM-dd')
 }

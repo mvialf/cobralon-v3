@@ -3,7 +3,6 @@
 import * as React from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { format } from 'date-fns'
 
 import {
   createAftersaleEventWithUpdateSchema,
@@ -21,9 +20,8 @@ import { FormGrid } from '@/components/ui/form-grid'
 import { AftersaleSearchField } from '@/components/forms/search/aftersale-search-field'
 import { AddressFields } from '@/components/forms/fields/address-fields'
 import { TodoListField } from '@/components/custom/todo'
-import { TagSelector } from '@/components/custom/tag-system'
-import { useTeamTags, type TeamTag } from '@/hooks/use-team-tags'
-import { cn } from '@/lib/utils'
+import { TeamTagsField } from '@/components/forms/fields/team-tags-field'
+import { formatDateForInput } from '@/lib/utils'
 import {
   Form,
   FormControl,
@@ -50,15 +48,6 @@ export const AftersaleEventForm = React.forwardRef<
 >(({ onSubmit, defaultValues }, ref) => {
   // Fetch aftersale statuses usando hook compartido con caché
   const { data: aftersaleStatuses = [], isLoading: loadingStatuses } = useAftersaleStatuses()
-
-  // Hook para team tags (integrantes del equipo)
-  const {
-    availableTags: availableTeamTags,
-    availableColors: teamTagColors,
-    createTag: createTeamTag,
-    editTag: editTeamTag,
-    deleteTag: deleteTeamTag,
-  } = useTeamTags()
 
   // State para detalles del aftersale seleccionado
   const [aftersaleDetails, setAftersaleDetails] = React.useState<{
@@ -186,19 +175,6 @@ export const AftersaleEventForm = React.forwardRef<
       })
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [aftersaleId])
-
-  // Formatear fecha para el input type="date"
-  // IMPORTANTE: Si ya es string yyyy-MM-dd, devolverlo directo (evita bugs de timezone)
-  const formatDateForInput = (date: Date | string): string => {
-    if (!date) return ''
-    // Si ya es string con formato correcto (yyyy-MM-dd), devolverlo directo
-    if (typeof date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(date)) {
-      return date
-    }
-    // Solo convertir si es Date object
-    const d = typeof date === 'string' ? new Date(date) : date
-    return format(d, 'yyyy-MM-dd')
-  }
 
   return (
     <Form {...form}>
@@ -329,43 +305,7 @@ export const AftersaleEventForm = React.forwardRef<
           />
 
           {/* Team Tags - Integrantes asignados al evento */}
-          <FormField
-            control={form.control}
-            name="teamTagIds"
-            render={({ field }) => {
-              // Transformar IDs a objetos TeamTag completos para TagSelector
-              const selectedTeamTagObjects =
-                (field.value
-                  ?.map((id) => availableTeamTags.find((tag) => tag.id === id))
-                  .filter(Boolean) as TeamTag[]) || []
-
-              // Handler: recibir objetos TeamTag, enviar IDs al form
-              const handleTeamTagChange = (tags: TeamTag[]) => {
-                field.onChange(tags.map((t) => t.id))
-              }
-
-              return (
-                <FormItem>
-                  <FormControl>
-                    <div className={cn(!aftersaleDetails && 'opacity-50 pointer-events-none')}>
-                      <TagSelector
-                        selectedTags={selectedTeamTagObjects}
-                        availableTags={availableTeamTags}
-                        availableColors={teamTagColors}
-                        onTagsChange={handleTeamTagChange}
-                        onCreateTag={createTeamTag}
-                        onEditTag={editTeamTag}
-                        onDeleteTag={deleteTeamTag}
-                        label="Integrantes"
-                        showFullNameInSelected
-                      />
-                    </div>
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )
-            }}
-          />
+          <TeamTagsField control={form.control} disabled={!aftersaleDetails} />
 
           {/* Tareas del Aftersale */}
           <FormField
