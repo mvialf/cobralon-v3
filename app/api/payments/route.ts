@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { Decimal } from '@prisma/client/runtime/library'
 import { Prisma } from '@prisma/client'
+import { z } from 'zod'
 import { AllocationInput, PaymentWhereInput } from '@/types/api'
 import { withLogging } from '@/lib/logger-middleware'
 import { canApplyCredit } from '@/lib/business-logic/credit-management'
@@ -53,6 +54,12 @@ export const GET = withLogging(async (request, logger) => {
   const startDate = searchParams.get('startDate') || ''
   const endDate = searchParams.get('endDate') || ''
   const includeFacets = searchParams.get('includeFacets') === 'true'
+
+  // Sorting params con validación Zod
+  const sortBySchema = z.enum(['date', 'amount']).optional()
+  const sortOrderSchema = z.enum(['asc', 'desc']).optional()
+  const sortBy = sortBySchema.safeParse(searchParams.get('sortBy') || undefined).data
+  const sortOrder = sortOrderSchema.safeParse(searchParams.get('sortOrder') || undefined).data
 
   logger.debug(
     {
@@ -149,7 +156,9 @@ export const GET = withLogging(async (request, logger) => {
         where,
         skip,
         take: limit,
-        orderBy: { date: 'desc' },
+        orderBy: sortBy
+          ? ({ [sortBy]: sortOrder || 'asc' } as Prisma.PaymentOrderByWithRelationInput)
+          : { date: 'desc' },
         include: {
           customer: {
             select: {

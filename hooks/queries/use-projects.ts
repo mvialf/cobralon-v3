@@ -53,6 +53,8 @@ export interface ProjectsQueryParams {
   customerId?: string
   statusIds?: string[] // IDs de status o 'null' para sin estado
   projectState?: 'Activo' | 'Finalizado' | 'all'
+  sortBy?: string
+  sortOrder?: 'asc' | 'desc'
 }
 
 /** Facet item para filtros server-side */
@@ -206,6 +208,8 @@ export function useProjects(params: ProjectsQueryParams = {}) {
         searchParams.set('statusIds', params.statusIds.join(','))
       }
       if (params.projectState) searchParams.set('projectState', params.projectState)
+      if (params.sortBy) searchParams.set('sortBy', params.sortBy)
+      if (params.sortOrder) searchParams.set('sortOrder', params.sortOrder)
 
       const response = await fetch(`/api/projects?${searchParams}`)
 

@@ -23,6 +23,19 @@ import {
 } from '@/types/project-list'
 
 /**
+ * Whitelist de columnas permitidas para ORDER BY.
+ * Mapea nombres de columna del frontend a fragmentos SQL seguros.
+ * NUNCA interpolar input del usuario directo en SQL.
+ */
+const SORT_COLUMN_MAP: Record<string, Prisma.Sql> = {
+  createdAt: Prisma.sql`p."createdAt"`,
+  date: Prisma.sql`p.date`,
+  total: Prisma.sql`p.total`,
+  balance: Prisma.sql`p.balance`,
+  projectNumber: Prisma.sql`p."projectNumber"`,
+}
+
+/**
  * Ejecuta query principal de proyectos con paginación en DB
  */
 export async function queryProjectList(filters: ProjectListFilters): Promise<ProjectListItem[]> {
@@ -81,7 +94,11 @@ export async function queryProjectList(filters: ProjectListFilters): Promise<Pro
       )`
           : Prisma.empty
       }
-    ORDER BY p."createdAt" DESC
+    ORDER BY ${
+      filters.sortBy && SORT_COLUMN_MAP[filters.sortBy]
+        ? Prisma.sql`${SORT_COLUMN_MAP[filters.sortBy]} ${filters.sortOrder === 'asc' ? Prisma.sql`ASC` : Prisma.sql`DESC`}`
+        : Prisma.sql`p."createdAt" DESC`
+    }
     LIMIT ${filters.limit}
     OFFSET ${offset}
   `

@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useMemo } from 'react'
-import { type PaginationState } from '@tanstack/react-table'
+import { type PaginationState, type SortingState } from '@tanstack/react-table'
 import { useQueryClient, useQuery } from '@tanstack/react-query'
 import { AppLayout } from '@/components/layout/app-layout'
 import { NewVisitDialog } from '@/components/dialogs/visits/new-visit-dialog'
@@ -24,14 +24,19 @@ export function VisitsPageClient() {
   const [searchTerm, setSearchTerm] = useState('')
   const debouncedSearch = useDebounce(searchTerm, 500)
 
+  // Estado de sorting server-side
+  const [sorting, setSorting] = useState<SortingState>([])
+
   // Query params para useVisits (useMemo para evitar recreación en cada render)
   const queryParams: VisitsQueryParams = useMemo(
     () => ({
       page: pagination.pageIndex + 1, // API usa 1-based
       limit: pagination.pageSize,
       search: debouncedSearch || undefined,
+      sortBy: sorting[0]?.id || undefined,
+      sortOrder: sorting[0] ? (sorting[0].desc ? 'desc' : 'asc') : undefined,
     }),
-    [pagination.pageIndex, pagination.pageSize, debouncedSearch]
+    [pagination.pageIndex, pagination.pageSize, debouncedSearch, sorting]
   )
 
   // React Query: Fetch visits con cache automático
@@ -100,6 +105,11 @@ export function VisitsPageClient() {
     }
   }
 
+  const handleSortingChange = (newSorting: SortingState) => {
+    setSorting(newSorting)
+    setPagination((prev) => ({ ...prev, pageIndex: 0 }))
+  }
+
   const columns = createColumns({
     statuses: statuses.map((s) => ({
       id: s.id,
@@ -141,6 +151,10 @@ export function VisitsPageClient() {
             pagination={pagination}
             onPaginationChange={setPagination}
             onSearchChange={handleSearchChange}
+            // Server-side sorting
+            manualSorting={true}
+            sorting={sorting}
+            onSortingChange={handleSortingChange}
             filterableColumns={[
               {
                 id: 'visitStatus',

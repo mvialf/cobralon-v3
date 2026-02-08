@@ -3,6 +3,7 @@ import { prisma } from '@/lib/db'
 import { withLogging } from '@/lib/logger-middleware'
 import { type CreateVisitAPIPayload } from '@/lib/validations/visit-validations'
 import { Prisma } from '@prisma/client'
+import { z } from 'zod'
 import { anyFieldMatchesSearch } from '@/lib/utils/normalize'
 
 /**
@@ -22,6 +23,12 @@ export const GET = withLogging(async (request, logger) => {
   const limit = Math.min(parseInt(searchParams.get('limit') || '50'), 100)
   const search = searchParams.get('search') || ''
   const visitStatusId = searchParams.get('visitStatusId') || ''
+
+  // Sorting params con validación Zod
+  const sortBySchema = z.enum(['date']).optional()
+  const sortOrderSchema = z.enum(['asc', 'desc']).optional()
+  const sortBy = sortBySchema.safeParse(searchParams.get('sortBy') || undefined).data
+  const sortOrder = sortOrderSchema.safeParse(searchParams.get('sortOrder') || undefined).data
 
   logger.debug(
     {
@@ -76,6 +83,16 @@ export const GET = withLogging(async (request, logger) => {
           anyFieldMatchesSearch([visit.name, visit.phone, visit.street, visit.comuna], search)
         )
       : allVisits
+
+    // Aplicar sorting en memoria (ya que los datos se filtran post-fetch)
+    if (sortBy === 'date') {
+      const direction = sortOrder === 'asc' ? 1 : -1
+      filteredVisits.sort((a, b) => {
+        const dateA = new Date(a.date).getTime()
+        const dateB = new Date(b.date).getTime()
+        return (dateA - dateB) * direction
+      })
+    }
 
     // Aplicar paginación manualmente
     const total = filteredVisits.length

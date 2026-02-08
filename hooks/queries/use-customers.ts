@@ -43,6 +43,8 @@ export interface CustomersQueryParams {
   page?: number
   limit?: number
   search?: string
+  sortBy?: string
+  sortOrder?: 'asc' | 'desc'
 }
 
 /** Respuesta de GET /api/customers */
@@ -120,6 +122,8 @@ export function useCustomers(params: CustomersQueryParams = {}) {
       if (params.page) searchParams.set('page', String(params.page))
       if (params.limit) searchParams.set('limit', String(params.limit))
       if (params.search) searchParams.set('search', params.search)
+      if (params.sortBy) searchParams.set('sortBy', params.sortBy)
+      if (params.sortOrder) searchParams.set('sortOrder', params.sortOrder)
 
       const response = await fetch(`/api/customers?${searchParams}`)
 

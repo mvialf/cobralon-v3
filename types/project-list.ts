@@ -118,6 +118,8 @@ export interface ProjectListFilters {
   filterByNullStatus: boolean
   actualStatusIds: string[]
   projectState: 'Activo' | 'Finalizado' | 'all'
+  sortBy?: string
+  sortOrder?: 'asc' | 'desc'
 }
 
 /**

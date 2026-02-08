@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
+import { Prisma } from '@prisma/client'
+import { z } from 'zod'
 import { withLogging } from '@/lib/logger-middleware'
 
 /**
@@ -17,6 +19,12 @@ export const GET = withLogging(async (request, logger) => {
   const page = parseInt(searchParams.get('page') || '1')
   const limit = Math.min(parseInt(searchParams.get('limit') || '10'), 100)
   const search = searchParams.get('search') || ''
+
+  // Sorting params con validación Zod
+  const sortBySchema = z.enum(['name', 'createdAt', 'creditBalance']).optional()
+  const sortOrderSchema = z.enum(['asc', 'desc']).optional()
+  const sortBy = sortBySchema.safeParse(searchParams.get('sortBy') || undefined).data
+  const sortOrder = sortOrderSchema.safeParse(searchParams.get('sortOrder') || undefined).data
 
   logger.debug(
     {
@@ -47,7 +55,9 @@ export const GET = withLogging(async (request, logger) => {
       prisma.customer.count({ where: whereCondition }),
       prisma.customer.findMany({
         where: whereCondition,
-        orderBy: { createdAt: 'desc' },
+        orderBy: sortBy
+          ? ({ [sortBy]: sortOrder || 'asc' } as Prisma.CustomerOrderByWithRelationInput)
+          : { createdAt: 'desc' },
         skip,
         take: limit,
       }),

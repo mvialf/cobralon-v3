@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useMemo, useEffect } from 'react'
-import { type PaginationState } from '@tanstack/react-table'
+import { type PaginationState, type SortingState } from '@tanstack/react-table'
 import { Plus, Trash2 } from 'lucide-react'
 import { useQueryClient } from '@tanstack/react-query'
 import { AppLayout } from '@/components/layout/app-layout'
@@ -59,6 +59,9 @@ export function PaymentsPageClient() {
   const [paymentMethodFilter, setPaymentMethodFilter] = useState<string | undefined>(undefined)
   const [projectNumberFilter, setProjectNumberFilter] = useState<string | undefined>(undefined)
 
+  // Estado de sorting server-side
+  const [sorting, setSorting] = useState<SortingState>([])
+
   // Query params para usePayments (useMemo para evitar recreación en cada render)
   const queryParams: PaymentsQueryParams = useMemo(
     () => ({
@@ -71,6 +74,9 @@ export function PaymentsPageClient() {
       projectNumber: projectNumberFilter,
       // Facets solo en página 1 (carga inicial + cambio de filtros que resetean a pág 1)
       includeFacets: pagination.pageIndex === 0,
+      // Server-side sorting
+      sortBy: sorting[0]?.id || undefined,
+      sortOrder: sorting[0] ? (sorting[0].desc ? 'desc' : 'asc') : undefined,
     }),
     [
       pagination.pageIndex,
@@ -79,6 +85,7 @@ export function PaymentsPageClient() {
       typeFilter,
       paymentMethodFilter,
       projectNumberFilter,
+      sorting,
     ]
   )
 
@@ -146,6 +153,11 @@ export function PaymentsPageClient() {
     if (pagination.pageIndex !== 0) {
       setPagination({ ...pagination, pageIndex: 0 })
     }
+  }
+
+  const handleSortingChange = (newSorting: SortingState) => {
+    setSorting(newSorting)
+    setPagination((prev) => ({ ...prev, pageIndex: 0 }))
   }
 
   const handleSuccess = () => {
@@ -232,6 +244,10 @@ export function PaymentsPageClient() {
             pagination={pagination}
             onPaginationChange={setPagination}
             onSearchChange={handleSearchChange}
+            // Server-side sorting
+            manualSorting={true}
+            sorting={sorting}
+            onSortingChange={handleSortingChange}
             // Server-side filtering
             manualFiltering={true}
             serverFacets={facets}

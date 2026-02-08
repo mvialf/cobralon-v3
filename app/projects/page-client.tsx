@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useMemo } from 'react'
-import { type PaginationState } from '@tanstack/react-table'
+import { type PaginationState, type SortingState } from '@tanstack/react-table'
 import { useQueryClient } from '@tanstack/react-query'
 import { Trash2 } from 'lucide-react'
 import { AppLayout } from '@/components/layout/app-layout'
@@ -51,6 +51,9 @@ export function ProjectsPageClient() {
   // Estado de filtro de status (IDs seleccionados, incluyendo 'null' para sin estado)
   const [statusIds, setStatusIds] = useState<string[]>([])
 
+  // Estado de sorting server-side
+  const [sorting, setSorting] = useState<SortingState>([])
+
   // Query params para useProjects (useMemo para evitar recreación en cada render)
   const queryParams: ProjectsQueryParams = useMemo(
     () => ({
@@ -59,8 +62,10 @@ export function ProjectsPageClient() {
       search: debouncedSearch || undefined,
       statusIds: statusIds.length > 0 ? statusIds : undefined,
       projectState,
+      sortBy: sorting[0]?.id || undefined,
+      sortOrder: sorting[0] ? (sorting[0].desc ? 'desc' : 'asc') : undefined,
     }),
-    [pagination.pageIndex, pagination.pageSize, debouncedSearch, statusIds, projectState]
+    [pagination.pageIndex, pagination.pageSize, debouncedSearch, statusIds, projectState, sorting]
   )
 
   // React Query: Fetch projects con cache automático
@@ -97,6 +102,8 @@ export function ProjectsPageClient() {
             })
             if (queryParams.search) params.append('search', queryParams.search)
             if (queryParams.projectState) params.append('projectState', queryParams.projectState)
+            if (queryParams.sortBy) params.append('sortBy', queryParams.sortBy)
+            if (queryParams.sortOrder) params.append('sortOrder', queryParams.sortOrder)
 
             const response = await fetch(`/api/projects?${params}`)
             if (!response.ok) throw new Error('Error al precargar')
@@ -122,6 +129,11 @@ export function ProjectsPageClient() {
     if (pagination.pageIndex !== 0) {
       setPagination({ ...pagination, pageIndex: 0 })
     }
+  }
+
+  const handleSortingChange = (newSorting: SortingState) => {
+    setSorting(newSorting)
+    setPagination((prev) => ({ ...prev, pageIndex: 0 }))
   }
 
   // Handler para bulk delete
@@ -201,6 +213,10 @@ export function ProjectsPageClient() {
             pagination={pagination}
             onPaginationChange={setPagination}
             onSearchChange={handleSearchChange}
+            // Server-side sorting
+            manualSorting={true}
+            sorting={sorting}
+            onSortingChange={handleSortingChange}
             // Server-side filtering
             manualFiltering={true}
             serverFacets={data?.facets}

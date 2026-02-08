@@ -39,6 +39,9 @@ export interface PaymentsQueryParams {
   endDate?: string
   // Performance: solo pedir facets cuando se necesitan
   includeFacets?: boolean
+  // Server-side sorting
+  sortBy?: string
+  sortOrder?: 'asc' | 'desc'
 }
 
 /** Facet individual (usado en facets de respuesta) */
@@ -155,6 +158,8 @@ export function usePayments(params: PaymentsQueryParams = {}) {
       if (params.startDate) searchParams.set('startDate', params.startDate)
       if (params.endDate) searchParams.set('endDate', params.endDate)
       if (params.includeFacets) searchParams.set('includeFacets', 'true')
+      if (params.sortBy) searchParams.set('sortBy', params.sortBy)
+      if (params.sortOrder) searchParams.set('sortOrder', params.sortOrder)
 
       const response = await fetch(`/api/payments?${searchParams}`)
 

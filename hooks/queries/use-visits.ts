@@ -26,6 +26,8 @@ export interface VisitsQueryParams {
   limit?: number
   search?: string
   visitStatusId?: string
+  sortBy?: string
+  sortOrder?: 'asc' | 'desc'
 }
 
 /** Respuesta de GET /api/visits */
@@ -91,6 +93,8 @@ export function useVisits(params: VisitsQueryParams = {}) {
       if (params.limit) searchParams.set('limit', String(params.limit))
       if (params.search) searchParams.set('search', params.search)
       if (params.visitStatusId) searchParams.set('visitStatusId', params.visitStatusId)
+      if (params.sortBy) searchParams.set('sortBy', params.sortBy)
+      if (params.sortOrder) searchParams.set('sortOrder', params.sortOrder)
 
       const response = await fetch(`/api/visits?${searchParams}`)
 

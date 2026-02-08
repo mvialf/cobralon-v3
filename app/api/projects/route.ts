@@ -72,6 +72,12 @@ export const GET = withLogging(async (request, logger) => {
   }
   const projectState = projectStateResult.data
 
+  // Sorting params con validación Zod
+  const sortBySchema = z.enum(['createdAt', 'date', 'total', 'balance', 'projectNumber']).optional()
+  const sortOrderSchema = z.enum(['asc', 'desc']).optional()
+  const sortBy = sortBySchema.safeParse(searchParams.get('sortBy') || undefined).data
+  const sortOrder = sortOrderSchema.safeParse(searchParams.get('sortOrder') || undefined).data
+
   logger.debug(
     {
       page,
@@ -97,6 +103,8 @@ export const GET = withLogging(async (request, logger) => {
       filterByNullStatus,
       actualStatusIds,
       projectState,
+      sortBy,
+      sortOrder,
     }
 
     // Ejecutar queries en paralelo para mejor performance
