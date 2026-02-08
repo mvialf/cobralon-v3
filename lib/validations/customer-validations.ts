@@ -11,3 +11,10 @@ export const customerSchema = z.object({
 })
 
 export type CustomerFormData = z.infer<typeof customerSchema>
+
+/**
+ * Schema API para actualizar cliente (server-side, todos opcionales)
+ */
+export const updateCustomerApiSchema = customerSchema.partial()
+
+export type UpdateCustomerApiBody = z.infer<typeof updateCustomerApiSchema>

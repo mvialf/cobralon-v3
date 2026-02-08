@@ -63,6 +63,15 @@ export const paymentMethodSchema = z
   )
 
 /**
+ * Schema para reordenar métodos de pago
+ */
+export const reorderPaymentMethodsSchema = z.object({
+  orderedIds: z.array(z.string().uuid()).min(1),
+})
+
+export type ReorderPaymentMethodsBody = z.infer<typeof reorderPaymentMethodsSchema>
+
+/**
  * Type inferido del schema (para formularios)
  */
 export type PaymentMethodFormValues = z.infer<typeof paymentMethodSchema>

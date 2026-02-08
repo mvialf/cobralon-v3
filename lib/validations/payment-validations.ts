@@ -94,6 +94,28 @@ export type CreatePaymentPayload = {
   }>
 }
 
+/**
+ * Schema API para actualizar pago (server-side, todos opcionales)
+ * Solo campos editables: amount, date, paymentMethodId, notes
+ */
+export const updatePaymentApiSchema = z.object({
+  amount: z.coerce
+    .number()
+    .positive('El monto debe ser mayor a 0')
+    .multipleOf(FINANCIAL.DECIMAL_PRECISION, 'El monto debe tener máximo 2 decimales')
+    .optional(),
+  date: z.coerce.date({ invalid_type_error: 'Fecha inválida' }).optional(),
+  paymentMethodId: z.string().uuid('ID de método de pago inválido').optional(),
+  notes: z
+    .string()
+    .max(500, 'Las notas no pueden exceder 500 caracteres')
+    .trim()
+    .nullable()
+    .optional(),
+})
+
+export type UpdatePaymentApiBody = z.infer<typeof updatePaymentApiSchema>
+
 // ============================================================================
 // SCHEMAS ESPECÍFICOS PARA FLUJOS SIMPLIFICADOS
 // ============================================================================

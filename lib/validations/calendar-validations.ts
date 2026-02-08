@@ -91,6 +91,16 @@ export const createProjectEventWithProjectUpdateSchema = z.object({
   teamTagIds: teamTagIdsSchema,
 })
 
+// Schema para PATCH de fecha (drag & drop)
+export const patchEventDateSchema = z.object({
+  scheduledDate: z.coerce.date({
+    required_error: 'scheduledDate es requerido',
+    invalid_type_error: 'scheduledDate inválido',
+  }),
+})
+
+export type PatchEventDateInput = z.infer<typeof patchEventDateSchema>
+
 // Schema para query params (rango de fechas)
 export const calendarQuerySchema = z.object({
   start: z.coerce.date({
@@ -119,6 +129,10 @@ export const reorderEventsSchema = z.object({
 // Types inferidos
 export type CreateProjectEventInput = z.infer<typeof createProjectEventSchema>
 export type UpdateProjectEventInput = z.infer<typeof updateProjectEventSchema>
+export type CreateVisitEventInput = z.infer<typeof createVisitEventSchema>
+export type UpdateVisitEventInput = z.infer<typeof updateVisitEventSchema>
+export type CreateAftersaleEventInput = z.infer<typeof createAftersaleEventSchema>
+export type UpdateAftersaleEventInput = z.infer<typeof updateAftersaleEventSchema>
 export type ReorderEventsInput = z.infer<typeof reorderEventsSchema>
 export type CreateProjectEventWithProjectUpdateInput = z.infer<
   typeof createProjectEventWithProjectUpdateSchema

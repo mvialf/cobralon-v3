@@ -27,6 +27,33 @@ export const aftersaleSchema = z.object({
 })
 
 /**
+ * Schema API para crear aftersale (server-side)
+ * Usa z.string().datetime() en vez de z.date() porque recibe JSON serializado
+ */
+export const createAftersaleApiSchema = z.object({
+  projectId: z.string().uuid('Debe seleccionar un proyecto válido'),
+  aftersaleStatusId: z.string().uuid('Debe seleccionar un estado válido'),
+  contactPhone: chilePhoneSchema,
+  description: z
+    .string()
+    .max(1000, 'La descripción no puede exceder 1000 caracteres')
+    .trim()
+    .optional()
+    .default(''),
+  reportedAt: z.string().datetime({ message: 'Fecha de reporte inválida' }),
+  tasks: todoListOptionalSchema,
+  ...addressWithNullableApartmentSchema,
+})
+
+/**
+ * Schema API para actualizar aftersale (server-side, todos opcionales)
+ */
+export const updateAftersaleApiSchema = createAftersaleApiSchema.partial()
+
+export type CreateAftersaleApiBody = z.infer<typeof createAftersaleApiSchema>
+export type UpdateAftersaleApiBody = z.infer<typeof updateAftersaleApiSchema>
+
+/**
  * Type inferido del schema (para formularios)
  */
 export type AftersaleFormValues = z.infer<typeof aftersaleSchema>
