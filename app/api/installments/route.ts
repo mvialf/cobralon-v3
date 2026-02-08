@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { Prisma } from '@prisma/client'
 import { withLogging } from '@/lib/logger-middleware'
+import { parsePaginationParams, buildPaginationResponse } from '@/lib/utils/pagination'
 
 /**
  * GET /api/installments
@@ -24,15 +25,12 @@ import { withLogging } from '@/lib/logger-middleware'
 export const GET = withLogging(async (request, logger) => {
   try {
     const { searchParams } = new URL(request.url)
-    const page = parseInt(searchParams.get('page') || '1')
-    const limit = Math.min(parseInt(searchParams.get('limit') || '10'), 100)
+    const { page, limit, skip } = parsePaginationParams(searchParams)
     const status = searchParams.get('status') || ''
     const paymentId = searchParams.get('paymentId') || ''
     const customerId = searchParams.get('customerId') || ''
     const startDate = searchParams.get('startDate') || ''
     const endDate = searchParams.get('endDate') || ''
-
-    const skip = (page - 1) * limit
 
     // Construir filtro dinámico
     const where: Prisma.InstallmentWhereInput = {}
@@ -120,12 +118,7 @@ export const GET = withLogging(async (request, logger) => {
 
     return NextResponse.json({
       installments,
-      pagination: {
-        page,
-        limit,
-        total,
-        totalPages: Math.ceil(total / limit),
-      },
+      pagination: buildPaginationResponse(page, limit, total),
     })
   } catch (error) {
     logger.error({ err: error }, 'Error fetching installments')

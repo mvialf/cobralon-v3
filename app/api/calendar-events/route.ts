@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { calendarQuerySchema } from '@/lib/validations/calendar-validations'
 import { withLogging } from '@/lib/logger-middleware'
+import { serializeProjectDecimals } from '@/lib/utils/serialize'
 
 /**
  * GET /api/calendar-events
@@ -156,18 +157,7 @@ export const GET = withLogging(async (request, logger) => {
       data: {
         ...event,
         project: {
-          ...event.project,
-          subtotal: Number(event.project.subtotal),
-          taxRate: Number(event.project.taxRate),
-          total: Number(event.project.total),
-          balance: Number(event.project.balance),
-          squareMeters: Number(event.project.squareMeters),
-          totalAmount: event.project.totalAmount ? Number(event.project.totalAmount) : null,
-          customer: {
-            ...event.project.customer,
-            creditBalance: Number(event.project.customer.creditBalance),
-          },
-          // Usar relación M:M directamente (elimina workaround de lookup manual)
+          ...serializeProjectDecimals(event.project),
           uninstallTags: event.project.uninstallTags.map((rel) => rel.uninstallTag),
         },
       },
@@ -180,22 +170,7 @@ export const GET = withLogging(async (request, logger) => {
         ...event,
         aftersale: {
           ...event.aftersale,
-          project: {
-            ...event.aftersale.project,
-            // Convertir Decimals del proyecto
-            subtotal: Number(event.aftersale.project.subtotal),
-            taxRate: Number(event.aftersale.project.taxRate),
-            total: Number(event.aftersale.project.total),
-            balance: Number(event.aftersale.project.balance),
-            squareMeters: Number(event.aftersale.project.squareMeters),
-            totalAmount: event.aftersale.project.totalAmount
-              ? Number(event.aftersale.project.totalAmount)
-              : null,
-            customer: {
-              ...event.aftersale.project.customer,
-              creditBalance: Number(event.aftersale.project.customer.creditBalance),
-            },
-          },
+          project: serializeProjectDecimals(event.aftersale.project),
         },
       },
     }))

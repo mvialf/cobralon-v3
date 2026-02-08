@@ -6,6 +6,7 @@ import { z } from 'zod'
 import { PaymentWhereInput } from '@/types/api'
 import { withLogging } from '@/lib/logger-middleware'
 import { withApiHandler, BusinessError } from '@/lib/api-handler'
+import { parsePaginationParams, buildPaginationResponse } from '@/lib/utils/pagination'
 import { canApplyCredit } from '@/lib/business-logic/credit-management'
 import { generatePrismaInstallmentsCreate } from '@/lib/business-logic/installments'
 import {
@@ -42,8 +43,7 @@ import { updateCustomerCreditBalance } from '@/lib/business-logic/update-custome
  */
 export const GET = withLogging(async (request, logger) => {
   const { searchParams } = new URL(request.url)
-  const page = parseInt(searchParams.get('page') || '1')
-  const limit = Math.min(parseInt(searchParams.get('limit') || '10'), 100)
+  const { page, limit, skip } = parsePaginationParams(searchParams)
 
   // Filtros de server-side filtering
   const search = searchParams.get('search') || ''
@@ -80,8 +80,6 @@ export const GET = withLogging(async (request, logger) => {
     },
     'Fetching payments with filters'
   )
-
-  const skip = (page - 1) * limit
 
   // Construir filtro dinámico
   const where: PaymentWhereInput = {}
@@ -260,12 +258,7 @@ export const GET = withLogging(async (request, logger) => {
 
       return NextResponse.json({
         payments,
-        pagination: {
-          page,
-          limit,
-          total,
-          totalPages: Math.ceil(total / limit),
-        },
+        pagination: buildPaginationResponse(page, limit, total),
         facets: {
           type: typeFacets.map((f) => ({
             value: f.type,

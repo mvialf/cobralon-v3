@@ -5,6 +5,7 @@ import { derivePaymentProgress } from '@/lib/business-logic/project-balance'
 import { getProjectStateWhere, type ProjectStateFilter } from '@/lib/business-logic/project-state'
 import { anyFieldMatchesSearch } from '@/lib/utils/normalize'
 import { withLogging } from '@/lib/logger-middleware'
+import { parsePaginationParams, buildPaginationResponse } from '@/lib/utils/pagination'
 
 /**
  * GET /api/projects-with-metadata
@@ -22,8 +23,7 @@ import { withLogging } from '@/lib/logger-middleware'
 export const GET = withLogging(async (request, logger) => {
   try {
     const { searchParams } = new URL(request.url)
-    const page = parseInt(searchParams.get('page') || '1')
-    const limit = Math.min(parseInt(searchParams.get('limit') || '10'), 100)
+    const { page, limit } = parsePaginationParams(searchParams)
     const search = searchParams.get('search') || ''
     const customerId = searchParams.get('customerId') || ''
     const projectState = searchParams.get('projectState') || 'Activo'
@@ -136,7 +136,6 @@ export const GET = withLogging(async (request, logger) => {
 
     // Aplicar paginación manualmente DESPUÉS del filtro
     const total = filteredProjects.length
-    const totalPages = Math.ceil(total / limit)
     const skip = (page - 1) * limit
     const paginatedProjects = filteredProjects.slice(skip, skip + limit)
 
@@ -145,12 +144,7 @@ export const GET = withLogging(async (request, logger) => {
       metadata: {
         projectStatuses: statuses,
       },
-      pagination: {
-        page,
-        limit,
-        total,
-        totalPages,
-      },
+      pagination: buildPaginationResponse(page, limit, total),
     })
   } catch (error) {
     logger.error({ err: error }, 'Error fetching projects with metadata')

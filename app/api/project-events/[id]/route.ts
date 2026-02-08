@@ -8,27 +8,11 @@ import {
   type PatchEventDateInput,
 } from '@/lib/validations/calendar-validations'
 import { Prisma } from '@prisma/client'
+import { serializeProjectDecimals } from '@/lib/utils/serialize'
 
-/**
- * Helper para convertir Decimals a números en el response
- */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function serializeProjectEvent(event: any) {
-  return {
-    ...event,
-    project: {
-      ...event.project,
-      subtotal: Number(event.project.subtotal),
-      taxRate: Number(event.project.taxRate),
-      total: Number(event.project.total),
-      balance: Number(event.project.balance),
-      squareMeters: Number(event.project.squareMeters),
-      totalAmount: event.project.totalAmount ? Number(event.project.totalAmount) : null,
-      customer: {
-        ...event.project.customer,
-        creditBalance: Number(event.project.customer.creditBalance),
-      },
-    },
-  }
+  return { ...event, project: serializeProjectDecimals(event.project) }
 }
 
 /**

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { withLogging } from '@/lib/logger-middleware'
+import { parsePaginationParams, buildPaginationResponse } from '@/lib/utils/pagination'
 import { withApiHandler } from '@/lib/api-handler'
 import {
   createVisitApiSchema,
@@ -23,8 +24,7 @@ import { anyFieldMatchesSearch } from '@/lib/utils/normalize'
  */
 export const GET = withLogging(async (request, logger) => {
   const { searchParams } = new URL(request.url)
-  const page = parseInt(searchParams.get('page') || '1')
-  const limit = Math.min(parseInt(searchParams.get('limit') || '50'), 100)
+  const { page, limit } = parsePaginationParams(searchParams, 50)
   const search = searchParams.get('search') || ''
   const visitStatusId = searchParams.get('visitStatusId') || ''
 
@@ -115,12 +115,7 @@ export const GET = withLogging(async (request, logger) => {
 
     return NextResponse.json({
       data: visits,
-      pagination: {
-        page,
-        limit,
-        total,
-        totalPages: Math.ceil(total / limit),
-      },
+      pagination: buildPaginationResponse(page, limit, total),
     })
   } catch (error) {
     logger.error({ error }, 'Error fetching visits')

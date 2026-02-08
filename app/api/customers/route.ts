@@ -3,6 +3,7 @@ import { prisma } from '@/lib/db'
 import { Prisma } from '@prisma/client'
 import { z } from 'zod'
 import { withLogging } from '@/lib/logger-middleware'
+import { parsePaginationParams, buildPaginationResponse } from '@/lib/utils/pagination'
 import { withApiHandler, BusinessError } from '@/lib/api-handler'
 import { customerSchema, type CustomerFormData } from '@/lib/validations/customer-validations'
 
@@ -18,8 +19,7 @@ import { customerSchema, type CustomerFormData } from '@/lib/validations/custome
  */
 export const GET = withLogging(async (request, logger) => {
   const { searchParams } = new URL(request.url)
-  const page = parseInt(searchParams.get('page') || '1')
-  const limit = Math.min(parseInt(searchParams.get('limit') || '10'), 100)
+  const { page, limit, skip } = parsePaginationParams(searchParams)
   const search = searchParams.get('search') || ''
 
   // Sorting params con validación Zod
@@ -38,8 +38,6 @@ export const GET = withLogging(async (request, logger) => {
   )
 
   try {
-    const skip = (page - 1) * limit
-
     // Construir condición WHERE para búsqueda SQL
     // Usa `mode: insensitive` para búsqueda case-insensitive en PostgreSQL
     const whereCondition = search
@@ -76,12 +74,7 @@ export const GET = withLogging(async (request, logger) => {
 
     return NextResponse.json({
       customers,
-      pagination: {
-        page,
-        limit,
-        total,
-        totalPages: Math.ceil(total / limit),
-      },
+      pagination: buildPaginationResponse(page, limit, total),
     })
   } catch (error) {
     logger.error({ err: error }, 'Error fetching customers')
