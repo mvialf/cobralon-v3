@@ -6,6 +6,50 @@ export { calculateProjectBalance } from '../business-logic/project-balance'
 export { calculateFIFO } from '../business-logic/payment-fifo'
 
 /**
+ * Schema Zod para el body del POST /api/payments
+ *
+ * Reemplaza las validaciones manuales if-chain. Las reglas de negocio
+ * que dependen de DB (customer exists, same currency, etc.) siguen
+ * validándose después del parse.
+ */
+export const createPaymentApiSchema = z.object({
+  type: z.enum(['Project', 'Customer'], {
+    required_error: 'El tipo de pago es requerido',
+    invalid_type_error: 'El tipo de pago debe ser "Project" o "Customer"',
+  }),
+  customerId: z
+    .string({ required_error: 'El cliente es requerido' })
+    .min(1, 'El cliente es requerido'),
+  amount: z.coerce
+    .number({
+      required_error: 'El monto es requerido',
+      invalid_type_error: 'El monto debe ser un número',
+    })
+    .positive('El monto debe ser mayor a 0'),
+  currency: z
+    .string({ required_error: 'La moneda es requerida' })
+    .length(3, 'La moneda debe ser un código de 3 letras'),
+  date: z.string({ required_error: 'La fecha es requerida' }).min(1, 'La fecha es requerida'),
+  paymentMethodId: z
+    .string({ required_error: 'El método de pago es requerido' })
+    .min(1, 'El método de pago es requerido'),
+  reference: z.string().nullable().optional(),
+  notes: z.string().nullable().optional(),
+  selectedInstallments: z.number().int().min(1).nullable().optional(),
+  creditApplied: z.number().min(0).optional().default(0),
+  allocations: z
+    .array(
+      z.object({
+        projectId: z.string().min(1),
+        allocatedAmount: z.number().positive(),
+      })
+    )
+    .min(1, 'Debe asignar el pago a al menos un proyecto'),
+})
+
+export type CreatePaymentApiBody = z.infer<typeof createPaymentApiSchema>
+
+/**
  * Type para PaymentMethod simplificado
  */
 export type PaymentMethodInfo = {

@@ -159,14 +159,14 @@ describe('POST /api/payments', () => {
     })
   })
 
-  describe('validaciones de tipo', () => {
+  describe('validaciones Zod del body', () => {
     it('debe rechazar tipo inválido', async () => {
       const request = createRequest({ ...validPayload, type: 'Invalid' })
       const response = await callPOST(request)
       const data = await response.json()
 
       expect(response.status).toBe(400)
-      expect(data.error).toContain('tipo de pago')
+      expect(data.error).toBe('Datos inválidos')
     })
 
     it('debe rechazar sin tipo', async () => {
@@ -190,26 +190,22 @@ describe('POST /api/payments', () => {
 
       expect(response.status).toBe(201)
     })
-  })
 
-  describe('validaciones de campos requeridos', () => {
     it('debe rechazar sin customerId', async () => {
       const { customerId: _, ...payload } = validPayload
       const request = createRequest(payload)
       const response = await callPOST(request)
-      const data = await response.json()
 
       expect(response.status).toBe(400)
-      expect(data.error).toContain('cliente')
+      expect((await response.json()).error).toBe('Datos inválidos')
     })
 
     it('debe rechazar amount <= 0', async () => {
       const request = createRequest({ ...validPayload, amount: 0 })
       const response = await callPOST(request)
-      const data = await response.json()
 
       expect(response.status).toBe(400)
-      expect(data.error).toContain('monto')
+      expect((await response.json()).error).toBe('Datos inválidos')
     })
 
     it('debe rechazar amount negativo', async () => {
@@ -223,19 +219,17 @@ describe('POST /api/payments', () => {
       const { date: _, ...payload } = validPayload
       const request = createRequest(payload)
       const response = await callPOST(request)
-      const data = await response.json()
 
       expect(response.status).toBe(400)
-      expect(data.error).toContain('fecha')
+      expect((await response.json()).error).toBe('Datos inválidos')
     })
 
     it('debe rechazar moneda inválida', async () => {
       const request = createRequest({ ...validPayload, currency: 'INVALID' })
       const response = await callPOST(request)
-      const data = await response.json()
 
       expect(response.status).toBe(400)
-      expect(data.error).toContain('moneda')
+      expect((await response.json()).error).toBe('Datos inválidos')
     })
 
     it('debe rechazar sin paymentMethodId', async () => {
@@ -245,17 +239,14 @@ describe('POST /api/payments', () => {
 
       expect(response.status).toBe(400)
     })
-  })
 
-  describe('validaciones de allocations', () => {
     it('debe rechazar sin allocations', async () => {
       const { allocations: _, ...payload } = validPayload
       const request = createRequest(payload)
       const response = await callPOST(request)
-      const data = await response.json()
 
       expect(response.status).toBe(400)
-      expect(data.error).toContain('asignar')
+      expect((await response.json()).error).toBe('Datos inválidos')
     })
 
     it('debe rechazar allocations vacías', async () => {

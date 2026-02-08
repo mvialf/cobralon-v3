@@ -3,7 +3,7 @@ import { prisma } from '@/lib/db'
 import { Decimal } from '@prisma/client/runtime/library'
 import { Prisma } from '@prisma/client'
 import { z } from 'zod'
-import { AllocationInput, PaymentWhereInput } from '@/types/api'
+import { PaymentWhereInput } from '@/types/api'
 import { withLogging } from '@/lib/logger-middleware'
 import { withApiHandler, BusinessError } from '@/lib/api-handler'
 import { canApplyCredit } from '@/lib/business-logic/credit-management'
@@ -15,6 +15,10 @@ import {
   validateSameCustomer,
   validateSameCurrency,
 } from '@/lib/validations/payment-business-rules'
+import {
+  createPaymentApiSchema,
+  type CreatePaymentApiBody,
+} from '@/lib/validations/payment-validations'
 import { updateMultipleProjectBalances } from '@/lib/business-logic/update-project-balance'
 import type { PrismaTransaction } from '@/lib/db/types'
 import { updateCustomerCreditBalance } from '@/lib/business-logic/update-customer-credit-balance'
@@ -320,9 +324,8 @@ export const GET = withLogging(async (request, logger) => {
  *   - notes: string (opcional)
  *   - allocations: Array<{ projectId: string, allocatedAmount: number }> (min 1)
  */
-export const POST = withApiHandler(
-  async (request, logger) => {
-    const body = await request.json()
+export const POST = withApiHandler<CreatePaymentApiBody>(
+  async (_request, logger, { body }) => {
     const {
       type,
       customerId,
@@ -334,7 +337,7 @@ export const POST = withApiHandler(
       notes,
       allocations,
       selectedInstallments,
-      creditApplied,
+      creditApplied: creditApplied,
     } = body
 
     // Child logger con contexto de negocio
@@ -343,72 +346,23 @@ export const POST = withApiHandler(
       customerId,
       amount,
       currency,
-      allocationCount: allocations?.length,
+      allocationCount: allocations.length,
     })
 
     paymentLogger.info('Payment creation requested')
 
     // Pre-calcular projectIds para query en paralelo
-    const projectIds = allocations?.map((a: AllocationInput) => a.projectId) ?? []
+    const projectIds = allocations.map((a) => a.projectId)
 
     // Defer: iniciar 3 queries a DB antes de validaciones sync
     const dbQueriesPromise = Promise.all([
       prisma.customer.findUnique({ where: { id: customerId } }),
       prisma.paymentMethod.findUnique({ where: { id: paymentMethodId } }),
-      projectIds.length > 0
-        ? prisma.project.findMany({
-            where: { id: { in: projectIds } },
-            select: { id: true, customerId: true, currency: true },
-          })
-        : Promise.resolve([] as Array<{ id: string; customerId: string; currency: string }>),
+      prisma.project.findMany({
+        where: { id: { in: projectIds } },
+        select: { id: true, customerId: true, currency: true },
+      }),
     ])
-
-    // Validaciones básicas
-    paymentLogger.debug('Starting basic validations')
-
-    if (!type || (type !== 'Project' && type !== 'Customer')) {
-      paymentLogger.warn({ providedType: type }, 'Invalid payment type')
-      return NextResponse.json(
-        { error: 'El tipo de pago debe ser "Project" o "Customer"' },
-        { status: 400 }
-      )
-    }
-
-    if (!customerId || typeof customerId !== 'string') {
-      paymentLogger.warn('Missing or invalid customerId')
-      return NextResponse.json({ error: 'El cliente es requerido' }, { status: 400 })
-    }
-
-    if (!amount || typeof amount !== 'number' || amount <= 0) {
-      paymentLogger.warn({ amount }, 'Invalid amount')
-      return NextResponse.json({ error: 'El monto debe ser mayor a 0' }, { status: 400 })
-    }
-
-    if (!currency || typeof currency !== 'string' || currency.length !== 3) {
-      paymentLogger.warn({ currency }, 'Invalid currency')
-      return NextResponse.json(
-        { error: 'La moneda debe ser un código de 3 letras' },
-        { status: 400 }
-      )
-    }
-
-    if (!date) {
-      paymentLogger.warn('Missing date')
-      return NextResponse.json({ error: 'La fecha es requerida' }, { status: 400 })
-    }
-
-    if (!paymentMethodId || typeof paymentMethodId !== 'string') {
-      paymentLogger.warn('Missing or invalid paymentMethodId')
-      return NextResponse.json({ error: 'El método de pago es requerido' }, { status: 400 })
-    }
-
-    if (!allocations || !Array.isArray(allocations) || allocations.length === 0) {
-      paymentLogger.warn('Missing or empty allocations')
-      return NextResponse.json(
-        { error: 'Debe asignar el pago a al menos un proyecto' },
-        { status: 400 }
-      )
-    }
 
     // Validación estricta: type debe coincidir con número de allocations
     // Usa validación centralizada de payment-business-rules.ts
@@ -420,8 +374,6 @@ export const POST = withApiHandler(
       )
       return NextResponse.json({ error: typeValidation.error }, { status: 400 })
     }
-
-    paymentLogger.debug('Basic validations passed')
 
     // Await de las 3 queries lanzadas antes de validaciones
     paymentLogger.debug('Validating customer, payment method and projects exist')
@@ -442,7 +394,7 @@ export const POST = withApiHandler(
     const duplicatesValidation = validateNoDuplicateProjects(allocations)
     if (!duplicatesValidation.valid) {
       paymentLogger.warn(
-        { projectIds: allocations.map((a: AllocationInput) => a.projectId) },
+        { projectIds: allocations.map((a) => a.projectId) },
         'Duplicate project IDs detected'
       )
       return NextResponse.json({ error: duplicatesValidation.error }, { status: 400 })
@@ -485,7 +437,7 @@ export const POST = withApiHandler(
       paymentLogger.warn(
         {
           expected: amount,
-          actual: allocations.reduce((s: number, a: AllocationInput) => s + a.allocatedAmount, 0),
+          actual: allocations.reduce((s, a) => s + a.allocatedAmount, 0),
         },
         'Allocation sum mismatch'
       )
@@ -549,7 +501,7 @@ export const POST = withApiHandler(
           notes: notes?.trim() || null,
           selectedInstallments: selectedInstallments || null,
           allocations: {
-            create: allocations.map((a: AllocationInput) => ({
+            create: allocations.map((a) => ({
               projectId: a.projectId,
               allocatedAmount: new Decimal(a.allocatedAmount),
             })),
@@ -762,5 +714,5 @@ export const POST = withApiHandler(
 
     return NextResponse.json(payment, { status: 201 })
   },
-  { fallbackError: 'Error al crear pago' }
+  { bodySchema: createPaymentApiSchema, fallbackError: 'Error al crear pago' }
 )
