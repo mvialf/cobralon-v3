@@ -15,17 +15,13 @@ import {
   useUpdateProjectStatus,
 } from '@/hooks/queries/use-project-statuses'
 
+import { StatusForm, type StatusFormHandle } from '@/components/forms/settings/status-form'
+import { type ProjectStatus, type BadgeColor } from '@/lib/validations/project-status-validations'
 import {
-  ProjectStatusForm,
-  type ProjectStatusFormHandle,
-} from '@/components/forms/settings/project-status-form'
-import {
-  type ProjectStatusFormValues,
-  type ProjectStatus,
-  type BadgeColor,
+  type BaseStatusFormValues,
   formValuesToPayload,
   statusToFormValues,
-} from '@/lib/validations/project-status-validations'
+} from '@/lib/validations/base-status-validations'
 
 interface ProjectStatusDialogProps {
   mode: 'create' | 'edit'
@@ -44,7 +40,7 @@ export function ProjectStatusDialog({
   open,
   onOpenChange,
 }: ProjectStatusDialogProps) {
-  const formRef = React.useRef<ProjectStatusFormHandle>(null)
+  const formRef = React.useRef<StatusFormHandle>(null)
   const createMutation = useCreateProjectStatus()
   const updateMutation = useUpdateProjectStatus()
   const isSubmitting = createMutation.isPending || updateMutation.isPending
@@ -53,7 +49,7 @@ export function ProjectStatusDialog({
     return null
   }
 
-  const handleSubmit = async (data: ProjectStatusFormValues) => {
+  const handleSubmit = async (data: BaseStatusFormValues) => {
     const isInitial = mode === 'edit' ? status!.isInitial : false
     const isFinal = mode === 'edit' ? status!.isFinal : false
     const payload = formValuesToPayload(data, isInitial, isFinal)
@@ -92,7 +88,7 @@ export function ProjectStatusDialog({
         </DialogHeader>
 
         <div className="py-4">
-          <ProjectStatusForm
+          <StatusForm
             ref={formRef}
             onSubmit={handleSubmit}
             defaultValues={mode === 'edit' && status ? statusToFormValues(status) : undefined}

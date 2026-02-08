@@ -1,5 +1,10 @@
 import { type BadgeColor } from './common'
-import { baseStatusSchema, type BaseStatusFormValues } from './base-status-validations'
+import {
+  baseStatusSchema,
+  type BaseStatusFormValues,
+  formValuesToPayload,
+  statusToFormValues,
+} from './base-status-validations'
 
 export type { BadgeColor }
 
@@ -51,32 +56,5 @@ export type CreateAftersaleStatusPayload = {
  */
 export type UpdateAftersaleStatusPayload = CreateAftersaleStatusPayload
 
-/**
- * Helper para convertir form values a API payload
- * @param values - Valores del formulario (nombre + color)
- * @param isInitial - Si el estado es inicial (determinado por el dialog)
- * @param isFinal - Si el estado es final (determinado por el dialog)
- */
-export function formValuesToPayload(
-  values: AftersaleStatusFormValues,
-  isInitial: boolean,
-  isFinal: boolean
-): CreateAftersaleStatusPayload {
-  return {
-    name: values.name,
-    colorId: values.colorId,
-    isInitial,
-    isFinal,
-  }
-}
-
-/**
- * Helper para convertir AftersaleStatus a form values
- * Nota: Solo retorna nombre + color. El tipo (isInitial/isFinal) se preserva en el dialog.
- */
-export function statusToFormValues(status: AftersaleStatus): AftersaleStatusFormValues {
-  return {
-    name: status.name,
-    colorId: status.colorId,
-  }
-}
+// Re-exportar helpers compartidos desde base
+export { formValuesToPayload, statusToFormValues }

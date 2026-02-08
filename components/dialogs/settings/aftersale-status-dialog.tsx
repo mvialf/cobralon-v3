@@ -15,17 +15,16 @@ import {
   useUpdateAftersaleStatus,
 } from '@/hooks/queries/use-aftersale-statuses'
 
+import { StatusForm, type StatusFormHandle } from '@/components/forms/settings/status-form'
 import {
-  AftersaleStatusForm,
-  type AftersaleStatusFormHandle,
-} from '@/components/forms/settings/aftersale-status-form'
-import {
-  type AftersaleStatusFormValues,
   type AftersaleStatus,
   type BadgeColor,
+} from '@/lib/validations/aftersale-status-validations'
+import {
+  type BaseStatusFormValues,
   formValuesToPayload,
   statusToFormValues,
-} from '@/lib/validations/aftersale-status-validations'
+} from '@/lib/validations/base-status-validations'
 
 interface AftersaleStatusDialogProps {
   mode: 'create' | 'edit'
@@ -44,7 +43,7 @@ export function AftersaleStatusDialog({
   open,
   onOpenChange,
 }: AftersaleStatusDialogProps) {
-  const formRef = React.useRef<AftersaleStatusFormHandle>(null)
+  const formRef = React.useRef<StatusFormHandle>(null)
   const createMutation = useCreateAftersaleStatus()
   const updateMutation = useUpdateAftersaleStatus()
   const isSubmitting = createMutation.isPending || updateMutation.isPending
@@ -53,7 +52,7 @@ export function AftersaleStatusDialog({
     return null
   }
 
-  const handleSubmit = async (data: AftersaleStatusFormValues) => {
+  const handleSubmit = async (data: BaseStatusFormValues) => {
     const isInitial = mode === 'edit' ? status!.isInitial : false
     const isFinal = mode === 'edit' ? status!.isFinal : false
     const payload = formValuesToPayload(data, isInitial, isFinal)
@@ -92,7 +91,7 @@ export function AftersaleStatusDialog({
         </DialogHeader>
 
         <div className="py-4">
-          <AftersaleStatusForm
+          <StatusForm
             ref={formRef}
             onSubmit={handleSubmit}
             defaultValues={mode === 'edit' && status ? statusToFormValues(status) : undefined}

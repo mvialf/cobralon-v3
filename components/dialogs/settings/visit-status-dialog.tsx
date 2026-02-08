@@ -12,17 +12,13 @@ import {
 import { Button } from '@/components/ui/button'
 import { useCreateVisitStatus, useUpdateVisitStatus } from '@/hooks/queries/use-visit-statuses'
 
+import { StatusForm, type StatusFormHandle } from '@/components/forms/settings/status-form'
+import { type VisitStatus, type BadgeColor } from '@/lib/validations/visit-status-validations'
 import {
-  VisitStatusForm,
-  type VisitStatusFormHandle,
-} from '@/components/forms/settings/visit-status-form'
-import {
-  type VisitStatusFormValues,
-  type VisitStatus,
-  type BadgeColor,
+  type BaseStatusFormValues,
   formValuesToPayload,
   statusToFormValues,
-} from '@/lib/validations/visit-status-validations'
+} from '@/lib/validations/base-status-validations'
 
 interface VisitStatusDialogProps {
   mode: 'create' | 'edit'
@@ -41,7 +37,7 @@ export function VisitStatusDialog({
   open,
   onOpenChange,
 }: VisitStatusDialogProps) {
-  const formRef = React.useRef<VisitStatusFormHandle>(null)
+  const formRef = React.useRef<StatusFormHandle>(null)
   const createMutation = useCreateVisitStatus()
   const updateMutation = useUpdateVisitStatus()
   const isSubmitting = createMutation.isPending || updateMutation.isPending
@@ -50,7 +46,7 @@ export function VisitStatusDialog({
     return null
   }
 
-  const handleSubmit = async (data: VisitStatusFormValues) => {
+  const handleSubmit = async (data: BaseStatusFormValues) => {
     const isInitial = mode === 'edit' ? status!.isInitial : false
     const isFinal = mode === 'edit' ? status!.isFinal : false
     const payload = formValuesToPayload(data, isInitial, isFinal)
@@ -89,11 +85,12 @@ export function VisitStatusDialog({
         </DialogHeader>
 
         <div className="py-4">
-          <VisitStatusForm
+          <StatusForm
             ref={formRef}
             onSubmit={handleSubmit}
             defaultValues={mode === 'edit' && status ? statusToFormValues(status) : undefined}
             badgeColors={badgeColors}
+            placeholder="Ej: Agendada"
           />
         </div>
 

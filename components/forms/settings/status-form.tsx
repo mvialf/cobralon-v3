@@ -5,10 +5,10 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 
 import {
-  projectStatusSchema,
-  type ProjectStatusFormValues,
+  baseStatusSchema,
+  type BaseStatusFormValues,
   type BadgeColor,
-} from '@/lib/validations/project-status-validations'
+} from '@/lib/validations/base-status-validations'
 
 import { Input } from '@/components/ui/input'
 import {
@@ -20,21 +20,22 @@ import {
   FormMessage,
 } from '@/components/ui/form'
 
-interface ProjectStatusFormProps {
-  onSubmit: (data: ProjectStatusFormValues) => void | Promise<void>
-  defaultValues?: Partial<ProjectStatusFormValues>
+interface StatusFormProps {
+  onSubmit: (data: BaseStatusFormValues) => void | Promise<void>
+  defaultValues?: Partial<BaseStatusFormValues>
   badgeColors: BadgeColor[]
+  placeholder?: string
 }
 
-export interface ProjectStatusFormHandle {
+export interface StatusFormHandle {
   submit: () => void
   reset: () => void
 }
 
-export const ProjectStatusForm = React.forwardRef<ProjectStatusFormHandle, ProjectStatusFormProps>(
-  ({ onSubmit, defaultValues, badgeColors }, ref) => {
-    const form = useForm<ProjectStatusFormValues>({
-      resolver: zodResolver(projectStatusSchema),
+export const StatusForm = React.forwardRef<StatusFormHandle, StatusFormProps>(
+  ({ onSubmit, defaultValues, badgeColors, placeholder = 'Ej: En Revisión' }, ref) => {
+    const form = useForm<BaseStatusFormValues>({
+      resolver: zodResolver(baseStatusSchema),
       defaultValues: {
         name: '',
         colorId: badgeColors[0]?.id || '',
@@ -59,7 +60,7 @@ export const ProjectStatusForm = React.forwardRef<ProjectStatusFormHandle, Proje
               <FormItem>
                 <FormLabel>Nombre del estado</FormLabel>
                 <FormControl>
-                  <Input placeholder="Ej: En Revisión" {...field} />
+                  <Input placeholder={placeholder} {...field} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -100,4 +101,4 @@ export const ProjectStatusForm = React.forwardRef<ProjectStatusFormHandle, Proje
   }
 )
 
-ProjectStatusForm.displayName = 'ProjectStatusForm'
+StatusForm.displayName = 'StatusForm'
