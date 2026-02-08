@@ -1,79 +1,55 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
-import { createProjectEventSchema } from '@/lib/validations/calendar-validations'
-import { withLogging } from '@/lib/logger-middleware'
+import { withApiHandler, BusinessError } from '@/lib/api-handler'
+import {
+  createProjectEventSchema,
+  type CreateProjectEventInput,
+} from '@/lib/validations/calendar-validations'
 
 /**
  * POST /api/project-events
  *
  * Crea un nuevo evento de calendario para un proyecto
  */
-export const POST = withLogging(async (request, logger) => {
-  try {
-    const body = await request.json()
-
-    // Validar datos de entrada
-    const validationResult = createProjectEventSchema.safeParse(body)
-
-    if (!validationResult.success) {
-      logger.warn({ errors: validationResult.error.errors }, 'Invalid project event data')
-      return NextResponse.json(
-        { error: 'Datos inválidos', details: validationResult.error.errors },
-        { status: 400 }
-      )
-    }
-
-    const data = validationResult.data
-
+export const POST = withApiHandler<CreateProjectEventInput>(
+  async (_request, logger, { body }) => {
     // Verificar que el proyecto existe y no está finalizado
     const project = await prisma.project.findUnique({
-      where: { id: data.projectId },
+      where: { id: body.projectId },
       include: { projectStatus: true },
     })
 
     if (!project) {
-      logger.warn({ projectId: data.projectId }, 'Project not found')
-      return NextResponse.json({ error: 'Proyecto no encontrado' }, { status: 404 })
+      throw new BusinessError('Proyecto no encontrado', 404)
     }
 
     if (project.projectStatus?.isFinal) {
-      logger.warn({ projectId: data.projectId }, 'Cannot create event for finalized project')
-      return NextResponse.json(
-        { error: 'No se pueden crear eventos para proyectos finalizados' },
-        { status: 400 }
-      )
+      throw new BusinessError('No se pueden crear eventos para proyectos finalizados', 400)
     }
 
     // Verificar que no exista un evento para este proyecto en esta fecha
     const existingEvent = await prisma.projectEvent.findFirst({
       where: {
-        projectId: data.projectId,
-        scheduledDate: data.scheduledDate,
+        projectId: body.projectId,
+        scheduledDate: body.scheduledDate,
       },
     })
 
     if (existingEvent) {
-      logger.warn(
-        { projectId: data.projectId, scheduledDate: data.scheduledDate },
-        'Event already exists for this project and date'
-      )
-      return NextResponse.json(
-        { error: 'Ya existe un evento para este proyecto en esta fecha' },
-        { status: 400 }
-      )
+      throw new BusinessError('Ya existe un evento para este proyecto en esta fecha', 400)
     }
 
     // Crear evento con teamTags si se proporcionan
     const event = await prisma.projectEvent.create({
       data: {
-        projectId: data.projectId,
-        scheduledDate: data.scheduledDate,
-        tasks: data.tasks || [],
+        projectId: body.projectId,
+        scheduledDate: body.scheduledDate,
+        tasks: body.tasks || [],
         // Conectar teamTags si se proporcionan
-        ...(data.teamTagIds &&
-          data.teamTagIds.length > 0 && {
+        ...(body.teamTagIds &&
+          body.teamTagIds.length > 0 && {
             teamTags: {
-              connect: data.teamTagIds.map((id) => ({ id })),
+              connect: body.teamTagIds.map((id) => ({ id })),
             },
           }),
       },
@@ -92,11 +68,9 @@ export const POST = withLogging(async (request, logger) => {
       },
     })
 
-    logger.info({ eventId: event.id, projectId: data.projectId }, 'Project event created')
+    logger.info({ eventId: event.id, projectId: body.projectId }, 'Project event created')
 
     return NextResponse.json(event, { status: 201 })
-  } catch (error) {
-    logger.error({ error }, 'Failed to create project event')
-    return NextResponse.json({ error: 'Error al crear evento' }, { status: 500 })
-  }
-})
+  },
+  { bodySchema: createProjectEventSchema, fallbackError: 'Error al crear evento' }
+)

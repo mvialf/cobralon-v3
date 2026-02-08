@@ -1,24 +1,23 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
-import { withLogging } from '@/lib/logger-middleware'
-import { type UpdateVisitAPIPayload } from '@/lib/validations/visit-validations'
+import { withApiHandler, BusinessError } from '@/lib/api-handler'
+import {
+  updateVisitApiSchema,
+  type UpdateVisitApiBody,
+} from '@/lib/validations/visit-validations'
 import { Prisma } from '@prisma/client'
-import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library'
 
 /**
  * GET /api/visits/[id]
  *
  * Obtiene una visita específica por ID
  */
-export const GET = withLogging(async (request, logger, context) => {
-  const params = await context?.params
-  const id = params?.id
+export const GET = withApiHandler(
+  async (_request, logger, { params }) => {
+    logger.debug({ visitId: params.id }, 'Fetching visit')
 
-  logger.debug({ visitId: id }, 'Fetching visit')
-
-  try {
     const visit = await prisma.visit.findUnique({
-      where: { id },
+      where: { id: params.id },
       include: {
         visitStatus: {
           select: {
@@ -38,32 +37,24 @@ export const GET = withLogging(async (request, logger, context) => {
     })
 
     if (!visit) {
-      logger.warn({ visitId: id }, 'Visit not found')
-      return NextResponse.json({ error: 'Visita no encontrada' }, { status: 404 })
+      throw new BusinessError('Visita no encontrada', 404)
     }
 
-    logger.info({ visitId: id }, 'Visit fetched successfully')
+    logger.info({ visitId: params.id }, 'Visit fetched successfully')
 
     return NextResponse.json(visit)
-  } catch (error) {
-    logger.error({ error, visitId: id }, 'Error fetching visit')
-    return NextResponse.json({ error: 'Error al obtener la visita' }, { status: 500 })
-  }
-})
+  },
+  { validateUuidParams: ['id'], fallbackError: 'Error al obtener la visita' }
+)
 
 /**
  * PUT /api/visits/[id]
  *
  * Actualiza una visita existente
  */
-export const PUT = withLogging(async (request, logger, context) => {
-  const params = await context?.params
-  const id = params?.id
-
-  try {
-    const body = (await request.json()) as UpdateVisitAPIPayload
-
-    logger.debug({ visitId: id, body }, 'Updating visit')
+export const PUT = withApiHandler<UpdateVisitApiBody>(
+  async (_request, logger, { params, body }) => {
+    logger.debug({ visitId: params.id, body }, 'Updating visit')
 
     // Transformar payload: date string → Date (si existe)
     const visitData: Prisma.VisitUpdateInput = {}
@@ -83,7 +74,7 @@ export const PUT = withLogging(async (request, logger, context) => {
 
     // Actualizar visita
     const visit = await prisma.visit.update({
-      where: { id },
+      where: { id: params.id },
       data: visitData,
       include: {
         visitStatus: {
@@ -103,46 +94,33 @@ export const PUT = withLogging(async (request, logger, context) => {
       },
     })
 
-    logger.info({ visitId: id }, 'Visit updated successfully')
+    logger.info({ visitId: params.id }, 'Visit updated successfully')
 
     return NextResponse.json(visit)
-  } catch (error) {
-    if (error instanceof PrismaClientKnownRequestError && error.code === 'P2025') {
-      logger.warn({ visitId: id }, 'Visit not found')
-      return NextResponse.json({ error: 'Visita no encontrada' }, { status: 404 })
-    }
-
-    logger.error({ error, visitId: id }, 'Error updating visit')
-    return NextResponse.json({ error: 'Error al actualizar la visita' }, { status: 500 })
+  },
+  {
+    bodySchema: updateVisitApiSchema,
+    validateUuidParams: ['id'],
+    fallbackError: 'Error al actualizar la visita',
   }
-})
+)
 
 /**
  * DELETE /api/visits/[id]
  *
  * Elimina una visita
  */
-export const DELETE = withLogging(async (request, logger, context) => {
-  const params = await context?.params
-  const id = params?.id
+export const DELETE = withApiHandler(
+  async (_request, logger, { params }) => {
+    logger.debug({ visitId: params.id }, 'Deleting visit')
 
-  logger.debug({ visitId: id }, 'Deleting visit')
-
-  try {
     await prisma.visit.delete({
-      where: { id },
+      where: { id: params.id },
     })
 
-    logger.info({ visitId: id }, 'Visit deleted successfully')
+    logger.info({ visitId: params.id }, 'Visit deleted successfully')
 
     return NextResponse.json({ message: 'Visita eliminada exitosamente' })
-  } catch (error) {
-    if (error instanceof PrismaClientKnownRequestError && error.code === 'P2025') {
-      logger.warn({ visitId: id }, 'Visit not found')
-      return NextResponse.json({ error: 'Visita no encontrada' }, { status: 404 })
-    }
-
-    logger.error({ error, visitId: id }, 'Error deleting visit')
-    return NextResponse.json({ error: 'Error al eliminar la visita' }, { status: 500 })
-  }
-})
+  },
+  { validateUuidParams: ['id'], fallbackError: 'Error al eliminar la visita' }
+)

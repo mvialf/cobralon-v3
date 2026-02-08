@@ -1,17 +1,13 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
-import { withLogging } from '@/lib/logger-middleware'
-import { updateProjectEventSchema } from '@/lib/validations/calendar-validations'
+import { withApiHandler } from '@/lib/api-handler'
+import {
+  updateProjectEventSchema,
+  patchEventDateSchema,
+  type UpdateProjectEventInput,
+  type PatchEventDateInput,
+} from '@/lib/validations/calendar-validations'
 import { Prisma } from '@prisma/client'
-import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library'
-import { z } from 'zod'
-
-/**
- * Schema para PATCH (solo scheduledDate)
- */
-const patchProjectEventSchema = z.object({
-  scheduledDate: z.string().min(1, 'La fecha es requerida'),
-})
 
 /**
  * Helper para convertir Decimals a números en el response
@@ -40,96 +36,59 @@ function serializeProjectEvent(event: any) {
  *
  * Actualiza solo la fecha del evento (usado por drag & drop)
  */
-export const PATCH = withLogging(async (request, logger, context) => {
-  const params = await context?.params
-  const id = params?.id
-
-  try {
-    const body = await request.json()
-
-    logger.debug({ eventId: id, body }, 'Updating project event date')
-
-    // Validar body
-    const validationResult = patchProjectEventSchema.safeParse(body)
-    if (!validationResult.success) {
-      logger.warn({ errors: validationResult.error.errors }, 'Invalid request body')
-      return NextResponse.json(
-        { error: 'Datos inválidos', details: validationResult.error.errors },
-        { status: 400 }
-      )
-    }
-
-    const { scheduledDate } = validationResult.data
+export const PATCH = withApiHandler<PatchEventDateInput>(
+  async (_request, logger, { params, body }) => {
+    logger.debug({ eventId: params.id, body }, 'Updating project event date')
 
     // Actualizar solo scheduledDate (SIN include para máxima performance)
     // Optimistic update en frontend maneja la UI, no necesitamos retornar datos completos
     await prisma.projectEvent.update({
-      where: { id },
+      where: { id: params.id },
       data: {
-        scheduledDate: new Date(scheduledDate),
+        scheduledDate: body.scheduledDate,
       },
     })
 
-    logger.info({ eventId: id, newDate: scheduledDate }, 'Project event date updated successfully')
+    logger.info({ eventId: params.id, newDate: body.scheduledDate }, 'Project event date updated successfully')
 
     // Retornar solo lo esencial - React Query invalida el cache automáticamente
     return NextResponse.json({
       success: true,
-      id,
-      scheduledDate,
+      id: params.id,
+      scheduledDate: body.scheduledDate,
     })
-  } catch (error) {
-    if (error instanceof PrismaClientKnownRequestError && error.code === 'P2025') {
-      logger.warn({ eventId: id }, 'Project event not found')
-      return NextResponse.json({ error: 'Evento no encontrado' }, { status: 404 })
-    }
-
-    logger.error({ error, eventId: id }, 'Error updating project event date')
-    return NextResponse.json({ error: 'Error al actualizar la fecha del evento' }, { status: 500 })
+  },
+  {
+    bodySchema: patchEventDateSchema,
+    validateUuidParams: ['id'],
+    fallbackError: 'Error al actualizar la fecha del evento',
   }
-})
+)
 
 /**
  * PUT /api/project-events/[id]
  *
  * Actualiza el evento completo (usado por edit dialog)
  */
-export const PUT = withLogging(async (request, logger, context) => {
-  const params = await context?.params
-  const id = params?.id
-
-  try {
-    const body = await request.json()
-
-    logger.debug({ eventId: id, body }, 'Updating project event')
-
-    // Validar body
-    const validationResult = updateProjectEventSchema.safeParse(body)
-    if (!validationResult.success) {
-      logger.warn({ errors: validationResult.error.errors }, 'Invalid request body')
-      return NextResponse.json(
-        { error: 'Datos inválidos', details: validationResult.error.errors },
-        { status: 400 }
-      )
-    }
-
-    const { scheduledDate, teamTagIds, tasks } = validationResult.data
+export const PUT = withApiHandler<UpdateProjectEventInput>(
+  async (_request, logger, { params, body }) => {
+    logger.debug({ eventId: params.id, body }, 'Updating project event')
 
     // Construir data para update
     const eventData: Prisma.ProjectEventUpdateInput = {}
-    if (scheduledDate !== undefined) eventData.scheduledDate = scheduledDate
-    if (tasks !== undefined) eventData.tasks = tasks
+    if (body.scheduledDate !== undefined) eventData.scheduledDate = body.scheduledDate
+    if (body.tasks !== undefined) eventData.tasks = body.tasks
 
     // Manejar teamTags: usar 'set' para reemplazar todos los teamTags
-    if (teamTagIds !== undefined) {
+    if (body.teamTagIds !== undefined) {
       eventData.teamTags = {
-        set: teamTagIds?.map((id) => ({ id })) || [],
+        set: body.teamTagIds?.map((id) => ({ id })) || [],
       }
     }
 
     // Actualizar evento
     const event = await prisma.projectEvent.update({
-      where: { id },
+      where: { id: params.id },
       data: eventData,
       include: {
         project: {
@@ -146,46 +105,33 @@ export const PUT = withLogging(async (request, logger, context) => {
       },
     })
 
-    logger.info({ eventId: id }, 'Project event updated successfully')
+    logger.info({ eventId: params.id }, 'Project event updated successfully')
 
     return NextResponse.json(serializeProjectEvent(event))
-  } catch (error) {
-    if (error instanceof PrismaClientKnownRequestError && error.code === 'P2025') {
-      logger.warn({ eventId: id }, 'Project event not found')
-      return NextResponse.json({ error: 'Evento no encontrado' }, { status: 404 })
-    }
-
-    logger.error({ error, eventId: id }, 'Error updating project event')
-    return NextResponse.json({ error: 'Error al actualizar el evento' }, { status: 500 })
+  },
+  {
+    bodySchema: updateProjectEventSchema,
+    validateUuidParams: ['id'],
+    fallbackError: 'Error al actualizar el evento',
   }
-})
+)
 
 /**
  * DELETE /api/project-events/[id]
  *
  * Elimina un evento
  */
-export const DELETE = withLogging(async (request, logger, context) => {
-  const params = await context?.params
-  const id = params?.id
+export const DELETE = withApiHandler(
+  async (_request, logger, { params }) => {
+    logger.debug({ eventId: params.id }, 'Deleting project event')
 
-  logger.debug({ eventId: id }, 'Deleting project event')
-
-  try {
     await prisma.projectEvent.delete({
-      where: { id },
+      where: { id: params.id },
     })
 
-    logger.info({ eventId: id }, 'Project event deleted successfully')
+    logger.info({ eventId: params.id }, 'Project event deleted successfully')
 
     return NextResponse.json({ message: 'Evento eliminado exitosamente' })
-  } catch (error) {
-    if (error instanceof PrismaClientKnownRequestError && error.code === 'P2025') {
-      logger.warn({ eventId: id }, 'Project event not found')
-      return NextResponse.json({ error: 'Evento no encontrado' }, { status: 404 })
-    }
-
-    logger.error({ error, eventId: id }, 'Error deleting project event')
-    return NextResponse.json({ error: 'Error al eliminar el evento' }, { status: 500 })
-  }
-})
+  },
+  { validateUuidParams: ['id'], fallbackError: 'Error al eliminar el evento' }
+)

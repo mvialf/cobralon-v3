@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
-import { reorderEventsSchema } from '@/lib/validations/calendar-validations'
-import { withLogging } from '@/lib/logger-middleware'
+import { withApiHandler } from '@/lib/api-handler'
+import { reorderEventsSchema, type ReorderEventsInput } from '@/lib/validations/calendar-validations'
 
 /**
  * PATCH /api/calendar-events/reorder
@@ -12,22 +12,9 @@ import { withLogging } from '@/lib/logger-middleware'
  * Body:
  *   - events: Array de { id, type, order }
  */
-export const PATCH = withLogging(async (request, logger) => {
-  try {
-    const body = await request.json()
-
-    // Validar body
-    const validationResult = reorderEventsSchema.safeParse(body)
-
-    if (!validationResult.success) {
-      logger.warn({ errors: validationResult.error.errors }, 'Invalid reorder request')
-      return NextResponse.json(
-        { error: 'Datos inválidos', details: validationResult.error.errors },
-        { status: 400 }
-      )
-    }
-
-    const { events } = validationResult.data
+export const PATCH = withApiHandler<ReorderEventsInput>(
+  async (_request, logger, { body }) => {
+    const { events } = body
 
     logger.debug({ eventsCount: events.length }, 'Reordering calendar events')
 
@@ -80,8 +67,6 @@ export const PATCH = withLogging(async (request, logger) => {
     )
 
     return NextResponse.json({ success: true })
-  } catch (error) {
-    logger.error({ error }, 'Failed to reorder calendar events')
-    return NextResponse.json({ error: 'Error al reordenar eventos' }, { status: 500 })
-  }
-})
+  },
+  { bodySchema: reorderEventsSchema, fallbackError: 'Error al reordenar eventos' }
+)

@@ -1,7 +1,11 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { withLogging } from '@/lib/logger-middleware'
-import { createVisitApiSchema } from '@/lib/validations/visit-validations'
+import { withApiHandler } from '@/lib/api-handler'
+import {
+  createVisitApiSchema,
+  type CreateVisitApiBody,
+} from '@/lib/validations/visit-validations'
 import { Prisma } from '@prisma/client'
 import { z } from 'zod'
 import { anyFieldMatchesSearch } from '@/lib/utils/normalize'
@@ -129,25 +133,22 @@ export const GET = withLogging(async (request, logger) => {
  *
  * Crea una nueva visita
  */
-export const POST = withLogging(async (request, logger) => {
-  try {
-    const body = await request.json()
-    const validatedData = createVisitApiSchema.parse(body)
-
-    logger.debug({ body: validatedData }, 'Creating new visit')
+export const POST = withApiHandler<CreateVisitApiBody>(
+  async (_request, logger, { body }) => {
+    logger.debug({ body }, 'Creating new visit')
 
     // Transformar payload: date string → Date
     const visitData = {
-      name: validatedData.name,
-      phone: validatedData.phone || null,
-      street: validatedData.street,
-      apartment: validatedData.apartment || null,
-      comuna: validatedData.comuna,
-      region: validatedData.region,
-      visitStatusId: validatedData.visitStatusId,
-      date: new Date(validatedData.date),
-      scheduledTime: validatedData.scheduledTime || null,
-      observations: validatedData.observations || null,
+      name: body.name,
+      phone: body.phone || null,
+      street: body.street,
+      apartment: body.apartment || null,
+      comuna: body.comuna,
+      region: body.region,
+      visitStatusId: body.visitStatusId,
+      date: new Date(body.date),
+      scheduledTime: body.scheduledTime || null,
+      observations: body.observations || null,
     }
 
     // Crear visita
@@ -174,12 +175,6 @@ export const POST = withLogging(async (request, logger) => {
     logger.info({ visitId: visit.id }, 'Visit created successfully')
 
     return NextResponse.json(visit, { status: 201 })
-  } catch (error) {
-    if (error instanceof z.ZodError) {
-      return NextResponse.json({ error: 'Datos inválidos', details: error.errors }, { status: 400 })
-    }
-
-    logger.error({ error }, 'Error creating visit')
-    return NextResponse.json({ error: 'Error al crear la visita' }, { status: 500 })
-  }
-})
+  },
+  { bodySchema: createVisitApiSchema, fallbackError: 'Error al crear la visita' }
+)
