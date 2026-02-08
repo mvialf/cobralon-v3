@@ -1,30 +1,19 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
-import { paymentMethodSchema } from '@/lib/validations/payment-method-validations'
+import { withApiHandler, BusinessError } from '@/lib/api-handler'
+import {
+  paymentMethodSchema,
+  type PaymentMethodFormValues,
+} from '@/lib/validations/payment-method-validations'
 
 /**
  * PUT /api/payment-methods/[id]
  * Actualiza un método de pago existente
  */
-export async function PUT(request: Request, { params }: { params: Promise<{ id: string }> }) {
-  try {
-    const { id } = await params
-    const body = await request.json()
-
-    // Validar con Zod
-    const validation = paymentMethodSchema.safeParse(body)
-
-    if (!validation.success) {
-      return NextResponse.json(
-        {
-          error: 'Datos inválidos',
-          details: validation.error.errors,
-        },
-        { status: 400 }
-      )
-    }
-
-    const { name, icon, hasInstallments, maxInstallments } = validation.data
+export const PUT = withApiHandler<PaymentMethodFormValues>(
+  async (_request, _logger, { params, body }) => {
+    const { id } = params
+    const { name, icon, hasInstallments, maxInstallments } = body
 
     // Verificar que el método existe
     const existing = await prisma.paymentMethod.findUnique({
@@ -32,7 +21,7 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
     })
 
     if (!existing) {
-      return NextResponse.json({ error: 'Método de pago no encontrado' }, { status: 404 })
+      throw new BusinessError('Método de pago no encontrado', 404)
     }
 
     // Validar que no exista otro método con el mismo nombre
@@ -42,10 +31,7 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
       })
 
       if (duplicate) {
-        return NextResponse.json(
-          { error: `El método de pago "${name}" ya existe` },
-          { status: 409 }
-        )
+        throw new BusinessError(`El método de pago "${name}" ya existe`, 409)
       }
     }
 
@@ -66,19 +52,21 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
     })
 
     return NextResponse.json({ paymentMethod: updated })
-  } catch (error) {
-    console.error('Error updating payment method:', error)
-    return NextResponse.json({ error: 'Error al actualizar el método de pago' }, { status: 500 })
+  },
+  {
+    bodySchema: paymentMethodSchema,
+    validateUuidParams: ['id'],
+    fallbackError: 'Error al actualizar el método de pago',
   }
-}
+)
 
 /**
  * DELETE /api/payment-methods/[id]
  * Elimina un método de pago (solo si no tiene pagos asociados)
  */
-export async function DELETE(request: Request, { params }: { params: Promise<{ id: string }> }) {
-  try {
-    const { id } = await params
+export const DELETE = withApiHandler(
+  async (_request, _logger, { params }) => {
+    const { id } = params
 
     // Verificar que el método existe
     const method = await prisma.paymentMethod.findUnique({
@@ -91,16 +79,14 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ i
     })
 
     if (!method) {
-      return NextResponse.json({ error: 'Método de pago no encontrado' }, { status: 404 })
+      throw new BusinessError('Método de pago no encontrado', 404)
     }
 
     // Verificar que no tenga pagos asociados
     if (method._count.payments > 0) {
-      return NextResponse.json(
-        {
-          error: `No se puede eliminar el método "${method.name}" porque tiene ${method._count.payments} pago(s) asociado(s)`,
-        },
-        { status: 409 }
+      throw new BusinessError(
+        `No se puede eliminar el método "${method.name}" porque tiene ${method._count.payments} pago(s) asociado(s)`,
+        409
       )
     }
 
@@ -112,8 +98,6 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ i
     return NextResponse.json({
       message: `El método de pago "${method.name}" se eliminó correctamente`,
     })
-  } catch (error) {
-    console.error('Error deleting payment method:', error)
-    return NextResponse.json({ error: 'Error al eliminar el método de pago' }, { status: 500 })
-  }
-}
+  },
+  { validateUuidParams: ['id'], fallbackError: 'Error al eliminar el método de pago' }
+)

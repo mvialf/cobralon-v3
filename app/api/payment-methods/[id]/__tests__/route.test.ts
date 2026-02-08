@@ -2,6 +2,7 @@
  * Tests para app/api/payment-methods/[id]/route.ts (PUT/DELETE)
  *
  * Valida:
+ * - UUID validation (withApiHandler)
  * - PUT: Validación Zod
  * - PUT: 404 si no existe
  * - PUT: Nombre duplicado → 409
@@ -10,6 +11,27 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { NextRequest } from 'next/server'
+
+// Mock de logger-middleware (requerido por withApiHandler)
+vi.mock('@/lib/logger-middleware', () => ({
+  withLogging: (handler: Function) => {
+    return async (
+      request: NextRequest,
+      context?: { params: Promise<Record<string, string>> }
+    ) => {
+      const mockLogger = {
+        debug: vi.fn(),
+        info: vi.fn(),
+        warn: vi.fn(),
+        error: vi.fn(),
+        child: vi.fn().mockReturnThis(),
+      }
+      const mockContext = context || { params: Promise.resolve({}) }
+      return handler(request, mockLogger, mockContext)
+    }
+  },
+}))
 
 // Mock de Prisma
 vi.mock('@/lib/db', () => ({
@@ -25,22 +47,48 @@ vi.mock('@/lib/db', () => ({
 import { prisma } from '@/lib/db'
 import { PUT, DELETE } from '../route'
 
-// Helper para crear params
-function createParams(id: string) {
-  return { params: Promise.resolve({ id }) }
-}
+const VALID_UUID = '00000000-0000-0000-0000-000000000001'
 
-// Helper para crear request
 function createRequest(
   method: 'PUT' | 'DELETE',
   body?: Record<string, unknown>
-): Request {
-  return new Request(`http://localhost:3000/api/payment-methods/test-id`, {
+): NextRequest {
+  return new NextRequest(`http://localhost:3000/api/payment-methods/${VALID_UUID}`, {
     method,
     body: body ? JSON.stringify(body) : undefined,
     headers: body ? { 'Content-Type': 'application/json' } : {},
   })
 }
+
+function createContext(id: string = VALID_UUID) {
+  return { params: Promise.resolve({ id }) }
+}
+
+async function callPUT(body: Record<string, unknown>, id: string = VALID_UUID) {
+  return (PUT as any)(createRequest('PUT', body), createContext(id))
+}
+
+async function callDELETE(id: string = VALID_UUID) {
+  return (DELETE as any)(createRequest('DELETE'), createContext(id))
+}
+
+describe('UUID validation', () => {
+  it('debe rechazar UUID inválido en PUT', async () => {
+    const response = await callPUT({ name: 'Test' }, 'not-a-uuid')
+    const data = await response.json()
+
+    expect(response.status).toBe(400)
+    expect(data.error).toContain('UUID inválido')
+  })
+
+  it('debe rechazar UUID inválido en DELETE', async () => {
+    const response = await callDELETE('not-a-uuid')
+    const data = await response.json()
+
+    expect(response.status).toBe(400)
+    expect(data.error).toContain('UUID inválido')
+  })
+})
 
 describe('PUT /api/payment-methods/[id]', () => {
   beforeEach(() => {
@@ -62,8 +110,7 @@ describe('PUT /api/payment-methods/[id]', () => {
 
   describe('validaciones Zod', () => {
     it('debe rechazar sin nombre', async () => {
-      const request = createRequest('PUT', { icon: 'star' })
-      const response = await PUT(request, createParams('pm-1'))
+      const response = await callPUT({ icon: 'star' })
       const data = await response.json()
 
       expect(response.status).toBe(400)
@@ -75,8 +122,7 @@ describe('PUT /api/payment-methods/[id]', () => {
     it('debe retornar 404 si método no existe', async () => {
       vi.mocked(prisma.paymentMethod.findUnique).mockResolvedValue(null)
 
-      const request = createRequest('PUT', { name: 'Test' })
-      const response = await PUT(request, createParams('nonexistent'))
+      const response = await callPUT({ name: 'Test' })
       const data = await response.json()
 
       expect(response.status).toBe(404)
@@ -86,14 +132,11 @@ describe('PUT /api/payment-methods/[id]', () => {
 
   describe('nombre duplicado', () => {
     it('debe rechazar si otro método tiene el mismo nombre', async () => {
-      // Primero encuentra el método actual
       vi.mocked(prisma.paymentMethod.findUnique)
         .mockResolvedValueOnce({ id: 'pm-1', name: 'Efectivo' } as never)
-        // Luego encuentra duplicado con el nuevo nombre
         .mockResolvedValueOnce({ id: 'pm-2', name: 'Transferencia' } as never)
 
-      const request = createRequest('PUT', { name: 'Transferencia' })
-      const response = await PUT(request, createParams('pm-1'))
+      const response = await callPUT({ name: 'Transferencia' })
       const data = await response.json()
 
       expect(response.status).toBe(409)
@@ -106,8 +149,7 @@ describe('PUT /api/payment-methods/[id]', () => {
         name: 'Efectivo',
       } as never)
 
-      const request = createRequest('PUT', { name: 'Efectivo', icon: 'new-icon' })
-      const response = await PUT(request, createParams('pm-1'))
+      const response = await callPUT({ name: 'Efectivo', icon: 'new-icon' })
 
       expect(response.status).toBe(200)
       // No debe buscar duplicados si el nombre no cambió
@@ -117,16 +159,11 @@ describe('PUT /api/payment-methods/[id]', () => {
 
   describe('actualización exitosa', () => {
     it('debe actualizar método de pago', async () => {
-      // Primera llamada: existencia, segunda: verificar duplicado (null = no hay)
       vi.mocked(prisma.paymentMethod.findUnique)
         .mockResolvedValueOnce({ id: 'pm-1', name: 'Efectivo', icon: 'cash' } as never)
-        .mockResolvedValueOnce(null) // No hay duplicado
+        .mockResolvedValueOnce(null)
 
-      const request = createRequest('PUT', {
-        name: 'Efectivo Actualizado',
-        icon: 'money',
-      })
-      const response = await PUT(request, createParams('pm-1'))
+      const response = await callPUT({ name: 'Efectivo Actualizado', icon: 'money' })
       const data = await response.json()
 
       expect(response.status).toBe(200)
@@ -134,10 +171,9 @@ describe('PUT /api/payment-methods/[id]', () => {
     })
 
     it('debe actualizar hasInstallments y maxInstallments', async () => {
-      // Mock para existencia y verificar duplicado
       vi.mocked(prisma.paymentMethod.findUnique)
         .mockResolvedValueOnce({ id: 'pm-1', name: 'Efectivo', icon: 'cash' } as never)
-        .mockResolvedValueOnce(null) // No hay duplicado
+        .mockResolvedValueOnce(null)
 
       vi.mocked(prisma.paymentMethod.update).mockResolvedValue({
         id: 'pm-1',
@@ -147,12 +183,11 @@ describe('PUT /api/payment-methods/[id]', () => {
         _count: { payments: 0 },
       } as never)
 
-      const request = createRequest('PUT', {
+      await callPUT({
         name: 'Crédito',
         hasInstallments: true,
         maxInstallments: 12,
       })
-      await PUT(request, createParams('pm-1'))
 
       expect(prisma.paymentMethod.update).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -167,15 +202,13 @@ describe('PUT /api/payment-methods/[id]', () => {
 
   describe('manejo de errores', () => {
     it('debe retornar 500 cuando update falla', async () => {
-      // Mock para existencia y verificar duplicado
       vi.mocked(prisma.paymentMethod.findUnique)
         .mockResolvedValueOnce({ id: 'pm-1', name: 'Efectivo', icon: 'cash' } as never)
-        .mockResolvedValueOnce(null) // No hay duplicado
+        .mockResolvedValueOnce(null)
 
       vi.mocked(prisma.paymentMethod.update).mockRejectedValue(new Error('DB Error'))
 
-      const request = createRequest('PUT', { name: 'Test' })
-      const response = await PUT(request, createParams('pm-1'))
+      const response = await callPUT({ name: 'Test' })
       const data = await response.json()
 
       expect(response.status).toBe(500)
@@ -203,8 +236,7 @@ describe('DELETE /api/payment-methods/[id]', () => {
     it('debe retornar 404 si método no existe', async () => {
       vi.mocked(prisma.paymentMethod.findUnique).mockResolvedValue(null)
 
-      const request = createRequest('DELETE')
-      const response = await DELETE(request, createParams('nonexistent'))
+      const response = await callDELETE()
       const data = await response.json()
 
       expect(response.status).toBe(404)
@@ -212,7 +244,7 @@ describe('DELETE /api/payment-methods/[id]', () => {
     })
   })
 
-  describe('⚠️ protección de datos relacionados', () => {
+  describe('protección de datos relacionados', () => {
     it('debe rechazar eliminación si tiene pagos asociados', async () => {
       vi.mocked(prisma.paymentMethod.findUnique).mockResolvedValue({
         id: 'pm-1',
@@ -220,8 +252,7 @@ describe('DELETE /api/payment-methods/[id]', () => {
         _count: { payments: 5 },
       } as never)
 
-      const request = createRequest('DELETE')
-      const response = await DELETE(request, createParams('pm-1'))
+      const response = await callDELETE()
       const data = await response.json()
 
       expect(response.status).toBe(409)
@@ -232,8 +263,7 @@ describe('DELETE /api/payment-methods/[id]', () => {
 
   describe('eliminación exitosa', () => {
     it('debe eliminar método sin pagos asociados', async () => {
-      const request = createRequest('DELETE')
-      const response = await DELETE(request, createParams('pm-1'))
+      const response = await callDELETE()
       const data = await response.json()
 
       expect(response.status).toBe(200)
@@ -247,8 +277,7 @@ describe('DELETE /api/payment-methods/[id]', () => {
         _count: { payments: 0 },
       } as never)
 
-      const request = createRequest('DELETE')
-      const response = await DELETE(request, createParams('pm-1'))
+      const response = await callDELETE()
       const data = await response.json()
 
       expect(data.message).toContain('Cheque')
@@ -259,8 +288,7 @@ describe('DELETE /api/payment-methods/[id]', () => {
     it('debe retornar 500 cuando delete falla', async () => {
       vi.mocked(prisma.paymentMethod.delete).mockRejectedValue(new Error('DB Error'))
 
-      const request = createRequest('DELETE')
-      const response = await DELETE(request, createParams('pm-1'))
+      const response = await callDELETE()
       const data = await response.json()
 
       expect(response.status).toBe(500)

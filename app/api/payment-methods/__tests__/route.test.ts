@@ -9,6 +9,27 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { NextRequest } from 'next/server'
+
+// Mock de logger-middleware (requerido por withApiHandler)
+vi.mock('@/lib/logger-middleware', () => ({
+  withLogging: (handler: Function) => {
+    return async (
+      request: NextRequest,
+      context?: { params: Promise<Record<string, string>> }
+    ) => {
+      const mockLogger = {
+        debug: vi.fn(),
+        info: vi.fn(),
+        warn: vi.fn(),
+        error: vi.fn(),
+        child: vi.fn().mockReturnThis(),
+      }
+      const mockContext = context || { params: Promise.resolve({}) }
+      return handler(request, mockLogger, mockContext)
+    }
+  },
+}))
 
 // Mock de Prisma
 vi.mock('@/lib/db', () => ({
@@ -25,13 +46,20 @@ vi.mock('@/lib/db', () => ({
 import { prisma } from '@/lib/db'
 import { GET, POST } from '../route'
 
-// Helper para crear request
-function createRequest(body?: Record<string, unknown>): Request {
-  return new Request('http://localhost:3000/api/payment-methods', {
-    method: body ? 'POST' : 'GET',
-    body: body ? JSON.stringify(body) : undefined,
-    headers: body ? { 'Content-Type': 'application/json' } : {},
+function createPostRequest(body: Record<string, unknown>): NextRequest {
+  return new NextRequest('http://localhost:3000/api/payment-methods', {
+    method: 'POST',
+    body: JSON.stringify(body),
+    headers: { 'Content-Type': 'application/json' },
   })
+}
+
+async function callGET() {
+  return (GET as any)(new NextRequest('http://localhost:3000/api/payment-methods'))
+}
+
+async function callPOST(body: Record<string, unknown>) {
+  return (POST as any)(createPostRequest(body))
 }
 
 describe('GET /api/payment-methods', () => {
@@ -45,7 +73,7 @@ describe('GET /api/payment-methods', () => {
       { id: 'pm2', name: 'Transferencia', icon: 'bank', order: 2, active: true, _count: { payments: 10 } },
     ] as never)
 
-    const response = await GET()
+    const response = await callGET()
     const data = await response.json()
 
     expect(response.status).toBe(200)
@@ -56,7 +84,7 @@ describe('GET /api/payment-methods', () => {
   it('debe ordenar por active desc, order asc, name asc', async () => {
     vi.mocked(prisma.paymentMethod.findMany).mockResolvedValue([])
 
-    await GET()
+    await callGET()
 
     expect(prisma.paymentMethod.findMany).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -70,7 +98,7 @@ describe('GET /api/payment-methods', () => {
       { id: 'pm1', name: 'Efectivo', _count: { payments: 5 } },
     ] as never)
 
-    const response = await GET()
+    const response = await callGET()
     const data = await response.json()
 
     expect(data.paymentMethods[0]._count.payments).toBe(5)
@@ -79,7 +107,7 @@ describe('GET /api/payment-methods', () => {
   it('debe manejar errores de base de datos', async () => {
     vi.mocked(prisma.paymentMethod.findMany).mockRejectedValue(new Error('DB Error'))
 
-    const response = await GET()
+    const response = await callGET()
     const data = await response.json()
 
     expect(response.status).toBe(500)
@@ -107,8 +135,7 @@ describe('POST /api/payment-methods', () => {
 
   describe('validaciones Zod', () => {
     it('debe rechazar sin nombre', async () => {
-      const request = createRequest({ icon: 'star' })
-      const response = await POST(request)
+      const response = await callPOST({ icon: 'star' })
       const data = await response.json()
 
       expect(response.status).toBe(400)
@@ -116,8 +143,7 @@ describe('POST /api/payment-methods', () => {
     })
 
     it('debe rechazar nombre vacío', async () => {
-      const request = createRequest({ name: '' })
-      const response = await POST(request)
+      const response = await callPOST({ name: '' })
       const data = await response.json()
 
       expect(response.status).toBe(400)
@@ -132,8 +158,7 @@ describe('POST /api/payment-methods', () => {
         name: 'Efectivo',
       } as never)
 
-      const request = createRequest({ name: 'Efectivo' })
-      const response = await POST(request)
+      const response = await callPOST({ name: 'Efectivo' })
       const data = await response.json()
 
       expect(response.status).toBe(409)
@@ -147,8 +172,7 @@ describe('POST /api/payment-methods', () => {
         _max: { order: 5 },
       } as never)
 
-      const request = createRequest({ name: 'Nuevo Método' })
-      await POST(request)
+      await callPOST({ name: 'Nuevo Método' })
 
       expect(prisma.paymentMethod.create).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -164,8 +188,7 @@ describe('POST /api/payment-methods', () => {
         _max: { order: null },
       } as never)
 
-      const request = createRequest({ name: 'Primer Método' })
-      await POST(request)
+      await callPOST({ name: 'Primer Método' })
 
       expect(prisma.paymentMethod.create).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -179,8 +202,7 @@ describe('POST /api/payment-methods', () => {
 
   describe('creación exitosa', () => {
     it('debe crear método de pago y retornar 201', async () => {
-      const request = createRequest({ name: 'Nuevo Método', icon: 'star' })
-      const response = await POST(request)
+      const response = await callPOST({ name: 'Nuevo Método', icon: 'star' })
       const data = await response.json()
 
       expect(response.status).toBe(201)
@@ -188,8 +210,7 @@ describe('POST /api/payment-methods', () => {
     })
 
     it('debe aceptar icon opcional (null)', async () => {
-      const request = createRequest({ name: 'Sin Icono' })
-      await POST(request)
+      await callPOST({ name: 'Sin Icono' })
 
       expect(prisma.paymentMethod.create).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -201,8 +222,7 @@ describe('POST /api/payment-methods', () => {
     })
 
     it('debe crear con active: true por defecto', async () => {
-      const request = createRequest({ name: 'Activo' })
-      await POST(request)
+      await callPOST({ name: 'Activo' })
 
       expect(prisma.paymentMethod.create).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -218,8 +238,7 @@ describe('POST /api/payment-methods', () => {
     it('debe retornar 500 cuando create falla', async () => {
       vi.mocked(prisma.paymentMethod.create).mockRejectedValue(new Error('DB Error'))
 
-      const request = createRequest({ name: 'Test' })
-      const response = await POST(request)
+      const response = await callPOST({ name: 'Test' })
       const data = await response.json()
 
       expect(response.status).toBe(500)

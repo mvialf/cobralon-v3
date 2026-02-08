@@ -1,12 +1,17 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
-import { paymentMethodSchema } from '@/lib/validations/payment-method-validations'
+import { withLogging } from '@/lib/logger-middleware'
+import { withApiHandler, BusinessError } from '@/lib/api-handler'
+import {
+  paymentMethodSchema,
+  type PaymentMethodFormValues,
+} from '@/lib/validations/payment-method-validations'
 
 /**
  * GET /api/payment-methods
  * Lista todos los métodos de pago ordenados por orden
  */
-export async function GET() {
+export const GET = withLogging(async (_request, logger) => {
   try {
     const paymentMethods = await prisma.paymentMethod.findMany({
       orderBy: [{ active: 'desc' }, { order: 'asc' }, { name: 'asc' }],
@@ -19,33 +24,18 @@ export async function GET() {
 
     return NextResponse.json({ paymentMethods })
   } catch (error) {
-    console.error('Error fetching payment methods:', error)
+    logger.error({ err: error }, 'Error fetching payment methods')
     return NextResponse.json({ error: 'Error al obtener los métodos de pago' }, { status: 500 })
   }
-}
+})
 
 /**
  * POST /api/payment-methods
  * Crea un nuevo método de pago
  */
-export async function POST(request: Request) {
-  try {
-    const body = await request.json()
-
-    // Validar con Zod
-    const validation = paymentMethodSchema.safeParse(body)
-
-    if (!validation.success) {
-      return NextResponse.json(
-        {
-          error: 'Datos inválidos',
-          details: validation.error.errors,
-        },
-        { status: 400 }
-      )
-    }
-
-    const { name, icon } = validation.data
+export const POST = withApiHandler<PaymentMethodFormValues>(
+  async (_request, _logger, { body }) => {
+    const { name, icon } = body
 
     // Validar que no exista un método con el mismo nombre
     const existing = await prisma.paymentMethod.findUnique({
@@ -53,7 +43,7 @@ export async function POST(request: Request) {
     })
 
     if (existing) {
-      return NextResponse.json({ error: `El método de pago "${name}" ya existe` }, { status: 409 })
+      throw new BusinessError(`El método de pago "${name}" ya existe`, 409)
     }
 
     // Obtener el máximo order actual y agregar 1
@@ -79,8 +69,6 @@ export async function POST(request: Request) {
     })
 
     return NextResponse.json({ paymentMethod }, { status: 201 })
-  } catch (error) {
-    console.error('Error creating payment method:', error)
-    return NextResponse.json({ error: 'Error al crear el método de pago' }, { status: 500 })
-  }
-}
+  },
+  { bodySchema: paymentMethodSchema, fallbackError: 'Error al crear el método de pago' }
+)
