@@ -1,9 +1,9 @@
 /**
- * Tests para app/api/visit-events/[id]/route.ts (GET/PUT/PATCH/DELETE)
+ * Tests para app/api/aftersale-events/[id]/route.ts (GET/PUT/PATCH/DELETE)
  *
  * Valida:
  * - UUID validation (withApiHandler)
- * - GET: Retorna evento con relaciones (visit, visitStatus, color)
+ * - GET: Retorna evento con relaciones
  * - GET: 404 si no existe
  * - PUT: Actualiza scheduledDate, notes, teamTagIds
  * - PUT: teamTags usa `set` (reemplaza)
@@ -42,7 +42,7 @@ vi.mock('@/lib/logger-middleware', () => ({
 // Mock de Prisma
 vi.mock('@/lib/db', () => ({
   prisma: {
-    visitEvent: {
+    aftersaleEvent: {
       findUnique: vi.fn(),
       findFirst: vi.fn(),
       update: vi.fn(),
@@ -56,19 +56,17 @@ import { GET, PUT, PATCH, DELETE } from '../route'
 
 const VALID_UUID = '00000000-0000-0000-0000-000000000001'
 
-// Helper para crear request con body
 function createRequest(
   method: 'GET' | 'PUT' | 'PATCH' | 'DELETE',
   body?: Record<string, unknown>
 ): NextRequest {
-  return new NextRequest('http://localhost:3000/api/visit-events/' + VALID_UUID, {
+  return new NextRequest('http://localhost:3000/api/aftersale-events/' + VALID_UUID, {
     method,
     body: body ? JSON.stringify(body) : undefined,
     headers: body ? { 'Content-Type': 'application/json' } : {},
   })
 }
 
-// Helper para context con params
 function createContext(id: string = VALID_UUID) {
   return { params: Promise.resolve({ id }) }
 }
@@ -89,22 +87,19 @@ async function callDELETE(id: string = VALID_UUID) {
   return (DELETE as any)(createRequest('DELETE'), createContext(id))
 }
 
-// Evento mock base
 const mockEvent = {
-  id: 've-1',
-  visitId: 'visit-1',
+  id: 'ae-1',
+  aftersaleId: 'aftersale-1',
   scheduledDate: new Date('2025-01-15'),
   notes: 'Notas originales',
-  visit: {
-    id: 'visit-1',
-    visitStatus: {
-      id: 'vs-1',
-      name: 'Agendada',
+  aftersale: {
+    id: 'aftersale-1',
+    project: { customer: { name: 'Cliente' } },
+    aftersaleStatus: {
+      id: 'as-1',
+      name: 'Pendiente',
       isFinal: false,
-      color: {
-        id: 'c-1',
-        name: 'Azul',
-      },
+      color: { id: 'c-1', name: 'Azul' },
     },
   },
   teamTags: [],
@@ -120,26 +115,26 @@ describe('UUID validation', () => {
   })
 })
 
-describe('GET /api/visit-events/[id]', () => {
+describe('GET /api/aftersale-events/[id]', () => {
   beforeEach(() => {
     vi.clearAllMocks()
   })
 
   it('debe retornar evento con relaciones', async () => {
-    vi.mocked(prisma.visitEvent.findUnique).mockResolvedValue(mockEvent as never)
+    vi.mocked(prisma.aftersaleEvent.findUnique).mockResolvedValue(mockEvent as never)
 
     const response = await callGET()
     const data = await response.json()
 
     expect(response.status).toBe(200)
-    expect(data.id).toBe('ve-1')
-    expect(data.visit).toBeDefined()
-    expect(data.visit.visitStatus).toBeDefined()
-    expect(data.visit.visitStatus.color).toBeDefined()
+    expect(data.id).toBe('ae-1')
+    expect(data.aftersale).toBeDefined()
+    expect(data.aftersale.project).toBeDefined()
+    expect(data.aftersale.aftersaleStatus).toBeDefined()
   })
 
   it('debe retornar 404 si evento no existe', async () => {
-    vi.mocked(prisma.visitEvent.findUnique).mockResolvedValue(null)
+    vi.mocked(prisma.aftersaleEvent.findUnique).mockResolvedValue(null)
 
     const response = await callGET()
     const data = await response.json()
@@ -149,7 +144,7 @@ describe('GET /api/visit-events/[id]', () => {
   })
 
   it('debe manejar errores de base de datos', async () => {
-    vi.mocked(prisma.visitEvent.findUnique).mockRejectedValue(new Error('DB Error'))
+    vi.mocked(prisma.aftersaleEvent.findUnique).mockRejectedValue(new Error('DB Error'))
 
     const response = await callGET()
     const data = await response.json()
@@ -159,20 +154,19 @@ describe('GET /api/visit-events/[id]', () => {
   })
 })
 
-describe('PUT /api/visit-events/[id]', () => {
+describe('PUT /api/aftersale-events/[id]', () => {
   beforeEach(() => {
     vi.clearAllMocks()
 
-    // Mock por defecto: evento existe
-    vi.mocked(prisma.visitEvent.findUnique).mockResolvedValue({
+    vi.mocked(prisma.aftersaleEvent.findUnique).mockResolvedValue({
       ...mockEvent,
-      visit: {
-        ...mockEvent.visit,
-        visitStatus: { isFinal: false },
+      aftersale: {
+        ...mockEvent.aftersale,
+        aftersaleStatus: { isFinal: false },
       },
     } as never)
-    vi.mocked(prisma.visitEvent.findFirst).mockResolvedValue(null)
-    vi.mocked(prisma.visitEvent.update).mockResolvedValue({
+    vi.mocked(prisma.aftersaleEvent.findFirst).mockResolvedValue(null)
+    vi.mocked(prisma.aftersaleEvent.update).mockResolvedValue({
       ...mockEvent,
       notes: 'Notas actualizadas',
     } as never)
@@ -180,7 +174,7 @@ describe('PUT /api/visit-events/[id]', () => {
 
   describe('validación existencia', () => {
     it('debe retornar 404 si evento no existe', async () => {
-      vi.mocked(prisma.visitEvent.findUnique).mockResolvedValue(null)
+      vi.mocked(prisma.aftersaleEvent.findUnique).mockResolvedValue(null)
 
       const response = await callPUT({ notes: 'Test' })
       const data = await response.json()
@@ -192,11 +186,10 @@ describe('PUT /api/visit-events/[id]', () => {
 
   describe('actualización de campos', () => {
     it('debe actualizar scheduledDate', async () => {
-      const newDate = '2025-01-20'
-      const response = await callPUT({ scheduledDate: newDate })
+      const response = await callPUT({ scheduledDate: '2025-01-20' })
 
       expect(response.status).toBe(200)
-      expect(prisma.visitEvent.update).toHaveBeenCalledWith(
+      expect(prisma.aftersaleEvent.update).toHaveBeenCalledWith(
         expect.objectContaining({
           data: expect.objectContaining({
             scheduledDate: expect.any(Date),
@@ -209,7 +202,7 @@ describe('PUT /api/visit-events/[id]', () => {
       const response = await callPUT({ notes: 'Nuevas notas' })
 
       expect(response.status).toBe(200)
-      expect(prisma.visitEvent.update).toHaveBeenCalledWith(
+      expect(prisma.aftersaleEvent.update).toHaveBeenCalledWith(
         expect.objectContaining({
           data: expect.objectContaining({
             notes: 'Nuevas notas',
@@ -235,7 +228,7 @@ describe('PUT /api/visit-events/[id]', () => {
       const response = await callPUT({ teamTagIds })
 
       expect(response.status).toBe(200)
-      expect(prisma.visitEvent.update).toHaveBeenCalledWith(
+      expect(prisma.aftersaleEvent.update).toHaveBeenCalledWith(
         expect.objectContaining({
           data: expect.objectContaining({
             teamTags: {
@@ -250,7 +243,7 @@ describe('PUT /api/visit-events/[id]', () => {
       const response = await callPUT({ teamTagIds: [] })
 
       expect(response.status).toBe(200)
-      expect(prisma.visitEvent.update).toHaveBeenCalledWith(
+      expect(prisma.aftersaleEvent.update).toHaveBeenCalledWith(
         expect.objectContaining({
           data: expect.objectContaining({
             teamTags: {
@@ -260,20 +253,13 @@ describe('PUT /api/visit-events/[id]', () => {
         })
       )
     })
-
-    it('no debe modificar teamTags si no se proporciona en el body', async () => {
-      const response = await callPUT({ notes: 'Test' })
-
-      expect(response.status).toBe(200)
-      expect(prisma.visitEvent.update).toHaveBeenCalled()
-    })
   })
 
   describe('validación de duplicados', () => {
-    it('debe rechazar si nueva fecha ya existe para la visita', async () => {
-      vi.mocked(prisma.visitEvent.findFirst).mockResolvedValue({
-        id: 've-other',
-        visitId: 'visit-1',
+    it('debe rechazar si nueva fecha ya existe para la postventa', async () => {
+      vi.mocked(prisma.aftersaleEvent.findFirst).mockResolvedValue({
+        id: 'ae-other',
+        aftersaleId: 'aftersale-1',
         scheduledDate: new Date('2025-01-20'),
       } as never)
 
@@ -281,14 +267,14 @@ describe('PUT /api/visit-events/[id]', () => {
       const data = await response.json()
 
       expect(response.status).toBe(400)
-      expect(data.error).toBe('Ya existe un evento para esta visita en esta fecha')
+      expect(data.error).toBe('Ya existe un evento para esta postventa en esta fecha')
     })
 
     it('debe permitir mantener la misma fecha', async () => {
-      vi.mocked(prisma.visitEvent.findUnique).mockResolvedValue({
+      vi.mocked(prisma.aftersaleEvent.findUnique).mockResolvedValue({
         ...mockEvent,
         scheduledDate: new Date('2025-01-15'),
-        visit: { visitStatus: { isFinal: false } },
+        aftersale: { aftersaleStatus: { isFinal: false } },
       } as never)
 
       const response = await callPUT({ scheduledDate: '2025-01-15' })
@@ -309,7 +295,7 @@ describe('PUT /api/visit-events/[id]', () => {
 
   describe('respuesta exitosa', () => {
     it('debe retornar evento actualizado con relaciones', async () => {
-      vi.mocked(prisma.visitEvent.update).mockResolvedValue({
+      vi.mocked(prisma.aftersaleEvent.update).mockResolvedValue({
         ...mockEvent,
         teamTags: [{ id: 'tt-1', name: 'Juan', color: { name: 'Verde' } }],
       } as never)
@@ -318,14 +304,14 @@ describe('PUT /api/visit-events/[id]', () => {
       const data = await response.json()
 
       expect(response.status).toBe(200)
-      expect(data.visit).toBeDefined()
+      expect(data.aftersale).toBeDefined()
       expect(data.teamTags).toBeDefined()
     })
   })
 
   describe('manejo de errores', () => {
     it('debe retornar 500 cuando update falla', async () => {
-      vi.mocked(prisma.visitEvent.update).mockRejectedValue(new Error('DB Error'))
+      vi.mocked(prisma.aftersaleEvent.update).mockRejectedValue(new Error('DB Error'))
 
       const response = await callPUT({ notes: 'Test' })
       const data = await response.json()
@@ -336,13 +322,13 @@ describe('PUT /api/visit-events/[id]', () => {
   })
 })
 
-describe('PATCH /api/visit-events/[id]', () => {
+describe('PATCH /api/aftersale-events/[id]', () => {
   beforeEach(() => {
     vi.clearAllMocks()
 
-    vi.mocked(prisma.visitEvent.findUnique).mockResolvedValue(mockEvent as never)
-    vi.mocked(prisma.visitEvent.findFirst).mockResolvedValue(null)
-    vi.mocked(prisma.visitEvent.update).mockResolvedValue({
+    vi.mocked(prisma.aftersaleEvent.findUnique).mockResolvedValue(mockEvent as never)
+    vi.mocked(prisma.aftersaleEvent.findFirst).mockResolvedValue(null)
+    vi.mocked(prisma.aftersaleEvent.update).mockResolvedValue({
       ...mockEvent,
       scheduledDate: new Date('2025-01-20'),
     } as never)
@@ -380,7 +366,7 @@ describe('PATCH /api/visit-events/[id]', () => {
 
   describe('validación existencia', () => {
     it('debe retornar 404 si evento no existe', async () => {
-      vi.mocked(prisma.visitEvent.findUnique).mockResolvedValue(null)
+      vi.mocked(prisma.aftersaleEvent.findUnique).mockResolvedValue(null)
 
       const response = await callPATCH({ scheduledDate: '2025-01-20' })
       const data = await response.json()
@@ -391,10 +377,10 @@ describe('PATCH /api/visit-events/[id]', () => {
   })
 
   describe('validación de duplicados', () => {
-    it('debe rechazar si nueva fecha ya existe para la visita', async () => {
-      vi.mocked(prisma.visitEvent.findFirst).mockResolvedValue({
-        id: 've-other',
-        visitId: 'visit-1',
+    it('debe rechazar si nueva fecha ya existe para la postventa', async () => {
+      vi.mocked(prisma.aftersaleEvent.findFirst).mockResolvedValue({
+        id: 'ae-other',
+        aftersaleId: 'aftersale-1',
         scheduledDate: new Date('2025-01-20'),
       } as never)
 
@@ -402,7 +388,7 @@ describe('PATCH /api/visit-events/[id]', () => {
       const data = await response.json()
 
       expect(response.status).toBe(400)
-      expect(data.error).toBe('Ya existe un evento para esta visita en esta fecha')
+      expect(data.error).toBe('Ya existe un evento para esta postventa en esta fecha')
     })
   })
 
@@ -411,7 +397,7 @@ describe('PATCH /api/visit-events/[id]', () => {
       const response = await callPATCH({ scheduledDate: '2025-01-20' })
 
       expect(response.status).toBe(200)
-      expect(prisma.visitEvent.update).toHaveBeenCalledWith(
+      expect(prisma.aftersaleEvent.update).toHaveBeenCalledWith(
         expect.objectContaining({
           data: { scheduledDate: expect.any(Date) },
         })
@@ -423,14 +409,14 @@ describe('PATCH /api/visit-events/[id]', () => {
       const data = await response.json()
 
       expect(response.status).toBe(200)
-      expect(data.visit).toBeDefined()
-      expect(data.visit.visitStatus).toBeDefined()
+      expect(data.aftersale).toBeDefined()
+      expect(data.aftersale.aftersaleStatus).toBeDefined()
     })
   })
 
   describe('manejo de errores', () => {
     it('debe retornar 500 cuando update falla', async () => {
-      vi.mocked(prisma.visitEvent.update).mockRejectedValue(new Error('DB Error'))
+      vi.mocked(prisma.aftersaleEvent.update).mockRejectedValue(new Error('DB Error'))
 
       const response = await callPATCH({ scheduledDate: '2025-01-20' })
       const data = await response.json()
@@ -441,17 +427,17 @@ describe('PATCH /api/visit-events/[id]', () => {
   })
 })
 
-describe('DELETE /api/visit-events/[id]', () => {
+describe('DELETE /api/aftersale-events/[id]', () => {
   beforeEach(() => {
     vi.clearAllMocks()
 
-    vi.mocked(prisma.visitEvent.findUnique).mockResolvedValue(mockEvent as never)
-    vi.mocked(prisma.visitEvent.delete).mockResolvedValue(mockEvent as never)
+    vi.mocked(prisma.aftersaleEvent.findUnique).mockResolvedValue(mockEvent as never)
+    vi.mocked(prisma.aftersaleEvent.delete).mockResolvedValue(mockEvent as never)
   })
 
   describe('validación existencia', () => {
     it('debe retornar 404 si evento no existe', async () => {
-      vi.mocked(prisma.visitEvent.findUnique).mockResolvedValue(null)
+      vi.mocked(prisma.aftersaleEvent.findUnique).mockResolvedValue(null)
 
       const response = await callDELETE()
       const data = await response.json()
@@ -473,7 +459,7 @@ describe('DELETE /api/visit-events/[id]', () => {
     it('debe llamar delete con el id correcto', async () => {
       await callDELETE()
 
-      expect(prisma.visitEvent.delete).toHaveBeenCalledWith({
+      expect(prisma.aftersaleEvent.delete).toHaveBeenCalledWith({
         where: { id: VALID_UUID },
       })
     })
@@ -481,7 +467,7 @@ describe('DELETE /api/visit-events/[id]', () => {
 
   describe('manejo de errores', () => {
     it('debe retornar 500 cuando delete falla', async () => {
-      vi.mocked(prisma.visitEvent.delete).mockRejectedValue(new Error('DB Error'))
+      vi.mocked(prisma.aftersaleEvent.delete).mockRejectedValue(new Error('DB Error'))
 
       const response = await callDELETE()
       const data = await response.json()

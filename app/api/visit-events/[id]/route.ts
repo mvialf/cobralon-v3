@@ -1,19 +1,27 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
-import { updateVisitEventSchema } from '@/lib/validations/calendar-validations'
+import { withApiHandler, BusinessError } from '@/lib/api-handler'
+import {
+  updateVisitEventSchema,
+  patchEventDateSchema,
+  type UpdateVisitEventInput,
+  type PatchEventDateInput,
+} from '@/lib/validations/calendar-validations'
 import { Prisma } from '@prisma/client'
+
+const HANDLER_OPTIONS = {
+  validateUuidParams: ['id'],
+}
 
 /**
  * GET /api/visit-events/[id]
  *
  * Obtiene un evento de visita por ID
  */
-export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
-  try {
-    const { id } = await params
-
+export const GET = withApiHandler(
+  async (_request, _logger, { params }) => {
     const event = await prisma.visitEvent.findUnique({
-      where: { id },
+      where: { id: params.id },
       include: {
         visit: {
           include: {
@@ -28,36 +36,22 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
     })
 
     if (!event) {
-      return NextResponse.json({ error: 'Evento no encontrado' }, { status: 404 })
+      throw new BusinessError('Evento no encontrado', 404)
     }
 
     return NextResponse.json(event)
-  } catch (_error) {
-    return NextResponse.json({ error: 'Error al obtener evento' }, { status: 500 })
-  }
-}
+  },
+  { ...HANDLER_OPTIONS, fallbackError: 'Error al obtener evento' }
+)
 
 /**
  * PUT /api/visit-events/[id]
  *
  * Actualiza un evento de visita
  */
-export async function PUT(request: Request, { params }: { params: Promise<{ id: string }> }) {
-  try {
-    const { id } = await params
-    const body = await request.json()
-
-    // Validar datos
-    const validationResult = updateVisitEventSchema.safeParse(body)
-
-    if (!validationResult.success) {
-      return NextResponse.json(
-        { error: 'Datos inválidos', details: validationResult.error.errors },
-        { status: 400 }
-      )
-    }
-
-    const data = validationResult.data
+export const PUT = withApiHandler<UpdateVisitEventInput>(
+  async (_request, _logger, { params, body }) => {
+    const { id } = params
 
     // Verificar que el evento existe
     const existingEvent = await prisma.visitEvent.findUnique({
@@ -66,40 +60,37 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
     })
 
     if (!existingEvent) {
-      return NextResponse.json({ error: 'Evento no encontrado' }, { status: 404 })
+      throw new BusinessError('Evento no encontrado', 404)
     }
 
     // Si se está cambiando la fecha, verificar duplicados
     if (
-      data.scheduledDate &&
-      data.scheduledDate.getTime() !== existingEvent.scheduledDate.getTime()
+      body.scheduledDate &&
+      body.scheduledDate.getTime() !== existingEvent.scheduledDate.getTime()
     ) {
       const duplicateEvent = await prisma.visitEvent.findFirst({
         where: {
           visitId: existingEvent.visitId,
-          scheduledDate: data.scheduledDate,
+          scheduledDate: body.scheduledDate,
           id: { not: id },
         },
       })
 
       if (duplicateEvent) {
-        return NextResponse.json(
-          { error: 'Ya existe un evento para esta visita en esta fecha' },
-          { status: 400 }
-        )
+        throw new BusinessError('Ya existe un evento para esta visita en esta fecha')
       }
     }
 
     // Construir data para update
     const updateData: Prisma.VisitEventUpdateInput = {
-      scheduledDate: data.scheduledDate,
-      notes: data.notes,
+      scheduledDate: body.scheduledDate,
+      notes: body.notes,
     }
 
     // Manejar teamTags: usar 'set' para reemplazar todos los teamTags
-    if (data.teamTagIds !== undefined) {
+    if (body.teamTagIds !== undefined) {
       updateData.teamTags = {
-        set: data.teamTagIds?.map((id) => ({ id })) || [],
+        set: body.teamTagIds?.map((id) => ({ id })) || [],
       }
     }
 
@@ -126,31 +117,22 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
     })
 
     return NextResponse.json(updatedEvent)
-  } catch (_error) {
-    return NextResponse.json({ error: 'Error al actualizar evento' }, { status: 500 })
+  },
+  {
+    bodySchema: updateVisitEventSchema,
+    ...HANDLER_OPTIONS,
+    fallbackError: 'Error al actualizar evento',
   }
-}
+)
 
 /**
  * PATCH /api/visit-events/[id]
  *
  * Actualiza solo la fecha de un evento (usado para drag & drop)
  */
-export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
-  try {
-    const { id } = await params
-    const body = await request.json()
-
-    // Validar que scheduledDate existe
-    if (!body.scheduledDate) {
-      return NextResponse.json({ error: 'scheduledDate es requerido' }, { status: 400 })
-    }
-
-    const scheduledDate = new Date(body.scheduledDate)
-
-    if (isNaN(scheduledDate.getTime())) {
-      return NextResponse.json({ error: 'scheduledDate inválido' }, { status: 400 })
-    }
+export const PATCH = withApiHandler<PatchEventDateInput>(
+  async (_request, _logger, { params, body }) => {
+    const { id } = params
 
     // Verificar que el evento existe
     const existingEvent = await prisma.visitEvent.findUnique({
@@ -158,29 +140,26 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     })
 
     if (!existingEvent) {
-      return NextResponse.json({ error: 'Evento no encontrado' }, { status: 404 })
+      throw new BusinessError('Evento no encontrado', 404)
     }
 
     // Verificar que no hay duplicado en la nueva fecha
     const duplicateEvent = await prisma.visitEvent.findFirst({
       where: {
         visitId: existingEvent.visitId,
-        scheduledDate: scheduledDate,
+        scheduledDate: body.scheduledDate,
         id: { not: id },
       },
     })
 
     if (duplicateEvent) {
-      return NextResponse.json(
-        { error: 'Ya existe un evento para esta visita en esta fecha' },
-        { status: 400 }
-      )
+      throw new BusinessError('Ya existe un evento para esta visita en esta fecha')
     }
 
     // Actualizar solo la fecha
     const updatedEvent = await prisma.visitEvent.update({
       where: { id },
-      data: { scheduledDate },
+      data: { scheduledDate: body.scheduledDate },
       include: {
         visit: {
           include: {
@@ -195,19 +174,22 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     })
 
     return NextResponse.json(updatedEvent)
-  } catch (_error) {
-    return NextResponse.json({ error: 'Error al actualizar fecha del evento' }, { status: 500 })
+  },
+  {
+    bodySchema: patchEventDateSchema,
+    ...HANDLER_OPTIONS,
+    fallbackError: 'Error al actualizar fecha del evento',
   }
-}
+)
 
 /**
  * DELETE /api/visit-events/[id]
  *
  * Elimina un evento de visita
  */
-export async function DELETE(request: Request, { params }: { params: Promise<{ id: string }> }) {
-  try {
-    const { id } = await params
+export const DELETE = withApiHandler(
+  async (_request, _logger, { params }) => {
+    const { id } = params
 
     // Verificar que existe
     const event = await prisma.visitEvent.findUnique({
@@ -215,7 +197,7 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ i
     })
 
     if (!event) {
-      return NextResponse.json({ error: 'Evento no encontrado' }, { status: 404 })
+      throw new BusinessError('Evento no encontrado', 404)
     }
 
     // Eliminar
@@ -224,7 +206,6 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ i
     })
 
     return NextResponse.json({ success: true })
-  } catch (_error) {
-    return NextResponse.json({ error: 'Error al eliminar evento' }, { status: 500 })
-  }
-}
+  },
+  { ...HANDLER_OPTIONS, fallbackError: 'Error al eliminar evento' }
+)

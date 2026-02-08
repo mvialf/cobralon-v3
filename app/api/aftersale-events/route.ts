@@ -1,72 +1,56 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
-import { createAftersaleEventSchema } from '@/lib/validations/calendar-validations'
+import { withApiHandler, BusinessError } from '@/lib/api-handler'
+import {
+  createAftersaleEventSchema,
+  type CreateAftersaleEventInput,
+} from '@/lib/validations/calendar-validations'
 
 /**
  * POST /api/aftersale-events
  *
  * Crea un nuevo evento de postventa
  */
-export async function POST(request: Request) {
-  try {
-    const body = await request.json()
-
-    // Validar datos
-    const validationResult = createAftersaleEventSchema.safeParse(body)
-
-    if (!validationResult.success) {
-      return NextResponse.json(
-        { error: 'Datos inválidos', details: validationResult.error.errors },
-        { status: 400 }
-      )
-    }
-
-    const data = validationResult.data
-
+export const POST = withApiHandler<CreateAftersaleEventInput>(
+  async (_request, _logger, { body }) => {
     // Verificar que la postventa existe
     const aftersale = await prisma.aftersale.findUnique({
-      where: { id: data.aftersaleId },
+      where: { id: body.aftersaleId },
       include: { aftersaleStatus: true },
     })
 
     if (!aftersale) {
-      return NextResponse.json({ error: 'Postventa no encontrada' }, { status: 404 })
+      throw new BusinessError('Postventa no encontrada', 404)
     }
 
     // Verificar que la postventa NO esté finalizada
     if (aftersale.aftersaleStatus.isFinal) {
-      return NextResponse.json(
-        { error: 'No se puede crear evento para una postventa finalizada' },
-        { status: 400 }
-      )
+      throw new BusinessError('No se puede crear evento para una postventa finalizada')
     }
 
     // Verificar que no exista duplicado
     const existingEvent = await prisma.aftersaleEvent.findFirst({
       where: {
-        aftersaleId: data.aftersaleId,
-        scheduledDate: data.scheduledDate,
+        aftersaleId: body.aftersaleId,
+        scheduledDate: body.scheduledDate,
       },
     })
 
     if (existingEvent) {
-      return NextResponse.json(
-        { error: 'Ya existe un evento para esta postventa en esta fecha' },
-        { status: 400 }
-      )
+      throw new BusinessError('Ya existe un evento para esta postventa en esta fecha')
     }
 
     // Crear evento con teamTags si se proporcionan
     const newEvent = await prisma.aftersaleEvent.create({
       data: {
-        aftersaleId: data.aftersaleId,
-        scheduledDate: data.scheduledDate,
-        notes: data.notes,
+        aftersaleId: body.aftersaleId,
+        scheduledDate: body.scheduledDate,
+        notes: body.notes,
         // Conectar teamTags si se proporcionan
-        ...(data.teamTagIds &&
-          data.teamTagIds.length > 0 && {
+        ...(body.teamTagIds &&
+          body.teamTagIds.length > 0 && {
             teamTags: {
-              connect: data.teamTagIds.map((id) => ({ id })),
+              connect: body.teamTagIds.map((id) => ({ id })),
             },
           }),
       },
@@ -94,7 +78,6 @@ export async function POST(request: Request) {
     })
 
     return NextResponse.json(newEvent, { status: 201 })
-  } catch (_error) {
-    return NextResponse.json({ error: 'Error al crear evento' }, { status: 500 })
-  }
-}
+  },
+  { bodySchema: createAftersaleEventSchema, fallbackError: 'Error al crear evento' }
+)
