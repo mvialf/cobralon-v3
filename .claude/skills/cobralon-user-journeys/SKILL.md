@@ -1,12 +1,11 @@
 ---
 name: cobralon-user-journeys
-description: |
-  Documentación de la UI real de cada feature de Cobralon. Selectores Playwright
-  verificados, estructura de páginas, comportamientos UI, edge cases y API endpoints.
-  USAR CUANDO: escribir o modificar tests E2E, crear Page Objects, debuggear selectores,
-  entender cómo funciona una página antes de modificarla.
-  Complementa cobralon-e2e-playwright (que cubre HOW-TO de testing).
+description: Documentación de la UI real de cada feature de Cobralon con selectores Playwright verificados.
 ---
+
+<!-- USAR CUANDO: escribir o modificar tests E2E, crear Page Objects, debuggear selectores,
+entender cómo funciona una página antes de modificarla.
+Complementa cobralon-e2e-playwright (que cubre HOW-TO de testing). -->
 
 # Cobralon User Journeys
 

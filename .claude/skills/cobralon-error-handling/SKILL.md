@@ -1,13 +1,11 @@
 ---
 name: cobralon-error-handling
-description: |
-  Patrones de manejo de errores para Cobralon: API responses estandarizadas,
-  error boundaries, y toast notifications.
-
-  USAR CUANDO: manejar errores en API routes, implementar error boundaries,
-  mostrar errores al usuario, decidir qué loggear con Pino, o estandarizar
-  respuestas HTTP de error.
+description: Patrones de manejo de errores para Cobralon con API responses estandarizadas, error boundaries y toast notifications.
 ---
+
+<!-- USAR CUANDO: manejar errores en API routes, implementar error boundaries,
+mostrar errores al usuario, decidir qué loggear con Pino, o estandarizar
+respuestas HTTP de error. -->
 
 # Error Handling en Cobralon
 

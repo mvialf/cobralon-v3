@@ -21,6 +21,12 @@ const eslintConfig = [
       '.playwright-mcp/**',
       'coverage/**',
 
+      // Documentación y configuración
+      '.claude/**',
+      'docs/**',
+      'scripts/**',
+      'capturas/**',
+
       // Tests (excluidos del lint de producción)
       'tests/**',
       '**/*.spec.ts',

@@ -1,17 +1,15 @@
 ---
 name: cobralon-e2e-playwright
-description: |
-  Patrones de E2E testing con Playwright para Cobralon.
-  Workflow MCP-first, Page Objects, waiting strategies, y anti-patrones.
-
-  USAR CUANDO: escribir tests E2E nuevos, refactorizar tests E2E existentes,
-  debuggear tests flaky, o decidir cómo estructurar un test E2E.
-
-  USAR SIEMPRE JUNTO CON: cobralon-testing-strategy (para auth setup,
-  cleanup patterns, comandos, y decisión de qué testear).
-
-  NO CUBRE: unit tests, mocking de Prisma, coverage (ver cobralon-testing-strategy).
+description: Patrones de E2E testing con Playwright para Cobralon.
 ---
+
+<!-- USAR CUANDO: escribir tests E2E nuevos, refactorizar tests E2E existentes,
+debuggear tests flaky, o decidir cómo estructurar un test E2E.
+
+USAR SIEMPRE JUNTO CON: cobralon-testing-strategy (para auth setup,
+cleanup patterns, comandos, y decisión de qué testear).
+
+NO CUBRE: unit tests, mocking de Prisma, coverage (ver cobralon-testing-strategy). -->
 
 # E2E Testing con Playwright - Cobralon
 

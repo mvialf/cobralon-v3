@@ -1,16 +1,14 @@
 ---
 name: cobralon-testing-strategy
-description: |
-  Guía de testing para Cobralon: unit tests con Vitest, E2E con Playwright,
-  y factories de datos.
-
-  USAR CUANDO: escribir tests nuevos, mockear Prisma, crear fixtures de datos,
-  debuggear tests E2E, decidir qué tipo de test escribir, configurar coverage.
-
-  Cubre: Vitest patterns del proyecto, Playwright auth setup,
-  factories de Customer/Project/Payment, mocking de Prisma client,
-  coverage strategy (qué medir y qué ignorar).
+description: Guía de testing para Cobralon con Vitest, Playwright y factories de datos.
 ---
+
+<!-- USAR CUANDO: escribir tests nuevos, mockear Prisma, crear fixtures de datos,
+debuggear tests E2E, decidir qué tipo de test escribir, configurar coverage.
+
+Cubre: Vitest patterns del proyecto, Playwright auth setup,
+factories de Customer/Project/Payment, mocking de Prisma client,
+coverage strategy (qué medir y qué ignorar). -->
 
 # Testing Strategy de Cobralon
 

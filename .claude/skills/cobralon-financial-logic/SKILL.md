@@ -1,12 +1,11 @@
 ---
 name: cobralon-financial-logic
-description: |
-  Guía para implementar features relacionadas con pagos FIFO, sistema de créditos y gestión de deudas en Cobralon.
-
-  USAR CUANDO: trabajas con pagos, créditos, balances, deudas, allocations, PaymentAllocation, creditBalance, o modificas lib/business-logic/.
-
-  Esta skill es OBLIGATORIA cuando tocas lógica financiera para evitar bugs críticos.
+description: Guía para implementar features relacionadas con pagos FIFO, sistema de créditos y gestión de deudas en Cobralon.
 ---
+
+<!-- USAR CUANDO: trabajas con pagos, créditos, balances, deudas, allocations,
+PaymentAllocation, creditBalance, o modificas lib/business-logic/.
+Esta skill es OBLIGATORIA cuando tocas lógica financiera para evitar bugs críticos. -->
 
 # Lógica Financiera de Cobralon
 

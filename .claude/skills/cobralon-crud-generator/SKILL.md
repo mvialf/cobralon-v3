@@ -1,12 +1,11 @@
 ---
 name: cobralon-crud-generator
-description: |
-  Genera features CRUD completas siguiendo los patrones establecidos en Cobralon.
-
-  USAR CUANDO: necesitas crear una nueva entidad, generar CRUD, crear formulario con validación, o agregar nueva feature con tabla + formulario + API.
-
-  Genera 7 archivos siguiendo la arquitectura del proyecto.
+description: Genera features CRUD completas siguiendo los patrones establecidos en Cobralon.
 ---
+
+<!-- USAR CUANDO: necesitas crear una nueva entidad, generar CRUD, crear formulario
+con validación, o agregar nueva feature con tabla + formulario + API.
+Genera 7 archivos siguiendo la arquitectura del proyecto. -->
 
 # CRUD Generator para Cobralon
 

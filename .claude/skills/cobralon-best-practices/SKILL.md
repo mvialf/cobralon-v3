@@ -1,18 +1,18 @@
 ---
 name: cobralon-best-practices
-description: |
-  Guía centralizada de buenas prácticas React/Next.js para Cobralon.
-  Usar cuando: (1) se escribe código nuevo en componentes, páginas o API routes,
-  (2) se hace refactoring de código existente, (3) se revisa código por performance,
-  (4) se optimiza bundle size o tiempos de carga, (5) se necesita verificar si un
-  patrón sigue las convenciones del proyecto.
-
-  Cubre: patrones establecidos del proyecto, paralelización de queries Prisma,
-  raw SQL con Prisma.sql, indexing strategy, facets opcionales, imports dinámicos,
-  React.cache(), after(), re-render optimization, rendering patterns,
-  TanStack Query patterns (query keys, mutations, SSR hydration), y
-  convenciones Next.js 15 + React 19 + React Query + Prisma.
+description: Guía centralizada de buenas prácticas React/Next.js para Cobralon.
 ---
+
+<!-- Usar cuando: (1) se escribe código nuevo en componentes, páginas o API routes,
+(2) se hace refactoring de código existente, (3) se revisa código por performance,
+(4) se optimiza bundle size o tiempos de carga, (5) se necesita verificar si un
+patrón sigue las convenciones del proyecto.
+
+Cubre: patrones establecidos del proyecto, paralelización de queries Prisma,
+raw SQL con Prisma.sql, indexing strategy, facets opcionales, imports dinámicos,
+React.cache(), after(), re-render optimization, rendering patterns,
+TanStack Query patterns (query keys, mutations, SSR hydration), y
+convenciones Next.js 15 + React 19 + React Query + Prisma. -->
 
 # Cobralon Best Practices
 
