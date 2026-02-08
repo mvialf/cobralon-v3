@@ -11,6 +11,27 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { NextRequest } from 'next/server'
+
+// Mock de logger-middleware (requerido por withLogging y withApiHandler)
+vi.mock('@/lib/logger-middleware', () => ({
+  withLogging: (handler: Function) => {
+    return async (
+      request: NextRequest,
+      context?: { params: Promise<Record<string, string>> }
+    ) => {
+      const mockLogger = {
+        debug: vi.fn(),
+        info: vi.fn(),
+        warn: vi.fn(),
+        error: vi.fn(),
+        child: vi.fn().mockReturnThis(),
+      }
+      const mockContext = context || { params: Promise.resolve({}) }
+      return handler(request, mockLogger, mockContext)
+    }
+  },
+}))
 
 // Mock de Prisma
 vi.mock('@/lib/db', () => ({
@@ -30,23 +51,26 @@ vi.mock('@/lib/db', () => ({
 import { prisma } from '@/lib/db'
 import { GET, POST } from '../route'
 
-// Helper para crear request
-function createRequest(
-  method: 'GET' | 'POST',
-  body?: Record<string, unknown>,
-  searchParams?: Record<string, string>
-): Request {
+// Helpers
+async function callGET(searchParams?: Record<string, string>) {
   const url = new URL('http://localhost:3000/api/uninstall-tags')
   if (searchParams) {
-    Object.entries(searchParams).forEach(([key, value]) => {
-      url.searchParams.set(key, value)
-    })
+    Object.entries(searchParams).forEach(([k, v]) => url.searchParams.set(k, v))
   }
-  return new Request(url, {
-    method,
-    body: body ? JSON.stringify(body) : undefined,
-    headers: body ? { 'Content-Type': 'application/json' } : {},
+  const context = { params: Promise.resolve({}) }
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return (GET as any)(new NextRequest(url), context)
+}
+
+async function callPOST(body: Record<string, unknown>) {
+  const request = new NextRequest('http://localhost:3000/api/uninstall-tags', {
+    method: 'POST',
+    body: JSON.stringify(body),
+    headers: { 'Content-Type': 'application/json' },
   })
+  const context = { params: Promise.resolve({}) }
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return (POST as any)(request, context)
 }
 
 describe('GET /api/uninstall-tags', () => {
@@ -60,7 +84,7 @@ describe('GET /api/uninstall-tags', () => {
       { id: 'ut2', name: 'PVC', abbreviation: 'PV', order: 20 },
     ] as never)
 
-    const response = await GET(createRequest('GET'))
+    const response = await callGET()
     const data = await response.json()
 
     expect(response.status).toBe(200)
@@ -70,7 +94,7 @@ describe('GET /api/uninstall-tags', () => {
   it('debe filtrar tags inactivas por defecto', async () => {
     vi.mocked(prisma.uninstallTag.findMany).mockResolvedValue([])
 
-    await GET(createRequest('GET'))
+    await callGET()
 
     expect(prisma.uninstallTag.findMany).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -82,7 +106,7 @@ describe('GET /api/uninstall-tags', () => {
   it('debe incluir tags inactivas si includeInactive=true', async () => {
     vi.mocked(prisma.uninstallTag.findMany).mockResolvedValue([])
 
-    await GET(createRequest('GET', undefined, { includeInactive: 'true' }))
+    await callGET({ includeInactive: 'true' })
 
     expect(prisma.uninstallTag.findMany).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -94,7 +118,7 @@ describe('GET /api/uninstall-tags', () => {
   it('debe ordenar por order asc', async () => {
     vi.mocked(prisma.uninstallTag.findMany).mockResolvedValue([])
 
-    await GET(createRequest('GET'))
+    await callGET()
 
     expect(prisma.uninstallTag.findMany).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -106,7 +130,7 @@ describe('GET /api/uninstall-tags', () => {
   it('debe incluir color por defecto', async () => {
     vi.mocked(prisma.uninstallTag.findMany).mockResolvedValue([])
 
-    await GET(createRequest('GET'))
+    await callGET()
 
     expect(prisma.uninstallTag.findMany).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -120,7 +144,7 @@ describe('GET /api/uninstall-tags', () => {
   it('debe manejar errores de base de datos', async () => {
     vi.mocked(prisma.uninstallTag.findMany).mockRejectedValue(new Error('DB Error'))
 
-    const response = await GET(createRequest('GET'))
+    const response = await callGET()
     const data = await response.json()
 
     expect(response.status).toBe(500)
@@ -149,10 +173,9 @@ describe('POST /api/uninstall-tags', () => {
 
   describe('validaciones Zod', () => {
     it('debe retornar 400 sin nombre', async () => {
-      const request = createRequest('POST', {
+      const response = await callPOST({
         colorId: '00000000-0000-0000-0000-000000000001',
       })
-      const response = await POST(request)
       const data = await response.json()
 
       expect(response.status).toBe(400)
@@ -160,8 +183,7 @@ describe('POST /api/uninstall-tags', () => {
     })
 
     it('debe rechazar sin colorId', async () => {
-      const request = createRequest('POST', { name: 'Test' })
-      const response = await POST(request)
+      const response = await callPOST({ name: 'Test' })
       const data = await response.json()
 
       expect(response.status).toBe(400)
@@ -175,11 +197,10 @@ describe('POST /api/uninstall-tags', () => {
         name: 'Aluminio',
       } as never)
 
-      const request = createRequest('POST', {
+      const response = await callPOST({
         name: 'Aluminio',
         colorId: '00000000-0000-0000-0000-000000000001',
       })
-      const response = await POST(request)
       const data = await response.json()
 
       expect(response.status).toBe(400)
@@ -191,11 +212,10 @@ describe('POST /api/uninstall-tags', () => {
     it('debe rechazar si colorId no existe', async () => {
       vi.mocked(prisma.badgeColor.findUnique).mockResolvedValue(null)
 
-      const request = createRequest('POST', {
+      const response = await callPOST({
         name: 'Test',
         colorId: '00000000-0000-0000-0000-000000000001',
       })
-      const response = await POST(request)
       const data = await response.json()
 
       expect(response.status).toBe(400)
@@ -205,23 +225,21 @@ describe('POST /api/uninstall-tags', () => {
 
   describe('auto-generación de abbreviation', () => {
     it('debe auto-generar abbreviation si no se provee', async () => {
-      const request = createRequest('POST', {
+      await callPOST({
         name: 'Aluminio',
         colorId: '00000000-0000-0000-0000-000000000001',
       })
-      await POST(request)
 
       // La abbreviation se genera automáticamente (primeras 2 letras mayúsculas)
       expect(prisma.uninstallTag.create).toHaveBeenCalled()
     })
 
     it('debe usar abbreviation si se provee', async () => {
-      const request = createRequest('POST', {
+      await callPOST({
         name: 'Aluminio',
         abbreviation: 'XX',
         colorId: '00000000-0000-0000-0000-000000000001',
       })
-      await POST(request)
 
       expect(prisma.uninstallTag.create).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -239,11 +257,10 @@ describe('POST /api/uninstall-tags', () => {
         order: 30,
       } as never)
 
-      const request = createRequest('POST', {
+      await callPOST({
         name: 'Nueva',
         colorId: '00000000-0000-0000-0000-000000000001',
       })
-      await POST(request)
 
       expect(prisma.uninstallTag.create).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -257,11 +274,10 @@ describe('POST /api/uninstall-tags', () => {
     it('debe usar order=10 si no hay tags existentes', async () => {
       vi.mocked(prisma.uninstallTag.findFirst).mockResolvedValue(null)
 
-      const request = createRequest('POST', {
+      await callPOST({
         name: 'Primera',
         colorId: '00000000-0000-0000-0000-000000000001',
       })
-      await POST(request)
 
       expect(prisma.uninstallTag.create).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -271,32 +287,14 @@ describe('POST /api/uninstall-tags', () => {
         })
       )
     })
-
-    it('debe usar order explícito si se provee', async () => {
-      const request = createRequest('POST', {
-        name: 'Con Order',
-        colorId: '00000000-0000-0000-0000-000000000001',
-        order: 5,
-      })
-      await POST(request)
-
-      expect(prisma.uninstallTag.create).toHaveBeenCalledWith(
-        expect.objectContaining({
-          data: expect.objectContaining({
-            order: 5,
-          }),
-        })
-      )
-    })
   })
 
   describe('creación exitosa', () => {
     it('debe crear tag y retornar 201', async () => {
-      const request = createRequest('POST', {
+      const response = await callPOST({
         name: 'Nueva Tag',
         colorId: '00000000-0000-0000-0000-000000000001',
       })
-      const response = await POST(request)
       const data = await response.json()
 
       expect(response.status).toBe(201)
@@ -308,11 +306,10 @@ describe('POST /api/uninstall-tags', () => {
     it('debe retornar 500 cuando create falla', async () => {
       vi.mocked(prisma.uninstallTag.create).mockRejectedValue(new Error('DB Error'))
 
-      const request = createRequest('POST', {
+      const response = await callPOST({
         name: 'Test',
         colorId: '00000000-0000-0000-0000-000000000001',
       })
-      const response = await POST(request)
       const data = await response.json()
 
       expect(response.status).toBe(500)

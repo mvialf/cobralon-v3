@@ -1,35 +1,21 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
-import { generateAbbreviation } from '@/lib/validations/team-tag-validations'
-import { z } from 'zod'
-
-/**
- * Schema de validación para actualizar TeamTag (campos opcionales)
- */
-const updateTeamTagSchema = z.object({
-  name: z.string().min(1).max(50).optional(),
-  abbreviation: z
-    .string()
-    .length(2)
-    .toUpperCase()
-    .regex(/^[A-Z]{2}$/)
-    .optional(),
-  colorId: z.string().uuid().optional(),
-  order: z.number().int().min(0).optional(),
-  isActive: z.boolean().optional(),
-})
+import { withApiHandler, BusinessError } from '@/lib/api-handler'
+import {
+  updateTeamTagApiSchema,
+  type UpdateTeamTagApiBody,
+  generateAbbreviation,
+} from '@/lib/validations/team-tag-validations'
 
 /**
  * GET /api/team-tags/[id]
  *
  * Obtiene un team tag específico por ID
  */
-export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
-  try {
-    const { id } = await params
-
+export const GET = withApiHandler(
+  async (_request, _logger, { params }) => {
     const teamTag = await prisma.teamTag.findUnique({
-      where: { id },
+      where: { id: params.id },
       include: {
         color: {
           select: {
@@ -44,102 +30,78 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
     })
 
     if (!teamTag) {
-      return NextResponse.json({ error: 'Team tag no encontrado' }, { status: 404 })
+      throw new BusinessError('Team tag no encontrado', 404)
     }
 
     return NextResponse.json({ teamTag })
-  } catch (error) {
-    console.error('Error fetching team tag:', error)
-    return NextResponse.json({ error: 'Error al obtener el team tag' }, { status: 500 })
-  }
-}
+  },
+  { validateUuidParams: ['id'], fallbackError: 'Error al obtener el team tag' }
+)
 
 /**
  * PUT /api/team-tags/[id]
  *
  * Actualiza un team tag existente
  *
- * Body: Campos opcionales a actualizar
- * ```json
- * {
- *   "name": "Nuevo nombre",
- *   "abbreviation": "NN",
- *   "colorId": "uuid",
- *   "order": 5
- * }
- * ```
- *
  * Validaciones:
  * - El nombre debe ser único (si se cambia)
  * - La abreviatura debe tener 2 letras mayúsculas
  * - El colorId debe existir (si se cambia)
  */
-export async function PUT(request: Request, { params }: { params: Promise<{ id: string }> }) {
-  try {
-    const { id } = await params
-    const body = await request.json()
+export const PUT = withApiHandler<UpdateTeamTagApiBody>(
+  async (request, _logger, { params, body }) => {
+    const { id } = params
 
-    // Auto-generar abbreviation desde nombre si viene vacía
-    const dataToValidate = {
-      ...body,
-      abbreviation: body.abbreviation || (body.name ? generateAbbreviation(body.name) : undefined),
+    // Auto-generar abbreviation desde nombre si se cambia nombre sin abbreviation
+    const updateData = { ...body }
+    if (updateData.name && updateData.abbreviation === undefined) {
+      updateData.abbreviation = generateAbbreviation(updateData.name)
     }
 
-    const validatedData = updateTeamTagSchema.parse(dataToValidate)
-
-    // Verificar que el tag existe
     const existingTag = await prisma.teamTag.findUnique({
       where: { id },
     })
 
     if (!existingTag) {
-      return NextResponse.json({ error: 'Team tag no encontrado' }, { status: 404 })
+      throw new BusinessError('Team tag no encontrado', 404)
     }
 
-    // Validación: nombre único (si se está cambiando)
-    if (validatedData.name && validatedData.name !== existingTag.name) {
+    if (updateData.name && updateData.name !== existingTag.name) {
       const duplicateName = await prisma.teamTag.findUnique({
-        where: { name: validatedData.name },
+        where: { name: updateData.name },
       })
 
       if (duplicateName) {
-        return NextResponse.json(
-          { error: `Ya existe un integrante con el nombre "${validatedData.name}"` },
-          { status: 400 }
-        )
+        throw new BusinessError(`Ya existe un integrante con el nombre "${updateData.name}"`)
       }
     }
 
-    // Validación: colorId existe (si se está cambiando)
-    if (validatedData.colorId) {
+    if (updateData.colorId) {
       const colorExists = await prisma.badgeColor.findUnique({
-        where: { id: validatedData.colorId },
+        where: { id: updateData.colorId },
       })
 
       if (!colorExists) {
-        return NextResponse.json({ error: 'El color seleccionado no existe' }, { status: 400 })
+        throw new BusinessError('El color seleccionado no existe')
       }
     }
 
-    // Actualizar el tag
     const updatedTag = await prisma.teamTag.update({
       where: { id },
-      data: validatedData,
+      data: updateData,
       include: {
         color: true,
       },
     })
 
     return NextResponse.json({ teamTag: updatedTag })
-  } catch (error) {
-    if (error instanceof z.ZodError) {
-      return NextResponse.json({ error: 'Datos inválidos', details: error.errors }, { status: 400 })
-    }
-
-    console.error('Error updating team tag:', error)
-    return NextResponse.json({ error: 'Error al actualizar el team tag' }, { status: 500 })
+  },
+  {
+    bodySchema: updateTeamTagApiSchema,
+    validateUuidParams: ['id'],
+    fallbackError: 'Error al actualizar el team tag',
   }
-}
+)
 
 /**
  * DELETE /api/team-tags/[id]
@@ -147,32 +109,29 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
  * Elimina (soft delete) un team tag
  *
  * Query params:
- * - force: "true" para hacer hard delete (usar con precaución)
+ * - force: "true" para hacer hard delete
  */
-export async function DELETE(request: Request, { params }: { params: Promise<{ id: string }> }) {
-  try {
-    const { id } = await params
+export const DELETE = withApiHandler(
+  async (request, _logger, { params }) => {
+    const { id } = params
     const { searchParams } = new URL(request.url)
     const force = searchParams.get('force') === 'true'
 
-    // Verificar que el tag existe
     const existingTag = await prisma.teamTag.findUnique({
       where: { id },
     })
 
     if (!existingTag) {
-      return NextResponse.json({ error: 'Team tag no encontrado' }, { status: 404 })
+      throw new BusinessError('Team tag no encontrado', 404)
     }
 
     if (force) {
-      // Hard delete
       await prisma.teamTag.delete({
         where: { id },
       })
 
       return NextResponse.json({ message: 'Team tag eliminado permanentemente' })
     } else {
-      // Soft delete
       const deletedTag = await prisma.teamTag.update({
         where: { id },
         data: { isActive: false },
@@ -183,8 +142,9 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ i
         teamTag: deletedTag,
       })
     }
-  } catch (error) {
-    console.error('Error deleting team tag:', error)
-    return NextResponse.json({ error: 'Error al eliminar el team tag' }, { status: 500 })
+  },
+  {
+    validateUuidParams: ['id'],
+    fallbackError: 'Error al eliminar el team tag',
   }
-}
+)

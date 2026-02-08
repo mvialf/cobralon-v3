@@ -1,3 +1,4 @@
+import { z } from 'zod'
 import {
   type BadgeColor,
   baseTagSchema,
@@ -43,3 +44,21 @@ export function normalizeUninstallTagPayload(
 ): CreateUninstallTagPayload {
   return normalizeTagPayload(values)
 }
+
+/**
+ * Schema API para actualizar uninstall tags (PUT /api/uninstall-tags/[id])
+ * Todos los campos opcionales
+ */
+export const updateUninstallTagApiSchema = z.object({
+  name: z.string().min(1).max(50).optional(),
+  abbreviation: z
+    .string()
+    .length(2)
+    .toUpperCase()
+    .regex(/^[A-Z]{2}$/)
+    .optional(),
+  colorId: z.string().uuid().optional(),
+  order: z.number().int().min(0).optional(),
+  isActive: z.boolean().optional(),
+})
+export type UpdateUninstallTagApiBody = z.infer<typeof updateUninstallTagApiSchema>

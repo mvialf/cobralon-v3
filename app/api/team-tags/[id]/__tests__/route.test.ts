@@ -1,13 +1,9 @@
 /**
- * Tests para app/api/uninstall-tags/[id]/route.ts (GET/PUT/DELETE)
+ * Tests para app/api/team-tags/[id]/route.ts (GET/PUT/DELETE)
  *
  * Valida:
- * - GET: 404 si no existe
- * - PUT: 404 si no existe
- * - PUT: Nombre único
- * - PUT: colorId debe existir
- * - PUT: Auto-generación de abbreviation
- * - DELETE: 404 si no existe
+ * - GET: Retorna tag por ID, 404 si no existe
+ * - PUT: 404 si no existe, nombre único, colorId válido, auto-generación abbreviation
  * - DELETE: Soft delete por defecto, hard delete con force=true
  */
 
@@ -37,7 +33,7 @@ vi.mock('@/lib/logger-middleware', () => ({
 // Mock de Prisma
 vi.mock('@/lib/db', () => ({
   prisma: {
-    uninstallTag: {
+    teamTag: {
       findUnique: vi.fn(),
       update: vi.fn(),
       delete: vi.fn(),
@@ -55,13 +51,13 @@ const VALID_UUID = '00000000-0000-0000-0000-000000000001'
 
 // Helpers
 async function callGET(id: string = VALID_UUID) {
-  const request = new NextRequest('http://localhost:3000/api/uninstall-tags/' + id)
+  const request = new NextRequest('http://localhost:3000/api/team-tags/' + id)
   const context = { params: Promise.resolve({ id }) }
   return (GET as any)(request, context)
 }
 
 async function callPUT(body: Record<string, unknown>, id: string = VALID_UUID) {
-  const request = new NextRequest('http://localhost:3000/api/uninstall-tags/' + id, {
+  const request = new NextRequest('http://localhost:3000/api/team-tags/' + id, {
     method: 'PUT',
     body: JSON.stringify(body),
     headers: { 'Content-Type': 'application/json' },
@@ -71,7 +67,7 @@ async function callPUT(body: Record<string, unknown>, id: string = VALID_UUID) {
 }
 
 async function callDELETE(id: string = VALID_UUID, searchParams?: Record<string, string>) {
-  const url = new URL('http://localhost:3000/api/uninstall-tags/' + id)
+  const url = new URL('http://localhost:3000/api/team-tags/' + id)
   if (searchParams) {
     Object.entries(searchParams).forEach(([k, v]) => url.searchParams.set(k, v))
   }
@@ -80,16 +76,16 @@ async function callDELETE(id: string = VALID_UUID, searchParams?: Record<string,
   return (DELETE as any)(request, context)
 }
 
-describe('GET /api/uninstall-tags/[id]', () => {
+describe('GET /api/team-tags/[id]', () => {
   beforeEach(() => {
     vi.clearAllMocks()
   })
 
   it('debe retornar tag por ID', async () => {
-    vi.mocked(prisma.uninstallTag.findUnique).mockResolvedValue({
+    vi.mocked(prisma.teamTag.findUnique).mockResolvedValue({
       id: VALID_UUID,
-      name: 'Aluminio',
-      abbreviation: 'AL',
+      name: 'Carlos',
+      abbreviation: 'CA',
       color: { id: 'c1', name: 'Azul' },
     } as never)
 
@@ -97,41 +93,41 @@ describe('GET /api/uninstall-tags/[id]', () => {
     const data = await response.json()
 
     expect(response.status).toBe(200)
-    expect(data.uninstallTag.name).toBe('Aluminio')
+    expect(data.teamTag.name).toBe('Carlos')
   })
 
   it('debe retornar 404 si no existe', async () => {
-    vi.mocked(prisma.uninstallTag.findUnique).mockResolvedValue(null)
+    vi.mocked(prisma.teamTag.findUnique).mockResolvedValue(null)
 
     const response = await callGET()
     const data = await response.json()
 
     expect(response.status).toBe(404)
-    expect(data.error).toBe('Uninstall tag no encontrada')
+    expect(data.error).toBe('Team tag no encontrado')
   })
 
   it('debe manejar errores de base de datos', async () => {
-    vi.mocked(prisma.uninstallTag.findUnique).mockRejectedValue(new Error('DB Error'))
+    vi.mocked(prisma.teamTag.findUnique).mockRejectedValue(new Error('DB Error'))
 
     const response = await callGET()
     const data = await response.json()
 
     expect(response.status).toBe(500)
-    expect(data.error).toBe('Error al obtener la uninstall tag')
+    expect(data.error).toBe('Error al obtener el team tag')
   })
 })
 
-describe('PUT /api/uninstall-tags/[id]', () => {
+describe('PUT /api/team-tags/[id]', () => {
   beforeEach(() => {
     vi.clearAllMocks()
 
-    vi.mocked(prisma.uninstallTag.findUnique).mockResolvedValue({
+    vi.mocked(prisma.teamTag.findUnique).mockResolvedValue({
       id: VALID_UUID,
-      name: 'Aluminio',
-      abbreviation: 'AL',
+      name: 'Carlos',
+      abbreviation: 'CA',
     } as never)
 
-    vi.mocked(prisma.uninstallTag.update).mockResolvedValue({
+    vi.mocked(prisma.teamTag.update).mockResolvedValue({
       id: VALID_UUID,
       name: 'Actualizado',
       abbreviation: 'AC',
@@ -141,31 +137,31 @@ describe('PUT /api/uninstall-tags/[id]', () => {
 
   describe('validación de existencia', () => {
     it('debe retornar 404 si tag no existe', async () => {
-      vi.mocked(prisma.uninstallTag.findUnique).mockResolvedValue(null)
+      vi.mocked(prisma.teamTag.findUnique).mockResolvedValue(null)
 
       const response = await callPUT({ name: 'Test' })
       const data = await response.json()
 
       expect(response.status).toBe(404)
-      expect(data.error).toBe('Uninstall tag no encontrada')
+      expect(data.error).toBe('Team tag no encontrado')
     })
   })
 
   describe('nombre único', () => {
-    it('debe rechazar si otra tag tiene el mismo nombre', async () => {
-      vi.mocked(prisma.uninstallTag.findUnique)
-        .mockResolvedValueOnce({ id: VALID_UUID, name: 'Aluminio' } as never)
-        .mockResolvedValueOnce({ id: 'other-id', name: 'PVC' } as never)
+    it('debe rechazar si otro integrante tiene el mismo nombre', async () => {
+      vi.mocked(prisma.teamTag.findUnique)
+        .mockResolvedValueOnce({ id: VALID_UUID, name: 'Carlos' } as never)
+        .mockResolvedValueOnce({ id: 'other-id', name: 'María' } as never)
 
-      const response = await callPUT({ name: 'PVC' })
+      const response = await callPUT({ name: 'María' })
       const data = await response.json()
 
       expect(response.status).toBe(400)
-      expect(data.error).toContain('Ya existe una tag')
+      expect(data.error).toContain('Ya existe un integrante')
     })
 
     it('debe permitir mantener el mismo nombre', async () => {
-      const response = await callPUT({ name: 'Aluminio' })
+      const response = await callPUT({ name: 'Carlos' })
 
       expect(response.status).toBe(200)
     })
@@ -187,16 +183,32 @@ describe('PUT /api/uninstall-tags/[id]', () => {
 
   describe('auto-generación de abbreviation', () => {
     it('debe auto-generar abbreviation si se cambia nombre sin abbreviation', async () => {
-      vi.mocked(prisma.uninstallTag.findUnique)
-        .mockResolvedValueOnce({ id: VALID_UUID, name: 'Aluminio', abbreviation: 'AL' } as never)
+      vi.mocked(prisma.teamTag.findUnique)
+        .mockResolvedValueOnce({ id: VALID_UUID, name: 'Carlos', abbreviation: 'CA' } as never)
         .mockResolvedValueOnce(null) // No hay duplicado
 
       await callPUT({ name: 'Nuevo Nombre' })
 
-      expect(prisma.uninstallTag.update).toHaveBeenCalledWith(
+      expect(prisma.teamTag.update).toHaveBeenCalledWith(
         expect.objectContaining({
           data: expect.objectContaining({
             abbreviation: 'NU', // Primeras 2 letras de "Nuevo"
+          }),
+        })
+      )
+    })
+
+    it('debe usar abbreviation explícita si se provee', async () => {
+      vi.mocked(prisma.teamTag.findUnique)
+        .mockResolvedValueOnce({ id: VALID_UUID, name: 'Carlos', abbreviation: 'CA' } as never)
+        .mockResolvedValueOnce(null) // No hay duplicado
+
+      await callPUT({ name: 'Nuevo Nombre', abbreviation: 'XX' })
+
+      expect(prisma.teamTag.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            abbreviation: 'XX',
           }),
         })
       )
@@ -205,21 +217,21 @@ describe('PUT /api/uninstall-tags/[id]', () => {
 
   describe('actualización exitosa', () => {
     it('debe actualizar tag y retornar datos', async () => {
-      vi.mocked(prisma.uninstallTag.findUnique)
-        .mockResolvedValueOnce({ id: VALID_UUID, name: 'Aluminio', abbreviation: 'AL' } as never)
+      vi.mocked(prisma.teamTag.findUnique)
+        .mockResolvedValueOnce({ id: VALID_UUID, name: 'Carlos', abbreviation: 'CA' } as never)
         .mockResolvedValueOnce(null) // No hay duplicado
 
       const response = await callPUT({ name: 'Actualizado' })
       const data = await response.json()
 
       expect(response.status).toBe(200)
-      expect(data.uninstallTag).toBeDefined()
+      expect(data.teamTag).toBeDefined()
     })
 
     it('debe actualizar order si se provee', async () => {
       await callPUT({ order: 5 })
 
-      expect(prisma.uninstallTag.update).toHaveBeenCalledWith(
+      expect(prisma.teamTag.update).toHaveBeenCalledWith(
         expect.objectContaining({
           data: expect.objectContaining({
             order: 5,
@@ -231,7 +243,7 @@ describe('PUT /api/uninstall-tags/[id]', () => {
     it('debe actualizar isActive', async () => {
       await callPUT({ isActive: false })
 
-      expect(prisma.uninstallTag.update).toHaveBeenCalledWith(
+      expect(prisma.teamTag.update).toHaveBeenCalledWith(
         expect.objectContaining({
           data: expect.objectContaining({
             isActive: false,
@@ -243,50 +255,50 @@ describe('PUT /api/uninstall-tags/[id]', () => {
 
   describe('manejo de errores', () => {
     it('debe retornar 500 cuando update falla', async () => {
-      vi.mocked(prisma.uninstallTag.findUnique)
-        .mockResolvedValueOnce({ id: VALID_UUID, name: 'Aluminio', abbreviation: 'AL' } as never)
+      vi.mocked(prisma.teamTag.findUnique)
+        .mockResolvedValueOnce({ id: VALID_UUID, name: 'Carlos', abbreviation: 'CA' } as never)
         .mockResolvedValueOnce(null) // No hay duplicado
 
-      vi.mocked(prisma.uninstallTag.update).mockRejectedValue(new Error('DB Error'))
+      vi.mocked(prisma.teamTag.update).mockRejectedValue(new Error('DB Error'))
 
       const response = await callPUT({ name: 'Test' })
       const data = await response.json()
 
       expect(response.status).toBe(500)
-      expect(data.error).toBe('Error al actualizar la uninstall tag')
+      expect(data.error).toBe('Error al actualizar el team tag')
     })
   })
 })
 
-describe('DELETE /api/uninstall-tags/[id]', () => {
+describe('DELETE /api/team-tags/[id]', () => {
   beforeEach(() => {
     vi.clearAllMocks()
 
-    vi.mocked(prisma.uninstallTag.findUnique).mockResolvedValue({
+    vi.mocked(prisma.teamTag.findUnique).mockResolvedValue({
       id: VALID_UUID,
       name: 'Test',
       isActive: true,
     } as never)
 
-    vi.mocked(prisma.uninstallTag.update).mockResolvedValue({
+    vi.mocked(prisma.teamTag.update).mockResolvedValue({
       id: VALID_UUID,
       isActive: false,
     } as never)
 
-    vi.mocked(prisma.uninstallTag.delete).mockResolvedValue({
+    vi.mocked(prisma.teamTag.delete).mockResolvedValue({
       id: VALID_UUID,
     } as never)
   })
 
   describe('validación de existencia', () => {
     it('debe retornar 404 si tag no existe', async () => {
-      vi.mocked(prisma.uninstallTag.findUnique).mockResolvedValue(null)
+      vi.mocked(prisma.teamTag.findUnique).mockResolvedValue(null)
 
       const response = await callDELETE()
       const data = await response.json()
 
       expect(response.status).toBe(404)
-      expect(data.error).toBe('Uninstall tag no encontrada')
+      expect(data.error).toBe('Team tag no encontrado')
     })
   })
 
@@ -296,8 +308,8 @@ describe('DELETE /api/uninstall-tags/[id]', () => {
       const data = await response.json()
 
       expect(response.status).toBe(200)
-      expect(data.message).toContain('desactivada')
-      expect(prisma.uninstallTag.update).toHaveBeenCalledWith({
+      expect(data.message).toContain('desactivado')
+      expect(prisma.teamTag.update).toHaveBeenCalledWith({
         where: { id: VALID_UUID },
         data: { isActive: false },
       })
@@ -311,7 +323,7 @@ describe('DELETE /api/uninstall-tags/[id]', () => {
 
       expect(response.status).toBe(200)
       expect(data.message).toContain('permanentemente')
-      expect(prisma.uninstallTag.delete).toHaveBeenCalledWith({
+      expect(prisma.teamTag.delete).toHaveBeenCalledWith({
         where: { id: VALID_UUID },
       })
     })
@@ -319,13 +331,13 @@ describe('DELETE /api/uninstall-tags/[id]', () => {
 
   describe('manejo de errores', () => {
     it('debe retornar 500 cuando delete falla', async () => {
-      vi.mocked(prisma.uninstallTag.update).mockRejectedValue(new Error('DB Error'))
+      vi.mocked(prisma.teamTag.update).mockRejectedValue(new Error('DB Error'))
 
       const response = await callDELETE()
       const data = await response.json()
 
       expect(response.status).toBe(500)
-      expect(data.error).toBe('Error al eliminar la uninstall tag')
+      expect(data.error).toBe('Error al eliminar el team tag')
     })
   })
 })
