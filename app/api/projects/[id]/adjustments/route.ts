@@ -1,7 +1,11 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { Decimal } from '@prisma/client/runtime/library'
-import { createProjectAdjustmentSchema } from '@/lib/validations/project-adjustment-validations'
+import { withApiHandler, BusinessError } from '@/lib/api-handler'
+import {
+  createProjectAdjustmentSchema,
+  type CreateProjectAdjustmentInput,
+} from '@/lib/validations/project-adjustment-validations'
 import { updateProjectBalanceWithAdjustments } from '@/lib/business-logic/update-project-balance'
 
 /**
@@ -9,23 +13,21 @@ import { updateProjectBalanceWithAdjustments } from '@/lib/business-logic/update
  *
  * Obtiene todos los ajustes de un proyecto
  */
-export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
-  try {
-    const { id } = await params
-
+export const GET = withApiHandler(
+  async (_request, _logger, { params }) => {
     // Verificar que el proyecto existe
     const project = await prisma.project.findUnique({
-      where: { id },
+      where: { id: params.id },
       select: { id: true },
     })
 
     if (!project) {
-      return NextResponse.json({ error: 'Proyecto no encontrado' }, { status: 404 })
+      throw new BusinessError('Proyecto no encontrado', 404)
     }
 
     // Obtener ajustes ordenados por fecha de aplicación
     const adjustments = await prisma.projectAdjustment.findMany({
-      where: { projectId: id },
+      where: { projectId: params.id },
       orderBy: { appliedAt: 'desc' },
     })
 
@@ -36,11 +38,12 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
     }))
 
     return NextResponse.json(formattedAdjustments)
-  } catch (error) {
-    console.error('Error fetching project adjustments:', error)
-    return NextResponse.json({ error: 'Error al obtener los ajustes' }, { status: 500 })
+  },
+  {
+    validateUuidParams: ['id'],
+    fallbackError: 'Error al obtener los ajustes',
   }
-}
+)
 
 /**
  * POST /api/projects/[id]/adjustments
@@ -48,25 +51,13 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
  * Crea un nuevo ajuste para el proyecto
  * Recalcula automáticamente el balance del proyecto
  */
-export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
-  try {
-    const { id } = await params
-    const body = await request.json()
-
-    // Validar datos de entrada
-    const validationResult = createProjectAdjustmentSchema.safeParse(body)
-    if (!validationResult.success) {
-      return NextResponse.json(
-        { error: 'Datos inválidos', details: validationResult.error.flatten() },
-        { status: 400 }
-      )
-    }
-
-    const { amount, reason, description, appliedAt } = validationResult.data
+export const POST = withApiHandler<CreateProjectAdjustmentInput>(
+  async (_request, _logger, { params, body }) => {
+    const { amount, reason, description, appliedAt } = body
 
     // Verificar que el proyecto existe
     const project = await prisma.project.findUnique({
-      where: { id },
+      where: { id: params.id },
       select: {
         id: true,
         balance: true,
@@ -75,7 +66,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     })
 
     if (!project) {
-      return NextResponse.json({ error: 'Proyecto no encontrado' }, { status: 404 })
+      throw new BusinessError('Proyecto no encontrado', 404)
     }
 
     // Validar que el ajuste no haga el balance negativo
@@ -84,12 +75,9 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     const newBalance = currentBalance - amount
 
     if (newBalance < -0.01 && currentBalance > 0) {
-      // Permitir ajuste máximo hasta dejar balance en 0
-      return NextResponse.json(
-        {
-          error: `El ajuste excede el balance. Máximo ajuste permitido: ${currentBalance.toFixed(2)}`,
-        },
-        { status: 400 }
+      throw new BusinessError(
+        `El ajuste excede el balance. Máximo ajuste permitido: ${currentBalance.toFixed(2)}`,
+        400
       )
     }
 
@@ -98,7 +86,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       // 1. Crear el ajuste
       const newAdjustment = await tx.projectAdjustment.create({
         data: {
-          projectId: id,
+          projectId: params.id,
           amount: new Decimal(amount),
           reason,
           description: description || null,
@@ -107,7 +95,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       })
 
       // 2. Actualizar el balance del proyecto
-      await updateProjectBalanceWithAdjustments(id, tx)
+      await updateProjectBalanceWithAdjustments(params.id, tx)
 
       return newAdjustment
     })
@@ -119,8 +107,10 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       },
       { status: 201 }
     )
-  } catch (error) {
-    console.error('Error creating project adjustment:', error)
-    return NextResponse.json({ error: 'Error al crear el ajuste' }, { status: 500 })
+  },
+  {
+    bodySchema: createProjectAdjustmentSchema,
+    validateUuidParams: ['id'],
+    fallbackError: 'Error al crear el ajuste',
   }
-}
+)
