@@ -334,22 +334,11 @@ export function useUpdateCustomer() {
 
       return response.json()
     },
-    onSuccess: (updatedCustomer) => {
-      // Invalidar queries con predicate (batch invalidation eficiente)
+    onSuccess: () => {
       queryClient.invalidateQueries({
         predicate: (query) => {
           const key = query.queryKey[0]
-
-          // Invalidar todas las queries de customers
-          if (key === 'customers') return true
-
-          // Invalidar el customer específico
-          if (key === 'customers' && query.queryKey[1] === updatedCustomer.id) return true
-
-          // Invalidar lista simple para combobox
-          if (key === 'customers-list') return true
-
-          return false
+          return key === 'customers' || key === 'customers-list'
         },
       })
 

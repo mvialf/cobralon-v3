@@ -10,7 +10,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
-import { useToast } from '@/hooks/use-toast'
+import { toast } from 'sonner'
 
 import {
   AftersaleForm,
@@ -38,7 +38,6 @@ export function AftersaleDialog({
   open,
   onOpenChange,
 }: AftersaleDialogProps) {
-  const { toast } = useToast()
   const formRef = React.useRef<AftersaleFormHandle>(null)
   const [isSubmitting, setIsSubmitting] = React.useState(false)
 
@@ -68,22 +67,16 @@ export function AftersaleDialog({
         throw new Error(responseData.error || 'Error al procesar la solicitud')
       }
 
-      toast({
-        title: mode === 'create' ? 'Caso creado' : 'Caso actualizado',
-        description:
-          mode === 'create'
-            ? 'El caso de postventa se creó correctamente'
-            : 'El caso de postventa se actualizó correctamente',
-      })
+      toast.success(
+        mode === 'create'
+          ? 'El caso de postventa se creó correctamente'
+          : 'El caso de postventa se actualizó correctamente'
+      )
 
       onSuccess()
       onOpenChange?.(false)
     } catch (error) {
-      toast({
-        title: 'Error',
-        description: error instanceof Error ? error.message : 'Error al procesar la solicitud',
-        variant: 'destructive',
-      })
+      toast.error(error instanceof Error ? error.message : 'Error al procesar la solicitud')
     } finally {
       setIsSubmitting(false)
     }

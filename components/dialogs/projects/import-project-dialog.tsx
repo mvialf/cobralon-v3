@@ -22,7 +22,7 @@ import {
   type ProjectParseResult,
 } from '@/lib/excel/project-parser'
 import { downloadProjectTemplate } from '@/lib/excel/project-template'
-import { useToast } from '@/hooks/use-toast'
+import { toast } from 'sonner'
 
 interface ImportProjectDialogProps {
   onImportComplete?: () => void
@@ -39,8 +39,6 @@ export function ImportProjectDialog({ onImportComplete }: ImportProjectDialogPro
   const [isProcessing, setIsProcessing] = useState(false)
   const [importProgress, setImportProgress] = useState(0)
   const [importedCount, setImportedCount] = useState(0)
-
-  const { toast } = useToast()
 
   // Configurar dropzone
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
@@ -107,19 +105,14 @@ export function ImportProjectDialog({ onImportComplete }: ImportProjectDialogPro
       setImportProgress(100)
       setStep('complete')
 
-      toast({
-        title: '¡Importación exitosa!',
-        description: `Se importaron ${result.imported} proyecto${result.imported === 1 ? '' : 's'} correctamente.`,
-      })
+      toast.success(
+        `Se importaron ${result.imported} proyecto${result.imported === 1 ? '' : 's'} correctamente.`
+      )
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error al importar')
       setStep('preview')
 
-      toast({
-        title: 'Error al importar',
-        description: err instanceof Error ? err.message : 'Error desconocido',
-        variant: 'destructive',
-      })
+      toast.error(err instanceof Error ? err.message : 'Error desconocido')
     }
   }
 

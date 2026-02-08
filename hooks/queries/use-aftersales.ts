@@ -241,20 +241,9 @@ export function useUpdateAftersale() {
       const result = await response.json()
       return result.aftersale
     },
-    onSuccess: (updatedAftersale) => {
-      // Invalidar queries con predicate (batch invalidation eficiente)
+    onSuccess: () => {
       queryClient.invalidateQueries({
-        predicate: (query) => {
-          const key = query.queryKey[0]
-
-          // Invalidar todas las queries de aftersales
-          if (key === 'aftersales') return true
-
-          // Invalidar el aftersale específico
-          if (key === 'aftersales' && query.queryKey[1] === updatedAftersale.id) return true
-
-          return false
-        },
+        predicate: (query) => query.queryKey[0] === 'aftersales',
       })
 
       toast.success('Caso de postventa actualizado exitosamente')

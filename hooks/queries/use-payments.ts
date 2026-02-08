@@ -444,9 +444,6 @@ export function useUpdatePayment() {
           // Invalidar todas las queries de payments
           if (key === 'payments') return true
 
-          // Invalidar el payment específico
-          if (key === 'payments' && query.queryKey[1] === updatedPayment.id) return true
-
           // Invalidar projects (balance puede haber cambiado si se editó amount)
           if (key === 'projects') return true
 

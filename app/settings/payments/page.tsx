@@ -40,7 +40,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import { useToast } from '@/hooks/use-toast'
+import { toast } from 'sonner'
 import { PaymentMethodDialog } from '@/components/dialogs/settings/payment-method-dialog'
 import type { PaymentMethod } from '@/lib/validations/payment-method-validations'
 
@@ -117,8 +117,6 @@ function SortablePaymentMethodRow({ method, onToggle, onEdit, onDelete }: Sortab
 }
 
 export default function PaymentMethodsSettingsPage() {
-  const { toast } = useToast()
-
   // Estado
   const [methods, setMethods] = useState<PaymentMethod[]>([])
   const [loading, setLoading] = useState(true)
@@ -150,14 +148,9 @@ export default function PaymentMethodsSettingsPage() {
       .then(() => setLoading(false))
       .catch((error) => {
         console.error('Error loading data:', error)
-        toast({
-          title: 'Error',
-          description: 'No se pudieron cargar los métodos de pago',
-          variant: 'destructive',
-        })
+        toast.error('No se pudieron cargar los métodos de pago')
         setLoading(false)
       })
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   const fetchMethods = async () => {
@@ -197,17 +190,10 @@ export default function PaymentMethodsSettingsPage() {
         throw new Error(data.error || 'Error al reordenar')
       }
 
-      toast({
-        title: 'Orden actualizado',
-        description: data.message || 'El orden se actualizó correctamente',
-      })
+      toast.success(data.message || 'El orden se actualizó correctamente')
     } catch (error) {
       // Revertir en caso de error
-      toast({
-        title: 'Error',
-        description: error instanceof Error ? error.message : 'Error al actualizar el orden',
-        variant: 'destructive',
-      })
+      toast.error(error instanceof Error ? error.message : 'Error al actualizar el orden')
       // Refetch para restaurar orden correcto
       fetchMethods()
     }
@@ -228,20 +214,13 @@ export default function PaymentMethodsSettingsPage() {
         throw new Error(data.error || 'Error al eliminar el método de pago')
       }
 
-      toast({
-        title: 'Método eliminado',
-        description: data.message || 'El método de pago se eliminó correctamente',
-      })
+      toast.success(data.message || 'El método de pago se eliminó correctamente')
 
       setIsDeleteDialogOpen(false)
       setSelectedMethod(null)
       fetchMethods()
     } catch (error) {
-      toast({
-        title: 'Error',
-        description: error instanceof Error ? error.message : 'Error al eliminar el método de pago',
-        variant: 'destructive',
-      })
+      toast.error(error instanceof Error ? error.message : 'Error al eliminar el método de pago')
     }
   }
 
@@ -257,18 +236,13 @@ export default function PaymentMethodsSettingsPage() {
         throw new Error(data.error || 'Error al cambiar el estado')
       }
 
-      toast({
-        title: method.active ? 'Método desactivado' : 'Método activado',
-        description: `El método "${method.name}" ahora está ${method.active ? 'desactivado' : 'activado'}`,
-      })
+      toast.success(
+        `El método "${method.name}" ahora está ${method.active ? 'desactivado' : 'activado'}`
+      )
 
       fetchMethods()
     } catch (error) {
-      toast({
-        title: 'Error',
-        description: error instanceof Error ? error.message : 'Error al cambiar el estado',
-        variant: 'destructive',
-      })
+      toast.error(error instanceof Error ? error.message : 'Error al cambiar el estado')
     }
   }
 

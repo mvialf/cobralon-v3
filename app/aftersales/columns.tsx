@@ -20,7 +20,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
-import { useToast } from '@/hooks/use-toast'
+import { toast } from 'sonner'
 import { ProjectNameSummary } from '@/components/summarys/project-name-summary'
 import { AftersaleDialog } from '@/components/dialogs/aftersales/aftersale-dialog'
 import { formatDate } from '@/lib/format'
@@ -169,9 +169,6 @@ export const createColumns = ({
       const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
       // eslint-disable-next-line react-hooks/rules-of-hooks
       const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
-      // eslint-disable-next-line react-hooks/rules-of-hooks
-      const { toast } = useToast()
-
       const handleDelete = async () => {
         try {
           const response = await fetch(`/api/aftersales/${aftersale.id}`, {
@@ -184,20 +181,14 @@ export const createColumns = ({
             throw new Error(data.error || 'Error al eliminar el caso de postventa')
           }
 
-          toast({
-            title: 'Caso eliminado',
-            description: data.message || 'El caso de postventa se eliminó correctamente',
-          })
+          toast.success(data.message || 'El caso de postventa se eliminó correctamente')
 
           setIsDeleteDialogOpen(false)
           onAftersaleUpdated?.()
         } catch (error) {
-          toast({
-            title: 'Error',
-            description:
-              error instanceof Error ? error.message : 'Error al eliminar el caso de postventa',
-            variant: 'destructive',
-          })
+          toast.error(
+            error instanceof Error ? error.message : 'Error al eliminar el caso de postventa'
+          )
         }
       }
 

@@ -16,7 +16,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
-import { useToast } from '@/hooks/use-toast'
+import { toast } from 'sonner'
 import { GenericSortableStatusItem } from '@/components/settings/generic-sortable-status-item'
 import {
   type BaseStatus,
@@ -49,8 +49,6 @@ export function StatusConfigurationPage<T extends BaseStatus>({
   entityConfig,
   DialogComponent,
 }: StatusConfigurationPageProps<T>) {
-  const { toast } = useToast()
-
   // Estado
   const [statuses, setStatuses] = useState<T[]>([])
   const [badgeColors, setBadgeColors] = useState<BadgeColor[]>([])
@@ -68,11 +66,7 @@ export function StatusConfigurationPage<T extends BaseStatus>({
       .then(() => setLoading(false))
       .catch((error) => {
         console.error('Error loading data:', error)
-        toast({
-          title: 'Error',
-          description: 'No se pudieron cargar los datos',
-          variant: 'destructive',
-        })
+        toast.error('No se pudieron cargar los datos')
         setLoading(false)
       })
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -105,20 +99,13 @@ export function StatusConfigurationPage<T extends BaseStatus>({
         throw new Error(data.error || 'Error al eliminar el estado')
       }
 
-      toast({
-        title: 'Estado eliminado',
-        description: data.message || 'El estado se eliminó correctamente',
-      })
+      toast.success(data.message || 'El estado se eliminó correctamente')
 
       setIsDeleteDialogOpen(false)
       setSelectedStatus(null)
       fetchStatuses()
     } catch (error) {
-      toast({
-        title: 'Error',
-        description: error instanceof Error ? error.message : 'Error al eliminar el estado',
-        variant: 'destructive',
-      })
+      toast.error(error instanceof Error ? error.message : 'Error al eliminar el estado')
     }
   }
 
@@ -184,21 +171,14 @@ export function StatusConfigurationPage<T extends BaseStatus>({
         throw new Error(data.error || 'Error al reordenar los estados')
       }
 
-      toast({
-        title: 'Orden actualizado',
-        description: 'Los estados se reordenaron correctamente',
-      })
+      toast.success('Los estados se reordenaron correctamente')
 
       // Refetch para obtener el order actualizado
       fetchStatuses()
     } catch (error) {
       // Revertir cambios en caso de error
       fetchStatuses()
-      toast({
-        title: 'Error',
-        description: error instanceof Error ? error.message : 'Error al reordenar los estados',
-        variant: 'destructive',
-      })
+      toast.error(error instanceof Error ? error.message : 'Error al reordenar los estados')
     }
   }
 

@@ -22,7 +22,7 @@ import {
   type ParseResult,
 } from '@/lib/excel/customer-parser'
 import { downloadCustomerTemplate } from '@/lib/excel/customer-template'
-import { useToast } from '@/hooks/use-toast'
+import { toast } from 'sonner'
 
 interface ImportCustomerDialogProps {
   onImportComplete?: () => void
@@ -39,8 +39,6 @@ export function ImportCustomerDialog({ onImportComplete }: ImportCustomerDialogP
   const [isProcessing, setIsProcessing] = useState(false)
   const [importProgress, setImportProgress] = useState(0)
   const [importedCount, setImportedCount] = useState(0)
-
-  const { toast } = useToast()
 
   // Configurar dropzone
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
@@ -107,10 +105,9 @@ export function ImportCustomerDialog({ onImportComplete }: ImportCustomerDialogP
       setImportProgress(100)
       setStep('complete')
 
-      toast({
-        title: '¡Importación exitosa!',
-        description: `Se importaron ${result.imported} cliente${result.imported === 1 ? '' : 's'} correctamente.`,
-      })
+      toast.success(
+        `Se importaron ${result.imported} cliente${result.imported === 1 ? '' : 's'} correctamente.`
+      )
 
       // Notificar al padre para recargar datos
       onImportComplete?.()
@@ -118,11 +115,7 @@ export function ImportCustomerDialog({ onImportComplete }: ImportCustomerDialogP
       setError(err instanceof Error ? err.message : 'Error al importar')
       setStep('preview')
 
-      toast({
-        title: 'Error al importar',
-        description: err instanceof Error ? err.message : 'Error desconocido',
-        variant: 'destructive',
-      })
+      toast.error(err instanceof Error ? err.message : 'Error desconocido')
     }
   }
 

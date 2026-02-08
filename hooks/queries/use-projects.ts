@@ -338,22 +338,11 @@ export function useUpdateProject() {
 
       return response.json()
     },
-    onSuccess: (updatedProject) => {
-      // Invalidar queries con predicate (batch invalidation eficiente)
+    onSuccess: () => {
       queryClient.invalidateQueries({
         predicate: (query) => {
           const key = query.queryKey[0]
-
-          // Invalidar todas las queries de projects
-          if (key === 'projects') return true
-
-          // Invalidar projects-with-metadata
-          if (key === 'projects-with-metadata') return true
-
-          // Invalidar el proyecto específico
-          if (key === 'projects' && query.queryKey[1] === updatedProject.id) return true
-
-          return false
+          return key === 'projects' || key === 'projects-with-metadata'
         },
       })
 
@@ -543,22 +532,11 @@ export function useUpdateProjectStatus() {
 
       return response.json()
     },
-    onSuccess: (updatedProject) => {
-      // Invalidar queries con predicate (batch invalidation eficiente)
+    onSuccess: () => {
       queryClient.invalidateQueries({
         predicate: (query) => {
           const key = query.queryKey[0]
-
-          // Invalidar todas las queries de projects
-          if (key === 'projects') return true
-
-          // Invalidar projects-with-metadata (incluye metadata de statuses)
-          if (key === 'projects-with-metadata') return true
-
-          // Invalidar el proyecto específico
-          if (key === 'projects' && query.queryKey[1] === updatedProject.id) return true
-
-          return false
+          return key === 'projects' || key === 'projects-with-metadata'
         },
       })
 
@@ -598,22 +576,11 @@ export function useUpdateProjectDate() {
 
       return response.json()
     },
-    onSuccess: (updatedProject) => {
-      // Invalidar queries con predicate (batch invalidation eficiente)
+    onSuccess: () => {
       queryClient.invalidateQueries({
         predicate: (query) => {
           const key = query.queryKey[0]
-
-          // Invalidar todas las queries de projects
-          if (key === 'projects') return true
-
-          // Invalidar projects-with-metadata
-          if (key === 'projects-with-metadata') return true
-
-          // Invalidar el proyecto específico
-          if (key === 'projects' && query.queryKey[1] === updatedProject.id) return true
-
-          return false
+          return key === 'projects' || key === 'projects-with-metadata'
         },
       })
 
