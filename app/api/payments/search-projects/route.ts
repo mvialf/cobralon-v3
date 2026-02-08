@@ -1,5 +1,6 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
+import { withLogging } from '@/lib/logger-middleware'
 
 /**
  * GET /api/payments/search-projects
@@ -16,9 +17,9 @@ import { prisma } from '@/lib/db'
  * - projectName (ej: "Ampliación bodega")
  * - customer.name (ej: "Juan Pérez")
  */
-export async function GET(req: NextRequest) {
+export const GET = withLogging(async (request, logger) => {
   try {
-    const { searchParams } = new URL(req.url)
+    const { searchParams } = new URL(request.url)
     const q = searchParams.get('q') || ''
     const limit = Math.min(Number(searchParams.get('limit')) || 20, 50)
 
@@ -89,7 +90,7 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json(projectsWithBalance)
   } catch (error) {
-    console.error('Error searching projects:', error)
+    logger.error({ err: error }, 'Error searching projects')
     return NextResponse.json({ error: 'Error al buscar proyectos' }, { status: 500 })
   }
-}
+})

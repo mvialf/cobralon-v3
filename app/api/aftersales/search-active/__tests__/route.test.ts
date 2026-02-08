@@ -5,6 +5,27 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { NextRequest } from 'next/server'
+
+// Mock del logger middleware
+vi.mock('@/lib/logger-middleware', () => ({
+  withLogging: (handler: Function) => {
+    return async (
+      request: NextRequest,
+      context?: { params: Promise<Record<string, string>> }
+    ) => {
+      const mockLogger = {
+        debug: vi.fn(),
+        info: vi.fn(),
+        warn: vi.fn(),
+        error: vi.fn(),
+        child: vi.fn().mockReturnThis(),
+      }
+      const mockContext = context || { params: Promise.resolve({}) }
+      return handler(request, mockLogger, mockContext)
+    }
+  },
+}))
 
 vi.mock('@/lib/db', () => ({
   prisma: {
@@ -15,16 +36,19 @@ vi.mock('@/lib/db', () => ({
 }))
 
 import { prisma } from '@/lib/db'
-import { GET } from '../route'
+import { GET as _GET } from '../route'
 
-function createRequest(searchParams?: Record<string, string>): Request {
+// Wrapper para pasar context vacío requerido por withLogging
+const GET = (request: NextRequest) => _GET(request, { params: Promise.resolve({}) })
+
+function createRequest(searchParams?: Record<string, string>): NextRequest {
   const url = new URL('http://localhost:3000/api/aftersales/search-active')
   if (searchParams) {
     Object.entries(searchParams).forEach(([key, value]) => {
       url.searchParams.set(key, value)
     })
   }
-  return new Request(url, { method: 'GET' })
+  return new NextRequest(url, { method: 'GET' })
 }
 
 describe('GET /api/aftersales/search-active', () => {

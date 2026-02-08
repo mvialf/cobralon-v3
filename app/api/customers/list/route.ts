@@ -1,5 +1,6 @@
 import { prisma } from '@/lib/db'
 import { NextResponse } from 'next/server'
+import { withLogging } from '@/lib/logger-middleware'
 
 /**
  * GET /api/customers/list
@@ -7,7 +8,7 @@ import { NextResponse } from 'next/server'
  *
  * @returns Array de customers con { id, name, phone }
  */
-export async function GET() {
+export const GET = withLogging(async (_request, logger) => {
   try {
     const customers = await prisma.customer.findMany({
       select: {
@@ -22,7 +23,7 @@ export async function GET() {
 
     return NextResponse.json({ customers })
   } catch (error) {
-    console.error('Error al obtener lista de clientes:', error)
+    logger.error({ err: error }, 'Error al obtener lista de clientes')
     return NextResponse.json({ error: 'Error al obtener lista de clientes' }, { status: 500 })
   }
-}
+})

@@ -1,5 +1,6 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
+import { withLogging } from '@/lib/logger-middleware'
 
 /**
  * GET /api/customers/[id]/credit
@@ -11,9 +12,9 @@ import { prisma } from '@/lib/db'
  *   transactions: CreditTransaction[]
  * }
  */
-export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+export const GET = withLogging(async (_request, logger, context) => {
   try {
-    const { id: customerId } = await params
+    const { id: customerId } = await context.params
 
     // Obtener cliente con crédito y transacciones
     const customer = await prisma.customer.findUnique({
@@ -54,7 +55,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
       transactions: customer.creditTransactions,
     })
   } catch (error) {
-    console.error('[GET /api/customers/[id]/credit] Error:', error)
+    logger.error({ err: error }, '[GET /api/customers/[id]/credit] Error')
     return NextResponse.json({ error: 'Error al obtener información de crédito' }, { status: 500 })
   }
-}
+})

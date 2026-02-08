@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { Prisma } from '@prisma/client'
+import { withLogging } from '@/lib/logger-middleware'
 
 /**
  * GET /api/installments
@@ -20,7 +21,7 @@ import { Prisma } from '@prisma/client'
  *   - installments: Array de installments con payment, customer y allocations incluidas
  *   - pagination: { page, limit, total, totalPages }
  */
-export async function GET(request: Request) {
+export const GET = withLogging(async (request, logger) => {
   try {
     const { searchParams } = new URL(request.url)
     const page = parseInt(searchParams.get('page') || '1')
@@ -127,7 +128,7 @@ export async function GET(request: Request) {
       },
     })
   } catch (error) {
-    console.error('Error fetching installments:', error)
+    logger.error({ err: error }, 'Error fetching installments')
     return NextResponse.json({ error: 'Error al obtener cuotas' }, { status: 500 })
   }
-}
+})

@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
+import { withLogging } from '@/lib/logger-middleware'
 
 /**
  * GET /api/badge-colors
@@ -26,7 +27,7 @@ import { prisma } from '@/lib/db'
  * }
  * ```
  */
-export async function GET(request: Request) {
+export const GET = withLogging(async (request, logger) => {
   try {
     const { searchParams } = new URL(request.url)
     const includeInactive = searchParams.get('includeInactive') === 'true'
@@ -47,7 +48,7 @@ export async function GET(request: Request) {
 
     return NextResponse.json({ badgeColors })
   } catch (error) {
-    console.error('Error fetching badge colors:', error)
+    logger.error({ err: error }, 'Error fetching badge colors')
     return NextResponse.json({ error: 'Error al obtener los colores de badge' }, { status: 500 })
   }
-}
+})

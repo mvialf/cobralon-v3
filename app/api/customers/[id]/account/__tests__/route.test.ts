@@ -8,7 +8,28 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { NextRequest } from 'next/server'
 import { Decimal } from '@prisma/client/runtime/library'
+
+// Mock del logger middleware
+vi.mock('@/lib/logger-middleware', () => ({
+  withLogging: (handler: Function) => {
+    return async (
+      request: NextRequest,
+      context?: { params: Promise<Record<string, string>> }
+    ) => {
+      const mockLogger = {
+        debug: vi.fn(),
+        info: vi.fn(),
+        warn: vi.fn(),
+        error: vi.fn(),
+        child: vi.fn().mockReturnThis(),
+      }
+      const mockContext = context || { params: Promise.resolve({}) }
+      return handler(request, mockLogger, mockContext)
+    }
+  },
+}))
 
 // Mock de Prisma
 vi.mock('@/lib/db', () => ({
@@ -28,8 +49,8 @@ function createParams(id: string) {
 }
 
 // Helper para crear request
-function createRequest(): Request {
-  return new Request('http://localhost:3000/api/customers/test-id/account', {
+function createRequest(): NextRequest {
+  return new NextRequest('http://localhost:3000/api/customers/test-id/account', {
     method: 'GET',
   })
 }

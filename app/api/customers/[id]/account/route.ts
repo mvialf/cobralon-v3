@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { derivePaymentProgress } from '@/lib/business-logic/project-balance'
+import { withLogging } from '@/lib/logger-middleware'
 
 /**
  * GET /api/customers/[id]/account
@@ -20,9 +21,9 @@ import { derivePaymentProgress } from '@/lib/business-logic/project-balance'
  *   }>
  * }
  */
-export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
+export const GET = withLogging(async (_request, logger, context) => {
   try {
-    const { id } = await params
+    const { id } = await context.params
 
     // Obtener cliente con sus proyectos
     const customer = await prisma.customer.findUnique({
@@ -71,7 +72,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
       projects: projectsWithBalance,
     })
   } catch (error) {
-    console.error('Error fetching customer account:', error)
+    logger.error({ err: error }, 'Error fetching customer account')
     return NextResponse.json({ error: 'Error al obtener estado de cuenta' }, { status: 500 })
   }
-}
+})

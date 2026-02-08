@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
+import { withLogging } from '@/lib/logger-middleware'
 
 /**
  * GET /api/aftersales/search-active
@@ -39,7 +40,7 @@ import { prisma } from '@/lib/db'
  * ]
  * ```
  */
-export async function GET(request: Request) {
+export const GET = withLogging(async (request, logger) => {
   try {
     const { searchParams } = new URL(request.url)
     const query = searchParams.get('q') || ''
@@ -131,7 +132,7 @@ export async function GET(request: Request) {
 
     return NextResponse.json(aftersales)
   } catch (error) {
-    console.error('Error searching active aftersales:', error)
+    logger.error({ err: error }, 'Error searching active aftersales')
     return NextResponse.json({ error: 'Error al buscar postventas' }, { status: 500 })
   }
-}
+})

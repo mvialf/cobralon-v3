@@ -1,5 +1,6 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
+import { withLogging } from '@/lib/logger-middleware'
 
 /**
  * GET /api/payments/customer-projects
@@ -20,9 +21,9 @@ import { prisma } from '@/lib/db'
  * - Solo retorna proyectos con totalAmount > 0 y balance > 0
  * - Solo cuenta pagos activos (status = 'ACTIVE')
  */
-export async function GET(req: NextRequest) {
+export const GET = withLogging(async (request, logger) => {
   try {
-    const { searchParams } = new URL(req.url)
+    const { searchParams } = new URL(request.url)
     const customerId = searchParams.get('customerId')
 
     // Validar customerId
@@ -83,7 +84,7 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json(projectsWithBalance)
   } catch (error) {
-    console.error('Error fetching customer projects:', error)
+    logger.error({ err: error }, 'Error fetching customer projects')
     return NextResponse.json({ error: 'Error al obtener proyectos del cliente' }, { status: 500 })
   }
-}
+})

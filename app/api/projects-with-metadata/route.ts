@@ -4,6 +4,7 @@ import { ProjectWhereInput } from '@/types/api'
 import { derivePaymentProgress } from '@/lib/business-logic/project-balance'
 import { getProjectStateWhere, type ProjectStateFilter } from '@/lib/business-logic/project-state'
 import { anyFieldMatchesSearch } from '@/lib/utils/normalize'
+import { withLogging } from '@/lib/logger-middleware'
 
 /**
  * GET /api/projects-with-metadata
@@ -18,7 +19,7 @@ import { anyFieldMatchesSearch } from '@/lib/utils/normalize'
  *   - customerId: filtrar por cliente específico
  *   - projectState: "Activo" (default), "Finalizado", "all"
  */
-export async function GET(request: Request) {
+export const GET = withLogging(async (request, logger) => {
   try {
     const { searchParams } = new URL(request.url)
     const page = parseInt(searchParams.get('page') || '1')
@@ -152,7 +153,7 @@ export async function GET(request: Request) {
       },
     })
   } catch (error) {
-    console.error('Error fetching projects with metadata:', error)
+    logger.error({ err: error }, 'Error fetching projects with metadata')
     return NextResponse.json({ error: 'Error al obtener proyectos y metadata' }, { status: 500 })
   }
-}
+})
