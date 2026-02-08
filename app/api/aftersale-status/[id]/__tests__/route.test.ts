@@ -342,7 +342,7 @@ describe('DELETE /api/aftersale-status/[id]', () => {
     const data = await response.json()
 
     expect(response.status).toBe(400)
-    expect(data.error).toContain('5 caso(s) de postventa')
+    expect(data.error).toContain('tiene 5 postventa(s) asignado(s)')
   })
 
   it('debe rechazar eliminar único estado inicial activo', async () => {

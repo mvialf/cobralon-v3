@@ -423,7 +423,7 @@ describe('DELETE /api/visit-status/[id]', () => {
       const data = await response.json()
 
       expect(response.status).toBe(400)
-      expect(data.error).toContain('tiene 5 visita(s) asignada(s)')
+      expect(data.error).toContain('tiene 5 visita(s) asignado(s)')
     })
   })
 
