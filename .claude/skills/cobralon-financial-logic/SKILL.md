@@ -31,6 +31,7 @@ Esta skill es OBLIGATORIA cuando tocas lógica financiera para evitar bugs crít
 | `totals.ts` | Validación de integridad financiera |
 | `installments.ts` | Lógica de cuotas sin interés |
 | `update-project-balance.ts` | Actualización/verificación de balance en DB |
+| `update-customer-credit-balance.ts` | Actualización/verificación de creditBalance desde ledger |
 
 **Signatures completas:** [references/module-signatures.md](references/module-signatures.md)
 

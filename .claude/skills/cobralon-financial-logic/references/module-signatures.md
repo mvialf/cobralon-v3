@@ -1,6 +1,6 @@
 # Signatures de Módulos de Lógica Financiera
 
-Signatures exportadas de los 8 módulos en `lib/business-logic/`.
+Signatures exportadas de los 9 módulos en `lib/business-logic/`.
 
 ## `payment-fifo.ts` — Distribución FIFO
 
@@ -123,4 +123,15 @@ verifyProjectBalance(projectId: string): Promise<boolean>
 
 // Actualiza balance incluyendo ajustes: balance = totalAmount - totalPaid - totalAdjustments
 updateProjectBalanceWithAdjustments(projectId: string, tx?: PrismaTransaction): Promise<number>
+```
+
+## `update-customer-credit-balance.ts` — Actualización de creditBalance desde ledger
+
+```typescript
+// Recalcula creditBalance como SUM(credit_transactions.amount), Math.max(0)
+// Usar SIEMPRE dentro de $transaction después de crear/eliminar CreditTransaction
+updateCustomerCreditBalance(customerId: string, tx?: PrismaTransaction): Promise<number>
+
+// Verifica si creditBalance en DB es consistente con el ledger (tolerancia: FINANCIAL.TOLERANCE)
+verifyCustomerCreditBalance(customerId: string): Promise<boolean>
 ```

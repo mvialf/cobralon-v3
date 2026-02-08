@@ -18,6 +18,44 @@ respuestas HTTP de error. -->
 | 409 | Constraint violation (email duplicado, etc.) | `{ error: string }` |
 | 500 | Error no controlado | `{ error: string }` |
 
+## `withApiHandler`: Error Handling Automático
+
+`withApiHandler` (`lib/api-handler.ts`) integra `handleApiError` internamente. Para POST/PUT/DELETE **no necesitas try/catch manual**:
+
+```typescript
+export const POST = withApiHandler<CreateEntityBody>(
+  async (_request, logger, { body }) => {
+    // Si Zod falla → 400 automático
+    // Si BusinessError → su statusCode automático
+    // Si Prisma P2002 → 409 automático
+    // Si error desconocido → 500 con fallbackError
+    const entity = await prisma.entity.create({ data: body })
+    return NextResponse.json(entity, { status: 201 })
+  },
+  { bodySchema: createEntitySchema, fallbackError: 'Error al crear entidad' }
+)
+```
+
+Validaciones automáticas de `withApiHandler`:
+- **`bodySchema`**: Parsea y valida body con Zod (ZodError → 400)
+- **`validateUuidParams`**: Valida UUIDs en URL params (inválido → 400)
+- **`fallbackError`**: Mensaje para errores 500 no controlados
+
+## Clase `BusinessError` (`lib/api-handler.ts`)
+
+Error de negocio server-side con status HTTP específico:
+
+```typescript
+import { BusinessError } from '@/lib/api-handler'
+
+// Dentro de withApiHandler:
+throw new BusinessError('Cliente no encontrado', 404)
+throw new BusinessError('Crédito insuficiente', 400)
+throw new BusinessError('Email duplicado', 409, 'EMAIL_DUPLICATE')
+```
+
+`handleApiError` lo captura y retorna `{ error: message }` con el `statusCode` indicado.
+
 ## Clase `ApiError` (`lib/errors.ts`)
 
 ```typescript

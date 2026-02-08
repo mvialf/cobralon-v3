@@ -146,6 +146,7 @@ describe('POST /api/ENTITY', () => {
 
 ```typescript
 import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { NextRequest } from 'next/server'
 
 // Mocks (mismos de arriba) + business logic si aplica:
 // vi.mock('@/lib/business-logic/update-project-balance', () => ({
@@ -159,8 +160,8 @@ function createParams(id: string) {
   return { params: Promise.resolve({ id }) }
 }
 
-function createRequest(method: string, body?: Record<string, unknown>): Request {
-  return new Request('http://localhost:3000/api/ENTITY/test-id', {
+function createRequest(method: string, body?: Record<string, unknown>): NextRequest {
+  return new NextRequest('http://localhost:3000/api/ENTITY/test-id', {
     method,
     body: body ? JSON.stringify(body) : undefined,
     headers: body ? { 'Content-Type': 'application/json' } : {},
@@ -224,6 +225,42 @@ describe('DELETE /api/ENTITY/[id]', () => {
 })
 ```
 
+## Tests para validaciones de `withApiHandler`
+
+Rutas que usan `withApiHandler` deben testear las validaciones automáticas:
+
+```typescript
+// UUID inválido → 400
+it('debe retornar 400 para UUID inválido', async () => {
+  const response = await GET(
+    createRequest('GET'),
+    createParams('not-a-uuid')
+  )
+  expect(response.status).toBe(400)
+  const data = await response.json()
+  expect(data.error).toContain('UUID inválido')
+})
+
+// Body inválido (Zod) → 400
+it('debe retornar 400 para body inválido', async () => {
+  const response = await callPOST(createPostRequest({ invalid: true }))
+  expect(response.status).toBe(400)
+  const data = await response.json()
+  expect(data.error).toBe('Datos inválidos')
+  expect(data.details).toBeDefined()
+})
+
+// BusinessError → status code específico
+it('debe retornar 404 cuando no existe', async () => {
+  vi.mocked(prisma.ENTITY.findUnique).mockResolvedValue(null)
+  const response = await GET(
+    createRequest('GET'),
+    createParams('550e8400-e29b-41d4-a716-446655440000')
+  )
+  expect(response.status).toBe(404)
+})
+```
+
 ## Checklist por tipo de ruta
 
 ### GET lista
@@ -236,6 +273,7 @@ describe('DELETE /api/ENTITY/[id]', () => {
 
 ### POST crear
 
+- [ ] Body inválido (Zod) → 400 con "Datos inválidos"
 - [ ] Campos requeridos faltantes → 400
 - [ ] Validación de formato (email, phone)
 - [ ] Duplicados → 409
@@ -244,8 +282,9 @@ describe('DELETE /api/ENTITY/[id]', () => {
 
 ### GET/PUT/DELETE por [id]
 
-- [ ] No existe → 404
-- [ ] UUID inválido → 400 (con `withApiHandler`)
+- [ ] UUID inválido → 400 con "UUID inválido"
+- [ ] No existe → 404 (BusinessError)
+- [ ] Body inválido → 400 con "Datos inválidos" (PUT con bodySchema)
 - [ ] PUT: validaciones de campos
 - [ ] PUT: actualización parcial
 - [ ] PUT: duplicados en OTRO registro → 409
@@ -261,7 +300,7 @@ Verificar qué importa la ruta bajo test:
 | La ruta importa...                         | Mock necesario                                           |
 | ------------------------------------------ | -------------------------------------------------------- |
 | `withLogging` de `@/lib/logger-middleware` | Mock de `@/lib/logger-middleware`                        |
-| `withApiHandler` de `@/lib/api-handler`    | Mismo mock (withApiHandler usa withLogging internamente) |
+| `withApiHandler` de `@/lib/api-handler`    | Mismo mock de `@/lib/logger-middleware` (withApiHandler usa withLogging internamente, no requiere mock adicional) |
 | `logger` de `@/lib/logger` directamente    | Mock de `@/lib/logger`                                   |
 
 Mock de `@/lib/logger` (para rutas que lo importan directamente):

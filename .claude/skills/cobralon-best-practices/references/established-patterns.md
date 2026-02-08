@@ -167,30 +167,43 @@ const { fields, replace, update, remove } = useFieldArray({
 - FormField dentro de cada row con `name={`allocations.${index}.field`}`
 - Validación de sumas con tolerancia financiera
 
-## Structured Logging con Pino + withLogging
+## Structured Logging con Pino + withLogging / withApiHandler
 
 **Aplica a:** `app/api/*/route.ts`
 **Estado:** ✅ Implementado en 24+ endpoints
 
+### GET lista → `withLogging`
+
 ```typescript
-// app/api/payments/route.ts
 import { withLogging } from '@/lib/logger-middleware'
 
 export const GET = withLogging(async (request, logger) => {
   logger.info({ page, limit }, 'Fetching payments')
-  // ... handler logic
+  // ... handler logic con try/catch manual
 })
+```
 
-// Child logger con contexto
-const paymentLogger = logger.child({
-  type, customerId, amount, currency,
-  allocationCount: allocations?.length,
-})
-paymentLogger.info('Payment creation requested')
+### POST/PUT/DELETE → `withApiHandler`
+
+```typescript
+import { withApiHandler, BusinessError } from '@/lib/api-handler'
+import { createEntitySchema, type CreateEntityBody } from '@/lib/validations/entity-validations'
+
+export const POST = withApiHandler<CreateEntityBody>(
+  async (_request, logger, { body }) => {
+    // body ya validado con Zod, error handling automático
+    const entity = await prisma.entity.create({ data: body })
+    logger.info({ entityId: entity.id }, 'Entity created')
+    return NextResponse.json(entity, { status: 201 })
+  },
+  { bodySchema: createEntitySchema, fallbackError: 'Error al crear entidad' }
+)
 ```
 
 **Qué mantener:**
-- Todas las API routes envueltas en `withLogging`
+- GET lista → `withLogging` con try/catch manual
+- POST/PUT/DELETE → `withApiHandler` con bodySchema, validateUuidParams, fallbackError
+- `BusinessError` para errores de negocio (not found, validación custom)
 - Logger inyectado como segundo parámetro del handler
 - Child loggers con contexto estructurado para operaciones complejas
 - Redacción automática de campos sensibles (password, token, apiKey)

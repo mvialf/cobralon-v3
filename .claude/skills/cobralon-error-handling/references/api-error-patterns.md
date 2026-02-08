@@ -1,76 +1,74 @@
 # Patrones de Error en API Routes
 
-## Patrón completo de try/catch
+## Patrón Principal: `withApiHandler`
 
-Todas las API routes de Cobralon siguen esta estructura:
+Para POST/PUT/DELETE, `withApiHandler` maneja automáticamente body validation (Zod), UUID validation y error handling. **No necesitas try/catch manual.**
 
 ```typescript
-export const POST = withLogging(async (request, logger) => {
+import { withApiHandler, BusinessError } from '@/lib/api-handler'
+
+export const PUT = withApiHandler<UpdateEntityBody>(
+  async (_request, logger, { params, body }) => {
+    // body ya fue parseado y validado con Zod (bodySchema)
+    // params.id ya fue validado como UUID (validateUuidParams)
+
+    const entity = await prisma.entity.findUnique({ where: { id: params.id } })
+    if (!entity) throw new BusinessError('Entidad no encontrada', 404)
+
+    // Si Prisma lanza P2002 → 409 automático
+    // Si Prisma lanza P2025 → 404 automático
+    // Si Prisma lanza P2003 → 400 automático
+    const updated = await prisma.entity.update({
+      where: { id: params.id },
+      data: body,
+    })
+
+    logger.info({ entityId: params.id }, 'Entity updated')
+    return NextResponse.json(updated)
+  },
+  {
+    bodySchema: updateEntitySchema,
+    validateUuidParams: ['id'],
+    fallbackError: 'Error al actualizar entidad',
+  }
+)
+```
+
+### Manejo automático de `handleApiError`
+
+| Tipo de error | Status HTTP | Respuesta |
+|--------------|-------------|-----------|
+| `BusinessError` | su `statusCode` | `{ error: message, code?: string }` |
+| `ZodError` | 400 | `{ error: 'Datos inválidos', details: [...] }` |
+| Prisma P2002 | 409 | `{ error: 'Ya existe un registro con ese X', code: 'UNIQUE_VIOLATION' }` |
+| Prisma P2025 | 404 | `{ error: 'Registro no encontrado', code: 'NOT_FOUND' }` |
+| Prisma P2003 | 400 | `{ error: 'Referencia a registro inexistente', code: 'FK_VIOLATION' }` |
+| Otro | 500 | `{ error: fallbackMessage }` |
+
+## Patrón para GET lista (`withLogging`)
+
+Las rutas GET de listas usan `withLogging` con try/catch manual (no `withApiHandler`):
+
+```typescript
+import { withLogging } from '@/lib/logger-middleware'
+
+export const GET = withLogging(async (request, logger) => {
+  const { searchParams } = new URL(request.url)
+
   try {
-    const body = await request.json()
+    const [total, items] = await Promise.all([
+      prisma.entity.count({ where: whereCondition }),
+      prisma.entity.findMany({ where: whereCondition, skip, take: limit }),
+    ])
 
-    // 1. Validación Zod (safeParse preferido)
-    const result = createSchema.safeParse(body)
-    if (!result.success) {
-      logger.warn({ errors: result.error.errors }, 'Validation failed')
-      return NextResponse.json(
-        { error: 'Datos inválidos', details: result.error.errors },
-        { status: 400 }
-      )
-    }
-
-    // 2. Validaciones de negocio
-    const customer = await prisma.customer.findUnique({ where: { id: result.data.customerId } })
-    if (!customer) {
-      return NextResponse.json({ error: 'El cliente no existe' }, { status: 404 })
-    }
-
-    // 3. Verificar conflictos (unique constraints)
-    const existing = await prisma.entity.findFirst({ where: { email: result.data.email } })
-    if (existing) {
-      logger.warn({ email: result.data.email }, 'Email already exists')
-      return NextResponse.json({ error: 'Ya existe un registro con ese email' }, { status: 409 })
-    }
-
-    // 4. Operación principal
-    const created = await prisma.entity.create({ data: result.data })
-
-    logger.info({ id: created.id }, 'Entity created')
-    return NextResponse.json(created, { status: 201 })
+    logger.info({ total, page, limit }, 'Entities fetched')
+    return NextResponse.json({ items, pagination: { page, limit, total } })
   } catch (error) {
-    // 5. Prisma errors específicos
-    if (error instanceof PrismaClientKnownRequestError) {
-      if (error.code === 'P2002') {
-        logger.warn({ meta: error.meta }, 'Unique constraint violation')
-        return NextResponse.json({ error: 'Ya existe un registro con esos datos' }, { status: 409 })
-      }
-      if (error.code === 'P2025') {
-        logger.warn('Record not found')
-        return NextResponse.json({ error: 'Recurso no encontrado' }, { status: 404 })
-      }
-    }
-
-    // 6. Error genérico
-    logger.error({ err: error }, 'Error creating entity')
-    return NextResponse.json({ error: 'Error interno del servidor' }, { status: 500 })
+    logger.error({ err: error }, 'Error fetching entities')
+    return NextResponse.json({ error: 'Error al obtener entidades' }, { status: 500 })
   }
 })
 ```
-
-## Orden de prioridad en catch
-
-1. **Zod errors** → Detectar antes del catch (con `safeParse`)
-2. **Prisma P2002** → Unique constraint → 409
-3. **Prisma P2025** → Record not found → 404
-4. **Genérico** → 500
-
-## Errores de Prisma relevantes
-
-| Código | Significado | Status HTTP |
-|--------|-------------|-------------|
-| P2002 | Unique constraint violation | 409 Conflict |
-| P2025 | Record not found (update/delete inexistente) | 404 Not Found |
-| P2003 | Foreign key constraint failure | 409 Conflict |
 
 ## Logging estructurado con `withLogging`
 
@@ -85,23 +83,17 @@ Helpers adicionales:
 - `logResponse(logger, response)` — Loggea response antes de enviar
 - `createBusinessLogger(logger, 'payment')` — Logger con contexto de dominio
 
-## Validación Zod: `safeParse` vs `parse`
+## Validación Zod: `parse` vs `safeParse`
 
-Cobralon prefiere `safeParse` para control explícito del error:
+Con `withApiHandler`, se usa `parse` (el error es capturado automáticamente por `handleApiError` → 400).
+
+Para GET lista con `withLogging`, se puede usar `safeParse` para control explícito:
 
 ```typescript
-// ✅ PREFERIDO — Control explícito
+// En GET lista (withLogging) — safeParse para control manual
 const result = schema.safeParse(body)
 if (!result.success) {
   return NextResponse.json({ error: '...' }, { status: 400 })
-}
-const data = result.data
-
-// ❌ EVITAR — Error implícito que cae en catch
-try {
-  const data = schema.parse(body)  // Throws ZodError
-} catch (error) {
-  if (error instanceof z.ZodError) { ... }
 }
 ```
 

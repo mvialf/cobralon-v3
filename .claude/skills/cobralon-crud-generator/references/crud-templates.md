@@ -107,28 +107,37 @@ export function EntityNameDialog({ open, onOpenChange, entityName, onSuccess }: 
 
 ```typescript
 import { NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
-import { createEntityNameSchema } from '@/lib/validations/entity-name-validations'
+import { prisma } from '@/lib/db'
+import { withLogging } from '@/lib/logger-middleware'
+import { withApiHandler } from '@/lib/api-handler'
+import {
+  createEntityNameSchema,
+  type CreateEntityNameInput,
+} from '@/lib/validations/entity-name-validations'
 
-// GET /api/entity-names
-export async function GET() {
-  const items = await prisma.entityName.findMany({
-    orderBy: { createdAt: 'desc' },
-  })
-  return NextResponse.json(items)
-}
+// GET /api/entity-names (withLogging para listas)
+export const GET = withLogging(async (request, logger) => {
+  try {
+    const items = await prisma.entityName.findMany({
+      orderBy: { createdAt: 'desc' },
+    })
+    logger.info({ count: items.length }, 'EntityNames fetched')
+    return NextResponse.json(items)
+  } catch (error) {
+    logger.error({ err: error }, 'Error fetching entity names')
+    return NextResponse.json({ error: 'Error al obtener entity names' }, { status: 500 })
+  }
+})
 
-// POST /api/entity-names
-export async function POST(request: Request) {
-  const body = await request.json()
-  const validated = createEntityNameSchema.parse(body)
-
-  const created = await prisma.entityName.create({
-    data: validated,
-  })
-
-  return NextResponse.json(created, { status: 201 })
-}
+// POST /api/entity-names (withApiHandler para body validation + error handling)
+export const POST = withApiHandler<CreateEntityNameInput>(
+  async (_request, logger, { body }) => {
+    const created = await prisma.entityName.create({ data: body })
+    logger.info({ entityNameId: created.id }, 'EntityName created')
+    return NextResponse.json(created, { status: 201 })
+  },
+  { bodySchema: createEntityNameSchema, fallbackError: 'Error al crear entity name' }
+)
 ```
 
 ## 5. API Route GET/PUT/DELETE por ID
@@ -139,42 +148,56 @@ export async function POST(request: Request) {
 
 ```typescript
 import { NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
+import { prisma } from '@/lib/db'
+import { withApiHandler, BusinessError } from '@/lib/api-handler'
+import {
+  updateEntityNameSchema,
+  type UpdateEntityNameInput,
+} from '@/lib/validations/entity-name-validations'
 
 // GET /api/entity-names/[id]
-export async function GET(
-  request: Request,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  const { id } = await params
-  const item = await prisma.entityName.findUnique({ where: { id } })
-  if (!item) return NextResponse.json({ error: 'Not found' }, { status: 404 })
-  return NextResponse.json(item)
-}
+export const GET = withApiHandler(
+  async (_request, logger, { params }) => {
+    const item = await prisma.entityName.findUnique({ where: { id: params.id } })
+    if (!item) throw new BusinessError('EntityName no encontrado', 404)
+    logger.info({ entityNameId: params.id }, 'EntityName fetched')
+    return NextResponse.json(item)
+  },
+  { validateUuidParams: ['id'], fallbackError: 'Error al obtener entity name' }
+)
 
 // PUT /api/entity-names/[id]
-export async function PUT(
-  request: Request,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  const { id } = await params
-  const body = await request.json()
-  const updated = await prisma.entityName.update({
-    where: { id },
-    data: body,
-  })
-  return NextResponse.json(updated)
-}
+export const PUT = withApiHandler<UpdateEntityNameInput>(
+  async (_request, logger, { params, body }) => {
+    const existing = await prisma.entityName.findUnique({ where: { id: params.id } })
+    if (!existing) throw new BusinessError('EntityName no encontrado', 404)
+
+    const updated = await prisma.entityName.update({
+      where: { id: params.id },
+      data: body,
+    })
+    logger.info({ entityNameId: params.id }, 'EntityName updated')
+    return NextResponse.json(updated)
+  },
+  {
+    bodySchema: updateEntityNameSchema,
+    validateUuidParams: ['id'],
+    fallbackError: 'Error al actualizar entity name',
+  }
+)
 
 // DELETE /api/entity-names/[id]
-export async function DELETE(
-  request: Request,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  const { id } = await params
-  await prisma.entityName.delete({ where: { id } })
-  return NextResponse.json({ success: true })
-}
+export const DELETE = withApiHandler(
+  async (_request, logger, { params }) => {
+    const existing = await prisma.entityName.findUnique({ where: { id: params.id } })
+    if (!existing) throw new BusinessError('EntityName no encontrado', 404)
+
+    await prisma.entityName.delete({ where: { id: params.id } })
+    logger.info({ entityNameId: params.id }, 'EntityName deleted')
+    return NextResponse.json({ message: 'EntityName eliminado exitosamente' })
+  },
+  { validateUuidParams: ['id'], fallbackError: 'Error al eliminar entity name' }
+)
 ```
 
 ## 6. Table Columns
@@ -213,7 +236,7 @@ export const columns: ColumnDef<EntityNameType>[] = [
 import { AppLayout } from '@/components/layout/app-layout'
 import { DataTable } from '@/components/custom/data-table/data-table'
 import { columns } from './columns'
-import { prisma } from '@/lib/prisma'
+import { prisma } from '@/lib/db'
 
 export default async function EntityNamesPage() {
   const items = await prisma.entityName.findMany({
