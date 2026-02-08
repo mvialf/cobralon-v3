@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { withLogging } from '@/lib/logger-middleware'
-import { type CreateVisitAPIPayload } from '@/lib/validations/visit-validations'
+import { createVisitApiSchema } from '@/lib/validations/visit-validations'
 import { Prisma } from '@prisma/client'
 import { z } from 'zod'
 import { anyFieldMatchesSearch } from '@/lib/utils/normalize'
@@ -131,22 +131,23 @@ export const GET = withLogging(async (request, logger) => {
  */
 export const POST = withLogging(async (request, logger) => {
   try {
-    const body = (await request.json()) as CreateVisitAPIPayload
+    const body = await request.json()
+    const validatedData = createVisitApiSchema.parse(body)
 
-    logger.debug({ body }, 'Creating new visit')
+    logger.debug({ body: validatedData }, 'Creating new visit')
 
     // Transformar payload: date string → Date
     const visitData = {
-      name: body.name,
-      phone: body.phone || null,
-      street: body.street,
-      apartment: body.apartment || null,
-      comuna: body.comuna,
-      region: body.region,
-      visitStatusId: body.visitStatusId,
-      date: new Date(body.date),
-      scheduledTime: body.scheduledTime || null,
-      observations: body.observations || null,
+      name: validatedData.name,
+      phone: validatedData.phone || null,
+      street: validatedData.street,
+      apartment: validatedData.apartment || null,
+      comuna: validatedData.comuna,
+      region: validatedData.region,
+      visitStatusId: validatedData.visitStatusId,
+      date: new Date(validatedData.date),
+      scheduledTime: validatedData.scheduledTime || null,
+      observations: validatedData.observations || null,
     }
 
     // Crear visita
@@ -174,6 +175,10 @@ export const POST = withLogging(async (request, logger) => {
 
     return NextResponse.json(visit, { status: 201 })
   } catch (error) {
+    if (error instanceof z.ZodError) {
+      return NextResponse.json({ error: 'Datos inválidos', details: error.errors }, { status: 400 })
+    }
+
     logger.error({ error }, 'Error creating visit')
     return NextResponse.json({ error: 'Error al crear la visita' }, { status: 500 })
   }

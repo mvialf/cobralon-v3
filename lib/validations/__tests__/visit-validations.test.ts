@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest'
 import {
   createVisitSchema,
   updateVisitSchema,
+  createVisitApiSchema,
   formValuesToPayload,
   visitToFormValues,
   type CreateVisitInput,
@@ -436,5 +437,131 @@ describe('integración Form → API → Form', () => {
     expect(formValuesFromAPI.visitStatusId).toBe(originalFormValues.visitStatusId)
     expect(formValuesFromAPI.observations).toBe(originalFormValues.observations)
     expect(formValuesFromAPI.date.toISOString()).toBe(originalFormValues.date.toISOString())
+  })
+})
+
+describe('createVisitApiSchema', () => {
+  const validApiInput = {
+    name: 'Juan Pérez',
+    phone: '+56912345678',
+    street: 'Av. Providencia 123',
+    apartment: 'Depto 45',
+    comuna: 'Providencia',
+    region: 'Región Metropolitana',
+    visitStatusId: '123e4567-e89b-12d3-a456-426614174000',
+    date: '2025-12-01T10:00:00.000Z',
+    scheduledTime: '10:30',
+    observations: 'Cliente prefiere mañana',
+  }
+
+  it('debe validar input completo válido', () => {
+    const result = createVisitApiSchema.safeParse(validApiInput)
+    expect(result.success).toBe(true)
+  })
+
+  it('debe rechazar name muy corto (< 3 caracteres)', () => {
+    const result = createVisitApiSchema.safeParse({ ...validApiInput, name: 'AB' })
+    expect(result.success).toBe(false)
+    if (!result.success) {
+      expect(result.error.issues[0].message).toContain('al menos 3 caracteres')
+    }
+  })
+
+  describe('date como string', () => {
+    it('debe aceptar ISO string datetime válido', () => {
+      const result = createVisitApiSchema.safeParse(validApiInput)
+      expect(result.success).toBe(true)
+    })
+
+    it('debe rechazar string no datetime', () => {
+      const result = createVisitApiSchema.safeParse({
+        ...validApiInput,
+        date: 'not-a-date',
+      })
+      expect(result.success).toBe(false)
+    })
+
+    it('debe rechazar Date object (solo acepta string)', () => {
+      const result = createVisitApiSchema.safeParse({
+        ...validApiInput,
+        date: new Date('2025-12-01'),
+      })
+      expect(result.success).toBe(false)
+    })
+  })
+
+  describe('phone', () => {
+    it('debe aceptar sin phone', () => {
+      const { phone, ...input } = validApiInput
+      const result = createVisitApiSchema.safeParse(input)
+      expect(result.success).toBe(true)
+    })
+
+    it('debe normalizar teléfono sin prefijo', () => {
+      const result = createVisitApiSchema.safeParse({
+        ...validApiInput,
+        phone: '912345678',
+      })
+      expect(result.success).toBe(true)
+      if (result.success) {
+        expect(result.data.phone).toBe('+56912345678')
+      }
+    })
+  })
+
+  describe('dirección', () => {
+    it('debe rechazar sin street', () => {
+      const { street, ...input } = validApiInput
+      const result = createVisitApiSchema.safeParse(input)
+      expect(result.success).toBe(false)
+    })
+
+    it('debe rechazar sin comuna', () => {
+      const { comuna, ...input } = validApiInput
+      const result = createVisitApiSchema.safeParse(input)
+      expect(result.success).toBe(false)
+    })
+
+    it('debe rechazar sin region', () => {
+      const { region, ...input } = validApiInput
+      const result = createVisitApiSchema.safeParse(input)
+      expect(result.success).toBe(false)
+    })
+
+    it('debe aceptar sin apartment', () => {
+      const { apartment, ...input } = validApiInput
+      const result = createVisitApiSchema.safeParse(input)
+      expect(result.success).toBe(true)
+    })
+  })
+
+  describe('scheduledTime', () => {
+    it('debe aceptar formato HH:mm válido', () => {
+      const result = createVisitApiSchema.safeParse({
+        ...validApiInput,
+        scheduledTime: '14:30',
+      })
+      expect(result.success).toBe(true)
+    })
+
+    it('debe aceptar sin scheduledTime', () => {
+      const { scheduledTime, ...input } = validApiInput
+      const result = createVisitApiSchema.safeParse(input)
+      expect(result.success).toBe(true)
+    })
+
+    it('debe rechazar formato inválido', () => {
+      const result = createVisitApiSchema.safeParse({
+        ...validApiInput,
+        scheduledTime: '25:00',
+      })
+      expect(result.success).toBe(false)
+    })
+  })
+
+  it('debe rechazar sin visitStatusId', () => {
+    const { visitStatusId, ...input } = validApiInput
+    const result = createVisitApiSchema.safeParse(input)
+    expect(result.success).toBe(false)
   })
 })

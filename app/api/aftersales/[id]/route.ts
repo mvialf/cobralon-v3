@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { z } from 'zod'
+import { optionalChilePhoneSchema } from '@/lib/validations/common'
 import { todoListOptionalSchema } from '@/lib/validations/todo-validations'
 import { getRegionByCodigo } from '@/lib/regiones-chile'
 
@@ -11,10 +12,7 @@ import { getRegionByCodigo } from '@/lib/regiones-chile'
 const updateAftersaleSchema = z.object({
   projectId: z.string().uuid().optional(),
   aftersaleStatusId: z.string().uuid().optional(),
-  contactPhone: z
-    .string()
-    .regex(/^\+56[2-9]\d{8}$/, 'Formato inválido. Debe ser un teléfono chileno válido')
-    .optional(),
+  contactPhone: optionalChilePhoneSchema,
   description: z.string().max(1000).optional(),
   reportedAt: z.string().datetime().optional(),
   tasks: todoListOptionalSchema.optional(), // Lista de tareas para resolver el caso

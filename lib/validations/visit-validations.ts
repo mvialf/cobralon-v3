@@ -50,6 +50,27 @@ export type CreateVisitInput = z.infer<typeof createVisitSchema>
 export type UpdateVisitInput = z.infer<typeof updateVisitSchema>
 
 /**
+ * Schema para validación en API (date como string ISO, no Date)
+ */
+export const createVisitApiSchema = z.object({
+  name: z.string().min(3, 'El nombre debe tener al menos 3 caracteres'),
+  phone: optionalChilePhoneSchema,
+  ...addressWithOptionalApartmentSchema,
+  visitStatusId: z.string().min(1, 'El estado es requerido'),
+  date: z.string().datetime('Fecha inválida'),
+  scheduledTime: z
+    .string()
+    .optional()
+    .refine(
+      (val) => !val || /^([01]?[0-9]|2[0-3]):[0-5][0-9]$/.test(val),
+      'Formato de hora inválido'
+    ),
+  observations: z.string().optional(),
+})
+
+export type CreateVisitApiBody = z.infer<typeof createVisitApiSchema>
+
+/**
  * Type para el payload de creación (API)
  * Las fechas se envían como strings ISO en JSON
  */

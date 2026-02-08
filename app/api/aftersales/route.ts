@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { z } from 'zod'
+import { chilePhoneSchema } from '@/lib/validations/common'
 import { todoListOptionalSchema } from '@/lib/validations/todo-validations'
 import { getRegionByCodigo } from '@/lib/regiones-chile'
 
@@ -11,10 +12,7 @@ import { getRegionByCodigo } from '@/lib/regiones-chile'
 const createAftersaleSchema = z.object({
   projectId: z.string().uuid('Project ID inválido'),
   aftersaleStatusId: z.string().uuid('Status ID inválido'),
-  contactPhone: z
-    .string()
-    .min(1, 'El teléfono de contacto es obligatorio')
-    .regex(/^\+56[2-9]\d{8}$/, 'Formato inválido. Debe ser un teléfono chileno válido'),
+  contactPhone: chilePhoneSchema,
   description: z.string().max(1000, 'Máximo 1000 caracteres').optional().default(''),
   reportedAt: z.string().datetime('Fecha inválida'),
   tasks: todoListOptionalSchema, // Lista de tareas para resolver el caso
