@@ -544,5 +544,40 @@ describe('DELETE /api/payments/[id]', () => {
       expect(response.status).toBe(500)
       expect(data.error).toBe('Error al eliminar pago')
     })
+
+    it('debe hacer rollback si recálculo de balance falla', async () => {
+      // updateMultipleProjectBalances lanza error dentro de la transacción
+      vi.mocked(updateMultipleProjectBalances).mockRejectedValue(
+        new Error('Project p1 not found')
+      )
+
+      let mockTxPaymentDelete: ReturnType<typeof vi.fn>
+
+      vi.mocked(prisma.$transaction).mockImplementation(async (fn) => {
+        mockTxPaymentDelete = vi.fn().mockResolvedValue({ id: 'payment-1' })
+        const mockTx = {
+          creditTransaction: {
+            findMany: vi.fn().mockResolvedValue([]),
+            create: vi.fn(),
+          },
+          customer: {
+            update: vi.fn(),
+          },
+          payment: {
+            delete: mockTxPaymentDelete,
+          },
+        }
+        // La transacción ejecuta fn, que lanza error → Prisma hace rollback
+        return fn(mockTx as never)
+      })
+
+      const request = createRequest('DELETE')
+      const response = await DELETE(request, createParams('payment-1'))
+      const data = await response.json()
+
+      // La transacción falla → 500
+      expect(response.status).toBe(500)
+      expect(data.error).toBe('Error al eliminar pago')
+    })
   })
 })

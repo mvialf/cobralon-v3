@@ -133,13 +133,8 @@ export async function updateMultipleProjectBalances(
   let updated = 0
 
   for (const projectId of projectIds) {
-    try {
-      await updateProjectBalance(projectId, tx)
-      updated++
-    } catch (error) {
-      console.error(`Error updating project ${projectId}:`, error)
-      // Continuar con el siguiente proyecto
-    }
+    await updateProjectBalance(projectId, tx)
+    updated++
   }
 
   return updated

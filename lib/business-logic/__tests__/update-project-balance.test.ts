@@ -221,41 +221,21 @@ describe('updateMultipleProjectBalances', () => {
     expect(prisma.project.update).toHaveBeenCalledTimes(3)
   })
 
-  it('debe continuar si un proyecto falla (best-effort)', async () => {
+  it('debe lanzar error si un proyecto falla', async () => {
     const project1 = createMockProject({ id: 'p1', total: 1000, paymentAllocations: [] })
-    const project3 = createMockProject({ id: 'p3', total: 3000, paymentAllocations: [] })
 
     vi.mocked(prisma.project.findUnique)
       .mockResolvedValueOnce(project1)
-      .mockResolvedValueOnce(null) // p2 no existe
-      .mockResolvedValueOnce(project3)
+      .mockResolvedValueOnce(null) // p2 no existe → lanza error
+
     vi.mocked(prisma.project.update).mockResolvedValue(project1)
 
-    // Suprimir console.error para este test
-    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    await expect(
+      updateMultipleProjectBalances(['p1', 'p2', 'p3'])
+    ).rejects.toThrow('Project p2 not found')
 
-    const result = await updateMultipleProjectBalances(['p1', 'p2', 'p3'])
-
-    // Solo 2 de 3 actualizados
-    expect(result).toBe(2)
-    expect(consoleSpy).toHaveBeenCalledWith(
-      'Error updating project p2:',
-      expect.any(Error)
-    )
-
-    consoleSpy.mockRestore()
-  })
-
-  it('debe retornar 0 si todos fallan', async () => {
-    vi.mocked(prisma.project.findUnique).mockResolvedValue(null)
-
-    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
-
-    const result = await updateMultipleProjectBalances(['p1', 'p2'])
-
-    expect(result).toBe(0)
-
-    consoleSpy.mockRestore()
+    // Solo se actualizó p1 antes del error
+    expect(prisma.project.update).toHaveBeenCalledTimes(1)
   })
 
   it('debe manejar array vacío', async () => {
