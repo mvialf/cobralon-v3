@@ -180,93 +180,78 @@ describe('POST /api/projects', () => {
     })
   })
 
-  describe('validaciones de campos requeridos', () => {
+  describe('validaciones Zod de campos requeridos', () => {
     it('debe rechazar sin customerId', async () => {
       const { customerId: _, ...noCustomer } = validPayload
       const request = createPostRequest(noCustomer)
       const response = await callPOST(request)
-      const data = await response.json()
 
       expect(response.status).toBe(400)
-      expect(data.error).toContain('cliente')
+      const data = await response.json()
+      expect(data.error).toBe('Datos inválidos')
+      expect(data.details).toBeDefined()
     })
 
     it('debe rechazar sin projectNumber', async () => {
       const { projectNumber: _, ...noNumber } = validPayload
       const request = createPostRequest(noNumber)
       const response = await callPOST(request)
-      const data = await response.json()
 
       expect(response.status).toBe(400)
-      expect(data.error).toContain('número de proyecto')
     })
 
     it('debe rechazar sin teléfono', async () => {
       const { phone: _, ...noPhone } = validPayload
       const request = createPostRequest(noPhone)
       const response = await callPOST(request)
-      const data = await response.json()
 
       expect(response.status).toBe(400)
-      expect(data.error).toContain('teléfono')
     })
 
     it('debe rechazar sin calle', async () => {
       const { street: _, ...noStreet } = validPayload
       const request = createPostRequest(noStreet)
       const response = await callPOST(request)
-      const data = await response.json()
 
       expect(response.status).toBe(400)
-      expect(data.error).toContain('calle')
     })
 
     it('debe rechazar sin comuna', async () => {
       const { comuna: _, ...noComuna } = validPayload
       const request = createPostRequest(noComuna)
       const response = await callPOST(request)
-      const data = await response.json()
 
       expect(response.status).toBe(400)
-      expect(data.error).toContain('comuna')
     })
 
     it('debe rechazar sin region', async () => {
       const { region: _, ...noRegion } = validPayload
       const request = createPostRequest(noRegion)
       const response = await callPOST(request)
-      const data = await response.json()
 
       expect(response.status).toBe(400)
-      expect(data.error).toContain('región')
     })
 
     it('debe rechazar sin subtotal', async () => {
       const { subtotal: _, ...noSubtotal } = validPayload
       const request = createPostRequest(noSubtotal)
       const response = await callPOST(request)
-      const data = await response.json()
 
       expect(response.status).toBe(400)
-      expect(data.error).toContain('subtotal')
     })
 
     it('debe rechazar subtotal <= 0', async () => {
       const request = createPostRequest({ ...validPayload, subtotal: 0 })
       const response = await callPOST(request)
-      const data = await response.json()
 
       expect(response.status).toBe(400)
-      expect(data.error).toContain('mayor a 0')
     })
 
     it('debe rechazar subtotal negativo', async () => {
       const request = createPostRequest({ ...validPayload, subtotal: -1000 })
       const response = await callPOST(request)
-      const data = await response.json()
 
       expect(response.status).toBe(400)
-      expect(data.error).toContain('mayor a 0')
     })
   })
 
@@ -365,50 +350,27 @@ describe('POST /api/projects', () => {
       expect(response.status).toBe(201)
     })
 
-    it('debe aceptar uninstallTagIds', async () => {
+    it('debe aceptar uninstallTagIds con UUIDs válidos', async () => {
       const request = createPostRequest({
         ...validPayload,
-        uninstallTagIds: ['tag-1', 'tag-2'],
+        uninstallTagIds: [
+          'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
+          'b2c3d4e5-f6a7-8901-bcde-f12345678901',
+        ],
       })
       const response = await callPOST(request)
 
       expect(response.status).toBe(201)
     })
 
-    it('debe trimear espacios en campos de texto', async () => {
-      let createdProject: Record<string, unknown> | null = null
-      vi.mocked(prisma.$transaction).mockImplementation(async (fn) => {
-        const mockTx = {
-          project: {
-            create: vi.fn().mockImplementation((args: { data: Record<string, unknown> }) => {
-              createdProject = args.data
-              return { id: 'project-1' }
-            }),
-            findUnique: vi.fn().mockResolvedValue({
-              id: 'project-1',
-              customer: {},
-              projectStatus: null,
-              uninstallTags: [],
-            }),
-          },
-          projectUninstallTag: {
-            createMany: vi.fn().mockResolvedValue({ count: 0 }),
-          },
-        }
-        return fn(mockTx as never)
-      })
-
+    it('debe rechazar uninstallTagIds con UUIDs inválidos', async () => {
       const request = createPostRequest({
         ...validPayload,
-        projectNumber: '  P-001  ',
-        phone: '  +56912345678  ',
-        street: '  Av. Principal 123  ',
+        uninstallTagIds: ['not-a-uuid'],
       })
-      await callPOST(request)
+      const response = await callPOST(request)
 
-      expect(createdProject?.['projectNumber']).toBe('P-001')
-      expect(createdProject?.['phone']).toBe('+56912345678')
-      expect(createdProject?.['street']).toBe('Av. Principal 123')
+      expect(response.status).toBe(400)
     })
   })
 

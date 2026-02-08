@@ -685,7 +685,7 @@ describe('POST /api/payments', () => {
   })
 
   describe('errores en transacción', () => {
-    it('debe retornar 500 cuando cliente no se encuentra en TX (crédito)', async () => {
+    it('debe retornar 404 cuando cliente no se encuentra en TX (crédito)', async () => {
       vi.mocked(prisma.$transaction).mockImplementation(async (fn) => {
         return fn({
           payment: { create: vi.fn().mockResolvedValue({ id: 'p1', allocations: [], installments: [] }) },
@@ -701,10 +701,10 @@ describe('POST /api/payments', () => {
       })
       const response = await callPOST(request)
 
-      expect(response.status).toBe(500)
+      expect(response.status).toBe(404)
     })
 
-    it('debe retornar 500 cuando proyecto no se encuentra en TX (crédito)', async () => {
+    it('debe retornar 404 cuando proyecto no se encuentra en TX (crédito)', async () => {
       vi.mocked(prisma.$transaction).mockImplementation(async (fn) => {
         return fn({
           payment: { create: vi.fn().mockResolvedValue({ id: 'p1', allocations: [], installments: [] }) },
@@ -720,10 +720,10 @@ describe('POST /api/payments', () => {
       })
       const response = await callPOST(request)
 
-      expect(response.status).toBe(500)
+      expect(response.status).toBe(404)
     })
 
-    it('debe retornar 500 cuando canApplyCredit es inválido en TX', async () => {
+    it('debe retornar 400 cuando canApplyCredit es inválido en TX', async () => {
       vi.mocked(canApplyCredit).mockReturnValue({ valid: false, error: 'Crédito insuficiente' })
 
       vi.mocked(prisma.$transaction).mockImplementation(async (fn) => {
@@ -743,7 +743,9 @@ describe('POST /api/payments', () => {
       })
       const response = await callPOST(request)
 
-      expect(response.status).toBe(500)
+      expect(response.status).toBe(400)
+      const data = await response.json()
+      expect(data.error).toBe('Crédito insuficiente')
     })
 
     it('debe retornar 500 cuando $transaction rechaza', async () => {

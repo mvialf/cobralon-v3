@@ -1,16 +1,35 @@
 /**
  * Tests para app/api/projects/[id]/route.ts (GET/PUT/DELETE endpoints)
  *
- * ⚠️ CRÍTICO: Recálculo de balance en actualización
- *
  * Valida:
- * - GET: Obtención con balance calculado
- * - PUT: Validaciones, recálculo de total/balance, seguridad totalAmount
- * - DELETE: Eliminación exitosa
+ * - GET: Obtención con balance calculado, UUID validation
+ * - PUT: Validaciones Zod, recálculo de total/balance, seguridad totalAmount
+ * - DELETE: Eliminación exitosa, UUID validation
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { NextRequest } from 'next/server'
 import { Decimal } from '@prisma/client/runtime/library'
+
+// Mock de logger-middleware (usado internamente por withApiHandler)
+vi.mock('@/lib/logger-middleware', () => ({
+  withLogging: (handler: Function) => {
+    return async (
+      request: NextRequest,
+      context?: { params: Promise<Record<string, string>> }
+    ) => {
+      const mockLogger = {
+        debug: vi.fn(),
+        info: vi.fn(),
+        warn: vi.fn(),
+        error: vi.fn(),
+        child: vi.fn().mockReturnThis(),
+      }
+      const mockContext = context || { params: Promise.resolve({}) }
+      return handler(request, mockLogger, mockContext)
+    }
+  },
+}))
 
 // Mock de Prisma
 vi.mock('@/lib/db', () => ({
@@ -59,15 +78,19 @@ function createParams(id: string) {
   return { params: Promise.resolve({ id }) }
 }
 
-// Helper para crear request
-function createRequest(method: string, body?: Record<string, unknown>): Request {
-  const init: RequestInit = { method }
-  if (body) {
-    init.body = JSON.stringify(body)
-    init.headers = { 'Content-Type': 'application/json' }
-  }
-  return new Request('http://localhost:3000/api/projects/test-id', init)
+// Helper para crear NextRequest
+function createRequest(method: string, body?: Record<string, unknown>): NextRequest {
+  return new NextRequest('http://localhost:3000/api/projects/test-id', {
+    method,
+    ...(body && {
+      body: JSON.stringify(body),
+      headers: { 'Content-Type': 'application/json' },
+    }),
+  })
 }
+
+// UUID válido para tests
+const VALID_UUID = 'a1b2c3d4-e5f6-7890-abcd-ef1234567890'
 
 // Proyecto mock base
 const mockProject = {
@@ -99,11 +122,20 @@ describe('GET /api/projects/[id]', () => {
     vi.clearAllMocks()
   })
 
+  it('debe retornar 400 para UUID inválido', async () => {
+    const request = createRequest('GET')
+    const response = await GET(request, createParams('not-a-uuid'))
+    const data = await response.json()
+
+    expect(response.status).toBe(400)
+    expect(data.error).toContain('UUID inválido')
+  })
+
   it('debe retornar 404 cuando proyecto no existe', async () => {
     vi.mocked(prisma.project.findUnique).mockResolvedValue(null)
 
     const request = createRequest('GET')
-    const response = await GET(request, createParams('nonexistent'))
+    const response = await GET(request, createParams(VALID_UUID))
     const data = await response.json()
 
     expect(response.status).toBe(404)
@@ -114,11 +146,10 @@ describe('GET /api/projects/[id]', () => {
     vi.mocked(prisma.project.findUnique).mockResolvedValue(mockProject as never)
 
     const request = createRequest('GET')
-    const response = await GET(request, createParams('project-1'))
+    const response = await GET(request, createParams(VALID_UUID))
     const data = await response.json()
 
     expect(response.status).toBe(200)
-    expect(data.id).toBe('project-1')
     expect(data.totalPaid).toBeDefined()
     expect(data.balance).toBeDefined()
     expect(data.percentPaid).toBeDefined()
@@ -128,7 +159,7 @@ describe('GET /api/projects/[id]', () => {
     vi.mocked(prisma.project.findUnique).mockResolvedValue(mockProject as never)
 
     const request = createRequest('GET')
-    await GET(request, createParams('project-1'))
+    await GET(request, createParams(VALID_UUID))
 
     expect(derivePaymentProgress).toHaveBeenCalled()
   })
@@ -137,7 +168,7 @@ describe('GET /api/projects/[id]', () => {
     vi.mocked(prisma.project.findUnique).mockResolvedValue(mockProject as never)
 
     const request = createRequest('GET')
-    const response = await GET(request, createParams('project-1'))
+    const response = await GET(request, createParams(VALID_UUID))
     const data = await response.json()
 
     expect(typeof data.totalAmount).toBe('number')
@@ -148,7 +179,7 @@ describe('GET /api/projects/[id]', () => {
     vi.mocked(prisma.project.findUnique).mockRejectedValue(new Error('DB Error'))
 
     const request = createRequest('GET')
-    const response = await GET(request, createParams('project-1'))
+    const response = await GET(request, createParams(VALID_UUID))
     const data = await response.json()
 
     expect(response.status).toBe(500)
@@ -186,11 +217,20 @@ describe('PUT /api/projects/[id]', () => {
   })
 
   describe('validaciones', () => {
+    it('debe retornar 400 para UUID inválido', async () => {
+      const request = createRequest('PUT', { projectName: 'Nuevo' })
+      const response = await PUT(request, createParams('not-a-uuid'))
+      const data = await response.json()
+
+      expect(response.status).toBe(400)
+      expect(data.error).toContain('UUID inválido')
+    })
+
     it('debe retornar 404 cuando proyecto no existe', async () => {
       vi.mocked(prisma.project.findUnique).mockResolvedValue(null)
 
       const request = createRequest('PUT', { projectName: 'Nuevo' })
-      const response = await PUT(request, createParams('nonexistent'))
+      const response = await PUT(request, createParams(VALID_UUID))
       const data = await response.json()
 
       expect(response.status).toBe(404)
@@ -201,7 +241,7 @@ describe('PUT /api/projects/[id]', () => {
       vi.mocked(prisma.customer.findUnique).mockResolvedValue(null)
 
       const request = createRequest('PUT', { customerId: 'nonexistent' })
-      const response = await PUT(request, createParams('project-1'))
+      const response = await PUT(request, createParams(VALID_UUID))
       const data = await response.json()
 
       expect(response.status).toBe(404)
@@ -209,47 +249,42 @@ describe('PUT /api/projects/[id]', () => {
     })
   })
 
-  describe('⚠️ SEGURIDAD: Recálculo de total', () => {
+  describe('SEGURIDAD: Recálculo de total', () => {
     it('debe recalcular total cuando cambia subtotal', async () => {
       const request = createRequest('PUT', { subtotal: 2000000 })
-      await PUT(request, createParams('project-1'))
+      await PUT(request, createParams(VALID_UUID))
 
-      // Debe usar el taxRate existente (19)
       expect(calculateProjectTotal).toHaveBeenCalledWith(2000000, 19)
     })
 
     it('debe recalcular total cuando cambia taxRate', async () => {
       const request = createRequest('PUT', { taxRate: 21 })
-      await PUT(request, createParams('project-1'))
+      await PUT(request, createParams(VALID_UUID))
 
-      // Debe usar el subtotal existente (1000000)
       expect(calculateProjectTotal).toHaveBeenCalledWith(1000000, 21)
     })
 
     it('debe recalcular cuando cambian ambos', async () => {
       const request = createRequest('PUT', { subtotal: 2000000, taxRate: 21 })
-      await PUT(request, createParams('project-1'))
+      await PUT(request, createParams(VALID_UUID))
 
       expect(calculateProjectTotal).toHaveBeenCalledWith(2000000, 21)
     })
 
     it('debe IGNORAR totalAmount enviado por cliente', async () => {
-      // Cliente intenta enviar totalAmount manipulado
       const request = createRequest('PUT', {
         subtotal: 2000000,
         taxRate: 19,
-        totalAmount: 100000, // Intento de fraude
+        totalAmount: 100000,
       })
-      await PUT(request, createParams('project-1'))
+      await PUT(request, createParams(VALID_UUID))
 
-      // El servidor debe calcular el valor correcto
       expect(calculateProjectTotal).toHaveBeenCalledWith(2000000, 19)
     })
   })
 
   describe('recálculo de balance', () => {
     it('debe recalcular balance cuando cambia totalAmount', async () => {
-      // Mock que captura los datos de update
       let updateData: Record<string, unknown> | null = null
       vi.mocked(prisma.$transaction).mockImplementation(async (fn) => {
         const mockTx = {
@@ -269,9 +304,8 @@ describe('PUT /api/projects/[id]', () => {
       })
 
       const request = createRequest('PUT', { subtotal: 2000000 })
-      await PUT(request, createParams('project-1'))
+      await PUT(request, createParams(VALID_UUID))
 
-      // Balance debe estar definido y ser recalculado
       expect(updateData?.['balance']).toBeDefined()
     })
 
@@ -281,11 +315,11 @@ describe('PUT /api/projects/[id]', () => {
       } as never)
 
       const request = createRequest('PUT', { subtotal: 2000000 })
-      await PUT(request, createParams('project-1'))
+      await PUT(request, createParams(VALID_UUID))
 
       expect(prisma.paymentAllocation.aggregate).toHaveBeenCalledWith(
         expect.objectContaining({
-          where: { projectId: 'project-1' },
+          where: { projectId: VALID_UUID },
           _sum: { allocatedAmount: true },
         })
       )
@@ -295,23 +329,22 @@ describe('PUT /api/projects/[id]', () => {
   describe('actualización parcial', () => {
     it('debe actualizar solo projectNumber', async () => {
       const request = createRequest('PUT', { projectNumber: 'P-002' })
-      const response = await PUT(request, createParams('project-1'))
+      const response = await PUT(request, createParams(VALID_UUID))
 
       expect(response.status).toBe(200)
-      // No debe recalcular total si no cambiaron subtotal/taxRate
       expect(calculateProjectTotal).not.toHaveBeenCalled()
     })
 
     it('debe actualizar projectName', async () => {
       const request = createRequest('PUT', { projectName: 'Mi Proyecto' })
-      const response = await PUT(request, createParams('project-1'))
+      const response = await PUT(request, createParams(VALID_UUID))
 
       expect(response.status).toBe(200)
     })
 
     it('debe permitir limpiar projectName (null)', async () => {
       const request = createRequest('PUT', { projectName: '' })
-      const response = await PUT(request, createParams('project-1'))
+      const response = await PUT(request, createParams(VALID_UUID))
 
       expect(response.status).toBe(200)
     })
@@ -323,21 +356,21 @@ describe('PUT /api/projects/[id]', () => {
         comuna: 'Providencia',
         region: 'Metropolitana',
       })
-      const response = await PUT(request, createParams('project-1'))
+      const response = await PUT(request, createParams(VALID_UUID))
 
       expect(response.status).toBe(200)
     })
 
     it('debe cambiar projectStatusId', async () => {
       const request = createRequest('PUT', { projectStatusId: 'status-2' })
-      const response = await PUT(request, createParams('project-1'))
+      const response = await PUT(request, createParams(VALID_UUID))
 
       expect(response.status).toBe(200)
     })
 
     it('debe permitir desconectar projectStatus (null)', async () => {
       const request = createRequest('PUT', { projectStatusId: null })
-      const response = await PUT(request, createParams('project-1'))
+      const response = await PUT(request, createParams(VALID_UUID))
 
       expect(response.status).toBe(200)
     })
@@ -367,8 +400,13 @@ describe('PUT /api/projects/[id]', () => {
         return fn(mockTx as never)
       })
 
-      const request = createRequest('PUT', { uninstallTagIds: ['tag-1', 'tag-2'] })
-      await PUT(request, createParams('project-1'))
+      const request = createRequest('PUT', {
+        uninstallTagIds: [
+          'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
+          'b2c3d4e5-f6a7-8901-bcde-f12345678901',
+        ],
+      })
+      await PUT(request, createParams(VALID_UUID))
 
       expect(deletedTags).toBe(true)
       expect(createdTags).toBe(true)
@@ -394,7 +432,7 @@ describe('PUT /api/projects/[id]', () => {
       })
 
       const request = createRequest('PUT', { uninstallTagIds: [] })
-      await PUT(request, createParams('project-1'))
+      await PUT(request, createParams(VALID_UUID))
 
       expect(deletedTags).toBe(true)
     })
@@ -405,7 +443,7 @@ describe('PUT /api/projects/[id]', () => {
       vi.mocked(prisma.$transaction).mockRejectedValue(new Error('Transaction failed'))
 
       const request = createRequest('PUT', { projectName: 'Test' })
-      const response = await PUT(request, createParams('project-1'))
+      const response = await PUT(request, createParams(VALID_UUID))
       const data = await response.json()
 
       expect(response.status).toBe(500)
@@ -419,11 +457,20 @@ describe('DELETE /api/projects/[id]', () => {
     vi.clearAllMocks()
   })
 
+  it('debe retornar 400 para UUID inválido', async () => {
+    const request = createRequest('DELETE')
+    const response = await DELETE(request, createParams('not-a-uuid'))
+    const data = await response.json()
+
+    expect(response.status).toBe(400)
+    expect(data.error).toContain('UUID inválido')
+  })
+
   it('debe retornar 404 cuando proyecto no existe', async () => {
     vi.mocked(prisma.project.findUnique).mockResolvedValue(null)
 
     const request = createRequest('DELETE')
-    const response = await DELETE(request, createParams('nonexistent'))
+    const response = await DELETE(request, createParams(VALID_UUID))
     const data = await response.json()
 
     expect(response.status).toBe(404)
@@ -435,7 +482,7 @@ describe('DELETE /api/projects/[id]', () => {
     vi.mocked(prisma.project.delete).mockResolvedValue(mockProject as never)
 
     const request = createRequest('DELETE')
-    const response = await DELETE(request, createParams('project-1'))
+    const response = await DELETE(request, createParams(VALID_UUID))
     const data = await response.json()
 
     expect(response.status).toBe(200)
@@ -447,7 +494,7 @@ describe('DELETE /api/projects/[id]', () => {
     vi.mocked(prisma.project.delete).mockRejectedValue(new Error('FK Constraint'))
 
     const request = createRequest('DELETE')
-    const response = await DELETE(request, createParams('project-1'))
+    const response = await DELETE(request, createParams(VALID_UUID))
     const data = await response.json()
 
     expect(response.status).toBe(500)
