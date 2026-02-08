@@ -99,10 +99,10 @@ export function ProjectSearchField({
       let endpoint: string
       switch (resolvedFilterMode) {
         case 'finished':
-          endpoint = `/api/projects/search-finished?q=${debouncedSearch}&limit=20`
+          endpoint = `/api/projects/search?q=${debouncedSearch}&status=finished&limit=20`
           break
         case 'active':
-          endpoint = `/api/projects/search-active?q=${debouncedSearch}&limit=20`
+          endpoint = `/api/projects/search?q=${debouncedSearch}&status=active&limit=20`
           break
         case 'with-balance':
         default:

@@ -3,27 +3,24 @@ import { prisma } from '@/lib/db'
 import { withLogging } from '@/lib/logger-middleware'
 
 /**
- * GET /api/projects/search-active
+ * GET /api/projects/search
  *
- * Busca proyectos activos (NO finalizados) para eventos de calendario.
- * Retorna proyectos con isFinal = false (sin importar balance).
+ * Busca proyectos por estado para calendario (active) o postventa (finished).
  *
  * Query params:
  * - q: término de búsqueda (min 2 caracteres)
+ * - status: 'active' (isFinal=false) | 'finished' (isFinal=true)
  * - limit: máximo de resultados (default: 20, max: 50)
  *
- * Búsqueda en:
- * - projectNumber (ej: "2024-089")
- * - projectName (ej: "Ampliación bodega")
- * - customer.name (ej: "Juan Pérez")
+ * Búsqueda en: projectNumber, projectName, customer.name
  */
 export const GET = withLogging(async (request, logger) => {
   try {
     const { searchParams } = new URL(request.url)
     const q = searchParams.get('q') || ''
+    const status = searchParams.get('status')
     const limit = Math.min(Number(searchParams.get('limit')) || 20, 50)
 
-    // Validar término de búsqueda
     if (q.length < 2) {
       return NextResponse.json(
         { error: 'El término de búsqueda debe tener al menos 2 caracteres' },
@@ -31,60 +28,41 @@ export const GET = withLogging(async (request, logger) => {
       )
     }
 
-    // Buscar proyectos activos (NO finalizados)
+    if (status !== 'active' && status !== 'finished') {
+      return NextResponse.json(
+        { error: "El parámetro 'status' debe ser 'active' o 'finished'" },
+        { status: 400 }
+      )
+    }
+
+    const isFinal = status === 'finished'
+
     const projects = await prisma.project.findMany({
       where: {
         projectStatus: {
-          isFinal: false, // ← Filtro principal: excluir proyectos finalizados
+          isFinal,
           isActive: true,
         },
         OR: [
-          {
-            projectNumber: {
-              contains: q,
-              mode: 'insensitive',
-            },
-          },
-          {
-            projectName: {
-              contains: q,
-              mode: 'insensitive',
-            },
-          },
-          {
-            customer: {
-              name: {
-                contains: q,
-                mode: 'insensitive',
-              },
-            },
-          },
+          { projectNumber: { contains: q, mode: 'insensitive' } },
+          { projectName: { contains: q, mode: 'insensitive' } },
+          { customer: { name: { contains: q, mode: 'insensitive' } } },
         ],
       },
       include: {
         customer: {
-          select: {
-            id: true,
-            name: true,
-          },
+          select: { id: true, name: true },
         },
         projectStatus: {
           select: {
             id: true,
             name: true,
-            color: {
-              select: {
-                bgClass: true,
-                textClass: true,
-              },
-            },
+            color: { select: { bgClass: true, textClass: true } },
           },
         },
       },
       take: limit,
-      orderBy: {
-        createdAt: 'desc', // Más recientes primero
-      },
+      orderBy: { createdAt: 'desc' },
     })
 
     const projectsSimplified = projects.map((project) => ({
@@ -106,7 +84,7 @@ export const GET = withLogging(async (request, logger) => {
 
     return NextResponse.json(projectsSimplified)
   } catch (error) {
-    logger.error({ err: error }, 'Error searching active projects')
-    return NextResponse.json({ error: 'Error al buscar proyectos activos' }, { status: 500 })
+    logger.error({ err: error }, 'Error searching projects')
+    return NextResponse.json({ error: 'Error al buscar proyectos' }, { status: 500 })
   }
 })
