@@ -12,6 +12,7 @@ import {
 import { calculateProjectTotal } from '@/lib/business-logic/totals'
 import { FINANCIAL } from '@/lib/constants/financial-constants'
 import type { ProjectListFilters } from '@/types/project-list'
+import { parsePaginationParams, buildPaginationResponse } from '@/lib/utils/pagination'
 import { withApiHandler, BusinessError } from '@/lib/api-handler'
 import {
   createProjectApiSchema,
@@ -50,8 +51,7 @@ const projectStateSchema = projectStateValues.default('Activo')
  */
 export const GET = withLogging(async (request, logger) => {
   const { searchParams } = new URL(request.url)
-  const page = parseInt(searchParams.get('page') || '1')
-  const limit = Math.min(parseInt(searchParams.get('limit') || '10'), 100)
+  const { page, limit } = parsePaginationParams(searchParams)
   const search = searchParams.get('search') || ''
   const customerId = searchParams.get('customerId') || ''
 
@@ -128,7 +128,7 @@ export const GET = withLogging(async (request, logger) => {
       }),
     ])
 
-    const totalPages = Math.ceil(total / limit)
+    const pagination = buildPaginationResponse(page, limit, total)
 
     // Formatear facets para respuesta
     const facets = {
@@ -138,10 +138,7 @@ export const GET = withLogging(async (request, logger) => {
 
     logger.info(
       {
-        total,
-        page,
-        limit,
-        totalPages,
+        ...pagination,
         projectState,
         returnedCount: projects.length,
         facets: {
@@ -154,12 +151,7 @@ export const GET = withLogging(async (request, logger) => {
 
     return NextResponse.json({
       projects,
-      pagination: {
-        page,
-        limit,
-        total,
-        totalPages,
-      },
+      pagination,
       facets,
     })
   } catch (error) {
