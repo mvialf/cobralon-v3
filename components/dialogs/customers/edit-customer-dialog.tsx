@@ -1,6 +1,6 @@
 'use client'
 
-import { CustomerForm } from '@/components/forms/customer/customer-form'
+import { CustomerForm } from '@/components/forms/customers/customer-form'
 import { type CustomerFormData } from '@/lib/validations/customer-validations'
 import { useUpdateCustomer } from '@/hooks/queries/use-customers'
 import {

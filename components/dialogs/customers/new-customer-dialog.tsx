@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { Plus } from 'lucide-react'
-import { CustomerForm } from '@/components/forms/customer/customer-form'
+import { CustomerForm } from '@/components/forms/customers/customer-form'
 import { type CustomerFormData } from '@/lib/validations/customer-validations'
 import { useCreateCustomer } from '@/hooks/queries/use-customers'
 import { Button } from '@/components/ui/button'

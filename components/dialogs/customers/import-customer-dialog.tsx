@@ -1,7 +1,7 @@
 'use client'
 
 import { ImportSheet } from '@/components/dialogs/shared/import-sheet'
-import { ImportPreviewTable } from '@/components/forms/customer/import-preview-table'
+import { ImportPreviewTable } from '@/components/forms/customers/import-preview-table'
 import {
   parseCustomerExcel,
   validateExcelFile,

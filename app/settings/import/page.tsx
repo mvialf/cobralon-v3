@@ -10,7 +10,7 @@ import dynamic from 'next/dynamic'
 
 const ImportCustomerDialog = dynamic(
   () =>
-    import('@/components/dialogs/customer/import-customer-dialog').then((m) => ({
+    import('@/components/dialogs/customers/import-customer-dialog').then((m) => ({
       default: m.ImportCustomerDialog,
     })),
   { ssr: false }

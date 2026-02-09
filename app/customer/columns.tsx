@@ -12,7 +12,7 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { PaymentToCustomerDialog } from '@/components/dialogs/payments/payment-to-customer-dialog'
 import { RefundCreditDialog } from '@/components/dialogs/customers/refund-credit-dialog'
-import { EditCustomerDialog } from '@/components/dialogs/customer/edit-customer-dialog'
+import { EditCustomerDialog } from '@/components/dialogs/customers/edit-customer-dialog'
 import { ConfirmDeleteDialog } from '@/components/dialogs/confirm-delete-dialog'
 import { ViewCustomerAccountDialog } from '@/components/dialogs/customers/view-customer-account-dialog'
 import { CreditHistoryDialog } from '@/components/dialogs/customers/credit-history-dialog'

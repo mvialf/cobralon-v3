@@ -9,7 +9,7 @@ import { normalizePhone } from '@/lib/utils/phone'
 import { formatDateValue, parseDateValue } from '@/lib/utils'
 import { calculateProjectTotal } from '@/lib/business-logic/totals'
 import { useCustomersList } from '@/hooks/queries/use-customers'
-import { useProjectStatuses, getInitialStatus } from '@/hooks/queries/use-project-statuses'
+import { useProjectStatuses, getInitialProjectStatus } from '@/hooks/queries/use-project-statuses'
 
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -17,7 +17,7 @@ import { PhoneInput } from '@/components/ui/phone-input'
 import { FormGrid } from '@/components/ui/form-grid'
 import { StatusOptionDisplay } from '@/components/ui/status-option-display'
 import { Combobox } from '@/components/ui/combobox'
-import { NewCustomerDialog } from '@/components/dialogs/customer/new-customer-dialog'
+import { NewCustomerDialog } from '@/components/dialogs/customers/new-customer-dialog'
 import { AddressFields } from '@/components/forms/fields/address-fields'
 import { ProjectFinancialFields } from '@/components/forms/fields/project-financial-fields'
 import { ProjectDetailsFields } from '@/components/forms/fields/project-details-fields'
@@ -143,7 +143,7 @@ export const ProjectForm = React.forwardRef<ProjectFormHandle, ProjectFormProps>
       if (!loadingStatuses && projectStatuses.length > 0) {
         // Si no hay projectStatusId seteado y no estamos editando, usar initialStatus
         if (!defaultValues?.projectStatusId && !form.getValues('projectStatusId')) {
-          const initialStatus = getInitialStatus(projectStatuses)
+          const initialStatus = getInitialProjectStatus(projectStatuses)
           if (initialStatus) {
             form.setValue('projectStatusId', initialStatus.id)
           }
