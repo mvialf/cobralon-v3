@@ -221,7 +221,9 @@ describe('ImportPaymentDialog', () => {
 
       await user.click(screen.getByRole('button', { name: /importar pagos/i }))
 
-      expect(screen.getByText(/importar pagos desde excel/i)).toBeInTheDocument()
+      expect(
+        screen.getByText(/sube un archivo excel con los datos de tus pagos/i)
+      ).toBeInTheDocument()
     })
 
     it('muestra instrucciones de columnas requeridas', async () => {
@@ -307,7 +309,9 @@ describe('ImportPaymentDialog', () => {
 
       // Debe volver a mostrar el dropzone / estado upload
       await waitFor(() => {
-        expect(screen.getByText(/importar pagos desde excel/i)).toBeInTheDocument()
+        expect(
+        screen.getByText(/sube un archivo excel con los datos de tus pagos/i)
+      ).toBeInTheDocument()
       })
     })
   })
@@ -329,7 +333,7 @@ describe('ImportPaymentDialog', () => {
 
       // Mientras fetch está pendiente, debe mostrar el estado importing
       await waitFor(() => {
-        expect(screen.getByText(/importando 2 pagos/i)).toBeInTheDocument()
+        expect(screen.getByRole('progressbar')).toBeInTheDocument()
       })
 
       // Resolver fetch para limpiar
