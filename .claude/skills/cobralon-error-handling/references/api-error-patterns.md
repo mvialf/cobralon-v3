@@ -47,7 +47,7 @@ export const PUT = withApiHandler<UpdateEntityBody>(
 
 ## Patrón para GET lista (`withLogging`)
 
-Las rutas GET de listas usan `withLogging` con try/catch manual (no `withApiHandler`):
+Las rutas GET de listas paginadas usan `withLogging` con try/catch manual:
 
 ```typescript
 import { withLogging } from '@/lib/logger-middleware'
@@ -68,6 +68,25 @@ export const GET = withLogging(async (request, logger) => {
     return NextResponse.json({ error: 'Error al obtener entidades' }, { status: 500 })
   }
 })
+```
+
+### Alternativa: GET simples con `withApiHandler`
+
+Para GETs que no requieren paginación ni lógica compleja (listas de catálogo, opciones de select), se puede usar `withApiHandler` sin `bodySchema`. El error handling es automático:
+
+```typescript
+import { withApiHandler } from '@/lib/api-handler'
+
+// Ejemplos reales: badge-colors, payment-methods, aftersales (sin paginación)
+export const GET = withApiHandler(
+  async (_request, logger) => {
+    const items = await prisma.entity.findMany({ orderBy: { name: 'asc' } })
+    logger.info({ count: items.length }, 'Entities fetched')
+    return NextResponse.json({ items })
+  },
+  { fallbackError: 'Error al obtener entidades' }
+)
+```
 ```
 
 ## Logging estructurado con `withLogging`

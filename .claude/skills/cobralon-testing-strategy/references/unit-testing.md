@@ -2,7 +2,7 @@
 
 ## Mockear Prisma (`@/lib/db`)
 
-El proyecto NO usa `__mocks__/` global. Cada test mockea inline:
+Cada test mockea Prisma inline (no hay auto-mock global para Prisma):
 
 ```typescript
 import { describe, it, expect, vi, beforeEach } from 'vitest'
@@ -25,27 +25,16 @@ import { prisma } from '@/lib/db'
 import { POST } from '../route'
 ```
 
-## Mockear `withLogging`
+## Mockear `withLogging` (auto-mock)
 
-Todas las API routes usan `withLogging`. Mockearlo así:
+El proyecto usa un **auto-mock** en `lib/__mocks__/logger-middleware.ts` que Vitest detecta automáticamente por convención de directorio `__mocks__/`.
 
 ```typescript
-vi.mock('@/lib/logger-middleware', () => ({
-  withLogging: (handler: Function) => {
-    return async (request: NextRequest, context?: { params: Promise<Record<string, string>> }) => {
-      const mockLogger = {
-        debug: vi.fn(),
-        info: vi.fn(),
-        warn: vi.fn(),
-        error: vi.fn(),
-        child: vi.fn().mockReturnThis(),
-      }
-      const mockContext = context || { params: Promise.resolve({}) }
-      return handler(request, mockLogger, mockContext)
-    }
-  },
-}))
+// Solo necesitas esto — sin factory function:
+vi.mock('@/lib/logger-middleware')
 ```
+
+El auto-mock reemplaza `withLogging` con un passthrough que inyecta un mock logger (con `debug`, `info`, `warn`, `error`, `child` como `vi.fn()`). Funciona tanto para rutas con `withLogging` como con `withApiHandler`.
 
 ## Mockear `$transaction`
 

@@ -172,15 +172,37 @@ const { fields, replace, update, remove } = useFieldArray({
 **Aplica a:** `app/api/*/route.ts`
 **Estado:** ✅ Implementado en 24+ endpoints
 
-### GET lista → `withLogging`
+### GET lista paginada → `withLogging`
 
 ```typescript
 import { withLogging } from '@/lib/logger-middleware'
+import { parsePaginationParams, buildPaginationResponse } from '@/lib/utils/pagination'
 
 export const GET = withLogging(async (request, logger) => {
-  logger.info({ page, limit }, 'Fetching payments')
+  const { searchParams } = new URL(request.url)
+  const { page, limit, skip } = parsePaginationParams(searchParams)
   // ... handler logic con try/catch manual
+  return NextResponse.json({
+    items,
+    pagination: buildPaginationResponse(page, limit, total),
+  })
 })
+```
+
+### GET simple (catálogo/sin paginación) → `withApiHandler`
+
+GETs simples sin paginación (badge-colors, payment-methods, etc.) pueden usar `withApiHandler` sin `bodySchema`:
+
+```typescript
+import { withApiHandler } from '@/lib/api-handler'
+
+export const GET = withApiHandler(
+  async (_request, logger) => {
+    const items = await prisma.entity.findMany({ orderBy: { name: 'asc' } })
+    return NextResponse.json({ items })
+  },
+  { fallbackError: 'Error al obtener entidades' }
+)
 ```
 
 ### POST/PUT/DELETE → `withApiHandler`
@@ -201,7 +223,8 @@ export const POST = withApiHandler<CreateEntityBody>(
 ```
 
 **Qué mantener:**
-- GET lista → `withLogging` con try/catch manual
+- GET lista paginada → `withLogging` con try/catch manual + `parsePaginationParams`/`buildPaginationResponse`
+- GET simple (catálogo) → `withApiHandler` sin bodySchema es alternativa válida
 - POST/PUT/DELETE → `withApiHandler` con bodySchema, validateUuidParams, fallbackError
 - `BusinessError` para errores de negocio (not found, validación custom)
 - Logger inyectado como segundo parámetro del handler
@@ -228,6 +251,48 @@ lib/business-logic/
 - Sin imports de `@/components`, `next/`, ni `@prisma/client` en estos módulos
 - Funciones puras que reciben datos y retornan resultados
 - Testing directo sin mocking de DB/UI
+- Usar `PrismaTransaction` de `@/lib/db/types` para tipar el parámetro `tx` en transacciones
+
+## Pagination Helpers
+
+**Aplica a:** `app/api/*/route.ts` (funciones GET con paginación)
+**Estado:** ✅ Implementado en 7+ endpoints
+
+```typescript
+import { parsePaginationParams, buildPaginationResponse } from '@/lib/utils/pagination'
+
+const { page, limit, skip } = parsePaginationParams(searchParams) // default limit=10, max=100
+// ... usar skip/limit en findMany
+return NextResponse.json({
+  items,
+  pagination: buildPaginationResponse(page, limit, total),
+})
+```
+
+**Qué mantener:**
+- Siempre usar `parsePaginationParams` en lugar de parsear manualmente
+- `buildPaginationResponse` calcula `totalPages` automáticamente
+- Default limit=10, máximo limit=100
+
+## Status Route Factory
+
+**Aplica a:** `app/api/*-status/route.ts`
+**Estado:** ✅ Implementado para projectStatus, aftersaleStatus, visitStatus
+
+Las 3 entidades de status comparten la misma lógica CRUD y reorder. La factory en `lib/api/status-route-factory.ts` genera handlers parametrizados:
+
+```typescript
+import { STATUS_CONFIGS, createStatusListHandler, createStatusCreateHandler } from '@/lib/api/status-route-factory'
+
+const config = STATUS_CONFIGS.project
+export const GET = createStatusListHandler(config)
+export const POST = createStatusCreateHandler(config)
+```
+
+**Qué mantener:**
+- Usar la factory para las 3 entidades de status (project, aftersale, visit)
+- Nunca duplicar lógica de CRUD de status manualmente
+- La factory maneja validaciones de unicidad (isInitial, isFinal, nombre), order automático y soft/hard delete
 
 ## keepPreviousData en React Query
 

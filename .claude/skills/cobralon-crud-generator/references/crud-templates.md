@@ -110,6 +110,7 @@ import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { withLogging } from '@/lib/logger-middleware'
 import { withApiHandler } from '@/lib/api-handler'
+import { parsePaginationParams, buildPaginationResponse } from '@/lib/utils/pagination'
 import {
   createEntityNameSchema,
   type CreateEntityNameInput,
@@ -118,11 +119,29 @@ import {
 // GET /api/entity-names (withLogging para listas)
 export const GET = withLogging(async (request, logger) => {
   try {
-    const items = await prisma.entityName.findMany({
-      orderBy: { createdAt: 'desc' },
+    const { searchParams } = new URL(request.url)
+    const { page, limit, skip } = parsePaginationParams(searchParams)
+    const search = searchParams.get('search') || ''
+
+    const whereCondition = search
+      ? { OR: [{ name: { contains: search, mode: 'insensitive' as const } }] }
+      : {}
+
+    const [total, items] = await Promise.all([
+      prisma.entityName.count({ where: whereCondition }),
+      prisma.entityName.findMany({
+        where: whereCondition,
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take: limit,
+      }),
+    ])
+
+    logger.info({ total, page, limit }, 'EntityNames fetched')
+    return NextResponse.json({
+      entityNames: items,
+      pagination: buildPaginationResponse(page, limit, total),
     })
-    logger.info({ count: items.length }, 'EntityNames fetched')
-    return NextResponse.json(items)
   } catch (error) {
     logger.error({ err: error }, 'Error fetching entity names')
     return NextResponse.json({ error: 'Error al obtener entity names' }, { status: 500 })

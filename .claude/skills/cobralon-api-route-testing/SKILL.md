@@ -30,20 +30,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { NextRequest } from 'next/server'
 
 // 1. Mocks ANTES de imports
-vi.mock('@/lib/logger-middleware', () => ({
-  withLogging: (handler: Function) => {
-    return async (request: NextRequest, context?: { params: Promise<Record<string, string>> }) => {
-      const mockLogger = {
-        debug: vi.fn(),
-        info: vi.fn(),
-        warn: vi.fn(),
-        error: vi.fn(),
-        child: vi.fn().mockReturnThis(),
-      }
-      return handler(request, mockLogger, context || { params: Promise.resolve({}) })
-    }
-  },
-}))
+vi.mock('@/lib/logger-middleware') // Auto-mock: usa lib/__mocks__/logger-middleware.ts
 
 vi.mock('@/lib/db', () => ({
   prisma: {
@@ -148,7 +135,18 @@ describe('POST /api/ENTITY', () => {
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { NextRequest } from 'next/server'
 
-// Mocks (mismos de arriba) + business logic si aplica:
+// Mocks ANTES de imports
+vi.mock('@/lib/logger-middleware') // Auto-mock
+vi.mock('@/lib/db', () => ({
+  prisma: {
+    ENTITY: {
+      findUnique: vi.fn(),
+      update: vi.fn(),
+      delete: vi.fn(),
+    },
+  },
+}))
+// + business logic si aplica:
 // vi.mock('@/lib/business-logic/update-project-balance', () => ({
 //   updateMultipleProjectBalances: vi.fn(),
 // }))
@@ -299,11 +297,21 @@ Verificar qué importa la ruta bajo test:
 
 | La ruta importa...                         | Mock necesario                                           |
 | ------------------------------------------ | -------------------------------------------------------- |
-| `withLogging` de `@/lib/logger-middleware` | Mock de `@/lib/logger-middleware`                        |
-| `withApiHandler` de `@/lib/api-handler`    | Mismo mock de `@/lib/logger-middleware` (withApiHandler usa withLogging internamente, no requiere mock adicional) |
-| `logger` de `@/lib/logger` directamente    | Mock de `@/lib/logger`                                   |
+| `withLogging` de `@/lib/logger-middleware` | `vi.mock('@/lib/logger-middleware')` (auto-mock)         |
+| `withApiHandler` de `@/lib/api-handler`    | Mismo auto-mock (withApiHandler usa withLogging internamente) |
+| `logger` de `@/lib/logger` directamente    | Mock manual de `@/lib/logger` (ver abajo)                |
 
-Mock de `@/lib/logger` (para rutas que lo importan directamente):
+### Auto-mock (opción principal — preferida)
+
+El proyecto tiene `lib/__mocks__/logger-middleware.ts` que Vitest detecta automáticamente:
+
+```typescript
+vi.mock('@/lib/logger-middleware') // ← Usa auto-mock. Sin factory function.
+```
+
+Esto reemplaza `withLogging` con un passthrough que inyecta un mock logger. Funciona tanto para rutas con `withLogging` como con `withApiHandler`.
+
+### Mock manual de `@/lib/logger` (para rutas que lo importan directamente)
 
 ```typescript
 vi.mock('@/lib/logger', () => ({

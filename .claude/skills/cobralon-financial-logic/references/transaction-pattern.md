@@ -2,10 +2,14 @@
 
 ## Patrón de Transacción para Operaciones Financieras
 
-SIEMPRE usar transacción para operaciones que afectan pagos, créditos o balances:
+SIEMPRE usar transacción para operaciones que afectan pagos, créditos o balances.
+
+Tipar el parámetro `tx` con `PrismaTransaction` de `@/lib/db/types`:
 
 ```typescript
-await prisma.$transaction(async (tx) => {
+import type { PrismaTransaction } from '@/lib/db/types'
+
+await prisma.$transaction(async (tx: PrismaTransaction) => {
   // 1. Crear Payment
   const payment = await tx.payment.create({ ... })
 
