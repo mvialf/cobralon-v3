@@ -15,16 +15,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { DataTableFacetedFilter } from './data-table-faceted-filter'
-
-// Tipo para facets del servidor
-interface ServerFacet {
-  value: string
-  count: number
-}
-
-interface ServerFacets {
-  [columnId: string]: ServerFacet[]
-}
+import type { ServerFacets } from './data-table'
 
 interface DataTableToolbarProps<TData> {
   table: Table<TData>
@@ -77,6 +68,12 @@ export function DataTableToolbar<TData>({
     }
   }
 
+  const currentSearchValue = onSearchChange
+    ? (searchValue ?? '')
+    : enableGlobalFilter
+      ? ((table.getState().globalFilter as string) ?? '')
+      : ((table.getColumn(searchKey)?.getFilterValue() as string) ?? '')
+
   return (
     <div className="flex py-4 px-4 items-center bg-popover rounded-lg justify-between border-border">
       <div className="flex flex-1 items-center space-x-2">
@@ -85,22 +82,12 @@ export function DataTableToolbar<TData>({
             <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input
               placeholder={searchPlaceholder}
-              value={
-                onSearchChange
-                  ? (searchValue ?? '') // Use searchValue from parent for server-side
-                  : enableGlobalFilter
-                    ? ((table.getState().globalFilter as string) ?? '')
-                    : ((table.getColumn(searchKey)?.getFilterValue() as string) ?? '')
-              }
+              value={currentSearchValue}
               onChange={(event) => handleSearchChange(event.target.value)}
               className="pl-8 pr-8 w-[150px] lg:w-[250px]"
             />
             {/* Botón para limpiar búsqueda */}
-            {(onSearchChange
-              ? searchValue
-              : enableGlobalFilter
-                ? table.getState().globalFilter
-                : table.getColumn(searchKey)?.getFilterValue()) && (
+            {currentSearchValue && (
               <button
                 type="button"
                 onClick={() => handleSearchChange('')}

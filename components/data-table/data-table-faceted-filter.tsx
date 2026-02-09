@@ -19,12 +19,7 @@ import {
 } from '@/components/ui/command'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Separator } from '@/components/ui/separator'
-
-// Tipo para facets del servidor
-interface ServerFacet {
-  value: string
-  count: number
-}
+import type { ServerFacet } from './data-table'
 
 interface DataTableFacetedFilterProps<TData, TValue> {
   column?: Column<TData, TValue>
