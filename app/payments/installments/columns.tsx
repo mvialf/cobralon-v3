@@ -11,7 +11,7 @@ import {
 import { Badge } from '@/components/ui/badge'
 import { DataTableColumnHeader } from '@/components/data-table'
 import { toast } from 'sonner'
-import { formatDate } from '@/lib/format'
+import { formatDate, formatCurrency } from '@/lib/format'
 import { ProjectNameSummary } from '@/components/summarys/project-name-summary'
 
 export interface Installment {
@@ -119,16 +119,7 @@ export const createColumns = ({
     cell: ({ row }) => {
       const amount = row.getValue('amount') as number
       const currency = row.original.payment.currency
-      return (
-        <div className="text-right font-medium">
-          {new Intl.NumberFormat('es-CL', {
-            style: 'currency',
-            currency,
-            minimumFractionDigits: 0,
-            maximumFractionDigits: 0,
-          }).format(amount)}
-        </div>
-      )
+      return <div className="text-right font-medium">{formatCurrency(amount, currency)}</div>
     },
   },
   {
