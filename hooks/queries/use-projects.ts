@@ -286,26 +286,12 @@ export function useCreateProject() {
       return response.json()
     },
     onSuccess: () => {
-      // Invalidar queries con predicate (batch invalidation eficiente)
-      queryClient.invalidateQueries({
-        predicate: (query) => {
-          const key = query.queryKey[0]
-
-          // Invalidar todas las queries de projects
-          if (key === 'projects') return true
-
-          // Invalidar projects-with-metadata
-          if (key === 'projects-with-metadata') return true
-
-          return false
-        },
-      })
-
+      queryClient.invalidateQueries({ queryKey: ['projects'] })
+      queryClient.invalidateQueries({ queryKey: ['projects-with-metadata'] })
       toast.success('Proyecto creado exitosamente')
     },
     onError: (error) => {
       handleMutationError(error)
-      console.error('Error creating project:', error)
     },
   })
 }
@@ -350,7 +336,6 @@ export function useUpdateProject() {
     },
     onError: (error) => {
       handleMutationError(error)
-      console.error('Error updating project:', error)
     },
   })
 }
@@ -403,31 +388,15 @@ export function useDeleteProject() {
 
       return { previousData }
     },
-    // ✅ Rollback en caso de error
-    onError: (error, id, context) => {
-      // Restaurar estado anterior
+    onError: (error, _id, context) => {
       if (context?.previousData) {
         queryClient.setQueryData(['projects'], context.previousData)
       }
       handleMutationError(error)
     },
-    // ✅ Refetch para asegurar consistencia
     onSuccess: () => {
-      // Invalidar queries con predicate (batch invalidation eficiente)
-      queryClient.invalidateQueries({
-        predicate: (query) => {
-          const key = query.queryKey[0]
-
-          // Invalidar todas las queries de projects
-          if (key === 'projects') return true
-
-          // Invalidar projects-with-metadata
-          if (key === 'projects-with-metadata') return true
-
-          return false
-        },
-      })
-
+      queryClient.invalidateQueries({ queryKey: ['projects'] })
+      queryClient.invalidateQueries({ queryKey: ['projects-with-metadata'] })
       toast.success('Proyecto eliminado exitosamente')
     },
   })
@@ -474,13 +443,8 @@ export function useBulkDeleteProjects() {
       return { deleted, failed }
     },
     onSuccess: ({ deleted, failed }) => {
-      // Invalidar queries de projects
-      queryClient.invalidateQueries({
-        predicate: (query) => {
-          const key = query.queryKey[0]
-          return key === 'projects' || key === 'projects-with-metadata'
-        },
-      })
+      queryClient.invalidateQueries({ queryKey: ['projects'] })
+      queryClient.invalidateQueries({ queryKey: ['projects-with-metadata'] })
 
       if (failed === 0) {
         toast.success(
@@ -492,7 +456,6 @@ export function useBulkDeleteProjects() {
     },
     onError: (error) => {
       handleMutationError(error)
-      console.error('Error in bulk delete:', error)
     },
   })
 }
@@ -533,18 +496,12 @@ export function useUpdateProjectStatus() {
       return response.json()
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({
-        predicate: (query) => {
-          const key = query.queryKey[0]
-          return key === 'projects' || key === 'projects-with-metadata'
-        },
-      })
-
+      queryClient.invalidateQueries({ queryKey: ['projects'] })
+      queryClient.invalidateQueries({ queryKey: ['projects-with-metadata'] })
       toast.success('Estado actualizado exitosamente')
     },
     onError: (error) => {
       handleMutationError(error)
-      console.error('Error updating project status:', error)
     },
   })
 }
@@ -577,18 +534,12 @@ export function useUpdateProjectDate() {
       return response.json()
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({
-        predicate: (query) => {
-          const key = query.queryKey[0]
-          return key === 'projects' || key === 'projects-with-metadata'
-        },
-      })
-
+      queryClient.invalidateQueries({ queryKey: ['projects'] })
+      queryClient.invalidateQueries({ queryKey: ['projects-with-metadata'] })
       toast.success('Fecha actualizada exitosamente')
     },
     onError: (error) => {
       handleMutationError(error)
-      console.error('Error updating project date:', error)
     },
   })
 }

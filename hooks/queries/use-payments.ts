@@ -346,34 +346,16 @@ export function useCreatePayment() {
       return response.json()
     },
     onSuccess: (createdPayment) => {
-      // Invalidar queries con predicate (batch invalidation eficiente)
+      queryClient.invalidateQueries({ queryKey: ['payments'] })
+      queryClient.invalidateQueries({ queryKey: ['projects'] })
+      queryClient.invalidateQueries({ queryKey: ['search-projects'] })
       queryClient.invalidateQueries({
-        predicate: (query) => {
-          const key = query.queryKey[0]
-
-          // Invalidar todas las queries de payments
-          if (key === 'payments') return true
-
-          // Invalidar todas las queries de projects (balance cambió)
-          if (key === 'projects') return true
-
-          // Invalidar search-projects (balance de proyectos cambió)
-          if (key === 'search-projects') return true
-
-          // Invalidar customer-projects del cliente del pago
-          if (key === 'customer-projects' && query.queryKey[1] === createdPayment.customerId) {
-            return true
-          }
-
-          return false
-        },
+        queryKey: ['customer-projects', createdPayment.customerId],
       })
-
       toast.success('Pago creado exitosamente')
     },
     onError: (error) => {
       handleMutationError(error)
-      console.error('Error creating payment:', error)
     },
   })
 }
@@ -436,36 +418,18 @@ export function useUpdatePayment() {
       return response.json()
     },
     onSuccess: (updatedPayment) => {
-      // Invalidar queries con predicate (batch invalidation eficiente)
+      queryClient.invalidateQueries({ queryKey: ['payments'] })
+      queryClient.invalidateQueries({ queryKey: ['projects'] })
+      queryClient.invalidateQueries({ queryKey: ['search-projects'] })
       queryClient.invalidateQueries({
-        predicate: (query) => {
-          const key = query.queryKey[0]
-
-          // Invalidar todas las queries de payments
-          if (key === 'payments') return true
-
-          // Invalidar projects (balance puede haber cambiado si se editó amount)
-          if (key === 'projects') return true
-
-          // Invalidar search-projects
-          if (key === 'search-projects') return true
-
-          // Invalidar customer-projects del cliente del pago
-          if (key === 'customer-projects' && query.queryKey[1] === updatedPayment.customerId) {
-            return true
-          }
-
-          return false
-        },
+        queryKey: ['customer-projects', updatedPayment.customerId],
       })
-
       toast.success('Pago actualizado exitosamente')
     },
     onError: (error) => {
       handleMutationError(error, {
         400: 'No se puede editar un pago con cuotas configuradas',
       })
-      console.error('Error updating payment:', error)
     },
   })
 }
@@ -513,7 +477,6 @@ export function useUpdatePaymentDate() {
     },
     onError: (error) => {
       handleMutationError(error)
-      console.error('Error updating payment date:', error)
     },
   })
 }
@@ -555,18 +518,10 @@ export function useBulkDeletePayments() {
       return { deleted, failed }
     },
     onSuccess: ({ deleted, failed }) => {
-      // Invalidar queries relacionadas
-      queryClient.invalidateQueries({
-        predicate: (query) => {
-          const key = query.queryKey[0]
-          return (
-            key === 'payments' ||
-            key === 'projects' ||
-            key === 'search-projects' ||
-            key === 'customer-projects'
-          )
-        },
-      })
+      queryClient.invalidateQueries({ queryKey: ['payments'] })
+      queryClient.invalidateQueries({ queryKey: ['projects'] })
+      queryClient.invalidateQueries({ queryKey: ['search-projects'] })
+      queryClient.invalidateQueries({ queryKey: ['customer-projects'] })
 
       if (failed === 0) {
         toast.success(
@@ -578,7 +533,6 @@ export function useBulkDeletePayments() {
     },
     onError: (error) => {
       handleMutationError(error)
-      console.error('Error in bulk delete payments:', error)
     },
   })
 }
@@ -656,38 +610,17 @@ export function useDeletePayment() {
 
       return { previousData }
     },
-    // ✅ Rollback en caso de error
-    onError: (error, id, context) => {
-      // Restaurar estado anterior
+    onError: (error, _id, context) => {
       if (context?.previousData) {
         queryClient.setQueryData(['payments'], context.previousData)
       }
       handleMutationError(error)
-      console.error('Error deleting payment:', error)
     },
-    // ✅ Refetch para asegurar consistencia
     onSuccess: () => {
-      // Invalidar queries con predicate (batch invalidation)
-      queryClient.invalidateQueries({
-        predicate: (query) => {
-          const key = query.queryKey[0]
-
-          // Invalidar payments
-          if (key === 'payments') return true
-
-          // Invalidar projects (balance se liberó)
-          if (key === 'projects') return true
-
-          // Invalidar search-projects
-          if (key === 'search-projects') return true
-
-          // Invalidar customer-projects
-          if (key === 'customer-projects') return true
-
-          return false
-        },
-      })
-
+      queryClient.invalidateQueries({ queryKey: ['payments'] })
+      queryClient.invalidateQueries({ queryKey: ['projects'] })
+      queryClient.invalidateQueries({ queryKey: ['search-projects'] })
+      queryClient.invalidateQueries({ queryKey: ['customer-projects'] })
       toast.success('Pago eliminado exitosamente')
     },
   })

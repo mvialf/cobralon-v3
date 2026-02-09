@@ -13,5 +13,5 @@ const hooks = createStatusHooks<ProjectStatus>({
 export const useProjectStatuses = hooks.useStatuses
 export const useCreateProjectStatus = hooks.useCreateStatus
 export const useUpdateProjectStatus = hooks.useUpdateStatus
-export const getInitialStatus = hooks.getInitialStatus
-export const getStatusById = hooks.getStatusById
+export const getInitialProjectStatus = hooks.getInitialStatus
+export const getProjectStatusById = hooks.getStatusById

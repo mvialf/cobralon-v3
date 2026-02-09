@@ -262,28 +262,14 @@ export function useCreateCustomer() {
       return response.json()
     },
     onSuccess: () => {
-      // Invalidar queries con predicate (batch invalidation eficiente)
-      queryClient.invalidateQueries({
-        predicate: (query) => {
-          const key = query.queryKey[0]
-
-          // Invalidar todas las queries de customers
-          if (key === 'customers') return true
-
-          // Invalidar lista simple para combobox
-          if (key === 'customers-list') return true
-
-          return false
-        },
-      })
-
+      queryClient.invalidateQueries({ queryKey: ['customers'] })
+      queryClient.invalidateQueries({ queryKey: ['customers-list'] })
       toast.success('Cliente creado exitosamente')
     },
     onError: (error) => {
       handleMutationError(error, {
         409: 'Este email ya está registrado',
       })
-      console.error('Error creating customer:', error)
     },
   })
 }
@@ -335,20 +321,14 @@ export function useUpdateCustomer() {
       return response.json()
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({
-        predicate: (query) => {
-          const key = query.queryKey[0]
-          return key === 'customers' || key === 'customers-list'
-        },
-      })
-
+      queryClient.invalidateQueries({ queryKey: ['customers'] })
+      queryClient.invalidateQueries({ queryKey: ['customers-list'] })
       toast.success('Cliente actualizado exitosamente')
     },
     onError: (error) => {
       handleMutationError(error, {
         409: 'Este email ya está registrado por otro cliente',
       })
-      console.error('Error updating customer:', error)
     },
   })
 }
@@ -421,32 +401,15 @@ export function useDeleteCustomer() {
 
       return { previousData }
     },
-    // ✅ Rollback en caso de error
-    onError: (error, id, context) => {
-      // Restaurar estado anterior
+    onError: (error, _id, context) => {
       if (context?.previousData) {
         queryClient.setQueryData(['customers'], context.previousData)
       }
       handleMutationError(error)
-      console.error('Error deleting customer:', error)
     },
-    // ✅ Refetch para asegurar consistencia
     onSuccess: () => {
-      // Invalidar queries con predicate (batch invalidation eficiente)
-      queryClient.invalidateQueries({
-        predicate: (query) => {
-          const key = query.queryKey[0]
-
-          // Invalidar customers
-          if (key === 'customers') return true
-
-          // Invalidar lista simple
-          if (key === 'customers-list') return true
-
-          return false
-        },
-      })
-
+      queryClient.invalidateQueries({ queryKey: ['customers'] })
+      queryClient.invalidateQueries({ queryKey: ['customers-list'] })
       toast.success('Cliente eliminado exitosamente')
     },
   })

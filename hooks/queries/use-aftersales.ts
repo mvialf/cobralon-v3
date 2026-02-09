@@ -171,23 +171,11 @@ export function useCreateAftersale() {
       return result.aftersale
     },
     onSuccess: () => {
-      // Invalidar queries con predicate (batch invalidation eficiente)
-      queryClient.invalidateQueries({
-        predicate: (query) => {
-          const key = query.queryKey[0]
-
-          // Invalidar todas las queries de aftersales
-          if (key === 'aftersales') return true
-
-          return false
-        },
-      })
-
+      queryClient.invalidateQueries({ queryKey: ['aftersales'] })
       toast.success('Caso de postventa creado exitosamente')
     },
     onError: (error) => {
       handleMutationError(error)
-      console.error('Error creating aftersale:', error)
     },
   })
 }
@@ -242,15 +230,11 @@ export function useUpdateAftersale() {
       return result.aftersale
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({
-        predicate: (query) => query.queryKey[0] === 'aftersales',
-      })
-
+      queryClient.invalidateQueries({ queryKey: ['aftersales'] })
       toast.success('Caso de postventa actualizado exitosamente')
     },
     onError: (error) => {
       handleMutationError(error)
-      console.error('Error updating aftersale:', error)
     },
   })
 }
@@ -317,29 +301,14 @@ export function useDeleteAftersale() {
 
       return { previousData }
     },
-    // ✅ Rollback en caso de error
-    onError: (error, id, context) => {
-      // Restaurar estado anterior
+    onError: (error, _id, context) => {
       if (context?.previousData) {
         queryClient.setQueryData(['aftersales'], context.previousData)
       }
       handleMutationError(error)
-      console.error('Error deleting aftersale:', error)
     },
-    // ✅ Refetch para asegurar consistencia
     onSuccess: () => {
-      // Invalidar queries con predicate (batch invalidation eficiente)
-      queryClient.invalidateQueries({
-        predicate: (query) => {
-          const key = query.queryKey[0]
-
-          // Invalidar aftersales
-          if (key === 'aftersales') return true
-
-          return false
-        },
-      })
-
+      queryClient.invalidateQueries({ queryKey: ['aftersales'] })
       toast.success('Caso de postventa eliminado exitosamente')
     },
   })
