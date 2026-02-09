@@ -2,9 +2,9 @@
  * Column definitions for Projects DataTable
  */
 
-import { type ColumnDef, type Table } from '@tanstack/react-table'
+import { type ColumnDef } from '@tanstack/react-table'
 import { Badge } from '@/components/ui/badge'
-import { DataTableColumnHeader, createSelectColumn } from '@/components/data-table'
+import { DataTableColumnHeader, createSelectColumn, getTableMeta } from '@/components/data-table'
 import { EditableBadge } from '@/components/ui/editable-badge'
 import { ProjectNameSummary } from '@/components/summarys/project-name-summary'
 import { PaymentProgressSummary } from '@/components/summarys/payment-progress-summary'
@@ -21,13 +21,6 @@ import { type Project, type ColumnsProps, type ProjectsTableMeta } from './types
 
 // Re-export types for consumers
 export { type Project } from './types'
-
-/**
- * Type-safe helper to access table meta with proper TypeScript inference
- */
-function getProjectsTableMeta(table: Table<Project>): ProjectsTableMeta {
-  return (table.options.meta || {}) as ProjectsTableMeta
-}
 
 /**
  * Creates column definitions for Projects DataTable
@@ -71,7 +64,7 @@ export const createColumns = ({
       const status = project.projectStatus
 
       // Obtener el callback de actualización desde meta (type-safe)
-      const { handleStatusChange } = getProjectsTableMeta(table)
+      const { handleStatusChange } = getTableMeta<ProjectsTableMeta>(table)
 
       // Determinar si este proyecto específico está siendo actualizado
       const isPending = updatingProjectId === project.id
@@ -141,7 +134,7 @@ export const createColumns = ({
     header: ({ column }) => <DataTableColumnHeader column={column} title="Fecha Ingreso" />,
     cell: ({ row, table }) => {
       const project = row.original
-      const { handleDateChange } = getProjectsTableMeta(table)
+      const { handleDateChange } = getTableMeta<ProjectsTableMeta>(table)
       const isPending = updatingDateProjectId === project.id
 
       return (

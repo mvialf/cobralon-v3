@@ -1,8 +1,8 @@
 'use client'
 
-import { type ColumnDef, type Table } from '@tanstack/react-table'
+import { type ColumnDef } from '@tanstack/react-table'
 import { Eye, XCircle, Loader2 } from 'lucide-react'
-import { DataTableDropdown, createSelectColumn } from '@/components/data-table'
+import { DataTableDropdown, createSelectColumn, getTableMeta } from '@/components/data-table'
 import { EditableDate } from '@/components/ui/editable-date'
 import {
   DropdownMenuItem,
@@ -12,7 +12,7 @@ import {
 import { StatusBadge } from '@/components/ui/status-badge'
 import { DataTableColumnHeader } from '@/components/data-table'
 import { ProjectNameSummary } from '@/components/summarys/project-name-summary'
-import { formatDate } from '@/lib/format'
+import { formatDate, formatCurrency } from '@/lib/format'
 
 export interface Payment {
   id: string
@@ -53,13 +53,6 @@ interface PaymentsTableMeta {
   handleDelete?: (paymentId: string) => void
   deletingPaymentId?: string | null
   handleDateChange?: (paymentId: string, newDate: Date) => Promise<void>
-}
-
-/**
- * Helper type-safe para extraer meta del table sin usar `as any`
- */
-function getPaymentsTableMeta(table: Table<Payment>): PaymentsTableMeta {
-  return (table.options.meta || {}) as PaymentsTableMeta
 }
 
 interface ColumnsProps {
@@ -189,13 +182,11 @@ export const createColumns = ({
     ),
     cell: ({ row }) => {
       const payment = row.original
-      const formatted = new Intl.NumberFormat('es-CL', {
-        style: 'currency',
-        currency: payment.currency,
-        minimumFractionDigits: 0,
-        maximumFractionDigits: 0,
-      }).format(payment.amount)
-      return <div className="text-right font-semibold">{formatted}</div>
+      return (
+        <div className="text-right font-semibold">
+          {formatCurrency(payment.amount, payment.currency)}
+        </div>
+      )
     },
     enableSorting: true,
   },
@@ -208,7 +199,7 @@ export const createColumns = ({
       const payment = row.original
       const hasInstallments =
         payment.selectedInstallments !== null && payment.selectedInstallments > 1
-      const { handleDateChange } = getPaymentsTableMeta(table)
+      const { handleDateChange } = getTableMeta<PaymentsTableMeta>(table)
       const isPending = updatingDatePaymentId === payment.id
 
       if (hasInstallments) {
@@ -236,7 +227,7 @@ export const createColumns = ({
       const isCustomerPayment = payment.type === 'Customer'
 
       // ✅ Extraer callbacks del table meta (type-safe)
-      const { handleDelete, deletingPaymentId } = getPaymentsTableMeta(table)
+      const { handleDelete, deletingPaymentId } = getTableMeta<PaymentsTableMeta>(table)
 
       const onDelete = async () => {
         if (

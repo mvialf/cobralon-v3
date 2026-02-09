@@ -1,9 +1,10 @@
+import { type Table } from '@tanstack/react-table'
+
 export { DataTable, type ServerFacet, type ServerFacets } from './data-table'
 export { DataTableColumnHeader } from './data-table-column-header'
 export { DataTableDropdown } from './data-table-dropdown'
 export { DataTableFacetedFilter } from './data-table-faceted-filter'
 export { DataTablePagination } from './data-table-pagination'
-export { DataTableRowActions } from './data-table-row-actions'
 export { DataTableToolbar } from './data-table-toolbar'
 export { DataTableBulkActions, type BulkAction } from './data-table-bulk-actions'
 
@@ -16,3 +17,9 @@ export {
   normalizedIncludesString,
   createNormalizedFilter,
 } from './filter-functions'
+
+/** Type-safe helper to extract table meta */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export function getTableMeta<TMeta>(table: Table<any>): TMeta {
+  return (table.options.meta || {}) as TMeta
+}

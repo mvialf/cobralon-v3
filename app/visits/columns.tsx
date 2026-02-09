@@ -1,9 +1,9 @@
 'use client'
 
 import { useState } from 'react'
-import { type ColumnDef, type Table } from '@tanstack/react-table'
+import { type ColumnDef } from '@tanstack/react-table'
 import { Pencil, Trash2, Eye } from 'lucide-react'
-import { DataTableDropdown, DataTableColumnHeader } from '@/components/data-table'
+import { DataTableDropdown, DataTableColumnHeader, getTableMeta } from '@/components/data-table'
 import {
   DropdownMenuItem,
   DropdownMenuLabel,
@@ -56,13 +56,6 @@ interface VisitsTableMeta {
   handleStatusChange?: (visitId: string, newStatusId: string) => Promise<void>
 }
 
-/**
- * Type guard to safely access table meta
- */
-function getVisitsTableMeta(table: Table<Visit>): VisitsTableMeta {
-  return (table.options.meta || {}) as VisitsTableMeta
-}
-
 export const createColumns = ({
   onVisitDeleted,
   onVisitUpdated,
@@ -113,7 +106,7 @@ export const createColumns = ({
       const status = visit.visitStatus
 
       // Obtener el callback de actualización desde meta (type-safe)
-      const { handleStatusChange } = getVisitsTableMeta(table)
+      const { handleStatusChange } = getTableMeta<VisitsTableMeta>(table)
 
       // Determinar si esta visita específica está siendo actualizada
       const isPending = updatingVisitId === visit.id

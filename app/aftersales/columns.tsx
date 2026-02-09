@@ -1,9 +1,9 @@
 'use client'
 
 import { useState } from 'react'
-import { type ColumnDef, type Table } from '@tanstack/react-table'
+import { type ColumnDef } from '@tanstack/react-table'
 import { Pencil, Eye, Trash2 } from 'lucide-react'
-import { DataTableDropdown, DataTableColumnHeader } from '@/components/data-table'
+import { DataTableDropdown, DataTableColumnHeader, getTableMeta } from '@/components/data-table'
 import {
   DropdownMenuItem,
   DropdownMenuLabel,
@@ -41,13 +41,6 @@ interface ColumnsProps {
 interface AftersalesTableMeta {
   /** Callback to handle aftersale status change */
   handleStatusChange?: (aftersaleId: string, newStatusId: string) => Promise<void>
-}
-
-/**
- * Type guard to safely access table meta with proper TypeScript inference
- */
-function getAftersalesTableMeta(table: Table<Aftersale>): AftersalesTableMeta {
-  return (table.options.meta || {}) as AftersalesTableMeta
 }
 
 export const createColumns = ({
@@ -101,7 +94,7 @@ export const createColumns = ({
       const status = aftersale.aftersaleStatus
 
       // Obtener el callback de actualización desde meta (type-safe)
-      const { handleStatusChange } = getAftersalesTableMeta(table)
+      const { handleStatusChange } = getTableMeta<AftersalesTableMeta>(table)
 
       // Determinar si este caso específico está siendo actualizado
       const isPending = updatingAftersaleId === aftersale.id
@@ -163,11 +156,9 @@ export const createColumns = ({
   {
     id: 'actions',
     header: 'Acciones',
-    cell: ({ row }) => {
+    cell: function ActionsCell({ row }) {
       const aftersale = row.original
-      // eslint-disable-next-line react-hooks/rules-of-hooks
       const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
-      // eslint-disable-next-line react-hooks/rules-of-hooks
       const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
       const handleDelete = async () => {
         try {
