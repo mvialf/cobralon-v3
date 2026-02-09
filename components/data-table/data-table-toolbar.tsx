@@ -50,8 +50,7 @@ export function DataTableToolbar<TData>({
 }: DataTableToolbarProps<TData>) {
   const isFiltered =
     table.getState().columnFilters.length > 0 ||
-    !!table.getState().globalFilter ||
-    table.getState().sorting.length > 0
+    !!table.getState().globalFilter
 
   // Manejar cambio de búsqueda
   const handleSearchChange = (value: string) => {
@@ -122,7 +121,7 @@ export function DataTableToolbar<TData>({
             variant="ghost"
             onClick={() => {
               table.resetColumnFilters()
-              table.resetSorting()
+              if (enableGlobalFilter) table.setGlobalFilter('')
             }}
             className="h-8 px-2 lg:px-3"
           >
