@@ -25,9 +25,16 @@ export interface VisitsQueryParams {
   page?: number
   limit?: number
   search?: string
-  visitStatusId?: string
+  visitStatusIds?: string[]
+  includeFacets?: boolean
   sortBy?: string
   sortOrder?: 'asc' | 'desc'
+}
+
+export interface VisitFacet {
+  value: string
+  label: string
+  count: number
 }
 
 /** Respuesta de GET /api/visits */
@@ -38,6 +45,9 @@ export interface VisitsResponse {
     limit: number
     total: number
     totalPages: number
+  }
+  facets?: {
+    visitStatus: VisitFacet[]
   }
 }
 
@@ -57,7 +67,7 @@ export interface UpdateVisitData extends Partial<UpdateVisitInput> {
  * @param params.page - Número de página (default: 1)
  * @param params.limit - Registros por página (default: 50, max: 100)
  * @param params.search - Búsqueda por nombre, teléfono, dirección o comuna
- * @param params.visitStatusId - Filtrar por estado específico
+ * @param params.visitStatusIds - Filtrar por estados (array de IDs)
  *
  * @returns Query con visits y paginación
  *
@@ -72,7 +82,7 @@ export interface UpdateVisitData extends Partial<UpdateVisitInput> {
  *   page: 1,
  *   limit: 50,
  *   search: 'Juan',
- *   visitStatusId: 'status-id'
+ *   visitStatusIds: ['status-id-1', 'status-id-2']
  * })
  *
  * // Prefetch página siguiente para mejor UX
@@ -92,7 +102,9 @@ export function useVisits(params: VisitsQueryParams = {}) {
       if (params.page) searchParams.set('page', String(params.page))
       if (params.limit) searchParams.set('limit', String(params.limit))
       if (params.search) searchParams.set('search', params.search)
-      if (params.visitStatusId) searchParams.set('visitStatusId', params.visitStatusId)
+      if (params.visitStatusIds?.length)
+        searchParams.set('visitStatusIds', params.visitStatusIds.join(','))
+      if (params.includeFacets) searchParams.set('includeFacets', 'true')
       if (params.sortBy) searchParams.set('sortBy', params.sortBy)
       if (params.sortOrder) searchParams.set('sortOrder', params.sortOrder)
 

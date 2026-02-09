@@ -27,16 +27,21 @@ export function VisitsPageClient() {
   // Estado de sorting server-side
   const [sorting, setSorting] = useState<SortingState>([])
 
+  // Estado de filtros server-side
+  const [statusIds, setStatusIds] = useState<string[]>([])
+
   // Query params para useVisits (useMemo para evitar recreación en cada render)
   const queryParams: VisitsQueryParams = useMemo(
     () => ({
       page: pagination.pageIndex + 1, // API usa 1-based
       limit: pagination.pageSize,
       search: debouncedSearch || undefined,
+      visitStatusIds: statusIds.length ? statusIds : undefined,
+      includeFacets: pagination.pageIndex === 0,
       sortBy: sorting[0]?.id || undefined,
       sortOrder: sorting[0] ? (sorting[0].desc ? 'desc' : 'asc') : undefined,
     }),
-    [pagination.pageIndex, pagination.pageSize, debouncedSearch, sorting]
+    [pagination.pageIndex, pagination.pageSize, debouncedSearch, statusIds, sorting]
   )
 
   // React Query: Fetch visits con cache automático
@@ -147,11 +152,21 @@ export function VisitsPageClient() {
             manualSorting={true}
             sorting={sorting}
             onSortingChange={handleSortingChange}
+            // Server-side filtering
+            manualFiltering={true}
+            serverFacets={data?.facets}
             filterableColumns={[
               {
                 id: 'visitStatus',
                 title: 'Estado',
                 options: statusFilterOptions,
+                selectedValues: statusIds,
+                onFilterChange: (values) => {
+                  setStatusIds(values)
+                  if (pagination.pageIndex !== 0) {
+                    setPagination({ ...pagination, pageIndex: 0 })
+                  }
+                },
               },
             ]}
             meta={{
