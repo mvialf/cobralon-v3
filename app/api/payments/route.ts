@@ -85,22 +85,20 @@ export const GET = withLogging(async (request, logger) => {
   const where: PaymentWhereInput = {}
 
   // Filtro de búsqueda global (por cliente o proyecto)
+  // Usa normalize_text() de PostgreSQL para ignorar acentos/tildes
+  // Ej: "garcia" encuentra "García", "perez" encuentra "Pérez"
   if (search) {
-    where.OR = [
-      { customer: { name: { contains: search, mode: 'insensitive' } } },
-      {
-        allocations: {
-          some: {
-            project: {
-              OR: [
-                { projectNumber: { contains: search, mode: 'insensitive' } },
-                { projectName: { contains: search, mode: 'insensitive' } },
-              ],
-            },
-          },
-        },
-      },
-    ]
+    const matchingIds = await prisma.$queryRaw<Array<{ id: string }>>`
+      SELECT DISTINCT pm.id
+      FROM "Payment" pm
+      JOIN "Customer" c ON c.id = pm."customerId"
+      LEFT JOIN "PaymentAllocation" pa ON pa."paymentId" = pm.id
+      LEFT JOIN "Project" p ON p.id = pa."projectId"
+      WHERE normalize_text(c.name) LIKE normalize_text(${`%${search}%`})
+         OR normalize_text(p."projectNumber") LIKE normalize_text(${`%${search}%`})
+         OR normalize_text(COALESCE(p."projectName", '')) LIKE normalize_text(${`%${search}%`})
+    `
+    where.id = { in: matchingIds.map((r) => r.id) }
   }
 
   // Filtro por tipo de pago
@@ -232,7 +230,7 @@ export const GET = withLogging(async (request, logger) => {
           JOIN "Payment" pm ON pa."paymentId" = pm.id
           ${search ? Prisma.sql`JOIN "Customer" c ON c.id = pm."customerId"` : Prisma.empty}
           WHERE 1=1
-            ${search ? Prisma.sql`AND (c.name ILIKE ${`%${search}%`} OR p."projectNumber" ILIKE ${`%${search}%`} OR p."projectName" ILIKE ${`%${search}%`})` : Prisma.empty}
+            ${search ? Prisma.sql`AND (normalize_text(c.name) LIKE normalize_text(${`%${search}%`}) OR normalize_text(p."projectNumber") LIKE normalize_text(${`%${search}%`}) OR normalize_text(COALESCE(p."projectName", '')) LIKE normalize_text(${`%${search}%`}))` : Prisma.empty}
             ${type ? Prisma.sql`AND pm.type = ${type}` : Prisma.empty}
             ${paymentMethodId ? Prisma.sql`AND pm."paymentMethodId"::text = ${paymentMethodId}` : Prisma.empty}
             ${customerId ? Prisma.sql`AND pm."customerId"::text = ${customerId}` : Prisma.empty}
