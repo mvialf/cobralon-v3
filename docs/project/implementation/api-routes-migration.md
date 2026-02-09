@@ -91,4 +91,9 @@
 | `test/cleanup/route.ts` | Solo dev |
 | `users/route.ts` | Scaffold/template con TODOs |
 | `cron/mark-installments-paid/route.ts` | Ya tiene child logger propio, el wrapper no encaja con cron |
-| `visit-statuses/route.ts` | Posible endpoint legacy (plural vs singular). Verificar consumidores antes de tocar |
+
+### Eliminado
+
+| Route | Acción |
+|-------|--------|
+| `visit-statuses/route.ts` | Eliminado. Era endpoint legacy (plural). Consumidores migrados al hook `useVisitStatuses()` que usa `/api/visit-status` (singular) |

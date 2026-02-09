@@ -53,7 +53,7 @@ async function getInitialVisits() {
  */
 async function getVisitStatuses() {
   const statuses = await prisma.visitStatus.findMany({
-    orderBy: { name: 'asc' },
+    orderBy: { order: 'asc' },
     include: {
       color: {
         select: {

@@ -2,13 +2,13 @@
 
 import { useState, useEffect, useMemo } from 'react'
 import { type PaginationState, type SortingState } from '@tanstack/react-table'
-import { useQueryClient, useQuery } from '@tanstack/react-query'
+import { useQueryClient } from '@tanstack/react-query'
 import { AppLayout } from '@/components/layout/app-layout'
 import { NewVisitDialog } from '@/components/dialogs/visits/new-visit-dialog'
 import { DataTable } from '@/components/data-table/data-table'
 import { createColumns } from './columns'
 import { useVisits, useUpdateVisit, type VisitsQueryParams } from '@/hooks/queries/use-visits'
-import type { VisitStatus } from '@/hooks/queries/use-visit-statuses'
+import { useVisitStatuses } from '@/hooks/queries/use-visit-statuses'
 import { useDebounce } from '@/hooks/use-debounce'
 
 export function VisitsPageClient() {
@@ -45,15 +45,7 @@ export function VisitsPageClient() {
 
   // Cargar visit statuses para el filtro
   // NOTA: También pre-cargado por HydrationBoundary
-  const { data: visitStatuses } = useQuery<VisitStatus[]>({
-    queryKey: ['visit-statuses'],
-    queryFn: async () => {
-      const response = await fetch('/api/visit-statuses')
-      if (!response.ok) throw new Error('Error al cargar estados')
-      return response.json()
-    },
-    staleTime: 5 * 60 * 1000, // 5 minutos - statuses cambian raramente
-  })
+  const { data: visitStatuses } = useVisitStatuses()
 
   // Mutation hook para actualizar estado de visita
   const updateVisitMutation = useUpdateVisit()
