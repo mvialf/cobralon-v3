@@ -8,6 +8,7 @@
  * @see commit 51cfac5 - fix(calendar): guardar todos los campos al editar eventos
  */
 
+import type { ProjectEventWithProjectUpdateFormValues } from '@/lib/validations/calendar-validations'
 import type { VisitEventWithUpdateFormValues } from '@/lib/validations/visit-event-validations'
 import type { AftersaleEventWithUpdateFormValues } from '@/lib/validations/aftersale-event-validations'
 
@@ -120,5 +121,38 @@ export async function updateAftersaleFields(
   if (!response.ok) {
     const error = await response.json()
     throw new Error(error.error || 'Error al actualizar datos del aftersale')
+  }
+}
+
+/**
+ * Actualiza los campos del proyecto (uninstallTagIds, phone, dirección, etc.)
+ * Se usa cuando se edita un evento para mantener sincronizados los datos del proyecto
+ *
+ * @throws Error si la respuesta no es ok
+ */
+export async function updateProjectFields(
+  projectId: string,
+  data: ProjectEventWithProjectUpdateFormValues
+): Promise<void> {
+  const response = await fetch(`/api/projects/${projectId}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      uninstallTagIds: data.uninstallTagIds || [],
+      phone: data.phone,
+      street: data.street,
+      apartment: data.apartment,
+      comuna: data.comuna,
+      region: data.region,
+      windowsCount: data.windowsCount,
+      squareMeters: data.squareMeters,
+      description: data.description,
+      projectStatusId: data.projectStatusId,
+    }),
+  })
+
+  if (!response.ok) {
+    const error = await response.json()
+    throw new Error(error.error || 'Error al actualizar datos del proyecto')
   }
 }
