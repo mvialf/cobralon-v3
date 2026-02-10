@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, forwardRef, useImperativeHandle } from 'react'
+import { useState, useEffect } from 'react'
 import {
   DndContext,
   DragStartEvent,
@@ -12,11 +12,10 @@ import {
   useSensors,
 } from '@dnd-kit/core'
 import { arrayMove, sortableKeyboardCoordinates } from '@dnd-kit/sortable'
-import { CalendarHeader } from './calendar-header'
+import { CalendarToolbar } from './calendar-header'
 import { WeekView } from './views/week-view'
 import { MonthView } from './views/month-view'
 import { AgendaView } from './views/agenda-view'
-import { ViewSelector } from './view-selector'
 import { EventTypeSelector } from './event-type-selector'
 import {
   AlertDialog,
@@ -46,12 +45,7 @@ function toLocalDateString(date: Date): string {
   return `${year}-${month}-${day}`
 }
 
-// Tipo para exponer métodos públicos via ref
-export interface EventCalendarHandle {
-  openNewEvent: (date?: Date | string) => void
-}
-
-export const EventCalendar = forwardRef<EventCalendarHandle>(function EventCalendar(_, ref) {
+export function EventCalendar() {
   const [currentDate, setCurrentDate] = useState(new Date())
   const [currentView, setCurrentView] = useState<'week' | 'month' | 'agenda'>('week')
 
@@ -81,17 +75,6 @@ export const EventCalendar = forwardRef<EventCalendarHandle>(function EventCalen
 
   // Estado para drag & drop
   const [activeEvent, setActiveEvent] = useState<CalendarEvent | null>(null)
-
-  // Exponer método público para abrir el selector de nuevo evento
-  useImperativeHandle(ref, () => ({
-    openNewEvent: (date?: Date | string) => {
-      // Convertir a string yyyy-MM-dd si es Date, o usar directamente si es string
-      const dateStr =
-        date instanceof Date ? toLocalDateString(date) : date || toLocalDateString(new Date())
-      setSelectedDate(dateStr)
-      setTypeSelectorOpen(true)
-    },
-  }))
 
   // Fetch eventos en el rango visible
   const { start, end } = getVisibleDateRange(currentDate, currentView)
@@ -287,20 +270,19 @@ export const EventCalendar = forwardRef<EventCalendarHandle>(function EventCalen
   return (
     <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
       <div className="h-full flex flex-col">
-        {/* Header con navegación y selector de vista */}
-        <div className="flex items-center justify-between pb-4">
-          <CalendarHeader
-            currentDate={currentDate}
-            view={currentView}
-            onNavigate={handleNavigate}
-          />
-          <ViewSelector
-            currentView={currentView}
-            onViewChange={setCurrentView}
-            showWeekends={showWeekends}
-            onToggleWeekends={setShowWeekends}
-          />
-        </div>
+        {/* Toolbar unificado */}
+        <CalendarToolbar
+          currentDate={currentDate}
+          view={currentView}
+          onNavigate={handleNavigate}
+          onViewChange={setCurrentView}
+          showWeekends={showWeekends}
+          onToggleWeekends={setShowWeekends}
+          onNewEvent={() => {
+            setSelectedDate(toLocalDateString(new Date()))
+            setTypeSelectorOpen(true)
+          }}
+        />
 
         {/* Vista actual */}
         {isLoading ? (
@@ -411,4 +393,4 @@ export const EventCalendar = forwardRef<EventCalendarHandle>(function EventCalen
       </AlertDialog>
     </DndContext>
   )
-})
+}
