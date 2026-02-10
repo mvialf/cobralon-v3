@@ -89,6 +89,7 @@ export function EditCustomerDialog({
           }}
           submitLabel="Guardar cambios"
           isSubmitting={updateCustomer.isPending}
+          excludeId={customer.id}
         />
       </DialogContent>
     </Dialog>

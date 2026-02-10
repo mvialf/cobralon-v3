@@ -2,11 +2,14 @@
 
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
+import { TriangleAlert } from 'lucide-react'
 import { customerSchema, type CustomerFormData } from '@/lib/validations/customer-validations'
 import { normalizePhone } from '@/lib/utils/phone'
+import { useCheckDuplicateCustomer } from '@/hooks/queries/use-customers'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { PhoneInput } from '@/components/ui/phone-input'
+import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert'
 import {
   Form,
   FormControl,
@@ -22,6 +25,8 @@ interface CustomerFormProps {
   defaultValues?: Partial<CustomerFormData>
   submitLabel?: string
   isSubmitting?: boolean
+  /** ID del cliente actual (para excluirlo de la búsqueda de duplicados en edición) */
+  excludeId?: string
 }
 
 export function CustomerForm({
@@ -29,15 +34,19 @@ export function CustomerForm({
   defaultValues,
   submitLabel = 'Guardar',
   isSubmitting = false,
+  excludeId,
 }: CustomerFormProps) {
   const form = useForm<CustomerFormData>({
     resolver: zodResolver(customerSchema),
     defaultValues: {
       name: defaultValues?.name || '',
-      phone: normalizePhone(defaultValues?.phone || ''), // Normalizar teléfono para evitar errores con datos legacy
+      phone: normalizePhone(defaultValues?.phone || ''),
       email: defaultValues?.email || '',
     },
   })
+
+  const nameValue = form.watch('name')
+  const { data: duplicates } = useCheckDuplicateCustomer(nameValue, excludeId)
 
   return (
     <Form {...form}>
@@ -56,6 +65,24 @@ export function CustomerForm({
             </FormItem>
           )}
         />
+
+        {/* Advertencia de cliente similar */}
+        {duplicates && duplicates.length > 0 && (
+          <Alert>
+            <TriangleAlert className="h-4 w-4" />
+            <AlertTitle>Posible cliente duplicado</AlertTitle>
+            <AlertDescription>
+              <p>Ya existen clientes con nombre similar:</p>
+              <ul className="mt-1 list-disc pl-4">
+                {duplicates.map((c) => (
+                  <li key={c.id}>
+                    {c.name} — {c.phone}
+                  </li>
+                ))}
+              </ul>
+            </AlertDescription>
+          </Alert>
+        )}
 
         {/* Telefono */}
         <FormField

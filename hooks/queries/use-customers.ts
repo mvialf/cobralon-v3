@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { createApiError, handleMutationError } from '@/lib/errors'
+import { useDebounce } from '@/hooks/use-debounce'
 
 /**
  * Hooks de React Query para Customers
@@ -412,5 +413,45 @@ export function useDeleteCustomer() {
       queryClient.invalidateQueries({ queryKey: ['customers-list'] })
       toast.success('Cliente eliminado exitosamente')
     },
+  })
+}
+
+// ============================================================================
+// QUERY: CHECK DUPLICATE
+// ============================================================================
+
+/** Respuesta de GET /api/customers/check-duplicate */
+export interface DuplicateCustomerMatch {
+  id: string
+  name: string
+  phone: string
+}
+
+/**
+ * Hook para verificar si ya existe un cliente con nombre similar.
+ * Aplica debounce de 500ms y solo busca con >= 4 caracteres.
+ *
+ * @param name - Nombre a verificar
+ * @param excludeId - ID a excluir (para edición)
+ * @returns Query con lista de clientes similares
+ */
+export function useCheckDuplicateCustomer(name: string, excludeId?: string) {
+  const debouncedName = useDebounce(name, 500)
+
+  return useQuery({
+    queryKey: ['customers-check-duplicate', debouncedName, excludeId],
+    queryFn: async (): Promise<DuplicateCustomerMatch[]> => {
+      const params = new URLSearchParams({ name: debouncedName })
+      if (excludeId) params.set('excludeId', excludeId)
+
+      const response = await fetch(`/api/customers/check-duplicate?${params}`)
+
+      if (!response.ok) return []
+
+      const data = await response.json()
+      return data.customers
+    },
+    enabled: debouncedName.length >= 4,
+    staleTime: 30 * 1000,
   })
 }
