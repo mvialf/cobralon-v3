@@ -2,26 +2,13 @@
 
 import { useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
+import { Loader2 } from 'lucide-react'
 import { authClient } from '@/lib/auth-client'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 
-/**
- * Formulario de login (Client Component)
- *
- * Separado en archivo propio para que useSearchParams funcione
- * correctamente con Suspense en Next.js 15.
- */
 export function LoginForm() {
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -50,7 +37,6 @@ export function LoginForm() {
       }
 
       if (data) {
-        // Redirect a la pagina original o principal despues de login exitoso
         router.push(callbackUrl)
         router.refresh()
       }
@@ -61,54 +47,56 @@ export function LoginForm() {
   }
 
   return (
-    <Card className="w-full max-w-md">
-      <CardHeader className="space-y-1">
-        <CardTitle className="text-2xl font-bold">Iniciar Sesion</CardTitle>
-        <CardDescription>Ingresa tu email y contrasena para acceder a Cobralon</CardDescription>
-      </CardHeader>
-      <form onSubmit={handleSubmit}>
-        <CardContent className="space-y-4">
-          {error && (
-            <Alert variant="destructive">
-              <AlertDescription>{error}</AlertDescription>
-            </Alert>
-          )}
+    <div className="space-y-6">
+      <div className="space-y-1">
+        <h2 className="text-2xl font-semibold tracking-tight text-foreground">
+          Iniciar sesion
+        </h2>
+        <p className="text-sm text-muted-foreground">
+          Ingresa tus credenciales para continuar
+        </p>
+      </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="email">Email</Label>
-            <Input
-              id="email"
-              type="email"
-              placeholder="tu@email.com"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-              autoComplete="email"
-              disabled={loading}
-            />
-          </div>
+      <form onSubmit={handleSubmit} className="space-y-4">
+        {error && (
+          <Alert variant="destructive">
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        )}
 
-          <div className="space-y-2">
-            <Label htmlFor="password">Contrasena</Label>
-            <Input
-              id="password"
-              type="password"
-              placeholder="••••••••"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              autoComplete="current-password"
-              disabled={loading}
-            />
-          </div>
-        </CardContent>
+        <div className="space-y-2">
+          <Label htmlFor="email">Email</Label>
+          <Input
+            id="email"
+            type="email"
+            placeholder="tu@email.com"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            required
+            autoComplete="email"
+            disabled={loading}
+          />
+        </div>
 
-        <CardFooter>
-          <Button type="submit" className="w-full" disabled={loading}>
-            {loading ? 'Iniciando sesion...' : 'Iniciar Sesion'}
-          </Button>
-        </CardFooter>
+        <div className="space-y-2">
+          <Label htmlFor="password">Contrasena</Label>
+          <Input
+            id="password"
+            type="password"
+            placeholder="••••••••"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            required
+            autoComplete="current-password"
+            disabled={loading}
+          />
+        </div>
+
+        <Button type="submit" className="w-full" disabled={loading}>
+          {loading && <Loader2 className="animate-spin" />}
+          {loading ? 'Iniciando sesion...' : 'Iniciar sesion'}
+        </Button>
       </form>
-    </Card>
+    </div>
   )
 }
