@@ -187,8 +187,8 @@ model Project {
   customer            Customer            @relation(fields: [customerId], references: [id], onDelete: Cascade)
   projectStatus       ProjectStatus?      @relation(fields: [projectStatusId], references: [id], onDelete: Restrict)
 
+  @@unique([projectNumber])
   @@index([customerId])
-  @@index([projectNumber])
   @@index([projectStatusId])
   @@index([date])
   @@index([balance]) // Index para filtros eficientes por balance
