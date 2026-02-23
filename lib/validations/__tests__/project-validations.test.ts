@@ -65,12 +65,20 @@ describe('projectFormSchema', () => {
       }
     })
 
-    it('debe rechazar sin street', () => {
+    it('debe aceptar sin street (opcional)', () => {
       const { street, ...input } = validInput
       const result = projectFormSchema.safeParse(input)
-      expect(result.success).toBe(false)
-      if (!result.success) {
-        expect(result.error.issues[0].path).toContain('street')
+      expect(result.success).toBe(true)
+      if (result.success) {
+        expect(result.data.street).toBe('')
+      }
+    })
+
+    it('debe aceptar con street lleno', () => {
+      const result = projectFormSchema.safeParse(validInput)
+      expect(result.success).toBe(true)
+      if (result.success) {
+        expect(result.data.street).toBe('Av. Providencia 123')
       }
     })
 

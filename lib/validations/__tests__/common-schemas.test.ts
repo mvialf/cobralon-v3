@@ -4,6 +4,7 @@ import {
   chilePhoneSchema,
   optionalChilePhoneSchema,
   addressFieldsSchema,
+  addressFieldsOptionalStreetSchema,
   addressWithOptionalApartmentSchema,
   addressWithNullableApartmentSchema,
   addressWithNullableOnlyApartmentSchema,
@@ -235,6 +236,72 @@ describe('Address Schemas', () => {
       expect(result.success).toBe(false)
       if (!result.success) {
         expect(result.error.issues[0].message).toContain('obligatoria')
+      }
+    })
+  })
+
+  describe('addressFieldsOptionalStreetSchema (street opcional)', () => {
+    const schema = z.object(addressFieldsOptionalStreetSchema)
+
+    it('debe aceptar sin street (solo comuna + region)', () => {
+      const result = schema.safeParse({
+        comuna: 'Providencia',
+        region: 'Metropolitana',
+      })
+
+      expect(result.success).toBe(true)
+      if (result.success) {
+        expect(result.data.street).toBe('')
+      }
+    })
+
+    it('debe aceptar con street vacío', () => {
+      const result = schema.safeParse({
+        street: '',
+        comuna: 'Providencia',
+        region: 'Metropolitana',
+      })
+
+      expect(result.success).toBe(true)
+      if (result.success) {
+        expect(result.data.street).toBe('')
+      }
+    })
+
+    it('debe aceptar con street lleno', () => {
+      const result = schema.safeParse({
+        street: 'Av. Providencia 1234',
+        comuna: 'Providencia',
+        region: 'Metropolitana',
+      })
+
+      expect(result.success).toBe(true)
+      if (result.success) {
+        expect(result.data.street).toBe('Av. Providencia 1234')
+      }
+    })
+
+    it('comuna sigue siendo obligatorio', () => {
+      const result = schema.safeParse({
+        street: 'Av. Providencia 1234',
+        region: 'Metropolitana',
+      })
+
+      expect(result.success).toBe(false)
+      if (!result.success) {
+        expect(result.error.issues[0].path).toContain('comuna')
+      }
+    })
+
+    it('region sigue siendo obligatorio', () => {
+      const result = schema.safeParse({
+        street: 'Av. Providencia 1234',
+        comuna: 'Providencia',
+      })
+
+      expect(result.success).toBe(false)
+      if (!result.success) {
+        expect(result.error.issues[0].path).toContain('region')
       }
     })
   })

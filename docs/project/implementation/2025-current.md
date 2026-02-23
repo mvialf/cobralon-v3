@@ -1511,6 +1511,33 @@ Registrar **implementaciones significativas** de este proyecto con:
 
 ---
 
+### 📍 Street Opcional en Entidades, Obligatorio en Eventos
+
+- **Status:** 🔄 En Progreso | **Date:** 2026-02-23 | **Impact:** Medium
+- **Problema:** `street` es obligatorio en todos los formularios, pero al crear entidades (proyecto, visita, postventa) no siempre se conoce la dirección exacta.
+- **Regla de negocio:** Entidades → street opcional (solo región + comuna obligatorios). Eventos → street obligatorio (desplazamiento físico).
+- **Flujo clave:** Crear entidad sin calle → Agendar evento (calle obligatoria) → Sincronización automática actualiza la entidad padre con la calle.
+- **Implementación:**
+  - **FASE 1:** DB + Schemas + Tipos
+    - Migración Prisma: `String` → `String?` en Project.street y Visit.street
+    - `address-schema.ts`: crear variante `addressFieldsOptionalStreetSchema`
+    - Schemas de entidades (project, visit, aftersale): usar street opcional
+    - Tipos manuales: `street: string` → `string | null` donde aplique
+    - `npm run typecheck` como checklist automática de null safety
+  - **FASE 2:** UI + Null Safety
+    - `AddressFields`: prop `streetRequired` (default `true`)
+    - 3 formularios de entidades: `streetRequired={false}`
+    - Diálogos de edición, columnas, exporter: manejar `null`
+    - APIs de entidades: normalizar `'' → null`
+  - **FASE 3:** Tests
+    - Ajustar tests que validaban street obligatorio en entidades
+    - Agregar tests para schema opcional
+    - Validación final: lint + typecheck
+- **Archivos afectados:** ~30 (6 schemas, 6 formularios, 6 APIs, componente compartido, diálogos, columnas, exporter, tipos, tests)
+- **Nota:** Schemas y APIs de eventos NO se modifican — street sigue obligatorio en eventos.
+
+---
+
 ## Quick Reference Index
 
 | #   | Implementación                                                          | Status      | Fecha      | Impact |

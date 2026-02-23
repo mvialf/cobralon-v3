@@ -576,4 +576,18 @@ describe('aftersaleToFormValues', () => {
 
     expect(formValues.tasks).toEqual([])
   })
+
+  it('debe manejar project.street null', () => {
+    const aftersaleConStreetNull = {
+      ...validAftersale,
+      project: {
+        ...validAftersale.project,
+        street: null,
+      },
+    }
+
+    const formValues = aftersaleToFormValues(aftersaleConStreetNull)
+
+    expect(formValues.street).toBe('')
+  })
 })

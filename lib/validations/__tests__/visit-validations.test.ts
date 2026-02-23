@@ -45,12 +45,12 @@ describe('createVisitSchema', () => {
       }
     })
 
-    it('debe rechazar sin street', () => {
+    it('debe aceptar sin street (opcional)', () => {
       const { street, ...input } = validInput
       const result = createVisitSchema.safeParse(input)
-      expect(result.success).toBe(false)
-      if (!result.success) {
-        expect(result.error.issues[0].path).toContain('street')
+      expect(result.success).toBe(true)
+      if (result.success) {
+        expect(result.data.street).toBe('')
       }
     })
 
@@ -368,6 +368,13 @@ describe('visitToFormValues', () => {
     expect(formValues.observations).toBeUndefined()
   })
 
+  it('debe manejar null en street', () => {
+    const visitWithoutStreet = { ...mockVisit, street: null }
+    const formValues = visitToFormValues(visitWithoutStreet)
+
+    expect(formValues.street).toBe('')
+  })
+
   it('debe NO incluir campos de sistema (id, createdAt, updatedAt)', () => {
     const formValues = visitToFormValues(mockVisit) as any
 
@@ -510,10 +517,13 @@ describe('createVisitApiSchema', () => {
   })
 
   describe('dirección', () => {
-    it('debe rechazar sin street', () => {
+    it('debe aceptar sin street (opcional)', () => {
       const { street, ...input } = validApiInput
       const result = createVisitApiSchema.safeParse(input)
-      expect(result.success).toBe(false)
+      expect(result.success).toBe(true)
+      if (result.success) {
+        expect(result.data.street).toBe('')
+      }
     })
 
     it('debe rechazar sin comuna', () => {
