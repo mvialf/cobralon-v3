@@ -297,6 +297,17 @@ export function PaymentsPageClient() {
                 },
               },
             ]}
+            // Toolbar: conteo y limpiar filtros server-side
+            totalCount={data?.pagination.total}
+            totalCountLabel="pagos"
+            activeFilterCount={
+              (typeFilter ? 1 : 0) + (paymentMethodFilter ? 1 : 0) + (projectNumberFilter ? 1 : 0)
+            }
+            onClearAllFilters={() => {
+              setTypeFilter(undefined)
+              setPaymentMethodFilter(undefined)
+              setProjectNumberFilter(undefined)
+            }}
             meta={{
               handleDelete,
               deletingPaymentId: deleteMutation.variables || null,

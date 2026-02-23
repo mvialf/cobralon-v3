@@ -18,6 +18,7 @@ import {
 } from '@/components/ui/alert-dialog'
 import { DataTable, type BulkAction } from '@/components/data-table'
 import { createColumns, type Project } from './columns'
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 import {
   useProjects,
   useUpdateProjectStatus,
@@ -182,12 +183,31 @@ export function ProjectsPageClient() {
     bgClass: status.color.bgClass,
   }))
 
-  // Opciones para el filtro de Estado del Proyecto (Activo/Finalizado)
-  const projectStateFilterOptions = [
-    { label: 'Todos', value: 'all' },
-    { label: 'Activos', value: 'Activo' },
-    { label: 'Finalizados', value: 'Finalizado' },
-  ]
+  const projectStateToggle = (
+    <ToggleGroup
+      type="single"
+      variant="outline"
+      size="sm"
+      value={projectState}
+      onValueChange={(value) => {
+        if (!value) return
+        setProjectState(value as 'Activo' | 'Finalizado' | 'all')
+        if (pagination.pageIndex !== 0) {
+          setPagination({ ...pagination, pageIndex: 0 })
+        }
+      }}
+    >
+      <ToggleGroupItem value="Activo" className="text-xs">
+        Activos
+      </ToggleGroupItem>
+      <ToggleGroupItem value="Finalizado" className="text-xs">
+        Finalizados
+      </ToggleGroupItem>
+      <ToggleGroupItem value="all" className="text-xs">
+        Todos
+      </ToggleGroupItem>
+    </ToggleGroup>
+  )
 
   return (
     <AppLayout
@@ -220,6 +240,7 @@ export function ProjectsPageClient() {
             // Server-side filtering
             manualFiltering={true}
             serverFacets={data?.facets}
+            toolbarExtra={projectStateToggle}
             filterableColumns={[
               {
                 id: 'projectStatus',
@@ -234,26 +255,15 @@ export function ProjectsPageClient() {
                   }
                 },
               },
-              {
-                id: 'projectState',
-                title: 'Estado Proyecto',
-                options: projectStateFilterOptions,
-                // Sincronizar estado visual con estado React
-                selectedValues: projectState === 'all' ? [] : [projectState],
-                onFilterChange: (values) => {
-                  // Si no hay valores o están ambos seleccionados, mostrar todos
-                  const newState =
-                    values.length === 0 || values.length >= 2
-                      ? 'all'
-                      : (values[0] as 'Activo' | 'Finalizado' | 'all')
-                  setProjectState(newState)
-                  // Resetear a página 1 cuando cambia el filtro
-                  if (pagination.pageIndex !== 0) {
-                    setPagination({ ...pagination, pageIndex: 0 })
-                  }
-                },
-              },
             ]}
+            // Toolbar: conteo y limpiar filtros server-side
+            totalCount={data?.pagination.total}
+            totalCountLabel="proyectos"
+            activeFilterCount={(statusIds.length > 0 ? 1 : 0) + (projectState !== 'Activo' ? 1 : 0)}
+            onClearAllFilters={() => {
+              setStatusIds([])
+              setProjectState('Activo')
+            }}
             meta={{
               handleStatusChange,
               handleDateChange,
