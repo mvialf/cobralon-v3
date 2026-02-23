@@ -1,6 +1,6 @@
 import { z } from 'zod'
 import { todoListOptionalSchema, type TodoItemFormData } from './todo-validations'
-import { chilePhoneSchema, addressWithNullableApartmentSchema } from './common'
+import { chilePhoneSchema, addressOptionalStreetWithNullableApartmentSchema } from './common'
 import { normalizePhone } from '@/lib/utils/phone'
 
 /**
@@ -23,7 +23,7 @@ export const aftersaleSchema = z.object({
   }),
   tasks: todoListOptionalSchema, // Lista de tareas para resolver el caso de postventa
   // Campos de dirección del proyecto (editables desde aftersale)
-  ...addressWithNullableApartmentSchema,
+  ...addressOptionalStreetWithNullableApartmentSchema,
 })
 
 /**
@@ -42,7 +42,7 @@ export const createAftersaleApiSchema = z.object({
     .default(''),
   reportedAt: z.string().datetime({ message: 'Fecha de reporte inválida' }),
   tasks: todoListOptionalSchema,
-  ...addressWithNullableApartmentSchema,
+  ...addressOptionalStreetWithNullableApartmentSchema,
 })
 
 /**
@@ -79,7 +79,7 @@ export type Aftersale = {
       name: string
     }
     // Campos de dirección del proyecto
-    street: string
+    street: string | null
     apartment: string | null
     comuna: string
     region: string
@@ -105,7 +105,7 @@ export type CreateAftersalePayload = {
   reportedAt: string // ISO string for API
   tasks?: TodoItemFormData[] // Lista de tareas para resolver el caso
   // Campos de dirección del proyecto
-  street: string
+  street?: string
   apartment?: string | null
   comuna: string
   region: string
@@ -128,7 +128,7 @@ export function formValuesToPayload(values: AftersaleFormValues): CreateAftersal
     reportedAt: values.reportedAt.toISOString(),
     tasks: values.tasks, // Incluir tareas
     // Campos de dirección del proyecto
-    street: values.street,
+    street: values.street || undefined,
     apartment: values.apartment,
     comuna: values.comuna,
     region: values.region,
@@ -147,7 +147,7 @@ export function aftersaleToFormValues(aftersale: Aftersale): AftersaleFormValues
     reportedAt: new Date(aftersale.reportedAt),
     tasks: aftersale.tasks || [], // Incluir tareas (default vacío si no existen)
     // Campos de dirección del proyecto
-    street: aftersale.project.street,
+    street: aftersale.project.street || '',
     apartment: aftersale.project.apartment,
     comuna: aftersale.project.comuna,
     region: aftersale.project.region,

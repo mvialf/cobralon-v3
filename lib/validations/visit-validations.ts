@@ -1,5 +1,8 @@
 import { z } from 'zod'
-import { optionalChilePhoneSchema, addressWithOptionalApartmentSchema } from './common'
+import {
+  optionalChilePhoneSchema,
+  addressOptionalStreetWithOptionalApartmentSchema,
+} from './common'
 
 /**
  * Schema base compartido (campos de entrada del usuario)
@@ -12,7 +15,7 @@ const visitBaseSchema = z.object({
   phone: optionalChilePhoneSchema,
 
   // Dirección de la visita (igual que Project)
-  ...addressWithOptionalApartmentSchema,
+  ...addressOptionalStreetWithOptionalApartmentSchema,
 
   // Estado y fecha
   visitStatusId: z.string().min(1, 'El estado de la visita es requerido'), // FK a VisitStatus (obligatorio)
@@ -55,7 +58,7 @@ export type UpdateVisitInput = z.infer<typeof updateVisitSchema>
 export const createVisitApiSchema = z.object({
   name: z.string().min(3, 'El nombre debe tener al menos 3 caracteres'),
   phone: optionalChilePhoneSchema,
-  ...addressWithOptionalApartmentSchema,
+  ...addressOptionalStreetWithOptionalApartmentSchema,
   visitStatusId: z.string().min(1, 'El estado es requerido'),
   date: z.string().datetime('Fecha inválida'),
   scheduledTime: z
@@ -80,7 +83,7 @@ export type UpdateVisitApiBody = z.infer<typeof updateVisitApiSchema>
 export type CreateVisitAPIPayload = {
   name: string
   phone?: string
-  street: string
+  street?: string
   apartment?: string
   comuna: string
   region: string
@@ -102,7 +105,7 @@ export type Visit = {
   id: string
   name: string
   phone: string | null
-  street: string
+  street: string | null
   apartment: string | null
   comuna: string
   region: string
@@ -131,7 +134,7 @@ export function formValuesToPayload(values: CreateVisitInput): CreateVisitAPIPay
   return {
     name: values.name,
     phone: values.phone,
-    street: values.street,
+    street: values.street || undefined,
     apartment: values.apartment,
     comuna: values.comuna,
     region: values.region,
@@ -149,7 +152,7 @@ export function visitToFormValues(visit: Visit): CreateVisitInput {
   return {
     name: visit.name,
     phone: visit.phone || undefined,
-    street: visit.street,
+    street: visit.street || '',
     apartment: visit.apartment || undefined,
     comuna: visit.comuna,
     region: visit.region,

@@ -5,6 +5,9 @@ export {
   addressWithOptionalApartmentSchema,
   addressWithNullableApartmentSchema,
   addressWithNullableOnlyApartmentSchema,
+  addressFieldsOptionalStreetSchema,
+  addressOptionalStreetWithOptionalApartmentSchema,
+  addressOptionalStreetWithNullableApartmentSchema,
 } from './address-schema'
 
 export {

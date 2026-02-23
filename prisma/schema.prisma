@@ -160,7 +160,7 @@ model Project {
   projectName         String?
   customerId          String
   phone               String
-  street              String
+  street              String?
   apartment           String?
   comuna              String
   region              String
@@ -365,7 +365,7 @@ model Visit {
   phone         String?       // Teléfono de contacto
 
   // Dirección (igual que Project)
-  street        String        // Calle
+  street        String?       // Calle (opcional, se completa al agendar evento)
   apartment     String?       // Depto/Oficina (opcional)
   comuna        String        // Comuna
   region        String        // Región

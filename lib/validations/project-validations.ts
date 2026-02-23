@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { chilePhoneSchema, addressWithOptionalApartmentSchema } from './common'
+import { chilePhoneSchema, addressOptionalStreetWithOptionalApartmentSchema } from './common'
 
 /**
  * Valores válidos para filtro de estado de proyecto
@@ -21,7 +21,7 @@ const projectBaseSchema = z.object({
   phone: chilePhoneSchema,
 
   // Dirección del proyecto
-  ...addressWithOptionalApartmentSchema,
+  ...addressOptionalStreetWithOptionalApartmentSchema,
 
   // Estado y fecha
   projectStatusId: z.string().min(1, 'El estado del proyecto es requerido'), // FK a ProjectStatus (obligatorio)
@@ -99,7 +99,7 @@ export type CreateProjectAPIPayload = {
   projectNumber: string
   projectName?: string
   phone: string
-  street: string
+  street?: string
   apartment?: string
   comuna: string
   region: string
@@ -152,7 +152,7 @@ export function projectFormToPayload(values: ProjectData): CreateProjectAPIPaylo
     projectNumber: values.projectNumber,
     projectName: values.projectName,
     phone: values.phone,
-    street: values.street,
+    street: values.street || undefined,
     apartment: values.apartment,
     comuna: values.comuna,
     region: values.region,

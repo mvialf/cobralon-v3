@@ -18,7 +18,7 @@ export interface ProjectListRawRow {
   projectName: string | null
   customerId: string
   phone: string
-  street: string
+  street: string | null
   apartment: string | null
   comuna: string
   region: string
@@ -58,7 +58,7 @@ export interface ProjectListItem {
   projectName: string | null
   customerId: string
   phone: string
-  street: string
+  street: string | null
   apartment: string | null
   comuna: string
   region: string
