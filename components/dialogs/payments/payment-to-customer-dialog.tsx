@@ -10,10 +10,11 @@ import {
 } from '@/lib/validations/payment-validations'
 
 import { PaymentToCustomerForm } from '@/components/forms/payments/payment-to-customer-form'
+import { Button } from '@/components/ui/button'
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
@@ -89,19 +90,27 @@ export function PaymentToCustomerDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-5xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Registrar Pago a Cliente</DialogTitle>
-          <DialogDescription>
-            Registre un pago y distribúyalo entre múltiples proyectos del cliente (FIFO o manual).
-          </DialogDescription>
         </DialogHeader>
 
         <PaymentToCustomerForm
           onSubmit={handleSubmit}
           isSubmitting={isSubmitting}
           preselectedCustomerId={preselectedCustomerId}
+          formId="payment-to-customer-form"
         />
+
+        <DialogFooter>
+          <Button
+            type="submit"
+            form="payment-to-customer-form"
+            disabled={isSubmitting}
+          >
+            {isSubmitting ? 'Registrando...' : 'Registrar Pago'}
+          </Button>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   )

@@ -262,211 +262,214 @@ export function PaymentToCustomerForm({
 
   return (
     <Form {...form}>
-      <form id={formId} onSubmit={form.handleSubmit(handleSubmit)} className="space-y-3">
-        {/* 1. Cliente: Búsqueda o Pre-seleccionado */}
-        <CustomerSearchField
-          control={form.control}
-          preselectedCustomerId={preselectedCustomerId}
-          onCustomerSelect={handleCustomerSelect}
-        />
+      <form id={formId} onSubmit={form.handleSubmit(handleSubmit)}>
+        <div className="grid grid-cols-1 lg:grid-cols-[2fr_3fr] gap-x-6">
+          {/* Columna izquierda: Datos del pago */}
+          <div className="space-y-3">
+            <CustomerSearchField
+              control={form.control}
+              preselectedCustomerId={preselectedCustomerId}
+              onCustomerSelect={handleCustomerSelect}
+            />
 
-        {/* 3. Monto y Fecha */}
-        <PaymentAmountDateFields
-          control={form.control}
-          currency={customerProjects[0]?.currency}
-          disabled={!selectedCustomerId || customerProjects.length === 0}
-          amountLabel="Monto Total del Pago *"
-        />
+            <PaymentAmountDateFields
+              control={form.control}
+              currency={customerProjects[0]?.currency}
+              disabled={!selectedCustomerId || customerProjects.length === 0}
+              amountLabel="Monto Total del Pago *"
+            />
 
-        {/* 5. Método de Pago + Cuotas */}
-        <PaymentMethodFields
-          control={form.control}
-          paymentMethods={paymentMethods}
-          onPaymentMethodChange={handlePaymentMethodChange}
-        />
+            <PaymentMethodFields
+              control={form.control}
+              paymentMethods={paymentMethods}
+              onPaymentMethodChange={handlePaymentMethodChange}
+            />
 
-        {/* 6. Sección de Allocations (solo si hay cliente seleccionado) */}
-        {selectedCustomerId && (
-          <div className="space-y-4">
-            <FormLabel className="text-center">Distribución del Pago</FormLabel>
-
-            {/* Loading State */}
-            {loadingProjects && (
-              <div className="text-center py-8 text-muted-foreground">
-                <p>Cargando proyectos...</p>
+            {/* Distribución del Pago: resumen y controles */}
+            {selectedCustomerId && fields.length > 0 && (
+              <div className="space-y-3">
+                <FormLabel>Distribución del Pago</FormLabel>
+                <div className="flex justify-center gap-4">
+                  <Card className="p-2">
+                    <CardContent className="flex flex-col">
+                      <span className="text-sm text-center text-muted-foreground">Asignado:</span>
+                      <span className="text-center font-semibold text-primary">
+                        {formatCurrency(totalAllocated, 'CLP')}
+                      </span>
+                    </CardContent>
+                  </Card>
+                  <Card className="p-2">
+                    <CardContent className="flex flex-col">
+                      <span className="text-sm text-center text-muted-foreground">Diferencia:</span>
+                      <span
+                        className={cn(
+                          'text-center font-semibold',
+                          isValidSum ? 'text-green-600' : 'text-red-600'
+                        )}
+                      >
+                        {formatCurrency(Math.abs(difference), 'CLP')}
+                        {!isValidSum &&
+                          (difference > 0 ? ' (falta asignar)' : ' (sobrepasado)')}
+                      </span>
+                    </CardContent>
+                  </Card>
+                  <Card className="p-2">
+                    <CardContent className="flex flex-col gap-1 items-center">
+                      <label
+                        htmlFor="auto-fifo"
+                        className={cn(
+                          'text-sm',
+                          !watchedAmount || watchedAmount <= 0
+                            ? 'text-muted-foreground cursor-not-allowed'
+                            : 'cursor-pointer'
+                        )}
+                      >
+                        Auto
+                      </label>
+                      <input
+                        type="checkbox"
+                        id="auto-fifo"
+                        checked={distributionMode === 'fifo'}
+                        disabled={!watchedAmount || watchedAmount <= 0}
+                        onChange={(e) => {
+                          const newMode = e.target.checked ? 'fifo' : 'manual'
+                          setDistributionMode(newMode)
+                          if (newMode === 'fifo') {
+                            handleCalculateFIFO()
+                          }
+                        }}
+                        className="h-4 w-4"
+                      />
+                    </CardContent>
+                  </Card>
+                </div>
               </div>
             )}
 
-            {/* Empty State */}
-            {!loadingProjects && fields.length === 0 && (
-              <div className="text-center py-8 text-muted-foreground">
-                <p>Este cliente no tiene proyectos con saldo pendiente.</p>
-              </div>
-            )}
-            {/* Validación Visual */}
-            {fields.length > 0 && (
-              <div className="flex justify-center gap-4">
-                <Card className="p-2">
-                  <CardContent className="flex flex-col">
-                    <span className="text-sm text-center text-muted-foreground">Asignado:</span>
-                    <span className="text-center font-semibold text-primary">
-                      {formatCurrency(totalAllocated, 'CLP')}
-                    </span>
-                  </CardContent>
-                </Card>
-                <Card className="p-2">
-                  <CardContent className="flex flex-col">
-                    <span className="text-sm text-center text-muted-foreground">Diferencia:</span>
-                    <span
-                      className={cn(
-                        'text-center font-semibold',
-                        isValidSum ? 'text-green-600' : 'text-red-600'
-                      )}
-                    >
-                      {formatCurrency(Math.abs(difference), 'CLP')}
-                      {!isValidSum && (difference > 0 ? ' (falta asignar)' : ' (sobrepasado)')}
-                    </span>
-                  </CardContent>
-                </Card>
-                <Card className="p-2">
-                  <CardContent className="flex flex-col gap-1 items-center">
-                    <label
-                      htmlFor="auto-fifo"
-                      className={cn(
-                        'text-sm',
-                        !watchedAmount || watchedAmount <= 0
-                          ? 'text-muted-foreground cursor-not-allowed'
-                          : 'cursor-pointer'
-                      )}
-                    >
-                      Auto
-                    </label>
-                    <input
-                      type="checkbox"
-                      id="auto-fifo"
-                      checked={distributionMode === 'fifo'}
-                      disabled={!watchedAmount || watchedAmount <= 0}
-                      onChange={(e) => {
-                        const newMode = e.target.checked ? 'fifo' : 'manual'
-                        setDistributionMode(newMode)
-                        if (newMode === 'fifo') {
-                          handleCalculateFIFO()
-                        }
-                      }}
-                      className="h-4 w-4"
+            <FormField
+              control={form.control}
+              name="notes"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Notas (opcional)</FormLabel>
+                  <FormControl>
+                    <Textarea
+                      placeholder="Notas adicionales sobre el pago..."
+                      className="resize-none"
+                      {...field}
+                      value={field.value || ''}
                     />
-                  </CardContent>
-                </Card>
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            {/* Submit button - solo si no hay formId externo */}
+            {!formId && (
+              <div className="flex justify-end gap-2 pt-4">
+                <Button
+                  type="submit"
+                  disabled={
+                    isSubmitting ||
+                    !selectedCustomerId ||
+                    customerProjects.length === 0 ||
+                    fields.length === 0 ||
+                    !isValidSum
+                  }
+                >
+                  {isSubmitting ? 'Registrando...' : 'Registrar Pago'}
+                </Button>
               </div>
             )}
+          </div>
 
-            {/* Tabla de Allocations */}
-            {!loadingProjects && fields.length > 0 && (
-              <div className="border rounded-lg overflow-hidden">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Proyecto</TableHead>
-                      <TableHead className="text-right">Balance</TableHead>
-                      <TableHead className="text-right">Monto Asignado</TableHead>
-                      <TableHead className="w-[50px]"></TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {fields.map((field, index) => {
-                      const project = customerProjects.find((p) => p.id === field.projectId)
-                      if (!project) return null
+          {/* Columna derecha: Tabla de proyectos */}
+          <div className="space-y-4">
+            {selectedCustomerId && (
+              <>
+                {loadingProjects && (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <p>Cargando proyectos...</p>
+                  </div>
+                )}
 
-                      return (
-                        <TableRow key={field.id}>
-                          <TableCell>
-                            <div>
-                              <div className="font-medium">{project.projectNumber}</div>
-                              {project.projectName && (
-                                <div className="text-sm text-muted-foreground">
-                                  {project.projectName}
-                                </div>
-                              )}
-                            </div>
-                          </TableCell>
-                          <TableCell className="text-right text-muted-foreground">
-                            {formatCurrency(project.balance, project.currency)}
-                          </TableCell>
-                          <TableCell className="text-right">
-                            <FormField
-                              control={form.control}
-                              name={`allocations.${index}.allocatedAmount`}
-                              render={({ field: inputField }) => (
-                                <CurrencyInput
-                                  value={inputField.value}
-                                  onChange={inputField.onChange}
-                                  currency={project.currency}
-                                  disabled={distributionMode === 'fifo'}
-                                  className="text-right max-w-[150px] ml-auto"
-                                />
-                              )}
-                            />
-                          </TableCell>
-                          <TableCell>
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => remove(index)}
-                              className="text-muted-foreground hover:text-destructive"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </TableCell>
+                {!loadingProjects && fields.length === 0 && (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <p>Este cliente no tiene proyectos con saldo pendiente.</p>
+                  </div>
+                )}
+
+                {!loadingProjects && fields.length > 0 && (
+                  <div className="border rounded-lg overflow-hidden">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Proyecto</TableHead>
+                          <TableHead className="text-right">Balance</TableHead>
+                          <TableHead className="text-right">Monto Asignado</TableHead>
+                          <TableHead className="w-[50px]"></TableHead>
                         </TableRow>
-                      )
-                    })}
-                  </TableBody>
-                </Table>
-              </div>
+                      </TableHeader>
+                      <TableBody>
+                        {fields.map((field, index) => {
+                          const project = customerProjects.find((p) => p.id === field.projectId)
+                          if (!project) return null
+
+                          return (
+                            <TableRow key={field.id}>
+                              <TableCell>
+                                <div>
+                                  <div className="font-medium">{project.projectNumber}</div>
+                                  {project.projectName && (
+                                    <div className="text-sm text-muted-foreground">
+                                      {project.projectName}
+                                    </div>
+                                  )}
+                                </div>
+                              </TableCell>
+                              <TableCell className="text-right text-muted-foreground">
+                                {formatCurrency(project.balance, project.currency)}
+                              </TableCell>
+                              <TableCell className="text-right">
+                                <FormField
+                                  control={form.control}
+                                  name={`allocations.${index}.allocatedAmount`}
+                                  render={({ field: inputField }) => (
+                                    <CurrencyInput
+                                      value={inputField.value}
+                                      onChange={inputField.onChange}
+                                      currency={project.currency}
+                                      disabled={distributionMode === 'fifo'}
+                                      className="text-right max-w-[150px] ml-auto"
+                                    />
+                                  )}
+                                />
+                              </TableCell>
+                              <TableCell>
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => remove(index)}
+                                  className="text-muted-foreground hover:text-destructive"
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </TableCell>
+                            </TableRow>
+                          )
+                        })}
+                      </TableBody>
+                    </Table>
+                  </div>
+                )}
+
+                <FormMessage />
+              </>
             )}
-
-            <FormMessage />
           </div>
-        )}
-
-        {/* 7. Notas (opcional) */}
-        <FormField
-          control={form.control}
-          name="notes"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Notas (opcional)</FormLabel>
-              <FormControl>
-                <Textarea
-                  placeholder="Notas adicionales sobre el pago..."
-                  className="resize-none"
-                  {...field}
-                  value={field.value || ''}
-                />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
-        {/* Submit button - solo si no hay formId externo */}
-        {!formId && (
-          <div className="flex justify-end gap-2 pt-4">
-            <Button
-              type="submit"
-              disabled={
-                isSubmitting ||
-                !selectedCustomerId ||
-                customerProjects.length === 0 ||
-                fields.length === 0 ||
-                !isValidSum
-              }
-            >
-              {isSubmitting ? 'Registrando...' : 'Registrar Pago'}
-            </Button>
-          </div>
-        )}
+        </div>
       </form>
     </Form>
   )
