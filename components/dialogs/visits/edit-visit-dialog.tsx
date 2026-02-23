@@ -59,7 +59,7 @@ export function EditVisitDialog({
     return {
       name: visit.name,
       phone: visit.phone || '',
-      street: visit.street,
+      street: visit.street || '',
       apartment: visit.apartment || '',
       comuna: visit.comuna,
       region: visit.region,

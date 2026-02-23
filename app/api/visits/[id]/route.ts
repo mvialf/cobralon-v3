@@ -61,7 +61,7 @@ export const PUT = withApiHandler<UpdateVisitApiBody>(
 
     if (body.name !== undefined) visitData.name = body.name
     if (body.phone !== undefined) visitData.phone = body.phone || null
-    if (body.street !== undefined) visitData.street = body.street
+    if (body.street !== undefined) visitData.street = body.street || null
     if (body.apartment !== undefined) visitData.apartment = body.apartment || null
     if (body.comuna !== undefined) visitData.comuna = body.comuna
     if (body.region !== undefined) visitData.region = body.region

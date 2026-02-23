@@ -9,7 +9,7 @@ export interface ProjectExportData {
   projectNumber: string
   projectName: string | null
   phone: string
-  street: string
+  street: string | null
   apartment: string | null
   comuna: string
   region: string
@@ -38,7 +38,7 @@ function transformProjectData(projects: ProjectExportData[]) {
     Glosa: project.projectName || '',
     Cliente: project.customer.name,
     Teléfono: project.phone,
-    Calle: project.street,
+    Calle: project.street || '',
     Depto: project.apartment || '',
     Comuna: project.comuna,
     Región: project.region,

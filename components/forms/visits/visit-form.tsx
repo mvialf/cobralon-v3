@@ -141,7 +141,7 @@ export const VisitForm = React.forwardRef<VisitFormHandle, VisitFormProps>(
           </div>
 
           {/* Dirección */}
-          <AddressFields control={form.control} />
+          <AddressFields control={form.control} streetRequired={false} />
 
           {/* Estado, Fecha y Hora */}
           <div className="space-y-4">

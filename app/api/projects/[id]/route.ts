@@ -140,7 +140,7 @@ export const PUT = withApiHandler<UpdateProjectApiBody>(
     if (body.projectNumber !== undefined) updateData.projectNumber = body.projectNumber
     if (body.projectName !== undefined) updateData.projectName = body.projectName || null
     if (body.phone !== undefined) updateData.phone = body.phone
-    if (body.street !== undefined) updateData.street = body.street
+    if (body.street !== undefined) updateData.street = body.street || null
     if (body.apartment !== undefined) updateData.apartment = body.apartment || null
     if (body.comuna !== undefined) updateData.comuna = body.comuna
     if (body.region !== undefined) updateData.region = body.region

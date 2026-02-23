@@ -48,7 +48,7 @@ export function EditProjectDialog({
       projectNumber: project.projectNumber,
       projectName: project.projectName || '',
       phone: project.phone,
-      street: project.street,
+      street: project.street || '',
       apartment: project.apartment || '',
       comuna: project.comuna,
       region: project.region,

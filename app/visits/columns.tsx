@@ -19,7 +19,7 @@ export interface Visit {
   id: string
   name: string
   phone: string | null
-  street: string
+  street: string | null
   apartment: string | null
   comuna: string
   region: string

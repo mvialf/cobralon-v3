@@ -109,7 +109,7 @@ export const POST = withApiHandler<CreateAftersaleApiBody>(
       await tx.project.update({
         where: { id: body.projectId },
         data: {
-          street: body.street,
+          street: body.street || null,
           apartment: body.apartment,
           comuna: body.comuna,
           region: regionNombre,

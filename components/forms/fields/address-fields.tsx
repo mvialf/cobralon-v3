@@ -15,13 +15,19 @@ interface AddressFieldsProps {
   control: Control<any>
   defaultRegion?: string
   disabled?: boolean
+  streetRequired?: boolean
 }
 
 /**
  * Componente reutilizable para campos de dirección
  * Incluye: calle, casa/dpto, comuna, región
  */
-export function AddressFields({ control, defaultRegion, disabled }: AddressFieldsProps) {
+export function AddressFields({
+  control,
+  defaultRegion,
+  disabled,
+  streetRequired = true,
+}: AddressFieldsProps) {
   const regiones = getRegiones()
 
   // Watch región del formulario para filtrar comunas
@@ -42,7 +48,7 @@ export function AddressFields({ control, defaultRegion, disabled }: AddressField
           name="street"
           render={({ field }) => (
             <FormItem className="col-span-5 w-full">
-              <FormLabel>Calle y numeración *</FormLabel>
+              <FormLabel>Calle y numeración{streetRequired ? ' *' : ''}</FormLabel>
               <FormControl>
                 <Input {...field} className="w-full" disabled={disabled} />
               </FormControl>

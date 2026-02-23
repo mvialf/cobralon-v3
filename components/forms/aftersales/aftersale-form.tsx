@@ -208,7 +208,11 @@ export const AftersaleForm = React.forwardRef<AftersaleFormHandle, AftersaleForm
           </FormGrid>
 
           {/* Dirección del Proyecto (editable) */}
-          <AddressFields control={form.control} disabled={!hasProjectDetails} />
+          <AddressFields
+            control={form.control}
+            disabled={!hasProjectDetails}
+            streetRequired={false}
+          />
 
           {/* Descripción */}
           <FormField

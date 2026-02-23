@@ -157,7 +157,7 @@ export const POST = withApiHandler<CreateVisitApiBody>(
     const visitData = {
       name: body.name,
       phone: body.phone || null,
-      street: body.street,
+      street: body.street || null,
       apartment: body.apartment || null,
       comuna: body.comuna,
       region: body.region,

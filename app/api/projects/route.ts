@@ -243,7 +243,7 @@ export const POST = withApiHandler<CreateProjectApiBody>(
           projectNumber,
           projectName: projectName || null,
           phone,
-          street,
+          street: street || null,
           apartment: apartment || null,
           comuna,
           region,

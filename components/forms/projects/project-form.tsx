@@ -165,155 +165,167 @@ export const ProjectForm = React.forwardRef<ProjectFormHandle, ProjectFormProps>
     return (
       <Form {...form}>
         <FormRoot onSubmit={form.handleSubmit(handleFormSubmit)}>
-          <FormGrid columns="3-1">
-            {/* Cliente - Combobox */}
-            <FormField
-              control={form.control}
-              name="customerId"
-              render={({ field }) => (
-                <FormItem className="flex flex-col">
-                  <FormLabel>Cliente *</FormLabel>
-                  <FormControl>
-                    <Combobox
-                      value={field.value}
-                      onValueChange={(value) => {
-                        field.onChange(value)
-                        handleCustomerSelect(value)
-                      }}
-                      options={customers}
-                      getOptionValue={(c) => c.id}
-                      getOptionLabel={(c) => c.name}
-                      getSearchKeywords={(c) => [c.name, c.phone]}
-                      renderOption={(c) => (
-                        <div className="flex flex-col">
-                          <span>{c.name}</span>
-                          <span className="text-xs text-muted-foreground">{c.phone}</span>
-                        </div>
-                      )}
-                      placeholder="Seleccionar cliente"
-                      searchPlaceholder="Buscar cliente..."
-                      emptyMessage="No se encontraron clientes"
-                      contentWidth="400px"
-                      loading={loadingCustomers}
-                      modal
-                      onCreateNew={() => setShowCreateCustomer(true)}
-                      createNewLabel="+ Crear cliente"
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            {/* Número de Proyecto */}
-            <FormField
-              control={form.control}
-              name="projectNumber"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Proyecto *</FormLabel>
-                  <FormControl>
-                    <Input {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          </FormGrid>
-
-          <FormGrid columns="2-1">
-            {/* Glosa */}
-            <FormField
-              control={form.control}
-              name="projectName"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Glosa</FormLabel>
-                  <FormControl>
-                    <Input {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            {/* Teléfono */}
-            <FormField
-              control={form.control}
-              name="phone"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Teléfono *</FormLabel>
-                  <FormControl>
-                    <PhoneInput {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          </FormGrid>
-
-          <FormGrid columns={2}>
-            {/* Estado - Combobox */}
-            <FormField
-              control={form.control}
-              name="projectStatusId"
-              render={({ field }) => (
-                <FormItem className="flex flex-col">
-                  <FormLabel>Estado *</FormLabel>
-                  <FormControl>
-                    <Combobox
-                      value={field.value || ''}
-                      onValueChange={field.onChange}
-                      options={projectStatuses}
-                      getOptionValue={(status) => status.id}
-                      getOptionLabel={(status) => status.name}
-                      renderOption={(status) => (
-                        <StatusOptionDisplay
-                          option={{ id: status.id, label: status.name, color: status.color }}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-x-8 gap-y-6">
+            {/* Columna izquierda: Identificación + Descripción */}
+            <div className="space-y-6">
+              <FormGrid columns="3-1">
+                {/* Cliente - Combobox */}
+                <FormField
+                  control={form.control}
+                  name="customerId"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-col">
+                      <FormLabel>Cliente *</FormLabel>
+                      <FormControl>
+                        <Combobox
+                          value={field.value}
+                          onValueChange={(value) => {
+                            field.onChange(value)
+                            handleCustomerSelect(value)
+                          }}
+                          options={customers}
+                          getOptionValue={(c) => c.id}
+                          getOptionLabel={(c) => c.name}
+                          getSearchKeywords={(c) => [c.name, c.phone]}
+                          renderOption={(c) => (
+                            <div className="flex flex-col">
+                              <span>{c.name}</span>
+                              <span className="text-xs text-muted-foreground">{c.phone}</span>
+                            </div>
+                          )}
+                          placeholder="Seleccionar cliente"
+                          searchPlaceholder="Buscar cliente..."
+                          emptyMessage="No se encontraron clientes"
+                          contentWidth="400px"
+                          loading={loadingCustomers}
+                          modal
+                          onCreateNew={() => setShowCreateCustomer(true)}
+                          createNewLabel="+ Crear cliente"
                         />
-                      )}
-                      placeholder="Seleccionar estado"
-                      searchPlaceholder="Buscar estado..."
-                      emptyMessage="No se encontraron estados"
-                      contentWidth="300px"
-                      loading={loadingStatuses}
-                      modal
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
 
-            {/* Fecha de Ingreso */}
-            <FormField
-              control={form.control}
-              name="date"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Fecha de Ingreso *</FormLabel>
-                  <FormControl>
-                    <Input
-                      type="date"
-                      defaultValue={formatDateValue(field.value)}
-                      onBlur={(e) => field.onChange(parseDateValue(e.target.value))}
-                      name={field.name}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          </FormGrid>
+                {/* Número de Proyecto */}
+                <FormField
+                  control={form.control}
+                  name="projectNumber"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Proyecto *</FormLabel>
+                      <FormControl>
+                        <Input {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </FormGrid>
 
-          <ProjectFinancialFields control={form.control} currency={form.watch('currency')} />
+              <FormGrid columns="2-1">
+                {/* Glosa */}
+                <FormField
+                  control={form.control}
+                  name="projectName"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Glosa</FormLabel>
+                      <FormControl>
+                        <Input {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
 
-          <AddressFields control={form.control} defaultRegion={configuration.region} />
+                {/* Teléfono */}
+                <FormField
+                  control={form.control}
+                  name="phone"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Teléfono *</FormLabel>
+                      <FormControl>
+                        <PhoneInput {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </FormGrid>
 
-          <ProjectDetailsFields control={form.control} />
+              <FormGrid columns={2}>
+                {/* Estado - Combobox */}
+                <FormField
+                  control={form.control}
+                  name="projectStatusId"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-col">
+                      <FormLabel>Estado *</FormLabel>
+                      <FormControl>
+                        <Combobox
+                          value={field.value || ''}
+                          onValueChange={field.onChange}
+                          options={projectStatuses}
+                          getOptionValue={(status) => status.id}
+                          getOptionLabel={(status) => status.name}
+                          renderOption={(status) => (
+                            <StatusOptionDisplay
+                              option={{ id: status.id, label: status.name, color: status.color }}
+                            />
+                          )}
+                          placeholder="Seleccionar estado"
+                          searchPlaceholder="Buscar estado..."
+                          emptyMessage="No se encontraron estados"
+                          contentWidth="300px"
+                          loading={loadingStatuses}
+                          modal
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
 
-          <UninstallTagsFields control={form.control} />
+                {/* Fecha de Ingreso */}
+                <FormField
+                  control={form.control}
+                  name="date"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Fecha de Ingreso *</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="date"
+                          defaultValue={formatDateValue(field.value)}
+                          onBlur={(e) => field.onChange(parseDateValue(e.target.value))}
+                          name={field.name}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </FormGrid>
+
+              <ProjectDetailsFields control={form.control} />
+            </div>
+
+            {/* Columna derecha: Dirección + Finanzas + Tags */}
+            <div className="space-y-6">
+              <AddressFields
+                control={form.control}
+                defaultRegion={configuration.region}
+                streetRequired={false}
+              />
+
+              <ProjectFinancialFields control={form.control} currency={form.watch('currency')} />
+
+              <UninstallTagsFields control={form.control} />
+            </div>
+          </div>
 
           {showSubmitButton && (
             <div className="flex justify-end gap-2">
