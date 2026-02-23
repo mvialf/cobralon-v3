@@ -2,7 +2,7 @@
 
 import { Cross2Icon } from '@radix-ui/react-icons'
 import { Table } from '@tanstack/react-table'
-import { Search, EyeOff } from 'lucide-react'
+import { Search, SlidersHorizontal } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -16,6 +16,11 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { DataTableFacetedFilter } from './data-table-faceted-filter'
 import type { ServerFacets } from './data-table'
+
+/** Convierte camelCase/PascalCase a label legible: "projectStatus" → "Proyecto status" */
+function formatColumnLabel(id: string): string {
+  return id.replace(/([a-z])([A-Z])/g, '$1 $2').replace(/^./, (c) => c.toUpperCase())
+}
 
 interface DataTableToolbarProps<TData> {
   table: Table<TData>
@@ -35,6 +40,16 @@ interface DataTableToolbarProps<TData> {
   // Server-side filtering props
   manualFiltering?: boolean
   serverFacets?: ServerFacets
+  // Cantidad de filtros server-side activos (para mostrar botón "Limpiar")
+  activeFilterCount?: number
+  // Callback para limpiar todos los filtros (incluyendo server-side)
+  onClearAllFilters?: () => void
+  // Conteo total de resultados
+  totalCount?: number
+  // Label para el conteo (ej: "proyectos", "pagos")
+  totalCountLabel?: string
+  // Slot para contenido extra entre el search y los filtros facetados
+  toolbarExtra?: React.ReactNode
 }
 
 export function DataTableToolbar<TData>({
@@ -47,10 +62,16 @@ export function DataTableToolbar<TData>({
   onSearchChange,
   manualFiltering: _manualFiltering = false,
   serverFacets,
+  activeFilterCount = 0,
+  onClearAllFilters,
+  totalCount,
+  totalCountLabel,
+  toolbarExtra,
 }: DataTableToolbarProps<TData>) {
-  const isFiltered =
-    table.getState().columnFilters.length > 0 ||
-    !!table.getState().globalFilter
+  const hasClientFilters =
+    table.getState().columnFilters.length > 0 || !!table.getState().globalFilter
+  const hasServerFilters = activeFilterCount > 0 || !!searchValue
+  const isFiltered = hasClientFilters || hasServerFilters
 
   // Manejar cambio de búsqueda
   const handleSearchChange = (value: string) => {
@@ -74,7 +95,7 @@ export function DataTableToolbar<TData>({
       : ((table.getColumn(searchKey)?.getFilterValue() as string) ?? '')
 
   return (
-    <div className="flex py-4 px-4 items-center bg-popover rounded-lg justify-between border-border">
+    <div className="flex py-3 px-4 items-center justify-between border-b border-border">
       <div className="flex flex-1 items-center space-x-2">
         {searchKey && (
           <div className="relative">
@@ -83,7 +104,7 @@ export function DataTableToolbar<TData>({
               placeholder={searchPlaceholder}
               value={currentSearchValue}
               onChange={(event) => handleSearchChange(event.target.value)}
-              className="pl-8 pr-8 w-[150px] lg:w-[250px]"
+              className="pl-8 pr-8 w-full max-w-xs"
             />
             {/* Botón para limpiar búsqueda */}
             {currentSearchValue && (
@@ -98,6 +119,7 @@ export function DataTableToolbar<TData>({
             )}
           </div>
         )}
+        {toolbarExtra}
         {filterableColumns.map((column) => {
           const tableColumn = table.getColumn(column.id)
           // Obtener facets del servidor para esta columna (si existen)
@@ -122,6 +144,8 @@ export function DataTableToolbar<TData>({
             onClick={() => {
               table.resetColumnFilters()
               if (enableGlobalFilter) table.setGlobalFilter('')
+              if (onSearchChange) onSearchChange('')
+              onClearAllFilters?.()
             }}
             className="h-8 px-2 lg:px-3"
           >
@@ -131,10 +155,15 @@ export function DataTableToolbar<TData>({
         )}
       </div>
       <div className="flex items-center space-x-2">
+        {totalCount !== undefined && (
+          <span className="text-sm text-muted-foreground whitespace-nowrap">
+            {totalCount} {totalCountLabel || 'resultados'}
+          </span>
+        )}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="outline" size="sm" className="ml-auto hidden h-8 lg:flex">
-              <EyeOff className="mr-2 h-4 w-4" />
+              <SlidersHorizontal className="mr-2 h-4 w-4" />
               Columnas
             </Button>
           </DropdownMenuTrigger>
@@ -148,11 +177,10 @@ export function DataTableToolbar<TData>({
                 return (
                   <DropdownMenuCheckboxItem
                     key={column.id}
-                    className="capitalize"
                     checked={column.getIsVisible()}
                     onCheckedChange={(value) => column.toggleVisibility(!!value)}
                   >
-                    {column.id}
+                    {formatColumnLabel(column.id)}
                   </DropdownMenuCheckboxItem>
                 )
               })}

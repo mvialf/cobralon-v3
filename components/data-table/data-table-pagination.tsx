@@ -23,7 +23,7 @@ interface DataTablePaginationProps<TData> {
 
 export function DataTablePagination<TData>({ table }: DataTablePaginationProps<TData>) {
   return (
-    <div className="flex items-center justify-between px-4 py-3 bg-popover rounded-lg">
+    <div className="flex items-center justify-between px-4 py-3 border-t border-border">
       <div className="flex-1 text-sm text-muted-foreground">
         {table.getFilteredSelectedRowModel().rows.length > 0 && (
           <span>

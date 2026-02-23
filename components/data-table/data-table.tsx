@@ -96,6 +96,16 @@ interface DataTableProps<TData, TValue> {
   onSortingChange?: (sorting: SortingState) => void
   // Bulk actions
   bulkActions?: BulkAction<TData>[]
+  // Toolbar: conteo de filtros server-side activos
+  activeFilterCount?: number
+  // Toolbar: callback para limpiar todos los filtros server-side
+  onClearAllFilters?: () => void
+  // Toolbar: conteo total de resultados
+  totalCount?: number
+  // Toolbar: label para el conteo (ej: "proyectos", "pagos")
+  totalCountLabel?: string
+  // Toolbar: contenido extra entre search y filtros facetados
+  toolbarExtra?: React.ReactNode
 }
 
 export function DataTable<TData, TValue>({
@@ -125,6 +135,12 @@ export function DataTable<TData, TValue>({
   onSortingChange,
   // Bulk actions
   bulkActions,
+  // Toolbar extras
+  activeFilterCount,
+  onClearAllFilters,
+  totalCount,
+  totalCountLabel,
+  toolbarExtra,
 }: DataTableProps<TData, TValue>) {
   const [internalSorting, setInternalSorting] = React.useState<SortingState>([])
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([])
@@ -225,7 +241,7 @@ export function DataTable<TData, TValue>({
   }, [rowSelection, onRowSelectionChange, table])
 
   return (
-    <div className="space-y-4">
+    <div className="rounded-lg border bg-card shadow-sm">
       <DataTableToolbar
         table={table}
         searchKey={searchKey}
@@ -236,51 +252,54 @@ export function DataTable<TData, TValue>({
         onSearchChange={onSearchChange}
         manualFiltering={manualFiltering}
         serverFacets={serverFacets}
+        activeFilterCount={activeFilterCount}
+        onClearAllFilters={onClearAllFilters}
+        totalCount={totalCount}
+        totalCountLabel={totalCountLabel}
+        toolbarExtra={toolbarExtra}
       />
-      <div className="rounded-md border">
-        <Table>
-          <TableHeader>
-            {table.getHeaderGroups().map((headerGroup) => (
-              <TableRow key={headerGroup.id}>
-                {headerGroup.headers.map((header) => {
-                  return (
-                    <TableHead
-                      key={header.id}
-                      className={cn(header.column.columnDef.meta?.headerClassName)}
-                    >
-                      {header.isPlaceholder
-                        ? null
-                        : flexRender(header.column.columnDef.header, header.getContext())}
-                    </TableHead>
-                  )
-                })}
+      <Table>
+        <TableHeader>
+          {table.getHeaderGroups().map((headerGroup) => (
+            <TableRow key={headerGroup.id}>
+              {headerGroup.headers.map((header) => {
+                return (
+                  <TableHead
+                    key={header.id}
+                    className={cn(header.column.columnDef.meta?.headerClassName)}
+                  >
+                    {header.isPlaceholder
+                      ? null
+                      : flexRender(header.column.columnDef.header, header.getContext())}
+                  </TableHead>
+                )
+              })}
+            </TableRow>
+          ))}
+        </TableHeader>
+        <TableBody>
+          {table.getRowModel().rows?.length ? (
+            table.getRowModel().rows.map((row) => (
+              <TableRow key={row.id} data-state={row.getIsSelected() && 'selected'}>
+                {row.getVisibleCells().map((cell) => (
+                  <TableCell
+                    key={cell.id}
+                    className={cn(cell.column.columnDef.meta?.cellClassName)}
+                  >
+                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                  </TableCell>
+                ))}
               </TableRow>
-            ))}
-          </TableHeader>
-          <TableBody>
-            {table.getRowModel().rows?.length ? (
-              table.getRowModel().rows.map((row) => (
-                <TableRow key={row.id} data-state={row.getIsSelected() && 'selected'}>
-                  {row.getVisibleCells().map((cell) => (
-                    <TableCell
-                      key={cell.id}
-                      className={cn(cell.column.columnDef.meta?.cellClassName)}
-                    >
-                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                    </TableCell>
-                  ))}
-                </TableRow>
-              ))
-            ) : (
-              <TableRow>
-                <TableCell colSpan={columns.length} className="h-24 text-center">
-                  No se encontraron resultados.
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
-      </div>
+            ))
+          ) : (
+            <TableRow>
+              <TableCell colSpan={columns.length} className="h-24 text-center">
+                No se encontraron resultados.
+              </TableCell>
+            </TableRow>
+          )}
+        </TableBody>
+      </Table>
       <DataTablePagination table={table} />
       {enableRowSelection && bulkActions && bulkActions.length > 0 && (
         <DataTableBulkActions table={table} actions={bulkActions} />
