@@ -12,7 +12,7 @@
  * Type para proyecto con allocations
  */
 export interface ProjectWithAllocations {
-  totalAmount: number | null
+  totalAmount: number
   allocations?: Array<{ allocatedAmount: number }>
 }
 
@@ -79,7 +79,7 @@ export interface ProjectBalanceResult {
  * @see {@link docs/project/analysis/frontend-calculations.md#1} - Análisis exhaustivo
  */
 export function calculateProjectBalance(project: ProjectWithAllocations): ProjectBalanceResult {
-  const totalAmount = project.totalAmount || 0
+  const totalAmount = project.totalAmount
 
   // 1. Sumar todos los pagos asignados al proyecto
   const totalPaid = project.allocations?.reduce((sum, alloc) => sum + alloc.allocatedAmount, 0) || 0
@@ -105,7 +105,7 @@ export function calculateProjectBalance(project: ProjectWithAllocations): Projec
  * Type para proyecto con allocations completas (usado en getTotalPendingBalance)
  */
 export interface ProjectWithFullAllocations {
-  totalAmount: number | null
+  totalAmount: number
   allocations?: Array<{
     allocatedAmount: number
   }>

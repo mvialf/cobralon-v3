@@ -30,7 +30,7 @@ import {
 const SORT_COLUMN_MAP: Record<string, Prisma.Sql> = {
   createdAt: Prisma.sql`p."createdAt"`,
   date: Prisma.sql`p.date`,
-  total: Prisma.sql`p.total`,
+  total: Prisma.sql`p."totalAmount"`,
   balance: Prisma.sql`p.balance`,
   projectNumber: Prisma.sql`p."projectNumber"`,
 }
@@ -57,7 +57,6 @@ export async function queryProjectList(filters: ProjectListFilters): Promise<Pro
       p.date,
       p.subtotal,
       p."taxRate",
-      p.total,
       p.balance,
       p."windowsCount",
       p."squareMeters",

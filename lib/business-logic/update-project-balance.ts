@@ -40,7 +40,6 @@ async function _updateBalanceInternal(
     where: { id: projectId },
     select: {
       id: true,
-      total: true,
       totalAmount: true,
       paymentAllocations: {
         select: { allocatedAmount: true },
@@ -58,7 +57,7 @@ async function _updateBalanceInternal(
   }
 
   const { balance: baseBalance } = calculateProjectBalance({
-    totalAmount: Number(project.totalAmount ?? project.total),
+    totalAmount: Number(project.totalAmount),
     allocations: project.paymentAllocations.map((alloc) => ({
       allocatedAmount: Number(alloc.allocatedAmount),
     })),
@@ -142,7 +141,6 @@ export async function verifyProjectBalance(projectId: string): Promise<boolean> 
   const project = await prisma.project.findUnique({
     where: { id: projectId },
     select: {
-      total: true,
       totalAmount: true,
       balance: true,
       paymentAllocations: {
@@ -158,7 +156,7 @@ export async function verifyProjectBalance(projectId: string): Promise<boolean> 
   }
 
   const { balance: calculatedBalance } = calculateProjectBalance({
-    totalAmount: Number(project.totalAmount ?? project.total),
+    totalAmount: Number(project.totalAmount),
     allocations: project.paymentAllocations.map((alloc) => ({
       allocatedAmount: Number(alloc.allocatedAmount),
     })),

@@ -251,7 +251,6 @@ async function main() {
       date: new Date('2024-06-15'), // Junio 2024 (antiguo)
       subtotal: 420168.07, // Subtotal para llegar a $500k con IVA
       taxRate: 19,
-      total: 500000, // Total con IVA
       totalAmount: 500000, // Monto total acordado
       currency: 'CLP',
       windowsCount: 8,
@@ -277,7 +276,6 @@ async function main() {
       date: new Date('2024-08-20'), // Agosto 2024
       subtotal: 336134.45,
       taxRate: 19,
-      total: 400000,
       totalAmount: 400000,
       currency: 'CLP',
       windowsCount: 4,
@@ -303,7 +301,6 @@ async function main() {
       date: new Date('2024-10-10'), // Octubre 2024
       subtotal: 252100.84,
       taxRate: 19,
-      total: 300000,
       totalAmount: 300000,
       currency: 'CLP',
       windowsCount: 6,
@@ -329,7 +326,6 @@ async function main() {
       date: new Date('2024-09-01'), // Septiembre 2024
       subtotal: 672268.91,
       taxRate: 19,
-      total: 800000,
       totalAmount: 800000,
       currency: 'CLP',
       windowsCount: 20,
@@ -356,7 +352,6 @@ async function main() {
       date: new Date('2024-10-25'), // Octubre 2024
       subtotal: 504201.68,
       taxRate: 19,
-      total: 600000,
       totalAmount: 600000,
       currency: 'CLP',
       windowsCount: 10,
@@ -381,7 +376,6 @@ async function main() {
       date: new Date('2024-11-05'), // Noviembre 2024
       subtotal: 378151.26,
       taxRate: 19,
-      total: 450000,
       totalAmount: 450000,
       currency: 'CLP',
       windowsCount: 3,

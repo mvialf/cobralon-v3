@@ -17,7 +17,7 @@ export interface ProjectWithBalance {
   id: string
   projectNumber: string
   projectName: string | null
-  totalAmount: number | null
+  totalAmount: number
   currency: string
   createdAt: Date
   paymentAllocations?: Array<{

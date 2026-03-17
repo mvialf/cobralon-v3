@@ -16,7 +16,7 @@ export interface ProjectExportData {
   date: Date | string
   subtotal: number | string | Decimal
   taxRate: number | string | Decimal
-  total: number | string | Decimal
+  totalAmount: number | string | Decimal
   balance: number | string | Decimal
   windowsCount: number
   squareMeters: number | string | Decimal
@@ -46,7 +46,7 @@ function transformProjectData(projects: ProjectExportData[]) {
     Fecha: new Date(project.date).toLocaleDateString('es-CL'),
     Subtotal: Number(project.subtotal),
     'IVA (%)': Number(project.taxRate),
-    Total: Number(project.total),
+    Total: Number(project.totalAmount),
     Saldo: Number(project.balance),
     Ventanas: project.windowsCount,
     'M²': Number(project.squareMeters),

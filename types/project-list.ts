@@ -26,7 +26,6 @@ export interface ProjectListRawRow {
   date: Date
   subtotal: Decimal
   taxRate: Decimal
-  total: Decimal
   balance: Decimal
   windowsCount: number
   squareMeters: Decimal
@@ -34,7 +33,7 @@ export interface ProjectListRawRow {
   createdAt: Date
   updatedAt: Date
   currency: string
-  totalAmount: Decimal | null
+  totalAmount: Decimal
 
   // Customer fields (from JOIN)
   customer_id: string
@@ -66,7 +65,6 @@ export interface ProjectListItem {
   date: Date
   subtotal: number
   taxRate: number
-  total: number
   balance: number
   totalPaid: number
   percentPaid: number
@@ -76,7 +74,7 @@ export interface ProjectListItem {
   createdAt: Date
   updatedAt: Date
   currency: string
-  totalAmount: number | null
+  totalAmount: number
   customer: {
     id: string
     name: string
@@ -127,9 +125,9 @@ export interface ProjectListFilters {
  * Transforma una fila raw a ProjectListItem
  */
 export function transformRawToProjectListItem(row: ProjectListRawRow): ProjectListItem {
-  const total = Number(row.total)
+  const totalAmount = Number(row.totalAmount)
   const balance = Number(row.balance)
-  const { totalPaid, percentPaid } = derivePaymentProgress(total, balance)
+  const { totalPaid, percentPaid } = derivePaymentProgress(totalAmount, balance)
 
   return {
     id: row.id,
@@ -145,7 +143,6 @@ export function transformRawToProjectListItem(row: ProjectListRawRow): ProjectLi
     date: row.date,
     subtotal: Number(row.subtotal),
     taxRate: Number(row.taxRate),
-    total,
     balance,
     totalPaid,
     percentPaid,
@@ -155,7 +152,7 @@ export function transformRawToProjectListItem(row: ProjectListRawRow): ProjectLi
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
     currency: row.currency,
-    totalAmount: row.totalAmount ? Number(row.totalAmount) : null,
+    totalAmount,
     customer: {
       id: row.customer_id,
       name: row.customer_name,
