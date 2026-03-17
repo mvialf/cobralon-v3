@@ -238,7 +238,7 @@ describe('calculateFIFO', () => {
         id: 'P1',
         projectNumber: '2024-001',
         projectName: 'Sin monto',
-        totalAmount: null,
+        totalAmount: 0,
         currency: 'CLP',
         createdAt: new Date('2024-01-01'),
         paymentAllocations: [],
@@ -550,7 +550,7 @@ describe('filterProjectsWithBalance', () => {
         id: 'P1',
         projectNumber: '2024-001',
         projectName: null,
-        totalAmount: null, // Sin monto → balance = 0
+        totalAmount: 0, // Sin monto → balance = 0
         currency: 'CLP',
         createdAt: new Date(),
         paymentAllocations: [],

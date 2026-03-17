@@ -20,7 +20,7 @@ export interface Project {
       bgClass: string
     }
   } | null
-  total: number // Decimal se convierte a number en JSON
+  totalAmount: number // Monto total del proyecto - Decimal convertido a number en JSON
   totalPaid: number // Total pagado (solo pagos ACTIVE) - calculado en backend
   balance: number // Saldo pendiente (total - totalPaid) - calculado en backend
   percentPaid: number // Porcentaje pagado (0-100) - calculado en backend

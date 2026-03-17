@@ -2,7 +2,7 @@ import { CircleDollarSign, Wallet, FileText } from 'lucide-react'
 import CircularProgressChart from '@/components/ui/circular-progress-chart'
 
 interface PaymentSummaryCardProps {
-  totalAmount: number | null
+  totalAmount: number
   currency: string
   totalPaid: number // ← Calculado en backend
   balance: number // ← Calculado en backend
@@ -82,7 +82,7 @@ export function PaymentSummaryCard({
               <p className="text-lg font-medium text-capture-foreground">Proyecto</p>
             </div>
             <div className="text-2xl text-right font-semibold pt-4 text-capture-foreground">
-              {formatCurrency(totalAmount || 0)}
+              {formatCurrency(totalAmount)}
             </div>
           </div>
         </div>

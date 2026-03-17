@@ -56,7 +56,10 @@ async function getInitialProjects() {
 
   // Agregar campos calculados (igual que transformRawToProjectListItem)
   const projects = rawProjects.map((p) => {
-    const { totalPaid, percentPaid } = derivePaymentProgress(Number(p.total), Number(p.balance))
+    const { totalPaid, percentPaid } = derivePaymentProgress(
+      Number(p.totalAmount),
+      Number(p.balance)
+    )
     return {
       ...p,
       totalPaid,

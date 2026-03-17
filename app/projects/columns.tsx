@@ -118,10 +118,10 @@ export const createColumns = ({
     },
   },
   {
-    accessorKey: 'total',
+    accessorKey: 'totalAmount',
     header: ({ column }) => <DataTableColumnHeader column={column} title="Total" />,
     cell: ({ row }) => {
-      return formatCurrency(row.original.total)
+      return formatCurrency(row.original.totalAmount)
     },
     enableSorting: true,
     meta: {

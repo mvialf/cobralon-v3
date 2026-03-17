@@ -172,7 +172,6 @@ describe('GET /api/projects/[id]', () => {
     const data = await response.json()
 
     expect(typeof data.totalAmount).toBe('number')
-    expect(typeof data.total).toBe('number')
   })
 
   it('debe manejar errores de base de datos', async () => {

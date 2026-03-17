@@ -73,7 +73,6 @@ export function EditProjectDialog({
     await updateMutation.mutateAsync({
       id: projectId,
       ...data,
-      total,
       totalAmount: total,
     })
 

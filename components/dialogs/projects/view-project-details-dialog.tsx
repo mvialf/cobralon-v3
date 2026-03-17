@@ -38,8 +38,7 @@ interface ProjectDetails {
   region: string
   subtotal: number
   taxRate: number
-  total: number
-  totalAmount: number | null
+  totalAmount: number
   description: string | null
   windowsCount: number
   squareMeters: number
@@ -205,7 +204,7 @@ export function ViewProjectDetailsDialog({
                   />
                   <DataField
                     label="Total"
-                    value={formatCurrency(project.total, project.currency)}
+                    value={formatCurrency(project.totalAmount, project.currency)}
                     valueClassName="text-sm"
                   />
                 </div>

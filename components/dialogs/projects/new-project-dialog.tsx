@@ -38,8 +38,7 @@ export function NewProjectDialog({ onProjectCreated }: NewProjectDialogProps) {
       // ✅ Mutation hook maneja loading, errores, invalidación y toast
       await createMutation.mutateAsync({
         ...data,
-        total,
-        totalAmount: total, // Campo legacy requerido por schema
+        totalAmount: total,
       })
 
       setOpen(false)

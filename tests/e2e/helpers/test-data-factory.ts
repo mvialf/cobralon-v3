@@ -28,7 +28,7 @@ interface CreatedProject {
   id: string
   projectNumber: string
   projectName: string | null
-  total: number
+  totalAmount: number
   customerId: string
 }
 
@@ -116,7 +116,7 @@ export async function createTestProject(
     id: project.id,
     projectNumber: project.projectNumber,
     projectName: project.projectName,
-    total: Number(project.total),
+    totalAmount: Number(project.totalAmount),
     customerId: project.customerId,
   }
 }

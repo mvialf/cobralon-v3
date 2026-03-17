@@ -16,7 +16,7 @@ interface ViewProjectPaymentsDialogProps {
 }
 
 interface ProjectPaymentData {
-  totalAmount: number | null
+  totalAmount: number
   currency: string
   projectNumber: string
   projectName?: string | null

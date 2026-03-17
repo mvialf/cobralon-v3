@@ -76,7 +76,7 @@ describe('calculateProjectBalance', () => {
 
   it('debe manejar totalAmount null', () => {
     const project = {
-      totalAmount: null,
+      totalAmount: 0,
       allocations: [{ allocatedAmount: 500000 }],
     }
 
@@ -88,16 +88,16 @@ describe('calculateProjectBalance', () => {
     expect(result.isFullyPaid).toBe(true) // balance negativo → fully paid
   })
 
-  it('debe manejar totalAmount null sin allocations', () => {
+  it('debe manejar totalAmount 0 sin allocations', () => {
     const project = {
-      totalAmount: null,
+      totalAmount: 0,
       allocations: [],
     }
 
     const result = calculateProjectBalance(project)
 
     expect(result.totalPaid).toBe(0)
-    expect(result.balance).toBe(0) // null → 0
+    expect(result.balance).toBe(0)
     expect(result.percentPaid).toBe(0)
     expect(result.isFullyPaid).toBe(true) // balance 0 → fully paid
   })
