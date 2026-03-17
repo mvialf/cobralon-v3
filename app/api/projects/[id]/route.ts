@@ -54,7 +54,6 @@ export const GET = withApiHandler(
     return NextResponse.json({
       ...project,
       totalAmount: Number(project.totalAmount),
-      total: Number(project.total),
       balance: Number(project.balance),
       totalPaid,
       percentPaid,
@@ -93,7 +92,6 @@ export const PUT = withApiHandler<UpdateProjectApiBody>(
     }
 
     // SEGURIDAD: Siempre recalcular total en el servidor cuando cambian subtotal/taxRate
-    let updatedTotal: Decimal | undefined
     let updatedTotalAmount: Decimal | undefined
     let updatedBalance: Decimal | undefined
 
@@ -102,8 +100,7 @@ export const PUT = withApiHandler<UpdateProjectApiBody>(
       const taxRate = body.taxRate ?? existingProject.taxRate.toNumber()
 
       const calculatedTotal = calculateProjectTotal(subtotal, taxRate)
-      updatedTotal = new Decimal(calculatedTotal)
-      updatedTotalAmount = updatedTotal
+      updatedTotalAmount = new Decimal(calculatedTotal)
 
       if (
         body.totalAmount !== undefined &&
@@ -120,16 +117,16 @@ export const PUT = withApiHandler<UpdateProjectApiBody>(
       }
     }
 
-    // Si cambia el total/totalAmount, recalcular el balance
+    // Si cambia el totalAmount, recalcular el balance
     const finalTotalAmount = updatedTotalAmount ?? existingProject.totalAmount
 
-    if (updatedTotal !== undefined || updatedTotalAmount !== undefined) {
+    if (updatedTotalAmount !== undefined) {
       const allocationsSum = await prisma.paymentAllocation.aggregate({
         where: { projectId: id },
         _sum: { allocatedAmount: true },
       })
       const totalPaid = allocationsSum._sum.allocatedAmount?.toNumber() || 0
-      const newTotalAmount = finalTotalAmount?.toNumber() || 0
+      const newTotalAmount = finalTotalAmount.toNumber()
       updatedBalance = new Decimal(newTotalAmount - totalPaid)
     }
 
@@ -152,7 +149,6 @@ export const PUT = withApiHandler<UpdateProjectApiBody>(
     if (body.date !== undefined) updateData.date = body.date
     if (body.subtotal !== undefined) updateData.subtotal = new Decimal(body.subtotal)
     if (body.taxRate !== undefined) updateData.taxRate = new Decimal(body.taxRate)
-    if (updatedTotal !== undefined) updateData.total = updatedTotal
     if (updatedTotalAmount !== undefined) updateData.totalAmount = updatedTotalAmount
     if (updatedBalance !== undefined) updateData.balance = updatedBalance
     if (body.currency !== undefined) updateData.currency = body.currency

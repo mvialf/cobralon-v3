@@ -251,7 +251,6 @@ export const POST = withApiHandler<CreateProjectApiBody>(
           date: date ?? new Date(),
           subtotal: new Decimal(subtotal),
           taxRate: new Decimal(finalTaxRate),
-          total: new Decimal(calculatedTotal),
           totalAmount: new Decimal(finalTotalAmount),
           balance: new Decimal(finalTotalAmount),
           currency: currency || 'CLP',

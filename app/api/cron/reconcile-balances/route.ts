@@ -92,7 +92,7 @@ export const GET = withLogging(async (request, logger) => {
       select: {
         id: true,
         projectNumber: true,
-        total: true,
+        totalAmount: true,
         balance: true,
         paymentAllocations: {
           select: {
@@ -116,7 +116,7 @@ export const GET = withLogging(async (request, logger) => {
 
       try {
         const { balance: calculatedBalance } = calculateProjectBalance({
-          totalAmount: Number(project.total),
+          totalAmount: Number(project.totalAmount),
           allocations: project.paymentAllocations.map((alloc) => ({
             allocatedAmount: Number(alloc.allocatedAmount),
           })),

@@ -93,7 +93,7 @@ export const GET = withLogging(async (request, logger) => {
     // Derivar campos de display desde balance persistido
     const projectsWithCalculations = allProjects.map((project) => {
       const { totalPaid, percentPaid } = derivePaymentProgress(
-        Number(project.total),
+        Number(project.totalAmount),
         Number(project.balance)
       )
 

@@ -133,7 +133,6 @@ export const POST = withLogging(async (request, logger) => {
               date: projectData.date,
               subtotal,
               taxRate,
-              total: totalAmount,
               totalAmount,
               currency: 'CLP',
               windowsCount: projectData.windowsCount,

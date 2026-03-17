@@ -92,7 +92,6 @@ export interface CreateProjectData {
   date: string | Date
   subtotal: number
   taxRate: number
-  total: number
   totalAmount: number
   currency: string
   windowsCount: number
