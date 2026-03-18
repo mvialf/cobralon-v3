@@ -14,6 +14,55 @@
  * 5. Cannot apply more credit than available
  */
 
+import { prisma } from '@/lib/db'
+import type { PrismaTransaction } from '@/lib/db/types'
+import type { PrismaClient } from '@prisma/client'
+
+/**
+ * Calcula el creditBalance de un cliente desde el ledger CreditTransaction.
+ * Reemplaza al campo caché Customer.creditBalance.
+ *
+ * @param customerId - ID del cliente
+ * @param db - Cliente Prisma o transacción (para consistencia dentro de tx)
+ * @returns creditBalance calculado (>= 0)
+ */
+export async function getCustomerCreditBalance(
+  customerId: string,
+  db: PrismaClient | PrismaTransaction = prisma
+): Promise<number> {
+  const result = await db.creditTransaction.aggregate({
+    where: { customerId },
+    _sum: { amount: true },
+  })
+  return Math.max(0, Number(result._sum.amount ?? 0))
+}
+
+/**
+ * Calcula creditBalance para múltiples clientes en 1 query (evita N+1).
+ *
+ * @param customerIds - IDs de clientes
+ * @param db - Cliente Prisma o transacción
+ * @returns Map<customerId, creditBalance>
+ */
+export async function getCustomerCreditBalances(
+  customerIds: string[],
+  db: PrismaClient | PrismaTransaction = prisma
+): Promise<Map<string, number>> {
+  if (customerIds.length === 0) return new Map()
+
+  const results = await db.creditTransaction.groupBy({
+    by: ['customerId'],
+    where: { customerId: { in: customerIds } },
+    _sum: { amount: true },
+  })
+
+  const map = new Map<string, number>()
+  for (const r of results) {
+    map.set(r.customerId, Math.max(0, Number(r._sum.amount ?? 0)))
+  }
+  return map
+}
+
 export interface ProcessPaymentWithCreditResult {
   appliedToProject: number
   generatedCredit: number
