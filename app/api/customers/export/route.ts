@@ -3,6 +3,7 @@ import { prisma } from '@/lib/db'
 import { generateCustomersExcelBuffer } from '@/lib/excel/customer-exporter'
 import { logger } from '@/lib/logger'
 import { anyFieldMatchesSearch } from '@/lib/utils/normalize'
+import { getCustomerCreditBalances } from '@/lib/business-logic/credit-management'
 
 /**
  * GET /api/customers/export
@@ -46,8 +47,15 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: 'No hay clientes para exportar' }, { status: 404 })
     }
 
+    // Enriquecer con creditBalance calculado desde ledger
+    const creditMap = await getCustomerCreditBalances(customers.map((c) => c.id))
+    const customersWithCredit = customers.map((c) => ({
+      ...c,
+      creditBalance: creditMap.get(c.id) ?? 0,
+    }))
+
     // Generar Excel buffer
-    const excelBuffer = await generateCustomersExcelBuffer(customers)
+    const excelBuffer = await generateCustomersExcelBuffer(customersWithCredit)
 
     // Nombre del archivo con fecha
     const filename = `clientes-${new Date().toISOString().split('T')[0]}.xlsx`

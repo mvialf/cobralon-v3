@@ -2,8 +2,7 @@ import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { withApiHandler, BusinessError } from '@/lib/api-handler'
 import { Prisma } from '@prisma/client'
-import { canRefundCredit } from '@/lib/business-logic/credit-management'
-import { updateCustomerCreditBalance } from '@/lib/business-logic/update-customer-credit-balance'
+import { canRefundCredit, getCustomerCreditBalance } from '@/lib/business-logic/credit-management'
 import type { PrismaTransaction } from '@/lib/db/types'
 import { refundCreditSchema, type RefundCreditFormData } from '@/lib/validations/credit-validations'
 
@@ -19,15 +18,15 @@ export const POST = withApiHandler<RefundCreditFormData>(
     // Obtener cliente actual
     const customer = await prisma.customer.findUnique({
       where: { id: customerId },
-      select: { id: true, name: true, creditBalance: true },
+      select: { id: true, name: true },
     })
 
     if (!customer) {
       throw new BusinessError('Cliente no encontrado', 404)
     }
 
-    // Convertir Decimal a number para validación
-    const creditBalance = Number(customer.creditBalance)
+    // Calcular creditBalance desde ledger
+    const creditBalance = await getCustomerCreditBalance(customerId)
 
     // Validar que se puede hacer la devolución
     const validation = canRefundCredit(body.amount, creditBalance)
@@ -53,15 +52,15 @@ export const POST = withApiHandler<RefundCreditFormData>(
         },
       })
 
-      // 2. Recalcular creditBalance desde ledger
-      await updateCustomerCreditBalance(customerId, tx)
+      // 2. Obtener creditBalance actualizado desde ledger (dentro de tx)
+      const newCreditBalance = await getCustomerCreditBalance(customerId, tx)
 
       // 3. Obtener customer actualizado
       const updatedCustomer = await tx.customer.findUnique({
         where: { id: customerId },
       })
 
-      return { customer: updatedCustomer, transaction }
+      return { customer: { ...updatedCustomer, creditBalance: newCreditBalance }, transaction }
     })
 
     logger.info(

@@ -2,6 +2,7 @@ import { dehydrate, HydrationBoundary, QueryClient } from '@tanstack/react-query
 import { prisma } from '@/lib/db'
 import { serialize } from '@/lib/utils/serialize'
 import { CustomersPageClient } from './page-client'
+import { getCustomerCreditBalances } from '@/lib/business-logic/credit-management'
 
 /**
  * Obtiene datos iniciales de clientes para SSR
@@ -21,7 +22,6 @@ async function getInitialCustomers() {
         name: true,
         email: true,
         phone: true,
-        creditBalance: true,
         createdAt: true,
         updatedAt: true,
       },
@@ -29,8 +29,15 @@ async function getInitialCustomers() {
     prisma.customer.count(),
   ])
 
+  // Enriquecer con creditBalance calculado desde ledger
+  const creditMap = await getCustomerCreditBalances(customers.map((c) => c.id))
+  const customersWithCredit = customers.map((c) => ({
+    ...c,
+    creditBalance: creditMap.get(c.id) ?? 0,
+  }))
+
   return serialize({
-    customers,
+    customers: customersWithCredit,
     pagination: {
       page,
       limit,

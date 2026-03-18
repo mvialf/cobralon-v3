@@ -4,7 +4,6 @@ import { Decimal } from '@prisma/client/runtime/library'
 import { withApiHandler, BusinessError } from '@/lib/api-handler'
 import { updateMultipleProjectBalances } from '@/lib/business-logic/update-project-balance'
 import type { PrismaTransaction } from '@/lib/db/types'
-import { updateCustomerCreditBalance } from '@/lib/business-logic/update-customer-credit-balance'
 import {
   updatePaymentApiSchema,
   type UpdatePaymentApiBody,
@@ -198,10 +197,6 @@ export const DELETE = withApiHandler(
         await updateMultipleProjectBalances(projectIds, tx)
       }
 
-      // 5. Recalcular creditBalance desde ledger (si hubo credit_transactions)
-      if (creditTransactions.length > 0) {
-        await updateCustomerCreditBalance(existingPayment.customerId, tx)
-      }
     })
 
     deleteLogger.info({ projectsRecalculated: projectIds.length }, 'Payment deleted successfully')

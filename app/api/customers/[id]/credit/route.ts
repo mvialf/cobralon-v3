@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { withLogging } from '@/lib/logger-middleware'
+import { getCustomerCreditBalance } from '@/lib/business-logic/credit-management'
 
 /**
  * GET /api/customers/[id]/credit
@@ -16,13 +17,12 @@ export const GET = withLogging(async (_request, logger, context) => {
   try {
     const { id: customerId } = await context.params
 
-    // Obtener cliente con crédito y transacciones
+    // Obtener cliente con transacciones (sin creditBalance — se calcula)
     const customer = await prisma.customer.findUnique({
       where: { id: customerId },
       select: {
         id: true,
         name: true,
-        creditBalance: true,
         creditTransactions: {
           orderBy: { createdAt: 'desc' },
           take: 50, // Últimas 50 transacciones
@@ -50,8 +50,11 @@ export const GET = withLogging(async (_request, logger, context) => {
       return NextResponse.json({ error: 'Cliente no encontrado' }, { status: 404 })
     }
 
+    // Calcular creditBalance desde ledger
+    const creditBalance = await getCustomerCreditBalance(customerId)
+
     return NextResponse.json({
-      creditBalance: customer.creditBalance,
+      creditBalance,
       transactions: customer.creditTransactions,
     })
   } catch (error) {

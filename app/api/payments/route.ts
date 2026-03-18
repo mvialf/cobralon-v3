@@ -22,7 +22,7 @@ import {
 } from '@/lib/validations/payment-validations'
 import { updateMultipleProjectBalances } from '@/lib/business-logic/update-project-balance'
 import type { PrismaTransaction } from '@/lib/db/types'
-import { updateCustomerCreditBalance } from '@/lib/business-logic/update-customer-credit-balance'
+import { getCustomerCreditBalance } from '@/lib/business-logic/credit-management'
 
 /**
  * GET /api/payments
@@ -545,25 +545,21 @@ export const POST = withApiHandler<CreatePaymentApiBody>(
       // ====================================================================
       if (creditToApply > 0) {
         // Leer datos DENTRO de la transacción (snapshot consistente)
-        const [customer, creditProject] = await Promise.all([
-          tx.customer.findUnique({
-            where: { id: customerId },
-            select: { creditBalance: true },
-          }),
+        const [customerCreditBalance, creditProject] = await Promise.all([
+          getCustomerCreditBalance(customerId, tx),
           tx.project.findUnique({
             where: { id: allocations[0].projectId },
             select: { balance: true },
           }),
         ])
 
-        if (!customer || !creditProject) {
+        if (!creditProject) {
           throw new BusinessError(
-            'Cliente o proyecto no encontrado durante validación de crédito',
+            'Proyecto no encontrado durante validación de crédito',
             404
           )
         }
 
-        const customerCreditBalance = Number(customer.creditBalance)
         const projectBalance = Number(creditProject.balance)
 
         // Validar con datos frescos de la transacción
@@ -681,13 +677,6 @@ export const POST = withApiHandler<CreatePaymentApiBody>(
             'Overpayment credit generated successfully in transaction'
           )
         }
-      }
-
-      // ====================================================================
-      // PASO 5: Recalcular creditBalance desde ledger (si hubo operaciones de crédito)
-      // ====================================================================
-      if (creditToApply > 0 || updatedProjects.some((p) => Number(p.balance) < 0)) {
-        await updateCustomerCreditBalance(customerId, tx)
       }
 
       return newPayment

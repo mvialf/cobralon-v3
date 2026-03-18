@@ -6,6 +6,7 @@ import { withLogging } from '@/lib/logger-middleware'
 import { parsePaginationParams, buildPaginationResponse } from '@/lib/utils/pagination'
 import { withApiHandler, BusinessError } from '@/lib/api-handler'
 import { customerSchema, type CustomerFormData } from '@/lib/validations/customer-validations'
+import { getCustomerCreditBalances } from '@/lib/business-logic/credit-management'
 
 /**
  * GET /api/customers
@@ -23,7 +24,7 @@ export const GET = withLogging(async (request, logger) => {
   const search = searchParams.get('search') || ''
 
   // Sorting params con validación Zod
-  const sortBySchema = z.enum(['name', 'createdAt', 'creditBalance']).optional()
+  const sortBySchema = z.enum(['name', 'createdAt']).optional()
   const sortOrderSchema = z.enum(['asc', 'desc']).optional()
   const sortBy = sortBySchema.safeParse(searchParams.get('sortBy') || undefined).data
   const sortOrder = sortOrderSchema.safeParse(searchParams.get('sortOrder') || undefined).data
@@ -63,6 +64,14 @@ export const GET = withLogging(async (request, logger) => {
       }),
     ])
 
+    // Enriquecer con creditBalance calculado desde ledger (1 query batch)
+    const customerIds = customers.map((c) => c.id)
+    const creditMap = await getCustomerCreditBalances(customerIds)
+    const customersWithCredit = customers.map((c) => ({
+      ...c,
+      creditBalance: creditMap.get(c.id) ?? 0,
+    }))
+
     logger.info(
       {
         found: customers.length,
@@ -73,7 +82,7 @@ export const GET = withLogging(async (request, logger) => {
     )
 
     return NextResponse.json({
-      customers,
+      customers: customersWithCredit,
       pagination: buildPaginationResponse(page, limit, total),
     })
   } catch (error) {
