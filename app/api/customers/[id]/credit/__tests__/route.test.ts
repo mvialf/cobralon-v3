@@ -40,7 +40,13 @@ vi.mock('@/lib/db', () => ({
   },
 }))
 
+// Mock de credit-management (getCustomerCreditBalance se calcula desde ledger)
+vi.mock('@/lib/business-logic/credit-management', () => ({
+  getCustomerCreditBalance: vi.fn().mockResolvedValue(0),
+}))
+
 import { prisma } from '@/lib/db'
+import { getCustomerCreditBalance } from '@/lib/business-logic/credit-management'
 import { GET } from '../route'
 
 // Helper para crear params
@@ -74,15 +80,15 @@ describe('GET /api/customers/[id]/credit', () => {
     vi.mocked(prisma.customer.findUnique).mockResolvedValue({
       id: 'customer-1',
       name: 'Test',
-      creditBalance: new Decimal(0),
       creditTransactions: [],
     } as never)
+    vi.mocked(getCustomerCreditBalance).mockResolvedValue(0)
 
     const response = await GET(createRequest(), createParams('customer-1'))
     const data = await response.json()
 
     expect(response.status).toBe(200)
-    expect(data.creditBalance).toBeDefined()
+    expect(data.creditBalance).toBe(0)
     expect(data.transactions).toEqual([])
   })
 
@@ -90,22 +96,21 @@ describe('GET /api/customers/[id]/credit', () => {
     vi.mocked(prisma.customer.findUnique).mockResolvedValue({
       id: 'customer-1',
       name: 'Test',
-      creditBalance: new Decimal(150000),
       creditTransactions: [],
     } as never)
+    vi.mocked(getCustomerCreditBalance).mockResolvedValue(150000)
 
     const response = await GET(createRequest(), createParams('customer-1'))
     const data = await response.json()
 
     expect(response.status).toBe(200)
-    expect(Number(data.creditBalance)).toBe(150000)
+    expect(data.creditBalance).toBe(150000)
   })
 
   it('debe retornar historial de transacciones', async () => {
     vi.mocked(prisma.customer.findUnique).mockResolvedValue({
       id: 'customer-1',
       name: 'Test',
-      creditBalance: new Decimal(50000),
       creditTransactions: [
         {
           id: 'tx-1',
@@ -127,6 +132,7 @@ describe('GET /api/customers/[id]/credit', () => {
         },
       ],
     } as never)
+    vi.mocked(getCustomerCreditBalance).mockResolvedValue(50000)
 
     const response = await GET(createRequest(), createParams('customer-1'))
     const data = await response.json()
@@ -141,7 +147,6 @@ describe('GET /api/customers/[id]/credit', () => {
     vi.mocked(prisma.customer.findUnique).mockResolvedValue({
       id: 'customer-1',
       name: 'Test',
-      creditBalance: new Decimal(0),
       creditTransactions: [
         {
           id: 'tx-1',
@@ -154,6 +159,7 @@ describe('GET /api/customers/[id]/credit', () => {
         },
       ],
     } as never)
+    vi.mocked(getCustomerCreditBalance).mockResolvedValue(0)
 
     const response = await GET(createRequest(), createParams('customer-1'))
     const data = await response.json()
@@ -167,9 +173,9 @@ describe('GET /api/customers/[id]/credit', () => {
     vi.mocked(prisma.customer.findUnique).mockResolvedValue({
       id: 'customer-1',
       name: 'Test',
-      creditBalance: new Decimal(0),
       creditTransactions: [],
     } as never)
+    vi.mocked(getCustomerCreditBalance).mockResolvedValue(0)
 
     await GET(createRequest(), createParams('customer-1'))
 

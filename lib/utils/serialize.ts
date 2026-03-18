@@ -30,10 +30,10 @@ export function serialize<T>(data: T): T {
 }
 
 /**
- * Serializa campos Decimal de un proyecto completo (con customer.creditBalance).
+ * Serializa campos Decimal de un proyecto completo (con customer).
  *
  * Usado en: calendar-events, project-events/[id]
- * Campos: subtotal, taxRate, totalAmount, balance, squareMeters, customer.creditBalance
+ * Campos: subtotal, taxRate, totalAmount, balance, squareMeters
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function serializeProjectDecimals<T extends Record<string, any>>(project: T) {
@@ -46,7 +46,6 @@ export function serializeProjectDecimals<T extends Record<string, any>>(project:
     squareMeters: Number(project.squareMeters),
     customer: {
       ...project.customer,
-      creditBalance: Number(project.customer.creditBalance),
     },
   }
 }

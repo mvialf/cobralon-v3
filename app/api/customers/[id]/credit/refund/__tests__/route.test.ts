@@ -52,15 +52,11 @@ vi.mock('@/lib/db', () => ({
 // Mock de business logic
 vi.mock('@/lib/business-logic/credit-management', () => ({
   canRefundCredit: vi.fn(),
-}))
-
-vi.mock('@/lib/business-logic/update-customer-credit-balance', () => ({
-  updateCustomerCreditBalance: vi.fn().mockResolvedValue(0),
+  getCustomerCreditBalance: vi.fn().mockResolvedValue(50000),
 }))
 
 import { prisma } from '@/lib/db'
 import { canRefundCredit } from '@/lib/business-logic/credit-management'
-import { updateCustomerCreditBalance } from '@/lib/business-logic/update-customer-credit-balance'
 import { POST } from '../route'
 
 const VALID_UUID = '00000000-0000-0000-0000-000000000001'
@@ -267,7 +263,7 @@ describe('POST /api/customers/[id]/credit/refund', () => {
       await POST(request, createParams())
 
       expect(transactionFnCalled).toBe(true)
-      expect(updateCustomerCreditBalance).toHaveBeenCalledWith(VALID_UUID, expect.anything())
+      // creditBalance se calcula en tiempo real desde ledger
     })
 
     it('debe crear CreditTransaction con tipo WITHDRAWAL', async () => {

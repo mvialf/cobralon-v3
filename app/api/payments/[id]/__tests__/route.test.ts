@@ -59,13 +59,8 @@ vi.mock('@/lib/business-logic/update-project-balance', () => ({
   updateMultipleProjectBalances: vi.fn(),
 }))
 
-vi.mock('@/lib/business-logic/update-customer-credit-balance', () => ({
-  updateCustomerCreditBalance: vi.fn().mockResolvedValue(0),
-}))
-
 import { prisma } from '@/lib/db'
 import { updateMultipleProjectBalances } from '@/lib/business-logic/update-project-balance'
-import { updateCustomerCreditBalance } from '@/lib/business-logic/update-customer-credit-balance'
 import { PUT, DELETE } from '../route'
 
 const VALID_UUID = '00000000-0000-0000-0000-000000000001'
@@ -428,7 +423,7 @@ describe('DELETE /api/payments/[id]', () => {
       })
 
       // Debe recalcular creditBalance desde ledger
-      expect(updateCustomerCreditBalance).toHaveBeenCalledWith('c1', expect.anything())
+      // creditBalance se calcula en tiempo real desde ledger
     })
 
     it('debe crear ADJUSTMENT de reversión para crédito OVERPAYMENT', async () => {
@@ -471,7 +466,7 @@ describe('DELETE /api/payments/[id]', () => {
       })
 
       // Debe recalcular creditBalance desde ledger
-      expect(updateCustomerCreditBalance).toHaveBeenCalledWith('c1', expect.anything())
+      // creditBalance se calcula en tiempo real desde ledger
     })
 
     it('debe crear ADJUSTMENTs para escenario mixto APPLIED + OVERPAYMENT', async () => {
@@ -504,8 +499,8 @@ describe('DELETE /api/payments/[id]', () => {
       expect(mockTx!.creditTransaction.create).toHaveBeenCalledTimes(2)
 
       // Debe recalcular creditBalance una sola vez desde ledger
-      expect(updateCustomerCreditBalance).toHaveBeenCalledWith('c1', expect.anything())
-      expect(updateCustomerCreditBalance).toHaveBeenCalledTimes(1)
+      // creditBalance se calcula en tiempo real desde ledger
+      // creditBalance derivado — no hay llamada de recálculo
     })
 
     it('debe crear ADJUSTMENTs para múltiples CreditTransactions del mismo tipo', async () => {
@@ -539,7 +534,7 @@ describe('DELETE /api/payments/[id]', () => {
       expect(mockTx!.creditTransaction.create).toHaveBeenCalledTimes(3)
 
       // Pero solo 1 recálculo de creditBalance
-      expect(updateCustomerCreditBalance).toHaveBeenCalledTimes(1)
+      // creditBalance derivado — no hay llamada de recálculo
     })
   })
 

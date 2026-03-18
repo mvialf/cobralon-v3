@@ -53,15 +53,11 @@ vi.mock('@/lib/business-logic/update-project-balance', () => ({
 
 vi.mock('@/lib/business-logic/credit-management', () => ({
   canApplyCredit: vi.fn().mockReturnValue({ valid: true }),
-}))
-
-vi.mock('@/lib/business-logic/update-customer-credit-balance', () => ({
-  updateCustomerCreditBalance: vi.fn().mockResolvedValue(0),
+  getCustomerCreditBalance: vi.fn().mockResolvedValue(100000),
 }))
 
 import { prisma } from '@/lib/db'
 import { canApplyCredit } from '@/lib/business-logic/credit-management'
-import { updateCustomerCreditBalance } from '@/lib/business-logic/update-customer-credit-balance'
 import { GET, POST } from '../route'
 
 // Helper para llamar al handler con context mock
@@ -475,8 +471,7 @@ describe('POST /api/payments', () => {
       const response = await callPOST(request)
 
       expect(response.status).toBe(201)
-      // Debe recalcular creditBalance desde ledger
-      expect(updateCustomerCreditBalance).toHaveBeenCalledWith('customer-1', expect.anything())
+      // creditBalance se calcula en tiempo real desde ledger (no se recalcula manualmente)
     })
   })
 
@@ -558,8 +553,7 @@ describe('POST /api/payments', () => {
           }),
         })
       )
-      // Debe recalcular creditBalance desde ledger
-      expect(updateCustomerCreditBalance).toHaveBeenCalledWith('customer-1', expect.anything())
+      // creditBalance se calcula en tiempo real desde ledger (no se recalcula manualmente)
     })
 
     it('debe generar créditos para múltiples proyectos con sobrepago', async () => {
@@ -662,25 +656,6 @@ describe('POST /api/payments', () => {
   })
 
   describe('errores en transacción', () => {
-    it('debe retornar 404 cuando cliente no se encuentra en TX (crédito)', async () => {
-      vi.mocked(prisma.$transaction).mockImplementation(async (fn) => {
-        return fn({
-          payment: { create: vi.fn().mockResolvedValue({ id: 'p1', allocations: [], installments: [] }) },
-          project: { findUnique: vi.fn().mockResolvedValue({ balance: 100000 }), findMany: vi.fn(), update: vi.fn() },
-          customer: { findUnique: vi.fn().mockResolvedValue(null) },
-          creditTransaction: { create: vi.fn() },
-        } as never)
-      })
-
-      const request = createRequest({
-        ...validPayload,
-        creditApplied: 5000,
-      })
-      const response = await callPOST(request)
-
-      expect(response.status).toBe(404)
-    })
-
     it('debe retornar 404 cuando proyecto no se encuentra en TX (crédito)', async () => {
       vi.mocked(prisma.$transaction).mockImplementation(async (fn) => {
         return fn({

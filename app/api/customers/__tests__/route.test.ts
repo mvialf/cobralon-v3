@@ -28,6 +28,11 @@ vi.mock('@/lib/db', () => ({
   },
 }))
 
+// Mock de credit-management (creditBalance se calcula desde ledger)
+vi.mock('@/lib/business-logic/credit-management', () => ({
+  getCustomerCreditBalances: vi.fn().mockResolvedValue(new Map()),
+}))
+
 import { prisma } from '@/lib/db'
 import { GET, POST } from '../route'
 

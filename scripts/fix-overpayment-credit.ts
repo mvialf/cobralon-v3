@@ -1,4 +1,8 @@
 /**
+ * OBSOLETO: creditBalance ya no es campo almacenado en Customer.
+ * Se calcula en tiempo real desde CreditTransaction (ver getCustomerCreditBalance).
+ * Este script no puede ejecutarse — el campo creditBalance fue eliminado del schema.
+ *
  * Script de corrección one-time para proyectos con balance negativo (sobrepago)
  *
  * Este script detecta proyectos que tienen balance < 0 (sobrepagos históricos)
@@ -103,14 +107,11 @@ async function fixOverpayment(project: ProjectWithOverpayment, dryRun: boolean):
       })
 
       // 2. Incrementar crédito del cliente
-      await tx.customer.update({
-        where: { id: project.customerId },
-        data: {
-          creditBalance: {
-            increment: overpaymentAmount,
-          },
-        },
-      })
+      // OBSOLETO: creditBalance eliminado del schema
+      // await tx.customer.update({
+      //   where: { id: project.customerId },
+      //   data: { creditBalance: { increment: overpaymentAmount } },
+      // })
 
       // 3. Crear registro de transacción de crédito (retroactivo)
       const lastPayment = project.paymentAllocations[0]?.payment
