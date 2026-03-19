@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { Decimal } from '@prisma/client/runtime/library'
+import { CreditTransactionType } from '@prisma/client'
 import { withApiHandler, BusinessError } from '@/lib/api-handler'
 import { updateMultipleProjectBalances } from '@/lib/business-logic/update-project-balance'
 import type { PrismaTransaction } from '@/lib/db/types'
@@ -161,15 +162,18 @@ export const DELETE = withApiHandler(
         'CreditTransactions linked to payment'
       )
 
-      // 2. Crear entradas de ADJUSTMENT para auditoría (reversión)
-      for (const ct of creditTransactions) {
-        const ctAmount = Number(ct.amount)
-
-        await tx.creditTransaction.create({
-          data: {
+      // 2. Crear entradas de ADJUSTMENT para auditoría (reversión en batch)
+      if (creditTransactions.length > 0) {
+        const reversals = creditTransactions.map((ct) => {
+          const ctAmount = Number(ct.amount)
+          deleteLogger.info(
+            { transactionId: ct.id, type: ct.type, amount: ctAmount },
+            'Credit transaction reversed'
+          )
+          return {
             customerId: ct.customerId,
             amount: new Decimal(-ctAmount),
-            type: 'ADJUSTMENT',
+            type: CreditTransactionType.ADJUSTMENT,
             description: `Reversión por eliminación de pago ${id.slice(0, 8)}`,
             paymentId: null,
             metadata: {
@@ -178,13 +182,10 @@ export const DELETE = withApiHandler(
               reversedAmount: ctAmount,
               deletedPaymentId: id,
             },
-          },
+          }
         })
 
-        deleteLogger.info(
-          { transactionId: ct.id, type: ct.type, amount: ctAmount },
-          'Credit transaction reversed'
-        )
+        await tx.creditTransaction.createMany({ data: reversals })
       }
 
       // 3. Eliminar el pago (cascade borra allocations + installments)

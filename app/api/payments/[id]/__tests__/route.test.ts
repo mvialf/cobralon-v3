@@ -386,7 +386,7 @@ describe('DELETE /api/payments/[id]', () => {
             findMany: vi.fn().mockResolvedValue([
               { id: 'ct-1', type: 'APPLIED', amount: new Decimal(-5000), customerId: 'c1' },
             ]),
-            create: vi.fn().mockResolvedValue({}),
+            createMany: vi.fn().mockResolvedValue({ count: 0 }),
             aggregate: vi.fn().mockResolvedValue({ _sum: { amount: new Decimal(0) } }),
           },
           customer: {
@@ -408,22 +408,21 @@ describe('DELETE /api/payments/[id]', () => {
         select: { id: true, type: true, amount: true, customerId: true },
       })
 
-      // Debe crear ADJUSTMENT de reversión
-      expect(mockTx!.creditTransaction.create).toHaveBeenCalledWith({
-        data: expect.objectContaining({
-          customerId: 'c1',
-          amount: new Decimal(5000),
-          type: 'ADJUSTMENT',
-          paymentId: null,
-          metadata: expect.objectContaining({
-            reversedTransactionId: 'ct-1',
-            reversedType: 'APPLIED',
+      // Debe crear ADJUSTMENT de reversión en batch
+      expect(mockTx!.creditTransaction.createMany).toHaveBeenCalledWith({
+        data: [
+          expect.objectContaining({
+            customerId: 'c1',
+            amount: new Decimal(5000),
+            type: 'ADJUSTMENT',
+            paymentId: null,
+            metadata: expect.objectContaining({
+              reversedTransactionId: 'ct-1',
+              reversedType: 'APPLIED',
+            }),
           }),
-        }),
+        ],
       })
-
-      // Debe recalcular creditBalance desde ledger
-      // creditBalance se calcula en tiempo real desde ledger
     })
 
     it('debe crear ADJUSTMENT de reversión para crédito OVERPAYMENT', async () => {
@@ -435,7 +434,7 @@ describe('DELETE /api/payments/[id]', () => {
             findMany: vi.fn().mockResolvedValue([
               { id: 'ct-2', type: 'OVERPAYMENT', amount: new Decimal(10000), customerId: 'c1' },
             ]),
-            create: vi.fn().mockResolvedValue({}),
+            createMany: vi.fn().mockResolvedValue({ count: 0 }),
             aggregate: vi.fn().mockResolvedValue({ _sum: { amount: new Decimal(0) } }),
           },
           customer: {
@@ -451,22 +450,21 @@ describe('DELETE /api/payments/[id]', () => {
       const request = createRequest('DELETE')
       await DELETE(request, createContext())
 
-      // Debe crear ADJUSTMENT de reversión
-      expect(mockTx!.creditTransaction.create).toHaveBeenCalledWith({
-        data: expect.objectContaining({
-          customerId: 'c1',
-          amount: new Decimal(-10000),
-          type: 'ADJUSTMENT',
-          paymentId: null,
-          metadata: expect.objectContaining({
-            reversedTransactionId: 'ct-2',
-            reversedType: 'OVERPAYMENT',
+      // Debe crear ADJUSTMENT de reversión en batch
+      expect(mockTx!.creditTransaction.createMany).toHaveBeenCalledWith({
+        data: [
+          expect.objectContaining({
+            customerId: 'c1',
+            amount: new Decimal(-10000),
+            type: 'ADJUSTMENT',
+            paymentId: null,
+            metadata: expect.objectContaining({
+              reversedTransactionId: 'ct-2',
+              reversedType: 'OVERPAYMENT',
+            }),
           }),
-        }),
+        ],
       })
-
-      // Debe recalcular creditBalance desde ledger
-      // creditBalance se calcula en tiempo real desde ledger
     })
 
     it('debe crear ADJUSTMENTs para escenario mixto APPLIED + OVERPAYMENT', async () => {
@@ -479,7 +477,7 @@ describe('DELETE /api/payments/[id]', () => {
               { id: 'ct-1', type: 'APPLIED', amount: new Decimal(-3000), customerId: 'c1' },
               { id: 'ct-2', type: 'OVERPAYMENT', amount: new Decimal(7000), customerId: 'c1' },
             ]),
-            create: vi.fn().mockResolvedValue({}),
+            createMany: vi.fn().mockResolvedValue({ count: 0 }),
             aggregate: vi.fn().mockResolvedValue({ _sum: { amount: new Decimal(0) } }),
           },
           customer: {
@@ -495,12 +493,14 @@ describe('DELETE /api/payments/[id]', () => {
       const request = createRequest('DELETE')
       await DELETE(request, createContext())
 
-      // 2 ADJUSTMENTs creados (uno por cada credit_transaction)
-      expect(mockTx!.creditTransaction.create).toHaveBeenCalledTimes(2)
-
-      // Debe recalcular creditBalance una sola vez desde ledger
-      // creditBalance se calcula en tiempo real desde ledger
-      // creditBalance derivado — no hay llamada de recálculo
+      // 1 llamada a createMany con 2 reversiones
+      expect(mockTx!.creditTransaction.createMany).toHaveBeenCalledTimes(1)
+      expect(mockTx!.creditTransaction.createMany).toHaveBeenCalledWith({
+        data: expect.arrayContaining([
+          expect.objectContaining({ metadata: expect.objectContaining({ reversedTransactionId: 'ct-1' }) }),
+          expect.objectContaining({ metadata: expect.objectContaining({ reversedTransactionId: 'ct-2' }) }),
+        ]),
+      })
     })
 
     it('debe crear ADJUSTMENTs para múltiples CreditTransactions del mismo tipo', async () => {
@@ -514,7 +514,7 @@ describe('DELETE /api/payments/[id]', () => {
               { id: 'ct-2', type: 'OVERPAYMENT', amount: new Decimal(2000), customerId: 'c1' },
               { id: 'ct-3', type: 'OVERPAYMENT', amount: new Decimal(3000), customerId: 'c1' },
             ]),
-            create: vi.fn().mockResolvedValue({}),
+            createMany: vi.fn().mockResolvedValue({ count: 0 }),
             aggregate: vi.fn().mockResolvedValue({ _sum: { amount: new Decimal(0) } }),
           },
           customer: {
@@ -530,11 +530,15 @@ describe('DELETE /api/payments/[id]', () => {
       const request = createRequest('DELETE')
       await DELETE(request, createContext())
 
-      // 3 ADJUSTMENTs creados
-      expect(mockTx!.creditTransaction.create).toHaveBeenCalledTimes(3)
-
-      // Pero solo 1 recálculo de creditBalance
-      // creditBalance derivado — no hay llamada de recálculo
+      // 1 llamada a createMany con 3 reversiones
+      expect(mockTx!.creditTransaction.createMany).toHaveBeenCalledTimes(1)
+      expect(mockTx!.creditTransaction.createMany).toHaveBeenCalledWith({
+        data: expect.arrayContaining([
+          expect.objectContaining({ metadata: expect.objectContaining({ reversedTransactionId: 'ct-1' }) }),
+          expect.objectContaining({ metadata: expect.objectContaining({ reversedTransactionId: 'ct-2' }) }),
+          expect.objectContaining({ metadata: expect.objectContaining({ reversedTransactionId: 'ct-3' }) }),
+        ]),
+      })
     })
   })
 

@@ -14,14 +14,19 @@
 
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
-import { calculateProjectBalance } from '@/lib/business-logic/project-balance'
 import { Decimal } from '@prisma/client/runtime/library'
 import { withLogging } from '@/lib/logger-middleware'
 import { FINANCIAL } from '@/lib/constants/financial-constants'
 
+interface InconsistentProject {
+  id: string
+  projectNumber: string
+  dbBalance: Decimal
+  calculatedBalance: Decimal
+}
+
 interface ReconciliationResult {
   totalProjects: number
-  checkedProjects: number
   inconsistentProjects: number
   fixedProjects: number
   errors: number
@@ -44,7 +49,6 @@ export const GET = withLogging(async (request, logger) => {
   try {
     const result: ReconciliationResult = {
       totalProjects: 0,
-      checkedProjects: 0,
       inconsistentProjects: 0,
       fixedProjects: 0,
       errors: 0,
@@ -53,98 +57,71 @@ export const GET = withLogging(async (request, logger) => {
       details: [],
     }
 
-    // Fetch todos los proyectos
-    logger.debug('Fetching all projects with allocations')
-    const projects = await prisma.project.findMany({
-      select: {
-        id: true,
-        projectNumber: true,
-        totalAmount: true,
-        balance: true,
-        paymentAllocations: {
-          select: {
-            allocatedAmount: true,
-          },
+    // Contar proyectos totales
+    result.totalProjects = await prisma.project.count()
+    logger.info({ totalProjects: result.totalProjects }, 'Projects counted')
+
+    // Fase 1: Detectar inconsistencias directamente en SQL
+    // Compara balance almacenado vs calculado (totalAmount - SUM(allocations))
+    const inconsistent = await prisma.$queryRaw<InconsistentProject[]>`
+      SELECT
+        p.id,
+        p."projectNumber",
+        p.balance as "dbBalance",
+        (COALESCE(p."totalAmount", 0) - COALESCE(
+          (SELECT SUM(pa."allocatedAmount") FROM "PaymentAllocation" pa WHERE pa."projectId" = p.id), 0
+        )) as "calculatedBalance"
+      FROM "Project" p
+      WHERE ABS(
+        p.balance - (COALESCE(p."totalAmount", 0) - COALESCE(
+          (SELECT SUM(pa."allocatedAmount") FROM "PaymentAllocation" pa WHERE pa."projectId" = p.id), 0
+        ))
+      ) >= ${FINANCIAL.TOLERANCE}
+    `
+
+    result.inconsistentProjects = inconsistent.length
+
+    for (const row of inconsistent) {
+      const dbBalance = Number(row.dbBalance)
+      const calculatedBalance = Number(row.calculatedBalance)
+      const difference = Math.abs(dbBalance - calculatedBalance)
+
+      logger.warn(
+        {
+          projectId: row.id,
+          projectNumber: row.projectNumber,
+          dbBalance,
+          calculatedBalance,
+          difference,
         },
-      },
-      orderBy: {
-        updatedAt: 'desc',
-      },
-    })
+        'Inconsistent balance detected'
+      )
 
-    result.totalProjects = projects.length
-    logger.info({ totalProjects: projects.length }, 'Projects loaded')
-
-    // Fase 1: Detectar inconsistencias en memoria
-    const toFix: Array<{ id: string; balance: number }> = []
-
-    for (const project of projects) {
-      result.checkedProjects++
-
-      try {
-        const { balance: calculatedBalance } = calculateProjectBalance({
-          totalAmount: Number(project.totalAmount),
-          allocations: project.paymentAllocations.map((alloc) => ({
-            allocatedAmount: Number(alloc.allocatedAmount),
-          })),
-        })
-
-        const dbBalance = Number(project.balance)
-        const difference = Math.abs(dbBalance - calculatedBalance)
-
-        if (difference >= FINANCIAL.TOLERANCE) {
-          result.inconsistentProjects++
-
-          logger.warn(
-            {
-              projectId: project.id,
-              projectNumber: project.projectNumber,
-              dbBalance,
-              calculatedBalance,
-              difference,
-            },
-            'Inconsistent balance detected'
-          )
-
-          result.details.push({
-            projectId: project.id,
-            projectNumber: project.projectNumber,
-            dbBalance,
-            calculatedBalance,
-            difference,
-          })
-
-          toFix.push({ id: project.id, balance: calculatedBalance })
-        }
-      } catch (error) {
-        result.errors++
-        logger.error(
-          {
-            err: error,
-            projectId: project.id,
-            projectNumber: project.projectNumber,
-          },
-          'Error processing project'
-        )
-      }
+      result.details.push({
+        projectId: row.id,
+        projectNumber: row.projectNumber,
+        dbBalance,
+        calculatedBalance,
+        difference,
+      })
     }
 
     // Fase 2: Corregir en batch dentro de una transacción
-    if (toFix.length > 0) {
+    if (inconsistent.length > 0) {
       try {
         await prisma.$transaction(
-          toFix.map(({ id, balance }) =>
+          inconsistent.map(({ id, calculatedBalance }) =>
             prisma.project.update({
               where: { id },
-              data: { balance: new Decimal(balance) },
+              data: { balance: new Decimal(Number(calculatedBalance)) },
             })
           )
         )
-        result.fixedProjects = toFix.length
+        result.fixedProjects = inconsistent.length
 
-        logger.info({ fixedCount: toFix.length }, 'Batch balance correction completed')
+        logger.info({ fixedCount: inconsistent.length }, 'Batch balance correction completed')
       } catch (error) {
-        result.errors += toFix.length
+        result.errors += inconsistent.length
         logger.error({ err: error }, 'Error in batch balance correction')
       }
     }
@@ -154,7 +131,6 @@ export const GET = withLogging(async (request, logger) => {
     logger.info(
       {
         totalProjects: result.totalProjects,
-        checkedProjects: result.checkedProjects,
         inconsistentProjects: result.inconsistentProjects,
         fixedProjects: result.fixedProjects,
         errors: result.errors,
