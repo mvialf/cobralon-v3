@@ -7,21 +7,23 @@ import {
   createVisitApiSchema,
   type CreateVisitApiBody,
 } from '@/lib/validations/visit-validations'
+import { queryVisitList, countVisits, getVisitStatusFacets } from '@/lib/queries/visit-list'
 
 import { z } from 'zod'
-import { anyFieldMatchesSearch } from '@/lib/utils/normalize'
 
 /**
  * GET /api/visits
  *
- * Obtiene lista de visitas con paginación opcional
+ * Obtiene lista de visitas con paginación en DB (SQL optimizado)
  *
  * Query params:
  *   - page: número de página (default: 1)
  *   - limit: registros por página (default: 50, max: 100)
- *   - search: buscar por nombre, teléfono, dirección o comuna
+ *   - search: buscar por nombre, teléfono, dirección o comuna (normalize_text)
  *   - visitStatusIds: filtrar por estados (comma-separated UUIDs)
  *   - includeFacets: incluir conteos por estado (para filtros)
+ *   - sortBy: columna para ordenar (date, createdAt, name)
+ *   - sortOrder: dirección de orden (asc, desc)
  */
 export const GET = withLogging(async (request, logger) => {
   const { searchParams } = new URL(request.url)
@@ -32,7 +34,7 @@ export const GET = withLogging(async (request, logger) => {
   const includeFacets = searchParams.get('includeFacets') === 'true'
 
   // Sorting params con validación Zod
-  const sortBySchema = z.enum(['date']).optional()
+  const sortBySchema = z.enum(['date', 'createdAt', 'name']).optional()
   const sortOrderSchema = z.enum(['asc', 'desc']).optional()
   const sortBy = sortBySchema.safeParse(searchParams.get('sortBy') || undefined).data
   const sortOrder = sortOrderSchema.safeParse(searchParams.get('sortOrder') || undefined).data
@@ -50,78 +52,14 @@ export const GET = withLogging(async (request, logger) => {
   )
 
   try {
-    // Obtener todas las visitas (filtros se aplican en memoria para normalización de búsqueda)
-    const allVisits = await prisma.visit.findMany({
-      relationLoadStrategy: 'join', // Fix N+1: Force database-level JOINs
-      orderBy: { date: 'desc' },
-      include: {
-        visitStatus: {
-          select: {
-            id: true,
-            name: true,
-            isInitial: true,
-            isFinal: true,
-            color: {
-              select: {
-                bgClass: true,
-                textClass: true,
-              },
-            },
-          },
-        },
-      },
-    })
+    const filters = { page, limit, search, visitStatusIds, sortBy, sortOrder }
 
-    // Filtrar con búsqueda normalizada (ignora acentos/tildes)
-    // "jose" encontrará "José", "nunoa" encontrará "Ñuñoa"
-    const searchFiltered = search
-      ? allVisits.filter((visit) =>
-          anyFieldMatchesSearch([visit.name, visit.phone, visit.street, visit.comuna], search)
-        )
-      : allVisits
-
-    // Generar facets ANTES de aplicar filtro de estado
-    // (muestra conteos por estado para el search actual)
-    let facets: { visitStatus: { value: string; label: string; count: number }[] } | undefined
-    if (includeFacets) {
-      const facetMap = new Map<string, { count: number; name: string }>()
-      for (const visit of searchFiltered) {
-        const existing = facetMap.get(visit.visitStatusId)
-        if (existing) {
-          existing.count++
-        } else {
-          facetMap.set(visit.visitStatusId, { count: 1, name: visit.visitStatus.name })
-        }
-      }
-      facets = {
-        visitStatus: Array.from(facetMap.entries()).map(([statusId, { count, name }]) => ({
-          value: statusId,
-          label: name,
-          count,
-        })),
-      }
-    }
-
-    // Aplicar filtro de estado (después de facets)
-    const statusFiltered =
-      visitStatusIds.length > 0
-        ? searchFiltered.filter((visit) => visitStatusIds.includes(visit.visitStatusId))
-        : searchFiltered
-
-    // Aplicar sorting en memoria (ya que los datos se filtran post-fetch)
-    if (sortBy === 'date') {
-      const direction = sortOrder === 'asc' ? 1 : -1
-      statusFiltered.sort((a, b) => {
-        const dateA = new Date(a.date).getTime()
-        const dateB = new Date(b.date).getTime()
-        return (dateA - dateB) * direction
-      })
-    }
-
-    // Aplicar paginación manualmente
-    const total = statusFiltered.length
-    const skip = (page - 1) * limit
-    const visits = statusFiltered.slice(skip, skip + limit)
+    // Ejecutar queries en paralelo: datos + conteo + facets (condicional)
+    const [visits, total, facets] = await Promise.all([
+      queryVisitList(filters),
+      countVisits({ search, visitStatusIds }),
+      includeFacets ? getVisitStatusFacets({ search }) : undefined,
+    ])
 
     logger.info(
       {
@@ -136,7 +74,7 @@ export const GET = withLogging(async (request, logger) => {
     return NextResponse.json({
       data: visits,
       pagination: buildPaginationResponse(page, limit, total),
-      ...(facets && { facets }),
+      ...(facets && { facets: { visitStatus: facets } }),
     })
   } catch (error) {
     logger.error({ error }, 'Error fetching visits')

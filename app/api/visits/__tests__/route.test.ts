@@ -2,7 +2,7 @@
  * Tests para app/api/visits/route.ts (GET/POST)
  *
  * Valida:
- * - GET: Paginación, filtros, búsqueda
+ * - GET: Paginación, filtros, búsqueda (via mocks de lib/queries)
  * - POST: Creación de visita
  */
 
@@ -12,17 +12,24 @@ import { NextRequest } from 'next/server'
 // Mock automático de logger-middleware (usa lib/__mocks__/logger-middleware.ts)
 vi.mock('@/lib/logger-middleware')
 
-// Mock de Prisma
+// Mock de Prisma (solo para POST)
 vi.mock('@/lib/db', () => ({
   prisma: {
     visit: {
-      findMany: vi.fn(),
       create: vi.fn(),
     },
   },
 }))
 
+// Mock de queries SQL (para GET)
+vi.mock('@/lib/queries/visit-list', () => ({
+  queryVisitList: vi.fn(),
+  countVisits: vi.fn(),
+  getVisitStatusFacets: vi.fn(),
+}))
+
 import { prisma } from '@/lib/db'
+import { queryVisitList, countVisits, getVisitStatusFacets } from '@/lib/queries/visit-list'
 import { GET, POST } from '../route'
 
 // Helper para crear request
@@ -65,11 +72,36 @@ const validVisitBody = {
   date: '2024-01-15T00:00:00.000Z',
 }
 
+// Visita mock para tests GET
+const mockVisit = {
+  id: 'v1',
+  name: 'Test 1',
+  phone: '+56912345678',
+  street: 'Calle 1',
+  apartment: null,
+  comuna: 'Santiago',
+  region: 'Metropolitana',
+  visitStatusId: 'status-1',
+  date: new Date('2024-01-15'),
+  scheduledTime: null,
+  observations: null,
+  createdAt: new Date(),
+  updatedAt: new Date(),
+  visitStatus: {
+    id: 'status-1',
+    name: 'Pendiente',
+    isInitial: true,
+    isFinal: false,
+    color: { bgClass: 'bg-yellow-500', textClass: 'text-yellow-900' },
+  },
+}
+
 describe('GET /api/visits', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-
-    vi.mocked(prisma.visit.findMany).mockResolvedValue([])
+    vi.mocked(queryVisitList).mockResolvedValue([])
+    vi.mocked(countVisits).mockResolvedValue(0)
+    vi.mocked(getVisitStatusFacets).mockResolvedValue([])
   })
 
   it('debe retornar lista vacía cuando no hay visitas', async () => {
@@ -82,10 +114,8 @@ describe('GET /api/visits', () => {
   })
 
   it('debe retornar visitas con paginación', async () => {
-    vi.mocked(prisma.visit.findMany).mockResolvedValue([
-      { id: 'v1', name: 'Test 1', visitStatus: {} },
-      { id: 'v2', name: 'Test 2', visitStatus: {} },
-    ] as never)
+    vi.mocked(queryVisitList).mockResolvedValue([mockVisit, { ...mockVisit, id: 'v2' }])
+    vi.mocked(countVisits).mockResolvedValue(2)
 
     const response = await callGET(createGetRequest())
     const data = await response.json()
@@ -95,58 +125,74 @@ describe('GET /api/visits', () => {
     expect(data.pagination.total).toBe(2)
   })
 
-  it('debe respetar parámetros de paginación', async () => {
-    const mockVisits = Array(25)
-      .fill(null)
-      .map((_, i) => ({ id: `v${i}`, name: `Test ${i}`, visitStatus: {} }))
-    vi.mocked(prisma.visit.findMany).mockResolvedValue(mockVisits as never)
+  it('debe pasar parámetros de paginación a la query', async () => {
+    vi.mocked(countVisits).mockResolvedValue(25)
 
     const response = await callGET(createGetRequest({ page: '2', limit: '10' }))
     const data = await response.json()
 
     expect(data.pagination.page).toBe(2)
     expect(data.pagination.limit).toBe(10)
-    expect(data.data).toHaveLength(10)
+    expect(queryVisitList).toHaveBeenCalledWith(
+      expect.objectContaining({ page: 2, limit: 10 })
+    )
   })
 
   it('debe limitar máximo a 100 registros', async () => {
-    const mockVisits = Array(150)
-      .fill(null)
-      .map((_, i) => ({ id: `v${i}`, name: `Test ${i}`, visitStatus: {} }))
-    vi.mocked(prisma.visit.findMany).mockResolvedValue(mockVisits as never)
+    await callGET(createGetRequest({ limit: '200' }))
 
-    const response = await callGET(createGetRequest({ limit: '200' }))
+    expect(queryVisitList).toHaveBeenCalledWith(
+      expect.objectContaining({ limit: 100 })
+    )
+  })
+
+  it('debe pasar filtro de visitStatusIds', async () => {
+    await callGET(createGetRequest({ visitStatusIds: 'status-1,status-2' }))
+
+    expect(queryVisitList).toHaveBeenCalledWith(
+      expect.objectContaining({ visitStatusIds: ['status-1', 'status-2'] })
+    )
+  })
+
+  it('debe pasar búsqueda a la query', async () => {
+    await callGET(createGetRequest({ search: 'Juan' }))
+
+    expect(queryVisitList).toHaveBeenCalledWith(
+      expect.objectContaining({ search: 'Juan' })
+    )
+  })
+
+  it('debe pasar sorting a la query', async () => {
+    await callGET(createGetRequest({ sortBy: 'date', sortOrder: 'asc' }))
+
+    expect(queryVisitList).toHaveBeenCalledWith(
+      expect.objectContaining({ sortBy: 'date', sortOrder: 'asc' })
+    )
+  })
+
+  it('debe incluir facets cuando includeFacets=true', async () => {
+    vi.mocked(getVisitStatusFacets).mockResolvedValue([
+      { value: 'status-1', label: 'Pendiente', count: 5 },
+    ])
+
+    const response = await callGET(createGetRequest({ includeFacets: 'true' }))
     const data = await response.json()
 
-    expect(data.data).toHaveLength(100)
+    expect(getVisitStatusFacets).toHaveBeenCalled()
+    expect(data.facets.visitStatus).toHaveLength(1)
+    expect(data.facets.visitStatus[0].count).toBe(5)
   })
 
-  it('debe filtrar por visitStatusId', async () => {
-    vi.mocked(prisma.visit.findMany).mockResolvedValue([])
+  it('no debe incluir facets por defecto', async () => {
+    const response = await callGET(createGetRequest())
+    const data = await response.json()
 
-    await callGET(createGetRequest({ visitStatusId: 'status-1' }))
-
-    expect(prisma.visit.findMany).toHaveBeenCalledWith(
-      expect.objectContaining({
-        where: { visitStatusId: 'status-1' },
-      })
-    )
-  })
-
-  it('debe ordenar por fecha descendente', async () => {
-    vi.mocked(prisma.visit.findMany).mockResolvedValue([])
-
-    await callGET(createGetRequest())
-
-    expect(prisma.visit.findMany).toHaveBeenCalledWith(
-      expect.objectContaining({
-        orderBy: { date: 'desc' },
-      })
-    )
+    expect(getVisitStatusFacets).not.toHaveBeenCalled()
+    expect(data.facets).toBeUndefined()
   })
 
   it('debe manejar errores de base de datos', async () => {
-    vi.mocked(prisma.visit.findMany).mockRejectedValue(new Error('DB Error'))
+    vi.mocked(queryVisitList).mockRejectedValue(new Error('DB Error'))
 
     const response = await callGET(createGetRequest())
     const data = await response.json()
