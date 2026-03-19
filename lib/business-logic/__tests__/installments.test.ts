@@ -212,21 +212,25 @@ describe('validateInstallmentsSum', () => {
 
 describe('getTotalPendingInstallments', () => {
   it('debe sumar solo cuotas pendientes', () => {
+    const pastDate = new Date('2020-01-01')
+    const futureDate1 = new Date('2099-01-01')
+    const futureDate2 = new Date('2099-02-01')
+
     const installments = [
-      { amount: 100, status: 'paid' },
-      { amount: 100, status: 'pending' },
-      { amount: 100, status: 'pending' },
+      { amount: 100, dueDate: pastDate },
+      { amount: 100, dueDate: futureDate1 },
+      { amount: 100, dueDate: futureDate2 },
     ]
 
     const totalPending = getTotalPendingInstallments(installments)
 
-    expect(totalPending).toBe(200) // Solo las pendientes
+    expect(totalPending).toBe(200) // Solo las futuras (pendientes)
   })
 
-  it('debe retornar 0 si todas están pagadas', () => {
+  it('debe retornar 0 si todas están vencidas', () => {
     const installments = [
-      { amount: 100, status: 'paid' },
-      { amount: 100, status: 'paid' },
+      { amount: 100, dueDate: new Date('2020-01-01') },
+      { amount: 100, dueDate: new Date('2020-06-01') },
     ]
 
     const totalPending = getTotalPendingInstallments(installments)
@@ -235,23 +239,23 @@ describe('getTotalPendingInstallments', () => {
   })
 
   it('debe manejar array vacío', () => {
-    const installments: any[] = []
+    const installments: Array<{ amount: number; dueDate: Date }> = []
 
     const totalPending = getTotalPendingInstallments(installments)
 
     expect(totalPending).toBe(0)
   })
 
-  it('debe ignorar estados que no sean "pending"', () => {
+  it('debe contar solo cuotas con vencimiento futuro', () => {
     const installments = [
-      { amount: 100, status: 'pending' },
-      { amount: 100, status: 'cancelled' },
-      { amount: 100, status: 'overdue' },
+      { amount: 100, dueDate: new Date('2099-01-01') },
+      { amount: 100, dueDate: new Date('2020-01-01') },
+      { amount: 100, dueDate: new Date('2020-06-01') },
     ]
 
     const totalPending = getTotalPendingInstallments(installments)
 
-    expect(totalPending).toBe(100) // Solo "pending"
+    expect(totalPending).toBe(100) // Solo la futura
   })
 })
 
@@ -301,14 +305,6 @@ describe('generatePrismaInstallmentsCreate', () => {
 
     result!.create.forEach((inst) => {
       expect(inst.amount).toBeInstanceOf(MockDecimal)
-    })
-  })
-
-  it('debe asignar status "pending" a todas las cuotas', () => {
-    const result = generatePrismaInstallmentsCreate(1000, 3, baseDate, MockDecimal)
-
-    result!.create.forEach((inst) => {
-      expect(inst.status).toBe('pending')
     })
   })
 

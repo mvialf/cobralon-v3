@@ -3,6 +3,7 @@ import { prisma } from '@/lib/db'
 import { Prisma } from '@prisma/client'
 import { withLogging } from '@/lib/logger-middleware'
 import { parsePaginationParams, buildPaginationResponse } from '@/lib/utils/pagination'
+import { getInstallmentStatus } from '@/lib/business-logic/installments'
 
 /**
  * GET /api/installments
@@ -12,7 +13,7 @@ import { parsePaginationParams, buildPaginationResponse } from '@/lib/utils/pagi
  * Query params:
  *   - page: número de página (default: 1)
  *   - limit: registros por página (default: 10, max: 100)
- *   - status: filtrar por estado ('pending' o 'paid')
+ *   - status: filtrar por estado derivado ('pending' o 'paid') — se traduce a filtro por dueDate
  *   - paymentId: filtrar por pago específico
  *   - customerId: filtrar por cliente específico
  *   - startDate: filtrar cuotas con vencimiento desde esta fecha (ISO string)
@@ -35,23 +36,35 @@ export const GET = withLogging(async (request, logger) => {
     // Construir filtro dinámico
     const where: Prisma.InstallmentWhereInput = {}
 
+    // Estado derivado: status se traduce a filtro por dueDate
     if (status) {
-      where.status = status
+      const today = new Date()
+      today.setHours(0, 0, 0, 0)
+      // Ajustar al final del día para incluir cuotas de hoy como "paid"
+      const endOfToday = new Date(today)
+      endOfToday.setHours(23, 59, 59, 999)
+
+      if (status === 'paid') {
+        where.dueDate = { ...((where.dueDate as object) || {}), lte: endOfToday }
+      } else if (status === 'pending') {
+        where.dueDate = { ...((where.dueDate as object) || {}), gt: endOfToday }
+      }
     }
 
     if (paymentId) {
       where.paymentId = paymentId
     }
 
-    // Filtro de rango de fechas (dueDate)
+    // Filtro de rango de fechas (dueDate) — se combina con status si ambos están
     if (startDate || endDate) {
-      where.dueDate = {}
+      const existing = (where.dueDate as Record<string, Date>) || {}
       if (startDate) {
-        where.dueDate.gte = new Date(startDate)
+        existing.gte = new Date(startDate)
       }
       if (endDate) {
-        where.dueDate.lte = new Date(endDate)
+        existing.lte = new Date(endDate)
       }
+      where.dueDate = existing
     }
 
     // Filtro por cliente (via payment -> customer)
@@ -64,13 +77,13 @@ export const GET = withLogging(async (request, logger) => {
     // Obtener installments y total count
     const [installments, total] = await Promise.all([
       prisma.installment.findMany({
-        relationLoadStrategy: 'join', // Fix N+1: Force database-level JOINs
+        relationLoadStrategy: 'join',
         where,
         skip,
         take: limit,
         orderBy: [
-          { dueDate: 'asc' }, // Vencimientos más próximos primero
-          { installmentNumber: 'asc' }, // Número de cuota
+          { dueDate: 'asc' },
+          { installmentNumber: 'asc' },
         ],
         include: {
           payment: {
@@ -116,8 +129,14 @@ export const GET = withLogging(async (request, logger) => {
       prisma.installment.count({ where }),
     ])
 
+    // Enriquecer con status derivado de dueDate
+    const installmentsWithStatus = installments.map((i) => ({
+      ...i,
+      status: getInstallmentStatus(i.dueDate),
+    }))
+
     return NextResponse.json({
-      installments,
+      installments: installmentsWithStatus,
       pagination: buildPaginationResponse(page, limit, total),
     })
   } catch (error) {

@@ -103,13 +103,15 @@ describe('GET /api/installments', () => {
   })
 
   describe('filtros', () => {
-    it('debe filtrar por status', async () => {
+    it('debe filtrar por status (derivado de dueDate)', async () => {
       await GET(createRequest({ status: 'pending' }))
 
       expect(prisma.installment.findMany).toHaveBeenCalledWith(
         expect.objectContaining({
           where: expect.objectContaining({
-            status: 'pending',
+            dueDate: expect.objectContaining({
+              gt: expect.any(Date),
+            }),
           }),
         })
       )
@@ -198,11 +200,12 @@ describe('GET /api/installments', () => {
 
       expect(prisma.installment.findMany).toHaveBeenCalledWith(
         expect.objectContaining({
-          where: {
-            status: 'paid',
+          where: expect.objectContaining({
             payment: { customerId: 'customer-1' },
-            dueDate: { gte: expect.any(Date) },
-          },
+            dueDate: expect.objectContaining({
+              gte: expect.any(Date),
+            }),
+          }),
         })
       )
     })

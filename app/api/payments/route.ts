@@ -528,8 +528,6 @@ export const POST = withApiHandler<CreatePaymentApiBody>(
               installmentNumber: true,
               amount: true,
               dueDate: true,
-              paidDate: true,
-              status: true,
             },
             orderBy: { installmentNumber: 'asc' },
           },

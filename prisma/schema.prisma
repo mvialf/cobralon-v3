@@ -244,14 +244,12 @@ model Installment {
   installmentNumber Int
   amount            Decimal   @db.Decimal(12, 2)
   dueDate           DateTime
-  paidDate          DateTime?
-  status            String    @default("pending")
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
   payment           Payment   @relation(fields: [paymentId], references: [id], onDelete: Cascade)
 
   @@index([paymentId])
-  @@index([status, dueDate])
+  @@index([dueDate])
 }
 
 model PaymentAllocation {

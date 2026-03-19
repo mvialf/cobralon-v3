@@ -1,16 +1,10 @@
 'use client'
 
 import { type ColumnDef } from '@tanstack/react-table'
-import { CheckCircle } from 'lucide-react'
 import { DataTableDropdown } from '@/components/data-table'
-import {
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-} from '@/components/ui/dropdown-menu'
+import { DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator } from '@/components/ui/dropdown-menu'
 import { Badge } from '@/components/ui/badge'
 import { DataTableColumnHeader } from '@/components/data-table'
-import { toast } from 'sonner'
 import { formatDate, formatCurrency } from '@/lib/format'
 import { ProjectNameSummary } from '@/components/summarys/project-name-summary'
 
@@ -19,8 +13,7 @@ export interface Installment {
   installmentNumber: number
   amount: number
   dueDate: string
-  paidDate: string | null
-  status: string
+  status: string // Derivado de dueDate por la API
   payment: {
     id: string
     amount: number
@@ -55,13 +48,11 @@ interface ColumnsProps {
 }
 
 export const createColumns = ({
-  onInstallmentUpdated,
   locale = 'es-CL',
 }: ColumnsProps = {}): ColumnDef<Installment>[] => [
   {
     id: 'associated',
     accessorFn: (row) => {
-      // Para sorting: usar nombre del cliente o proyecto
       if (row.payment.allocations.length === 1) {
         return (
           row.payment.allocations[0].project.projectName ||
@@ -74,7 +65,6 @@ export const createColumns = ({
     cell: ({ row }) => {
       const payment = row.original.payment
 
-      // 1 proyecto → ProjectNameSummary
       if (payment.allocations.length === 1) {
         const project = payment.allocations[0].project
         return (
@@ -87,7 +77,6 @@ export const createColumns = ({
         )
       }
 
-      // Múltiples proyectos → Cliente + lista de proyectos
       return (
         <div className="flex flex-col gap-1">
           <span className="font-medium">{payment.customer.name}</span>
@@ -131,12 +120,14 @@ export const createColumns = ({
       today.setHours(0, 0, 0, 0)
       const dueDate = new Date(date)
       dueDate.setHours(0, 0, 0, 0)
-      const isOverdue = dueDate < today && row.original.status === 'pending'
+      const isOverdue = dueDate < today
 
       return (
         <div className={isOverdue ? 'text-red-600 font-medium' : ''}>
           {formatDate(row.getValue('dueDate'), 'short', locale)}
-          {isOverdue && <div className="text-xs">Vencido</div>}
+          {isOverdue && row.original.status === 'pending' && (
+            <div className="text-xs">Vencido</div>
+          )}
         </div>
       )
     },
@@ -151,16 +142,6 @@ export const createColumns = ({
           {status === 'paid' ? 'Pagado' : 'Pendiente'}
         </Badge>
       )
-    },
-  },
-  {
-    accessorKey: 'paidDate',
-    header: ({ column }) => <DataTableColumnHeader column={column} title="Fecha Pago" />,
-    cell: ({ row }) => {
-      const paidDate = row.getValue('paidDate') as string | null
-      if (!paidDate) return <span className="text-muted-foreground text-sm">-</span>
-
-      return <div className="text-sm">{formatDate(paidDate, 'short', locale)}</div>
     },
   },
   {
@@ -179,28 +160,11 @@ export const createColumns = ({
     id: 'actions',
     cell: ({ row }) => {
       const installment = row.original
-      const isPending = installment.status === 'pending'
-
-      const handleMarkAsPaid = async () => {
-        try {
-          // TODO: Implement mark as paid endpoint
-          toast.success('Cuota marcada como pagada')
-          onInstallmentUpdated?.()
-        } catch {
-          toast.error('Error al marcar cuota como pagada')
-        }
-      }
 
       return (
         <DataTableDropdown>
           <DropdownMenuLabel>Acciones</DropdownMenuLabel>
           <DropdownMenuSeparator />
-          {isPending && (
-            <DropdownMenuItem onClick={handleMarkAsPaid}>
-              <CheckCircle className="mr-2 h-4 w-4" />
-              Marcar como pagado
-            </DropdownMenuItem>
-          )}
           <DropdownMenuItem onClick={() => navigator.clipboard.writeText(installment.id)}>
             Copiar ID de cuota
           </DropdownMenuItem>
