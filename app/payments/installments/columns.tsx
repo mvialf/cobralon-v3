@@ -43,7 +43,6 @@ export interface Installment {
 }
 
 interface ColumnsProps {
-  onInstallmentUpdated?: () => void
   locale?: string
 }
 
