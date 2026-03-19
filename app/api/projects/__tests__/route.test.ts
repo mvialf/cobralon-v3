@@ -191,12 +191,12 @@ describe('POST /api/projects', () => {
       expect(response.status).toBe(400)
     })
 
-    it('debe rechazar sin calle', async () => {
+    it('debe aceptar sin calle (campo opcional)', async () => {
       const { street: _, ...noStreet } = validPayload
       const request = createPostRequest(noStreet)
       const response = await callPOST(request)
 
-      expect(response.status).toBe(400)
+      expect(response.status).toBe(201)
     })
 
     it('debe rechazar sin comuna', async () => {

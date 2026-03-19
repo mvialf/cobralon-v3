@@ -757,18 +757,19 @@ describe('GET /api/payments', () => {
     })
   })
 
-  it('debe aplicar filtro search con OR conditions', async () => {
+  it('debe aplicar filtro search via $queryRaw + IDs', async () => {
+    // $queryRaw busca IDs de payments que matchean por nombre de cliente/proyecto
+    vi.mocked(prisma.$queryRaw).mockResolvedValue([{ id: 'pay-1' }, { id: 'pay-2' }] as never)
     vi.mocked(prisma.payment.findMany).mockResolvedValue([] as never)
     vi.mocked(prisma.payment.count).mockResolvedValue(0)
 
     await callGET(createGETRequest({ search: 'Juan' }))
 
+    expect(prisma.$queryRaw).toHaveBeenCalled()
     expect(prisma.payment.findMany).toHaveBeenCalledWith(
       expect.objectContaining({
         where: expect.objectContaining({
-          OR: expect.arrayContaining([
-            expect.objectContaining({ customer: { name: { contains: 'Juan', mode: 'insensitive' } } }),
-          ]),
+          id: { in: ['pay-1', 'pay-2'] },
         }),
       })
     )
