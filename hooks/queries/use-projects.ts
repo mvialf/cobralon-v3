@@ -105,56 +105,6 @@ export interface UpdateProjectData extends Partial<CreateProjectData> {
 }
 
 // ============================================================================
-// QUERY: GET LIST WITH METADATA
-// ============================================================================
-
-/** Respuesta de GET /api/projects-with-metadata */
-export interface ProjectsWithMetadataResponse {
-  projects: Project[]
-  metadata: {
-    projectStatuses: Array<{
-      id: string
-      name: string
-      color: {
-        id: string
-        bgClass: string
-      }
-    }>
-  }
-}
-
-/**
- * Hook para obtener proyectos + metadata (statuses) en una sola llamada
- * Optimizado para reducir latencia de red
- *
- * @example
- * const { data, isLoading } = useProjectsWithMetadata({ projectState: 'Activo' })
- */
-export function useProjectsWithMetadata(params: ProjectsQueryParams = {}) {
-  return useQuery({
-    queryKey: ['projects-with-metadata', params],
-    queryFn: async (): Promise<ProjectsWithMetadataResponse> => {
-      const searchParams = new URLSearchParams()
-
-      if (params.page) searchParams.set('page', String(params.page))
-      if (params.limit) searchParams.set('limit', String(params.limit))
-      if (params.search) searchParams.set('search', params.search)
-      if (params.customerId) searchParams.set('customerId', params.customerId)
-      if (params.projectState) searchParams.set('projectState', params.projectState)
-
-      const response = await fetch(`/api/projects-with-metadata?${searchParams}`)
-
-      if (!response.ok) {
-        const error = await response.json()
-        throw new Error(error.error || 'Error al cargar proyectos')
-      }
-
-      return response.json()
-    },
-  })
-}
-
-// ============================================================================
 // QUERY: GET LIST
 // ============================================================================
 
@@ -286,7 +236,6 @@ export function useCreateProject() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['projects'] })
-      queryClient.invalidateQueries({ queryKey: ['projects-with-metadata'] })
       toast.success('Proyecto creado exitosamente')
     },
     onError: (error) => {
@@ -324,13 +273,7 @@ export function useUpdateProject() {
       return response.json()
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({
-        predicate: (query) => {
-          const key = query.queryKey[0]
-          return key === 'projects' || key === 'projects-with-metadata'
-        },
-      })
-
+      queryClient.invalidateQueries({ queryKey: ['projects'] })
       toast.success('Proyecto actualizado exitosamente')
     },
     onError: (error) => {
@@ -395,7 +338,6 @@ export function useDeleteProject() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['projects'] })
-      queryClient.invalidateQueries({ queryKey: ['projects-with-metadata'] })
       toast.success('Proyecto eliminado exitosamente')
     },
   })
@@ -443,7 +385,6 @@ export function useBulkDeleteProjects() {
     },
     onSuccess: ({ deleted, failed }) => {
       queryClient.invalidateQueries({ queryKey: ['projects'] })
-      queryClient.invalidateQueries({ queryKey: ['projects-with-metadata'] })
 
       if (failed === 0) {
         toast.success(
@@ -496,7 +437,6 @@ export function useUpdateProjectStatus() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['projects'] })
-      queryClient.invalidateQueries({ queryKey: ['projects-with-metadata'] })
       toast.success('Estado actualizado exitosamente')
     },
     onError: (error) => {
@@ -534,7 +474,6 @@ export function useUpdateProjectDate() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['projects'] })
-      queryClient.invalidateQueries({ queryKey: ['projects-with-metadata'] })
       toast.success('Fecha actualizada exitosamente')
     },
     onError: (error) => {

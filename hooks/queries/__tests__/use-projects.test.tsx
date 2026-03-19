@@ -6,7 +6,6 @@ import React from 'react'
 // Hooks a testear
 import {
   useProjects,
-  useProjectsWithMetadata,
   useProject,
   useCreateProject,
   useUpdateProject,
@@ -151,74 +150,7 @@ describe('useProjects', () => {
 })
 
 // ============================================================================
-// TEST GROUP 2: useProjectsWithMetadata() (Query con metadata)
-// ============================================================================
-
-describe('useProjectsWithMetadata', () => {
-  it('debe cargar proyectos + metadata exitosamente', async () => {
-    const mockResponse = {
-      projects: [
-        {
-          id: 'proj-1',
-          projectNumber: 'P 0001-2025',
-          projectName: null,
-          totalAmount: 1000000,
-          totalPaid: 400000,
-          balance: 600000,
-          percentPaid: 40,
-          customer: { id: 'cust-1', name: 'Cliente A', phone: '+56912345678' },
-          projectStatus: {
-            id: 'status-1',
-            name: 'Activo',
-            color: { bgClass: 'bg-green-500' },
-          },
-          date: new Date('2025-01-01'),
-        },
-      ],
-      metadata: {
-        projectStatuses: [
-          { id: 'status-1', name: 'Activo', color: { bgClass: 'bg-green-500' } },
-          { id: 'status-2', name: 'Finalizado', color: { bgClass: 'bg-blue-500' } },
-        ],
-      },
-    }
-
-    global.fetch = vi.fn().mockResolvedValueOnce({
-      ok: true,
-      json: async () => mockResponse,
-    })
-
-    const { result } = renderHook(() => useProjectsWithMetadata(), {
-      wrapper: createWrapper(),
-    })
-
-    await waitFor(() => expect(result.current.isSuccess).toBe(true))
-
-    expect(result.current.data).toEqual(mockResponse)
-    expect(result.current.data?.projects).toHaveLength(1)
-    expect(result.current.data?.metadata.projectStatuses).toHaveLength(2)
-    expect(global.fetch).toHaveBeenCalledWith(
-      expect.stringContaining('/api/projects-with-metadata')
-    )
-  })
-
-  it('debe manejar error de API', async () => {
-    global.fetch = vi.fn().mockResolvedValueOnce({
-      ok: false,
-      json: async () => ({ error: 'Error al cargar metadata' }),
-    })
-
-    const { result } = renderHook(() => useProjectsWithMetadata(), {
-      wrapper: createWrapper(),
-    })
-
-    await waitFor(() => expect(result.current.isError).toBe(true))
-    expect(result.current.error?.message).toContain('Error al cargar metadata')
-  })
-})
-
-// ============================================================================
-// TEST GROUP 3: useProject(id) (Query single con enabled)
+// TEST GROUP 2: useProject(id) (Query single con enabled)
 // ============================================================================
 
 describe('useProject', () => {
