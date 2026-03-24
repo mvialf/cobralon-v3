@@ -7,23 +7,21 @@
  * @module business-logic/payment-fifo
  */
 
-import { calculateProjectBalance } from './project-balance'
 import { FINANCIAL } from '../constants/financial-constants'
 
 /**
  * Type para proyecto con balance pendiente (usado en FIFO)
+ *
+ * Usa `balance` pre-calculado en vez de recalcularlo desde allocations.
+ * Esto permite que el API compute el balance una sola vez y el frontend
+ * lo use directamente.
  */
 export interface ProjectWithBalance {
   id: string
   projectNumber: string
   projectName: string | null
-  totalAmount: number
-  currency: string
+  balance: number
   createdAt: Date
-  paymentAllocations?: Array<{
-    allocatedAmount: number
-    payment?: { status: string }
-  }>
 }
 
 /**
@@ -53,24 +51,9 @@ export interface FIFOAllocation {
  * @example
  * ```ts
  * const projects = [
- *   {
- *     id: 'P3',
- *     createdAt: new Date('2025-03-01'),
- *     totalAmount: 500000,
- *     paymentAllocations: [{ allocatedAmount: 300000 }]
- *   },
- *   {
- *     id: 'P1',
- *     createdAt: new Date('2025-01-01'),
- *     totalAmount: 1000000,
- *     paymentAllocations: [{ allocatedAmount: 700000 }]
- *   },
- *   {
- *     id: 'P2',
- *     createdAt: new Date('2025-02-01'),
- *     totalAmount: 800000,
- *     paymentAllocations: [{ allocatedAmount: 400000 }]
- *   }
+ *   { id: 'P3', projectNumber: '003', projectName: null, balance: 200000, createdAt: new Date('2025-03-01') },
+ *   { id: 'P1', projectNumber: '001', projectName: null, balance: 300000, createdAt: new Date('2025-01-01') },
+ *   { id: 'P2', projectNumber: '002', projectName: null, balance: 400000, createdAt: new Date('2025-02-01') },
  * ]
  *
  * // Pago de $500,000 a distribuir
@@ -90,11 +73,9 @@ export interface FIFOAllocation {
  * calculateFIFO(2000000, projects)
  * // => Todos los proyectos quedan en balance 0, sobra dinero
  *
- * // Caso 2: Proyecto ya pagado
- * calculateFIFO(100000, [
- *   { ...project, totalAmount: 100000, paymentAllocations: [{ allocatedAmount: 100000 }] }
- * ])
- * // => Skip automático (balance = 0)
+ * // Caso 2: Proyecto ya pagado (balance = 0)
+ * calculateFIFO(100000, [{ ...project, balance: 0 }])
+ * // => Skip automático
  *
  * // Caso 3: Sin proyectos
  * calculateFIFO(100000, [])
@@ -117,25 +98,19 @@ export function calculateFIFO(
   for (const project of sorted) {
     if (remaining <= 0) break
 
-    // 3. Calcular balance del proyecto
-    const { balance } = calculateProjectBalance({
-      totalAmount: project.totalAmount,
-      allocations: project.paymentAllocations,
-    })
+    // 3. Si el proyecto ya está pagado completamente, skip
+    if (project.balance <= 0) continue
 
-    // 4. Si el proyecto ya está pagado completamente, skip
-    if (balance <= 0) continue
-
-    // 5. Asignar el menor entre lo que queda y el balance del proyecto
-    const allocated = Math.min(balance, remaining)
+    // 4. Asignar el menor entre lo que queda y el balance del proyecto
+    const allocated = Math.min(project.balance, remaining)
 
     allocations.push({
       projectId: project.id,
       projectNumber: project.projectNumber,
       projectName: project.projectName,
-      balance,
+      balance: project.balance,
       allocatedAmount: allocated,
-      isFullyPaid: allocated >= balance,
+      isFullyPaid: allocated >= project.balance,
     })
 
     remaining -= allocated
@@ -199,9 +174,9 @@ export function validateAllocationsSum(
  * @example
  * ```ts
  * const allProjects = [
- *   { ...p1, totalAmount: 1000, paymentAllocations: [{ allocatedAmount: 500 }] },  // balance: 500
- *   { ...p2, totalAmount: 800, paymentAllocations: [{ allocatedAmount: 800 }] },   // balance: 0 (pagado)
- *   { ...p3, totalAmount: 1200, paymentAllocations: [] }                           // balance: 1200
+ *   { ...p1, balance: 500 },   // pendiente
+ *   { ...p2, balance: 0 },     // pagado
+ *   { ...p3, balance: 1200 },  // pendiente
  * ]
  *
  * const eligible = filterProjectsWithBalance(allProjects)
@@ -209,11 +184,5 @@ export function validateAllocationsSum(
  * ```
  */
 export function filterProjectsWithBalance(projects: ProjectWithBalance[]): ProjectWithBalance[] {
-  return projects.filter((project) => {
-    const { balance } = calculateProjectBalance({
-      totalAmount: project.totalAmount,
-      allocations: project.paymentAllocations,
-    })
-    return balance > 0
-  })
+  return projects.filter((project) => project.balance > 0)
 }

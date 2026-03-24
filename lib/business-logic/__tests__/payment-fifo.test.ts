@@ -18,28 +18,22 @@ describe('calculateFIFO', () => {
         id: 'P3',
         projectNumber: '2024-003',
         projectName: 'Proyecto 3',
-        totalAmount: 500000,
-        currency: 'CLP',
+        balance: 200000, // totalAmount 500000 - paid 300000
         createdAt: new Date('2024-03-01'),
-        paymentAllocations: [{ allocatedAmount: 300000 }],
       },
       {
         id: 'P1',
         projectNumber: '2024-001',
         projectName: 'Proyecto 1',
-        totalAmount: 1000000,
-        currency: 'CLP',
+        balance: 300000, // totalAmount 1000000 - paid 700000
         createdAt: new Date('2024-01-01'),
-        paymentAllocations: [{ allocatedAmount: 700000 }],
       },
       {
         id: 'P2',
         projectNumber: '2024-002',
         projectName: 'Proyecto 2',
-        totalAmount: 800000,
-        currency: 'CLP',
+        balance: 400000, // totalAmount 800000 - paid 400000
         createdAt: new Date('2024-02-01'),
-        paymentAllocations: [{ allocatedAmount: 400000 }],
       },
     ]
 
@@ -75,10 +69,8 @@ describe('calculateFIFO', () => {
         id: 'P1',
         projectNumber: '2024-001',
         projectName: null,
-        totalAmount: 500000,
-        currency: 'CLP',
+        balance: 200000, // totalAmount 500000 - paid 300000
         createdAt: new Date('2024-01-01'),
-        paymentAllocations: [{ allocatedAmount: 300000 }],
       },
     ]
 
@@ -96,19 +88,15 @@ describe('calculateFIFO', () => {
         id: 'P1',
         projectNumber: '2024-001',
         projectName: null,
-        totalAmount: 1000000,
-        currency: 'CLP',
+        balance: 0, // Pagado completamente
         createdAt: new Date('2024-01-01'),
-        paymentAllocations: [{ allocatedAmount: 1000000 }], // Balance = 0
       },
       {
         id: 'P2',
         projectNumber: '2024-002',
         projectName: null,
-        totalAmount: 500000,
-        currency: 'CLP',
+        balance: 300000, // totalAmount 500000 - paid 200000
         createdAt: new Date('2024-02-01'),
-        paymentAllocations: [{ allocatedAmount: 200000 }],
       },
     ]
 
@@ -134,10 +122,8 @@ describe('calculateFIFO', () => {
         id: 'P1',
         projectNumber: '2024-001',
         projectName: null,
-        totalAmount: 1000000,
-        currency: 'CLP',
+        balance: 500000,
         createdAt: new Date('2024-01-01'),
-        paymentAllocations: [{ allocatedAmount: 500000 }],
       },
     ]
 
@@ -152,19 +138,15 @@ describe('calculateFIFO', () => {
         id: 'P1',
         projectNumber: '2024-001',
         projectName: 'Proyecto sobrepagado',
-        totalAmount: 1000000,
-        currency: 'CLP',
+        balance: -200000, // Sobrepago
         createdAt: new Date('2024-01-01'),
-        paymentAllocations: [{ allocatedAmount: 1200000 }], // Sobrepago: balance = -200000
       },
       {
         id: 'P2',
         projectNumber: '2024-002',
         projectName: 'Proyecto pendiente',
-        totalAmount: 500000,
-        currency: 'CLP',
+        balance: 300000, // totalAmount 500000 - paid 200000
         createdAt: new Date('2024-02-01'),
-        paymentAllocations: [{ allocatedAmount: 200000 }], // Balance = 300000
       },
     ]
 
@@ -185,19 +167,15 @@ describe('calculateFIFO', () => {
         id: 'P-B',
         projectNumber: '2024-002',
         projectName: 'Proyecto B',
-        totalAmount: 100000,
-        currency: 'CLP',
+        balance: 100000,
         createdAt: sameDate,
-        paymentAllocations: [],
       },
       {
         id: 'P-A',
         projectNumber: '2024-001',
         projectName: 'Proyecto A',
-        totalAmount: 100000,
-        currency: 'CLP',
+        balance: 100000,
         createdAt: sameDate,
-        paymentAllocations: [],
       },
     ]
 
@@ -211,52 +189,46 @@ describe('calculateFIFO', () => {
     expect(allocations[1].allocatedAmount).toBe(50000)
   })
 
-  it('debe manejar proyecto sin paymentAllocations (undefined)', () => {
+  it('debe manejar proyecto con balance completo (sin pagos previos)', () => {
     const projects: ProjectWithBalance[] = [
       {
         id: 'P1',
         projectNumber: '2024-001',
         projectName: 'Nuevo proyecto',
-        totalAmount: 500000,
-        currency: 'CLP',
+        balance: 500000, // Sin pagos previos, balance = totalAmount
         createdAt: new Date('2024-01-01'),
-        paymentAllocations: undefined, // Sin allocations → balance = totalAmount
       },
     ]
 
     const allocations = calculateFIFO(300000, projects)
 
     expect(allocations).toHaveLength(1)
-    expect(allocations[0].balance).toBe(500000) // Balance completo
+    expect(allocations[0].balance).toBe(500000)
     expect(allocations[0].allocatedAmount).toBe(300000)
     expect(allocations[0].isFullyPaid).toBe(false)
   })
 
-  it('debe manejar proyecto con totalAmount null', () => {
+  it('debe manejar proyecto con balance 0', () => {
     const projects: ProjectWithBalance[] = [
       {
         id: 'P1',
         projectNumber: '2024-001',
         projectName: 'Sin monto',
-        totalAmount: 0,
-        currency: 'CLP',
+        balance: 0,
         createdAt: new Date('2024-01-01'),
-        paymentAllocations: [],
       },
       {
         id: 'P2',
         projectNumber: '2024-002',
         projectName: 'Con monto',
-        totalAmount: 500000,
-        currency: 'CLP',
+        balance: 500000,
         createdAt: new Date('2024-02-01'),
-        paymentAllocations: [],
       },
     ]
 
     const allocations = calculateFIFO(300000, projects)
 
-    // P1 con totalAmount null tiene balance 0 → skip
+    // P1 con balance 0 → skip
     // P2 recibe el pago
     expect(allocations).toHaveLength(1)
     expect(allocations[0].projectId).toBe('P2')
@@ -269,10 +241,8 @@ describe('calculateFIFO', () => {
         id: 'P1',
         projectNumber: '2024-001',
         projectName: null,
-        totalAmount: 500000,
-        currency: 'CLP',
+        balance: 500000,
         createdAt: new Date('2024-01-01'),
-        paymentAllocations: [],
       },
     ]
 
@@ -288,37 +258,29 @@ describe('calculateFIFO', () => {
         id: 'P1',
         projectNumber: '2024-001',
         projectName: null,
-        totalAmount: 100000,
-        currency: 'CLP',
+        balance: 100000,
         createdAt: new Date('2024-01-01'),
-        paymentAllocations: [],
       },
       {
         id: 'P2',
         projectNumber: '2024-002',
         projectName: null,
-        totalAmount: 100000,
-        currency: 'CLP',
+        balance: 100000,
         createdAt: new Date('2024-02-01'),
-        paymentAllocations: [],
       },
       {
         id: 'P3',
         projectNumber: '2024-003',
         projectName: null,
-        totalAmount: 100000,
-        currency: 'CLP',
+        balance: 100000,
         createdAt: new Date('2024-03-01'),
-        paymentAllocations: [],
       },
       {
         id: 'P4',
         projectNumber: '2024-004',
         projectName: null,
-        totalAmount: 100000,
-        currency: 'CLP',
+        balance: 100000,
         createdAt: new Date('2024-04-01'),
-        paymentAllocations: [],
       },
     ]
 
@@ -337,14 +299,11 @@ describe('calculateFIFO', () => {
         id: 'P1',
         projectNumber: '2024-001',
         projectName: null,
-        totalAmount: 333333,
-        currency: 'CLP',
+        balance: 222222, // totalAmount 333333 - paid 111111
         createdAt: new Date('2024-01-01'),
-        paymentAllocations: [{ allocatedAmount: 111111 }],
       },
     ]
 
-    // Balance = 222222
     const allocations = calculateFIFO(222222, projects)
 
     expect(allocations[0].allocatedAmount).toBe(222222)
@@ -440,28 +399,22 @@ describe('filterProjectsWithBalance', () => {
         id: 'P1',
         projectNumber: '2024-001',
         projectName: null,
-        totalAmount: 1000,
-        currency: 'CLP',
+        balance: 500,
         createdAt: new Date(),
-        paymentAllocations: [{ allocatedAmount: 500 }], // balance: 500
       },
       {
         id: 'P2',
         projectNumber: '2024-002',
         projectName: null,
-        totalAmount: 800,
-        currency: 'CLP',
+        balance: 0, // Pagado
         createdAt: new Date(),
-        paymentAllocations: [{ allocatedAmount: 800 }], // balance: 0
       },
       {
         id: 'P3',
         projectNumber: '2024-003',
         projectName: null,
-        totalAmount: 1200,
-        currency: 'CLP',
+        balance: 1200,
         createdAt: new Date(),
-        paymentAllocations: [], // balance: 1200
       },
     ]
 
@@ -477,10 +430,8 @@ describe('filterProjectsWithBalance', () => {
         id: 'P1',
         projectNumber: '2024-001',
         projectName: null,
-        totalAmount: 1000,
-        currency: 'CLP',
+        balance: 0,
         createdAt: new Date(),
-        paymentAllocations: [{ allocatedAmount: 1000 }],
       },
     ]
 
@@ -495,19 +446,15 @@ describe('filterProjectsWithBalance', () => {
         id: 'P1',
         projectNumber: '2024-001',
         projectName: null,
-        totalAmount: 1000,
-        currency: 'CLP',
+        balance: -500, // Sobrepago
         createdAt: new Date(),
-        paymentAllocations: [{ allocatedAmount: 1500 }], // Sobrepago: balance = -500
       },
       {
         id: 'P2',
         projectNumber: '2024-002',
         projectName: null,
-        totalAmount: 800,
-        currency: 'CLP',
+        balance: 500,
         createdAt: new Date(),
-        paymentAllocations: [{ allocatedAmount: 300 }], // balance: 500
       },
     ]
 
@@ -525,16 +472,14 @@ describe('filterProjectsWithBalance', () => {
     expect(filtered).toEqual([])
   })
 
-  it('debe manejar proyectos sin paymentAllocations', () => {
+  it('debe manejar proyectos con balance completo (sin pagos previos)', () => {
     const projects: ProjectWithBalance[] = [
       {
         id: 'P1',
         projectNumber: '2024-001',
         projectName: null,
-        totalAmount: 1000,
-        currency: 'CLP',
+        balance: 1000,
         createdAt: new Date(),
-        paymentAllocations: undefined, // Sin allocations → balance = totalAmount
       },
     ]
 
@@ -544,25 +489,21 @@ describe('filterProjectsWithBalance', () => {
     expect(filtered[0].id).toBe('P1')
   })
 
-  it('debe excluir proyectos con totalAmount null', () => {
+  it('debe excluir proyectos con balance 0', () => {
     const projects: ProjectWithBalance[] = [
       {
         id: 'P1',
         projectNumber: '2024-001',
         projectName: null,
-        totalAmount: 0, // Sin monto → balance = 0
-        currency: 'CLP',
+        balance: 0,
         createdAt: new Date(),
-        paymentAllocations: [],
       },
       {
         id: 'P2',
         projectNumber: '2024-002',
         projectName: null,
-        totalAmount: 1000,
-        currency: 'CLP',
+        balance: 1000,
         createdAt: new Date(),
-        paymentAllocations: [],
       },
     ]
 
@@ -578,19 +519,15 @@ describe('filterProjectsWithBalance', () => {
         id: 'P3',
         projectNumber: '2024-003',
         projectName: null,
-        totalAmount: 1000,
-        currency: 'CLP',
+        balance: 1000,
         createdAt: new Date('2024-03-01'),
-        paymentAllocations: [],
       },
       {
         id: 'P1',
         projectNumber: '2024-001',
         projectName: null,
-        totalAmount: 1000,
-        currency: 'CLP',
+        balance: 1000,
         createdAt: new Date('2024-01-01'),
-        paymentAllocations: [],
       },
     ]
 
