@@ -50,7 +50,7 @@ export function EditableDate({
   // Formatear fecha para mostrar
   const formattedDate = React.useMemo(() => {
     try {
-      return format(currentDate, 'dd-MM-yyyy')
+      return format(currentDate, 'dd/MM/yyyy')
     } catch (_e) {
       return 'Fecha inválida'
     }
