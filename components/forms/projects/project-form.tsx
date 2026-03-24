@@ -6,7 +6,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 
 import { projectFormSchema, type ProjectFormData } from '@/lib/validations/project-validations'
 import { normalizePhone } from '@/lib/utils/phone'
-import { formatDateValue, parseDateValue } from '@/lib/utils'
+import { DateField } from '@/components/ui/date-field'
 import { calculateProjectTotal } from '@/lib/business-logic/totals'
 import { useCustomersList } from '@/hooks/queries/use-customers'
 import { useProjectStatuses, getInitialProjectStatus } from '@/hooks/queries/use-project-statuses'
@@ -297,12 +297,7 @@ export const ProjectForm = React.forwardRef<ProjectFormHandle, ProjectFormProps>
                     <FormItem>
                       <FormLabel>Fecha de Ingreso *</FormLabel>
                       <FormControl>
-                        <Input
-                          type="date"
-                          defaultValue={formatDateValue(field.value)}
-                          onBlur={(e) => field.onChange(parseDateValue(e.target.value))}
-                          name={field.name}
-                        />
+                        <DateField field={field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>

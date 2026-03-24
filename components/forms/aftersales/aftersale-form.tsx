@@ -6,14 +6,13 @@ import { zodResolver } from '@hookform/resolvers/zod'
 
 import { aftersaleSchema, type AftersaleFormValues } from '@/lib/validations/aftersale-validations'
 import { normalizePhone } from '@/lib/utils/phone'
-import { formatDateValue, parseDateValue } from '@/lib/utils'
+import { DateField } from '@/components/ui/date-field'
 import { getRegionCodigoByNombre } from '@/lib/regiones-chile'
 import {
   useAftersaleStatuses,
   getInitialAftersaleStatus,
 } from '@/hooks/queries/use-aftersale-statuses'
 import { FormGrid } from '@/components/ui/form-grid'
-import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Combobox } from '@/components/ui/combobox'
 import { PhoneInput } from '@/components/ui/phone-input'
@@ -180,12 +179,7 @@ export const AftersaleForm = React.forwardRef<AftersaleFormHandle, AftersaleForm
                 <FormItem>
                   <FormLabel>Fecha de Reporte *</FormLabel>
                   <FormControl>
-                    <Input
-                      type="date"
-                      defaultValue={formatDateValue(field.value)}
-                      onBlur={(e) => field.onChange(parseDateValue(e.target.value))}
-                      name={field.name}
-                    />
+                    <DateField field={field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>

@@ -5,9 +5,8 @@ import { Control } from 'react-hook-form'
 
 import { FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form'
 import { FormGrid } from '@/components/ui/form-grid'
-import { Input } from '@/components/ui/input'
 import { CurrencyInput } from '@/components/ui/currency-input'
-import { formatDateValue, parseDateValue } from '@/lib/utils'
+import { DateField } from '@/components/ui/date-field'
 
 interface PaymentAmountDateFieldsProps {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -61,13 +60,7 @@ export function PaymentAmountDateFields({
           <FormItem>
             <FormLabel>{dateLabel}</FormLabel>
             <FormControl>
-              <Input
-                type="date"
-                defaultValue={formatDateValue(field.value)}
-                onBlur={(e) => field.onChange(parseDateValue(e.target.value))}
-                name={field.name}
-                disabled={disabled}
-              />
+              <DateField field={field} disabled={disabled} />
             </FormControl>
             <FormMessage />
           </FormItem>

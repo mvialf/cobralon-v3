@@ -6,7 +6,8 @@ import { zodResolver } from '@hookform/resolvers/zod'
 
 import { createVisitSchema, type CreateVisitInput } from '@/lib/validations/visit-validations'
 import { normalizePhone } from '@/lib/utils/phone'
-import { cn, formatDateValue, parseDateValue } from '@/lib/utils'
+import { cn } from '@/lib/utils'
+import { DateField } from '@/components/ui/date-field'
 import { useConfiguration } from '@/hooks/use-configuration'
 import { useVisitStatuses, getInitialVisitStatus } from '@/hooks/queries/use-visit-statuses'
 
@@ -189,12 +190,7 @@ export const VisitForm = React.forwardRef<VisitFormHandle, VisitFormProps>(
                   <FormItem>
                     <FormLabel>Fecha de Solicitud *</FormLabel>
                     <FormControl>
-                      <Input
-                        type="date"
-                        defaultValue={formatDateValue(field.value)}
-                        onBlur={(e) => field.onChange(parseDateValue(e.target.value))}
-                        name={field.name}
-                      />
+                      <DateField field={field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
