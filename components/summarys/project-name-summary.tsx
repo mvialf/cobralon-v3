@@ -7,6 +7,7 @@ interface ProjectNameSummaryProps {
   projectName?: string | null
   className?: string
   size?: 'sm' | 'xs'
+  variant?: 'default' | 'dashboard'
 }
 
 /**
@@ -21,13 +22,18 @@ export function ProjectNameSummary({
   projectName,
   className,
   size = 'sm',
+  variant = 'default',
 }: ProjectNameSummaryProps) {
+  const isDefault = variant === 'default'
+
   return (
     <div className={cn('flex flex-col space-y-1', className)}>
       <div className={cn('text-inherit', size === 'xs' ? 'text-xs' : 'text-sm')}>
-        P - {projectNumber} - {customerName}
+        P - {projectNumber}{isDefault ? ` - ${customerName}` : projectName ? ` - ${projectName}` : ''}
       </div>
-      <div className="text-xs font-medium text-inherit">{projectName && ` ${projectName}`}</div>
+      <div className="text-xs font-medium text-inherit">
+        {isDefault ? projectName && ` ${projectName}` : customerName}
+      </div>
     </div>
   )
 }

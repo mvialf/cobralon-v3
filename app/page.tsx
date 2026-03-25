@@ -203,6 +203,7 @@ export default async function HomePage() {
                 customerName={inst.customerName}
                 projectName={inst.project.projectName}
                 size="xs"
+                variant="dashboard"
               />
             ) : (
               <span>{inst.customerName}</span>
@@ -241,6 +242,7 @@ export default async function HomePage() {
                 customerName={proj.customerName}
                 projectName={proj.projectName}
                 size="xs"
+                variant="dashboard"
               />
             ),
             right: (
@@ -272,6 +274,7 @@ export default async function HomePage() {
                 customerName={pay.customerName}
                 projectName={pay.project.projectName}
                 size="xs"
+                variant="dashboard"
               />
             ) : (
               <span className="text-xs">{pay.customerName}</span>
