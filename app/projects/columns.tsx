@@ -82,7 +82,7 @@ export const createColumns = ({
               : undefined
           }
           isPending={isPending}
-          placeholder="Sin estado"
+          placeholder="Seleccionar estado"
         />
       )
     },

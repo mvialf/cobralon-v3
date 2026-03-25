@@ -371,7 +371,6 @@ export const ProjectEventForm = React.forwardRef<ProjectEventFormHandle, Project
                       onChange={field.onChange}
                       error={fieldState.error?.message}
                       disabled={!projectDetails}
-                      placeholder="Ej: Medir ventanas, tomar fotos, confirmar material..."
                     />
                   </FormControl>
                   <FormMessage />

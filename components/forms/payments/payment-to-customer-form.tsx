@@ -308,8 +308,7 @@ export function PaymentToCustomerForm({
                         )}
                       >
                         {formatCurrency(Math.abs(difference), 'CLP')}
-                        {!isValidSum &&
-                          (difference > 0 ? ' (falta asignar)' : ' (sobrepasado)')}
+                        {!isValidSum && (difference > 0 ? ' (falta asignar)' : ' (sobrepasado)')}
                       </span>
                     </CardContent>
                   </Card>

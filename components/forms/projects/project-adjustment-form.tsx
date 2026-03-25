@@ -155,11 +155,7 @@ export function ProjectAdjustmentForm({
             <FormItem>
               <FormLabel>Notas adicionales (opcional)</FormLabel>
               <FormControl>
-                <Textarea
-                  placeholder="Agrega detalles o justificación..."
-                  className="resize-none"
-                  {...field}
-                />
+                <Textarea className="resize-none" {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>

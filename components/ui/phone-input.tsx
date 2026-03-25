@@ -86,7 +86,7 @@ function PhoneInput({
     <div className="relative">
       {/* Prefijo visual fijo */}
       {showCountryPrefix && (
-        <div className="pointer-events-none absolute inset-y-0 left-0 z-10 flex items-center pl-0">
+        <div className="pointer-events-none absolute inset-y-0 left-0 z-10 flex items-center pl-3">
           <span className="text-sm font-medium text-muted-foreground">{prefix}</span>
         </div>
       )}
@@ -101,8 +101,8 @@ function PhoneInput({
         onChange={handleChange} // Usa el nuevo handler con auto-add de prefijo
         disabled={disabled}
         className={cn(
-          showCountryPrefix && 'pl-7', // Espacio para prefijo (+56)
-          showIcon && 'pr-9', // Espacio para icono
+          showCountryPrefix && 'pl-10', // Espacio para prefijo (+56)
+          showIcon && 'pr-7', // Espacio para icono
           className
         )}
         placeholder={placeholder}

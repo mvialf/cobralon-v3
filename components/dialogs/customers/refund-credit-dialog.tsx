@@ -211,7 +211,6 @@ export function RefundCreditDialog({
                   <FormLabel>Comentarios (opcional)</FormLabel>
                   <FormControl>
                     <Textarea
-                      placeholder="Ej: Devolución solicitada por cliente vía email"
                       className="resize-none"
                       {...field}
                     />

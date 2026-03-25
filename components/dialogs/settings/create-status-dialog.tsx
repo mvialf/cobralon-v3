@@ -91,7 +91,6 @@ export function createStatusDialog<T extends BaseStatus>(
               onSubmit={handleSubmit}
               defaultValues={mode === 'edit' && status ? statusToFormValues(status) : undefined}
               badgeColors={badgeColors}
-              placeholder={config.placeholder}
             />
           </div>
 

@@ -131,7 +131,6 @@ export const CreateTagModal: React.FC<CreateTagModalProps> = ({
             <Label htmlFor="tag-abbreviation">Abreviatura (2 letras)</Label>
             <Input
               id="tag-abbreviation"
-              placeholder="DV"
               value={tagAbbreviation}
               onChange={(e) => setTagAbbreviation(e.target.value.slice(0, 2).toUpperCase())}
               maxLength={2}

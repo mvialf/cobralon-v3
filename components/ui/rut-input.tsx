@@ -52,7 +52,6 @@ export interface RutInputProps
  * @example Uso simple
  * ```tsx
  * <RutInput
- *   placeholder="12.345.678-9"
  *   onRutChange={(cleanRut) => console.log(cleanRut)}
  * />
  * ```
@@ -84,7 +83,6 @@ export interface RutInputProps
  *   value={rut}
  *   onRutChange={setRut}
  *   showValidationIcon
- *   placeholder="Ingresa tu RUT"
  * />
  * ```
  */

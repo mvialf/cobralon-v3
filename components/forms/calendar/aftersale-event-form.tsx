@@ -292,12 +292,7 @@ export const AftersaleEventForm = React.forwardRef<
               <FormItem>
                 <FormLabel>Descripción del Problema</FormLabel>
                 <FormControl>
-                  <Textarea
-                    {...field}
-                    disabled={!aftersaleDetails}
-                    placeholder="Describe el problema o situación..."
-                    rows={3}
-                  />
+                  <Textarea {...field} disabled={!aftersaleDetails} rows={3} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -323,7 +318,6 @@ export const AftersaleEventForm = React.forwardRef<
                     onChange={field.onChange}
                     error={fieldState.error?.message}
                     disabled={!aftersaleDetails}
-                    placeholder="Ej: Revisar ventana, contactar al cliente, coordinar técnico..."
                   />
                 </FormControl>
                 <FormMessage />

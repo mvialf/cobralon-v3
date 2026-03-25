@@ -24,7 +24,6 @@ interface StatusFormProps {
   onSubmit: (data: BaseStatusFormValues) => void | Promise<void>
   defaultValues?: Partial<BaseStatusFormValues>
   badgeColors: BadgeColor[]
-  placeholder?: string
 }
 
 export interface StatusFormHandle {
@@ -33,7 +32,7 @@ export interface StatusFormHandle {
 }
 
 export const StatusForm = React.forwardRef<StatusFormHandle, StatusFormProps>(
-  ({ onSubmit, defaultValues, badgeColors, placeholder = 'Ej: En Revisión' }, ref) => {
+  ({ onSubmit, defaultValues, badgeColors }, ref) => {
     const form = useForm<BaseStatusFormValues>({
       resolver: zodResolver(baseStatusSchema),
       defaultValues: {
@@ -60,7 +59,7 @@ export const StatusForm = React.forwardRef<StatusFormHandle, StatusFormProps>(
               <FormItem>
                 <FormLabel>Nombre del estado</FormLabel>
                 <FormControl>
-                  <Input placeholder={placeholder} {...field} />
+                  <Input {...field} />
                 </FormControl>
                 <FormMessage />
               </FormItem>

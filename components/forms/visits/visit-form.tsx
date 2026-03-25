@@ -222,11 +222,7 @@ export const VisitForm = React.forwardRef<VisitFormHandle, VisitFormProps>(
               <FormItem>
                 <FormLabel>Observaciones</FormLabel>
                 <FormControl>
-                  <Textarea
-                    placeholder="Notas adicionales sobre la visita..."
-                    className=""
-                    {...field}
-                  />
+                  <Textarea className="" {...field} />
                 </FormControl>
                 <FormMessage />
               </FormItem>

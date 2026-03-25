@@ -59,7 +59,7 @@ export function CustomerForm({
             <FormItem>
               <FormLabel>Nombre</FormLabel>
               <FormControl>
-                <Input placeholder="Juan Perez" {...field} />
+                <Input {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -107,7 +107,7 @@ export function CustomerForm({
             <FormItem>
               <FormLabel>Correo</FormLabel>
               <FormControl>
-                <Input type="email" placeholder="correo@ejemplo.com" {...field} />
+                <Input type="email" {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>

@@ -64,7 +64,7 @@ export const PaymentMethodForm = React.forwardRef<PaymentMethodFormHandle, Payme
               <FormItem>
                 <FormLabel>Nombre del método</FormLabel>
                 <FormControl>
-                  <Input placeholder="Ej: Transferencia Bancaria" {...field} />
+                  <Input {...field} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -79,11 +79,7 @@ export const PaymentMethodForm = React.forwardRef<PaymentMethodFormHandle, Payme
               <FormItem>
                 <FormLabel>Icono (opcional)</FormLabel>
                 <FormControl>
-                  <Input
-                    placeholder="Ej: Banknote, CreditCard, Smartphone"
-                    {...field}
-                    value={field.value || ''}
-                  />
+                  <Input {...field} value={field.value || ''} />
                 </FormControl>
                 <FormDescription>
                   Nombre de icono de Lucide React (ej: Banknote, CreditCard, Smartphone)

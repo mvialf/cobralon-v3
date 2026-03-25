@@ -242,11 +242,7 @@ export const VisitEventForm = React.forwardRef<VisitEventFormHandle, VisitEventF
                   <FormItem>
                     <FormLabel>Nombre *</FormLabel>
                     <FormControl>
-                      <Input
-                        {...field}
-                        disabled={!visitDetails}
-                        placeholder="Nombre del prospecto"
-                      />
+                      <Input {...field} disabled={!visitDetails} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
