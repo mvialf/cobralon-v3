@@ -6,6 +6,7 @@ interface ProjectNameSummaryProps {
   customerName: string
   projectName?: string | null
   className?: string
+  size?: 'sm' | 'xs'
 }
 
 /**
@@ -19,10 +20,11 @@ export function ProjectNameSummary({
   customerName,
   projectName,
   className,
+  size = 'sm',
 }: ProjectNameSummaryProps) {
   return (
     <div className={cn('flex flex-col space-y-1', className)}>
-      <div className="text-sm text-inherit">
+      <div className={cn('text-inherit', size === 'xs' ? 'text-xs' : 'text-sm')}>
         P - {projectNumber} - {customerName}
       </div>
       <div className="text-xs font-medium text-inherit">{projectName && ` ${projectName}`}</div>
