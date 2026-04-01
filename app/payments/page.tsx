@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic'
+
 import { dehydrate, HydrationBoundary, QueryClient } from '@tanstack/react-query'
 import { prisma } from '@/lib/db'
 import { serialize } from '@/lib/utils/serialize'
