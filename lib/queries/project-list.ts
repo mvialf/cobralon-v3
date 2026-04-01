@@ -31,8 +31,11 @@ const SORT_COLUMN_MAP: Record<string, Prisma.Sql> = {
   createdAt: Prisma.sql`p."createdAt"`,
   date: Prisma.sql`p.date`,
   total: Prisma.sql`p."totalAmount"`,
+  totalAmount: Prisma.sql`p."totalAmount"`,
+  totalPaid: Prisma.sql`(p."totalAmount" - p.balance)`,
   balance: Prisma.sql`p.balance`,
   projectNumber: Prisma.sql`p."projectNumber"`,
+  projectStatus: Prisma.sql`ps.name`,
 }
 
 /**

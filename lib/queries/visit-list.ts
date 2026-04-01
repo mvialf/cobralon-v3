@@ -29,6 +29,8 @@ const SORT_COLUMN_MAP: Record<string, Prisma.Sql> = {
   date: Prisma.sql`v.date`,
   createdAt: Prisma.sql`v."createdAt"`,
   name: Prisma.sql`v.name`,
+  comuna: Prisma.sql`v.comuna`,
+  visitStatus: Prisma.sql`vs.name`,
 }
 
 /**

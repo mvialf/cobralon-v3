@@ -12,11 +12,7 @@ import { formatCurrency } from '@/lib/format'
 import { calculateProjectState } from '@/lib/business-logic/project-state'
 import { EditableDate } from '@/components/ui/editable-date'
 import { ProjectActionsCell } from './components/project-actions-cell'
-import {
-  transformStatusToOption,
-  sortByStatusName,
-  filterByProjectStatus,
-} from './utils/column-helpers'
+import { transformStatusToOption, filterByProjectStatus } from './utils/column-helpers'
 import { type Project, type ColumnsProps, type ProjectsTableMeta } from './types'
 
 // Re-export types for consumers
@@ -87,7 +83,6 @@ export const createColumns = ({
       )
     },
     enableSorting: true,
-    sortingFn: sortByStatusName,
     filterFn: filterByProjectStatus,
     meta: {
       headerClassName: 'text-center',
@@ -106,7 +101,7 @@ export const createColumns = ({
       const variant = state === 'Finalizado' ? 'success' : 'default'
       return <Badge variant={variant}>{state}</Badge>
     },
-    enableSorting: true,
+    enableSorting: false,
     filterFn: (row, id, value) => {
       // Si el filtro incluye 'all', mostrar todas las filas
       if (value.includes('all')) return true

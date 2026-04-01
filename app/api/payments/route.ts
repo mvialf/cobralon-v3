@@ -59,7 +59,7 @@ export const GET = withLogging(async (request, logger) => {
   const includeFacets = searchParams.get('includeFacets') === 'true'
 
   // Sorting params con validación Zod
-  const sortBySchema = z.enum(['date', 'amount']).optional()
+  const sortBySchema = z.enum(['date', 'amount', 'type', 'paymentMethodName']).optional()
   const sortOrderSchema = z.enum(['asc', 'desc']).optional()
   const sortBy = sortBySchema.safeParse(searchParams.get('sortBy') || undefined).data
   const sortOrder = sortOrderSchema.safeParse(searchParams.get('sortOrder') || undefined).data
@@ -155,9 +155,12 @@ export const GET = withLogging(async (request, logger) => {
         where,
         skip,
         take: limit,
-        orderBy: sortBy
-          ? ({ [sortBy]: sortOrder || 'asc' } as Prisma.PaymentOrderByWithRelationInput)
-          : { date: 'desc' },
+        orderBy: (() => {
+          if (!sortBy) return { date: 'desc' } as Prisma.PaymentOrderByWithRelationInput
+          const order = sortOrder || 'asc'
+          if (sortBy === 'paymentMethodName') return { paymentMethod: { name: order } }
+          return { [sortBy]: order } as Prisma.PaymentOrderByWithRelationInput
+        })(),
         include: {
           customer: {
             select: {

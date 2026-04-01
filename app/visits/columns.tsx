@@ -88,11 +88,6 @@ export const createColumns = ({
       return formatDate(date, 'short', 'es-CL')
     },
     enableSorting: true,
-    sortingFn: (rowA, rowB) => {
-      const dateA = new Date(rowA.original.date).getTime()
-      const dateB = new Date(rowB.original.date).getTime()
-      return dateA - dateB
-    },
     meta: {
       headerClassName: 'text-center',
       cellClassName: 'text-center',
@@ -133,11 +128,6 @@ export const createColumns = ({
       )
     },
     enableSorting: true,
-    sortingFn: (rowA, rowB) => {
-      const statusA = rowA.original.visitStatus.name
-      const statusB = rowB.original.visitStatus.name
-      return statusA.localeCompare(statusB)
-    },
     filterFn: (row, _id, filterValue) => {
       const status = row.original.visitStatus
       if (filterValue.includes(status.id)) {

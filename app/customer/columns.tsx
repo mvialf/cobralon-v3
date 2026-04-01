@@ -207,11 +207,6 @@ export const createColumns = ({ onCustomerUpdated }: ColumnsProps = {}): ColumnD
     accessorKey: 'email',
     header: ({ column }) => <DataTableColumnHeader column={column} title="Correo" />,
     enableSorting: true,
-    sortingFn: (rowA, rowB) => {
-      const emailA = rowA.original.email || ''
-      const emailB = rowB.original.email || ''
-      return emailA.localeCompare(emailB)
-    },
     meta: {
       headerClassName: 'text-left',
       cellClassName: 'text-left',
@@ -229,7 +224,7 @@ export const createColumns = ({ onCustomerUpdated }: ColumnsProps = {}): ColumnD
 
       return <CustomerCreditBadge creditBalance={credit} />
     },
-    enableSorting: true,
+    enableSorting: false,
     meta: {
       headerClassName: 'text-right',
       cellClassName: 'text-right',
@@ -256,7 +251,7 @@ export const createColumns = ({ onCustomerUpdated }: ColumnsProps = {}): ColumnD
         </span>
       )
     },
-    enableSorting: true,
+    enableSorting: false,
     meta: {
       headerClassName: 'text-right',
       cellClassName: 'text-right',

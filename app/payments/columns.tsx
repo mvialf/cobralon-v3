@@ -104,7 +104,7 @@ export const createColumns = ({
       // Project payment 1:N → vacío
       return <span className="text-muted-foreground">-</span>
     },
-    enableSorting: true,
+    enableSorting: false,
   },
 
   // Número de Proyecto
@@ -137,7 +137,7 @@ export const createColumns = ({
         </span>
       )
     },
-    enableSorting: true,
+    enableSorting: false,
     // filterFn removido - ahora usa server-side filtering
   },
 
@@ -166,11 +166,6 @@ export const createColumns = ({
     header: ({ column }) => <DataTableColumnHeader column={column} title="Método" />,
     cell: ({ row }) => row.original.paymentMethod?.name || '-',
     enableSorting: true,
-    sortingFn: (rowA, rowB) => {
-      const methodA = rowA.original.paymentMethod?.name || ''
-      const methodB = rowB.original.paymentMethod?.name || ''
-      return methodA.localeCompare(methodB)
-    },
     // filterFn removido - ahora usa server-side filtering
   },
 
