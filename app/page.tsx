@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic'
+
 import { AppLayout } from '@/components/layout/app-layout'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
