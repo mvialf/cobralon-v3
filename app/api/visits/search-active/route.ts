@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
+import { Prisma } from '@prisma/client'
 import { withLogging } from '@/lib/logger-middleware'
 
 /**
@@ -40,45 +41,30 @@ export const GET = withLogging(async (request, logger) => {
     const query = searchParams.get('q') || ''
     const limit = parseInt(searchParams.get('limit') || '20', 10)
 
-    // Buscar visitas con status NO final
+    // Búsqueda normalizada (sin acentos, case-insensitive) via normalize_text() de PostgreSQL
+    let whereCondition: Prisma.VisitWhereInput = {
+      visitStatus: { isFinal: false },
+    }
+
+    if (query.length >= 2) {
+      const matchingIds = await prisma.$queryRaw<Array<{ id: string }>>`
+        SELECT v.id
+        FROM "Visit" v
+        JOIN "VisitStatus" vs ON vs.id = v."visitStatusId"
+        WHERE vs."isFinal" = false
+          AND (
+            normalize_text(v.name) LIKE normalize_text(${`%${query}%`})
+            OR normalize_text(COALESCE(v.phone, '')) LIKE normalize_text(${`%${query}%`})
+            OR normalize_text(COALESCE(v.street, '')) LIKE normalize_text(${`%${query}%`})
+            OR normalize_text(v.comuna) LIKE normalize_text(${`%${query}%`})
+          )
+        LIMIT ${limit}
+      `
+      whereCondition = { id: { in: matchingIds.map((r) => r.id) } }
+    }
+
     const visits = await prisma.visit.findMany({
-      where: {
-        // Solo visitas no finalizadas
-        visitStatus: {
-          isFinal: false,
-        },
-        // Búsqueda por texto (si hay query)
-        ...(query.length >= 2
-          ? {
-              OR: [
-                {
-                  name: {
-                    contains: query,
-                    mode: 'insensitive',
-                  },
-                },
-                {
-                  phone: {
-                    contains: query,
-                    mode: 'insensitive',
-                  },
-                },
-                {
-                  street: {
-                    contains: query,
-                    mode: 'insensitive',
-                  },
-                },
-                {
-                  comuna: {
-                    contains: query,
-                    mode: 'insensitive',
-                  },
-                },
-              ],
-            }
-          : {}),
-      },
+      where: whereCondition,
       take: limit,
       orderBy: {
         date: 'desc',

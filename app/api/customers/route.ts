@@ -40,17 +40,19 @@ export const GET = withLogging(async (request, logger) => {
   )
 
   try {
-    // Construir condición WHERE para búsqueda SQL
-    // Usa `mode: insensitive` para búsqueda case-insensitive en PostgreSQL
-    const whereCondition = search
-      ? {
-          OR: [
-            { name: { contains: search, mode: 'insensitive' as const } },
-            { email: { contains: search, mode: 'insensitive' as const } },
-            { phone: { contains: search, mode: 'insensitive' as const } },
-          ],
-        }
-      : {}
+    // Búsqueda normalizada (sin acentos, case-insensitive) via normalize_text() de PostgreSQL
+    let whereCondition: Prisma.CustomerWhereInput = {}
+
+    if (search) {
+      const matchingIds = await prisma.$queryRaw<Array<{ id: string }>>`
+        SELECT c.id
+        FROM "Customer" c
+        WHERE normalize_text(c.name) LIKE normalize_text(${`%${search}%`})
+           OR normalize_text(COALESCE(c.email, '')) LIKE normalize_text(${`%${search}%`})
+           OR normalize_text(c.phone) LIKE normalize_text(${`%${search}%`})
+      `
+      whereCondition = { id: { in: matchingIds.map((r) => r.id) } }
+    }
 
     // Ejecutar queries en paralelo: total y datos paginados
     const [total, customers] = await Promise.all([

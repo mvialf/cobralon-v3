@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
+import { Prisma } from '@prisma/client'
 import { withLogging } from '@/lib/logger-middleware'
 
 /**
@@ -46,53 +47,32 @@ export const GET = withLogging(async (request, logger) => {
     const query = searchParams.get('q') || ''
     const limit = parseInt(searchParams.get('limit') || '20', 10)
 
-    // Buscar aftersales con status NO final
+    // Búsqueda normalizada (sin acentos, case-insensitive) via normalize_text() de PostgreSQL
+    let whereCondition: Prisma.AftersaleWhereInput = {
+      aftersaleStatus: { isFinal: false },
+    }
+
+    if (query.length >= 2) {
+      const matchingIds = await prisma.$queryRaw<Array<{ id: string }>>`
+        SELECT a.id
+        FROM "Aftersale" a
+        JOIN "AftersaleStatus" ast ON ast.id = a."aftersaleStatusId"
+        JOIN "Project" p ON p.id = a."projectId"
+        JOIN "Customer" c ON c.id = p."customerId"
+        WHERE ast."isFinal" = false
+          AND (
+            normalize_text(p."projectNumber") LIKE normalize_text(${`%${query}%`})
+            OR normalize_text(c.name) LIKE normalize_text(${`%${query}%`})
+            OR normalize_text(COALESCE(p."projectName", '')) LIKE normalize_text(${`%${query}%`})
+            OR normalize_text(a.description) LIKE normalize_text(${`%${query}%`})
+          )
+        LIMIT ${limit}
+      `
+      whereCondition = { id: { in: matchingIds.map((r) => r.id) } }
+    }
+
     const aftersales = await prisma.aftersale.findMany({
-      where: {
-        // Solo aftersales no finalizados
-        aftersaleStatus: {
-          isFinal: false,
-        },
-        // Búsqueda por texto (si hay query)
-        ...(query.length >= 2
-          ? {
-              OR: [
-                {
-                  project: {
-                    projectNumber: {
-                      contains: query,
-                      mode: 'insensitive',
-                    },
-                  },
-                },
-                {
-                  project: {
-                    customer: {
-                      name: {
-                        contains: query,
-                        mode: 'insensitive',
-                      },
-                    },
-                  },
-                },
-                {
-                  project: {
-                    projectName: {
-                      contains: query,
-                      mode: 'insensitive',
-                    },
-                  },
-                },
-                {
-                  description: {
-                    contains: query,
-                    mode: 'insensitive',
-                  },
-                },
-              ],
-            }
-          : {}),
-      },
+      where: whereCondition,
       take: limit,
       orderBy: {
         reportedAt: 'desc',

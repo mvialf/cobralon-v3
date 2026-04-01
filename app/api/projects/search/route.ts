@@ -37,18 +37,25 @@ export const GET = withLogging(async (request, logger) => {
 
     const isFinal = status === 'finished'
 
-    const projects = await prisma.project.findMany({
-      where: {
-        projectStatus: {
-          isFinal,
-          isActive: true,
-        },
-        OR: [
-          { projectNumber: { contains: q, mode: 'insensitive' } },
-          { projectName: { contains: q, mode: 'insensitive' } },
-          { customer: { name: { contains: q, mode: 'insensitive' } } },
-        ],
-      },
+    // Búsqueda normalizada (sin acentos, case-insensitive) via normalize_text() de PostgreSQL
+    const matchingIds = await prisma.$queryRaw<Array<{ id: string }>>`
+      SELECT p.id
+      FROM "Project" p
+      JOIN "Customer" c ON c.id = p."customerId"
+      JOIN "ProjectStatus" ps ON ps.id = p."projectStatusId"
+      WHERE ps."isFinal" = ${isFinal}
+        AND ps."isActive" = true
+        AND (
+          normalize_text(p."projectNumber") LIKE normalize_text(${`%${q}%`})
+          OR normalize_text(COALESCE(p."projectName", '')) LIKE normalize_text(${`%${q}%`})
+          OR normalize_text(c.name) LIKE normalize_text(${`%${q}%`})
+        )
+      LIMIT ${limit}
+    `
+
+    const projects = matchingIds.length > 0
+      ? await prisma.project.findMany({
+      where: { id: { in: matchingIds.map((r) => r.id) } },
       include: {
         customer: {
           select: { id: true, name: true },
@@ -64,6 +71,7 @@ export const GET = withLogging(async (request, logger) => {
       take: limit,
       orderBy: { createdAt: 'desc' },
     })
+      : []
 
     const projectsSimplified = projects.map((project) => ({
       id: project.id,

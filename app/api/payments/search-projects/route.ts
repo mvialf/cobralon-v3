@@ -31,47 +31,37 @@ export const GET = withLogging(async (request, logger) => {
       )
     }
 
-    // Buscar proyectos
-    const projects = await prisma.project.findMany({
-      where: {
-        totalAmount: { gt: 0 }, // Solo proyectos con monto definido
-        balance: { gt: 0 }, // Solo proyectos con balance pendiente (usa índice)
-        OR: [
-          {
-            projectNumber: {
-              contains: q,
-              mode: 'insensitive',
-            },
-          },
-          {
-            projectName: {
-              contains: q,
-              mode: 'insensitive',
-            },
-          },
-          {
+    // Búsqueda normalizada (sin acentos, case-insensitive) via normalize_text() de PostgreSQL
+    const matchingIds = await prisma.$queryRaw<Array<{ id: string }>>`
+      SELECT p.id
+      FROM "Project" p
+      JOIN "Customer" c ON c.id = p."customerId"
+      WHERE p."totalAmount" > 0
+        AND p.balance > 0
+        AND (
+          normalize_text(p."projectNumber") LIKE normalize_text(${`%${q}%`})
+          OR normalize_text(COALESCE(p."projectName", '')) LIKE normalize_text(${`%${q}%`})
+          OR normalize_text(c.name) LIKE normalize_text(${`%${q}%`})
+        )
+      LIMIT ${limit}
+    `
+
+    const projects = matchingIds.length > 0
+      ? await prisma.project.findMany({
+          where: { id: { in: matchingIds.map((r) => r.id) } },
+          include: {
             customer: {
-              name: {
-                contains: q,
-                mode: 'insensitive',
+              select: {
+                id: true,
+                name: true,
               },
             },
           },
-        ],
-      },
-      include: {
-        customer: {
-          select: {
-            id: true,
-            name: true,
+          orderBy: {
+            createdAt: 'desc',
           },
-        },
-      },
-      take: limit,
-      orderBy: {
-        createdAt: 'desc', // Más recientes primero
-      },
-    })
+        })
+      : []
 
     // Mapear respuesta (balance ya filtrado en DB)
     const projectsWithBalance = projects.map((project) => ({
