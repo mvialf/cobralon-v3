@@ -61,6 +61,8 @@ describe('useCustomers', () => {
           email: 'clientea@example.com',
           phone: '+56912345678',
           creditBalance: 0,
+          totalProjects: 0,
+          activeProjects: 0,
           createdAt: new Date('2025-01-15'),
           updatedAt: new Date('2025-01-15'),
         },
@@ -190,6 +192,8 @@ describe('useCustomer', () => {
       email: 'clientea@example.com',
       phone: '+56912345678',
       creditBalance: 0,
+      totalProjects: 0,
+      activeProjects: 0,
       createdAt: new Date('2025-01-15'),
       updatedAt: new Date('2025-01-15'),
     }
@@ -247,6 +251,8 @@ describe('useCreateCustomer', () => {
       email: 'nuevo@example.com',
       phone: '+56900000000',
       creditBalance: 0,
+      totalProjects: 0,
+      activeProjects: 0,
       createdAt: new Date('2025-01-20'),
       updatedAt: new Date('2025-01-20'),
     }
@@ -301,6 +307,8 @@ describe('useCreateCustomer', () => {
       email: null,
       phone: '+56922222222',
       creditBalance: 0,
+      totalProjects: 0,
+      activeProjects: 0,
       createdAt: new Date('2025-01-20'),
       updatedAt: new Date('2025-01-20'),
     }
@@ -350,6 +358,8 @@ describe('useUpdateCustomer', () => {
       email: 'actualizado@example.com', // Cambiado
       phone: '+56912345678',
       creditBalance: 0,
+      totalProjects: 0,
+      activeProjects: 0,
       createdAt: new Date('2025-01-15'),
       updatedAt: new Date('2025-01-20'),
     }
@@ -402,6 +412,8 @@ describe('useUpdateCustomer', () => {
       email: null, // Email removido
       phone: '+56912345678',
       creditBalance: 0,
+      totalProjects: 0,
+      activeProjects: 0,
       createdAt: new Date('2025-01-15'),
       updatedAt: new Date('2025-01-20'),
     }
@@ -469,6 +481,8 @@ describe('useDeleteCustomer', () => {
           email: 'a@example.com',
           phone: '+56911111111',
           creditBalance: 0,
+          totalProjects: 0,
+          activeProjects: 0,
           createdAt: new Date(),
           updatedAt: new Date(),
         },
@@ -478,6 +492,8 @@ describe('useDeleteCustomer', () => {
           email: 'b@example.com',
           phone: '+56922222222',
           creditBalance: 0,
+          totalProjects: 0,
+          activeProjects: 0,
           createdAt: new Date(),
           updatedAt: new Date(),
         },
@@ -528,6 +544,8 @@ describe('useDeleteCustomer', () => {
           email: 'a@example.com',
           phone: '+56911111111',
           creditBalance: 0,
+          totalProjects: 0,
+          activeProjects: 0,
           createdAt: new Date(),
           updatedAt: new Date(),
         },

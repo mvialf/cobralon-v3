@@ -7,6 +7,7 @@ import { parsePaginationParams, buildPaginationResponse } from '@/lib/utils/pagi
 import { withApiHandler, BusinessError } from '@/lib/api-handler'
 import { customerSchema, type CustomerFormData } from '@/lib/validations/customer-validations'
 import { getCustomerCreditBalances } from '@/lib/business-logic/credit-management'
+import { getActiveProjectsWhere } from '@/lib/business-logic/project-state'
 
 /**
  * GET /api/customers
@@ -64,12 +65,33 @@ export const GET = withLogging(async (request, logger) => {
       }),
     ])
 
-    // Enriquecer con creditBalance calculado desde ledger (1 query batch)
+    // Enriquecer con creditBalance y conteo de proyectos (queries batch en paralelo)
     const customerIds = customers.map((c) => c.id)
-    const creditMap = await getCustomerCreditBalances(customerIds)
+    const [creditMap, projectCounts, activeProjectCounts] = await Promise.all([
+      getCustomerCreditBalances(customerIds),
+      prisma.project.groupBy({
+        by: ['customerId'],
+        where: { customerId: { in: customerIds } },
+        _count: true,
+      }),
+      prisma.project.groupBy({
+        by: ['customerId'],
+        where: {
+          customerId: { in: customerIds },
+          ...getActiveProjectsWhere(),
+        },
+        _count: true,
+      }),
+    ])
+
+    const totalProjectsMap = new Map(projectCounts.map((r) => [r.customerId, r._count]))
+    const activeProjectsMap = new Map(activeProjectCounts.map((r) => [r.customerId, r._count]))
+
     const customersWithCredit = customers.map((c) => ({
       ...c,
       creditBalance: creditMap.get(c.id) ?? 0,
+      totalProjects: totalProjectsMap.get(c.id) ?? 0,
+      activeProjects: activeProjectsMap.get(c.id) ?? 0,
     }))
 
     logger.info(

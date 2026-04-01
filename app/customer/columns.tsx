@@ -26,6 +26,8 @@ export interface Customer {
   phone: string // Obligatorio
   email: string | null // Opcional
   creditBalance: number // Crédito a favor del cliente
+  totalProjects: number // Total de proyectos del cliente
+  activeProjects: number // Proyectos activos
 }
 
 // Componente para las acciones de cada customer
@@ -226,6 +228,33 @@ export const createColumns = ({ onCustomerUpdated }: ColumnsProps = {}): ColumnD
       }
 
       return <CustomerCreditBadge creditBalance={credit} />
+    },
+    enableSorting: true,
+    meta: {
+      headerClassName: 'text-right',
+      cellClassName: 'text-right',
+    },
+  },
+  {
+    accessorKey: 'totalProjects',
+    header: ({ column }) => <DataTableColumnHeader column={column} title="Proyectos" />,
+    cell: ({ row }) => {
+      const { activeProjects, totalProjects } = row.original
+
+      if (totalProjects === 0) {
+        return <span className="text-muted-foreground">-</span>
+      }
+
+      return (
+        <span>
+          {activeProjects > 0 ? (
+            <span className="font-medium">{activeProjects}</span>
+          ) : (
+            <span className="text-muted-foreground">0</span>
+          )}
+          <span className="text-muted-foreground">/{totalProjects}</span>
+        </span>
+      )
     },
     enableSorting: true,
     meta: {

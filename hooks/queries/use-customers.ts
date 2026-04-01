@@ -28,6 +28,8 @@ export interface Customer {
   email: string | null
   phone: string
   creditBalance: number
+  totalProjects: number
+  activeProjects: number
   createdAt: Date
   updatedAt: Date
 }
