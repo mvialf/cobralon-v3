@@ -197,18 +197,34 @@ model Project {
 }
 
 model PaymentMethod {
-  id              String    @id @default(uuid())
-  name            String    @unique
-  active          Boolean   @default(true)
-  order           Int       @default(0)
+  id              String           @id @default(uuid())
+  name            String           @unique
+  active          Boolean          @default(true)
+  order           Int              @default(0)
   icon            String?
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
-  hasInstallments Boolean   @default(false)
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  hasInstallments Boolean          @default(false)
   maxInstallments Int?
   payments        Payment[]
+  commissionTiers CommissionTier[]
 
   @@index([active, order])
+}
+
+model CommissionTier {
+  id              String        @id @default(uuid())
+  paymentMethodId String
+  minInstallments Int? // null = tier base (contado / sin cuotas)
+  maxInstallments Int? // null = tier base
+  percentageFee   Decimal       @default(0) @db.Decimal(5, 2) // Ej: 2.95%
+  fixedFee        Decimal       @default(0) @db.Decimal(12, 2) // Ej: 350 CLP
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  paymentMethod   PaymentMethod @relation(fields: [paymentMethodId], references: [id], onDelete: Cascade)
+
+  @@unique([paymentMethodId, minInstallments, maxInstallments])
+  @@index([paymentMethodId])
 }
 
 model Payment {
@@ -224,6 +240,10 @@ model Payment {
   updatedAt            DateTime            @updatedAt
   selectedInstallments Int?
   type                 String              @default("Project")
+  commissionAmount     Decimal?            @db.Decimal(12, 2) // Comisión calculada al registrar
+  netAmount            Decimal?            @db.Decimal(12, 2) // amount - commissionAmount
+  commissionRate       Decimal?            @db.Decimal(5, 2) // % aplicado (auditoría)
+  commissionFixed      Decimal?            @db.Decimal(12, 2) // Fee fijo aplicado (auditoría)
   installments         Installment[]
   customer             Customer            @relation(fields: [customerId], references: [id])
   paymentMethod        PaymentMethod       @relation(fields: [paymentMethodId], references: [id])
@@ -243,6 +263,7 @@ model Installment {
   paymentId         String
   installmentNumber Int
   amount            Decimal   @db.Decimal(12, 2)
+  netAmount         Decimal?  @db.Decimal(12, 2) // Monto neto de esta cuota
   dueDate           DateTime
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt

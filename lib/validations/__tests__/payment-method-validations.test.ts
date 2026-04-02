@@ -228,6 +228,7 @@ describe('formValuesToPayload', () => {
       icon: null,
       hasInstallments: false,
       maxInstallments: null,
+      commissionTiers: [],
     }
 
     const payload = formValuesToPayload(values)
@@ -244,6 +245,7 @@ describe('formValuesToPayload', () => {
       icon: 'credit-card',
       hasInstallments: true,
       maxInstallments: 12,
+      commissionTiers: [],
     }
 
     const payload = formValuesToPayload(values)
@@ -260,6 +262,7 @@ describe('formValuesToPayload', () => {
       icon: '',
       hasInstallments: false,
       maxInstallments: null,
+      commissionTiers: [],
     }
 
     const payload = formValuesToPayload(values)
@@ -273,6 +276,7 @@ describe('formValuesToPayload', () => {
       icon: null,
       hasInstallments: undefined,
       maxInstallments: null,
+      commissionTiers: [],
     }
 
     const payload = formValuesToPayload(values)
@@ -286,6 +290,7 @@ describe('formValuesToPayload', () => {
       icon: null,
       hasInstallments: true,
       maxInstallments: undefined,
+      commissionTiers: [],
     }
 
     const payload = formValuesToPayload(values)
@@ -304,6 +309,7 @@ describe('methodToFormValues', () => {
       icon: 'cash',
       hasInstallments: false,
       maxInstallments: null,
+      commissionTiers: [],
       _count: { payments: 10 },
       createdAt: new Date(),
       updatedAt: new Date(),
@@ -326,6 +332,7 @@ describe('methodToFormValues', () => {
       icon: 'credit-card',
       hasInstallments: true,
       maxInstallments: 24,
+      commissionTiers: [],
       _count: { payments: 5 },
       createdAt: new Date(),
       updatedAt: new Date(),
@@ -346,6 +353,7 @@ describe('methodToFormValues', () => {
       icon: null,
       hasInstallments: false,
       maxInstallments: null,
+      commissionTiers: [],
       _count: { payments: 0 },
       createdAt: new Date(),
       updatedAt: new Date(),
@@ -367,6 +375,7 @@ describe('roundtrip: method -> formValues -> payload', () => {
       icon: 'credit-card',
       hasInstallments: true,
       maxInstallments: 12,
+      commissionTiers: [],
       _count: { payments: 5 },
       createdAt: new Date(),
       updatedAt: new Date(),

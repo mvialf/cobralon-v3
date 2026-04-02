@@ -94,6 +94,10 @@ export type Payment = {
   id: string
   type: 'Project' | 'Customer'
   amount: number
+  commissionAmount: number | null
+  netAmount: number | null
+  commissionRate: number | null
+  commissionFixed: number | null
   currency: string
   date: Date
   reference: string | null

@@ -46,6 +46,18 @@ export const FINANCIAL = {
    * Usado en validaciones de Zod (multipleOf)
    */
   DECIMAL_PRECISION: 0.01,
+
+  /**
+   * Configuración de comisiones por método de pago
+   */
+  COMMISSION: {
+    /** Porcentaje máximo de comisión permitido */
+    MAX_PERCENTAGE: 30,
+    /** Fee fijo máximo permitido (en moneda local) */
+    MAX_FIXED_FEE: 50000,
+    /** Máximo de tramos de comisión por método */
+    MAX_TIERS: 10,
+  },
 } as const
 
 /**

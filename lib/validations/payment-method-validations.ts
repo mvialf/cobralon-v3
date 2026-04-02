@@ -1,10 +1,23 @@
 import { z } from 'zod'
 
+import { FINANCIAL } from '../constants/financial-constants'
+
 /**
  * Type para el conteo de pagos asociados a un método
  */
 export type PaymentMethodCount = {
   payments: number
+}
+
+/**
+ * Type para un tier de comisión (from API)
+ */
+export type CommissionTier = {
+  id: string
+  minInstallments: number | null
+  maxInstallments: number | null
+  percentageFee: number
+  fixedFee: number
 }
 
 /**
@@ -18,10 +31,30 @@ export type PaymentMethod = {
   icon: string | null
   hasInstallments: boolean
   maxInstallments: number | null
+  commissionTiers: CommissionTier[]
   _count: PaymentMethodCount
   createdAt: Date
   updatedAt: Date
 }
+
+/**
+ * Schema para un tier de comisión
+ */
+export const commissionTierSchema = z.object({
+  minInstallments: z.number().int().min(1, 'Mínimo 1 cuota').nullable(),
+  maxInstallments: z.number().int().min(1).max(36, 'Máximo 36 cuotas').nullable(),
+  percentageFee: z
+    .number()
+    .min(0, 'No puede ser negativo')
+    .max(FINANCIAL.COMMISSION.MAX_PERCENTAGE, `Máximo ${FINANCIAL.COMMISSION.MAX_PERCENTAGE}%`),
+  fixedFee: z
+    .number()
+    .min(0, 'No puede ser negativo')
+    .max(
+      FINANCIAL.COMMISSION.MAX_FIXED_FEE,
+      `Máximo ${FINANCIAL.COMMISSION.MAX_FIXED_FEE.toLocaleString()}`
+    ),
+})
 
 /**
  * Schema de validación para crear/editar métodos de pago
@@ -47,6 +80,12 @@ export const paymentMethodSchema = z
       .max(36, 'Máximo 36 cuotas')
       .nullable()
       .optional(),
+    hasCommission: z.boolean().optional(),
+    commissionTiers: z
+      .array(commissionTierSchema)
+      .max(FINANCIAL.COMMISSION.MAX_TIERS, `Máximo ${FINANCIAL.COMMISSION.MAX_TIERS} tramos`)
+      .optional()
+      .default([]),
   })
   .refine(
     (data) => {
@@ -59,6 +98,65 @@ export const paymentMethodSchema = z
     {
       message: 'El número máximo de cuotas es obligatorio cuando se habilitan cuotas',
       path: ['maxInstallments'],
+    }
+  )
+  .refine(
+    (data) => {
+      // Validar que tiers con rango tengan ambos valores o ambos null
+      for (const tier of data.commissionTiers) {
+        const hasMin = tier.minInstallments !== null
+        const hasMax = tier.maxInstallments !== null
+        if (hasMin !== hasMax) return false
+      }
+      return true
+    },
+    {
+      message: 'Los tramos deben tener ambos valores (desde y hasta) o ninguno',
+      path: ['commissionTiers'],
+    }
+  )
+  .refine(
+    (data) => {
+      // Validar que min <= max en cada tramo
+      for (const tier of data.commissionTiers) {
+        if (
+          tier.minInstallments !== null &&
+          tier.maxInstallments !== null &&
+          tier.minInstallments > tier.maxInstallments
+        ) {
+          return false
+        }
+      }
+      return true
+    },
+    {
+      message: 'El mínimo de cuotas debe ser menor o igual al máximo en cada tramo',
+      path: ['commissionTiers'],
+    }
+  )
+  .refine(
+    (data) => {
+      // Validar que no haya rangos solapados entre tramos
+      const rangedTiers = data.commissionTiers.filter(
+        (t) => t.minInstallments !== null && t.maxInstallments !== null
+      )
+      for (let i = 0; i < rangedTiers.length; i++) {
+        for (let j = i + 1; j < rangedTiers.length; j++) {
+          const a = rangedTiers[i]
+          const b = rangedTiers[j]
+          if (
+          a.minInstallments! <= b.maxInstallments! &&
+          b.minInstallments! <= a.maxInstallments!
+        ) {
+            return false
+          }
+        }
+      }
+      return true
+    },
+    {
+      message: 'Los tramos de cuotas no pueden solaparse',
+      path: ['commissionTiers'],
     }
   )
 
@@ -84,6 +182,12 @@ export type CreatePaymentMethodPayload = {
   icon: string | null
   hasInstallments?: boolean
   maxInstallments?: number | null
+  commissionTiers?: Array<{
+    minInstallments: number | null
+    maxInstallments: number | null
+    percentageFee: number
+    fixedFee: number
+  }>
   active?: boolean
   order?: number
 }
@@ -102,6 +206,7 @@ export function formValuesToPayload(values: PaymentMethodFormValues): CreatePaym
     icon: values.icon || null,
     hasInstallments: values.hasInstallments || false,
     maxInstallments: values.maxInstallments || null,
+    commissionTiers: values.hasCommission ? values.commissionTiers : [],
   }
 }
 
@@ -114,5 +219,12 @@ export function methodToFormValues(method: PaymentMethod): PaymentMethodFormValu
     icon: method.icon,
     hasInstallments: method.hasInstallments,
     maxInstallments: method.maxInstallments,
+    hasCommission: method.commissionTiers.length > 0,
+    commissionTiers: method.commissionTiers.map((t) => ({
+      minInstallments: t.minInstallments,
+      maxInstallments: t.maxInstallments,
+      percentageFee: Number(t.percentageFee),
+      fixedFee: Number(t.fixedFee),
+    })),
   }
 }
