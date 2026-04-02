@@ -16,7 +16,10 @@ import { chilePhoneSchema, addressWithNullableOnlyApartmentSchema } from './comm
 export const createAftersaleEventWithUpdateSchema = z.object({
   // Datos del evento
   aftersaleId: z.string().uuid('ID de postventa inválido'),
-  scheduledDate: z.string().min(1, 'La fecha es requerida'),
+  scheduledDate: z.coerce.date({
+    required_error: 'La fecha es requerida',
+    invalid_type_error: 'Fecha inválida',
+  }),
 
   // Datos del Aftersale (editables)
   aftersaleStatusId: z.string().uuid('ID de estado inválido'),
@@ -43,11 +46,11 @@ export type CreateAftersaleEventWithUpdateInput = z.infer<
 >
 
 /**
- * Form values para el formulario (scheduledDate como string para input type="date")
+ * Form values para el formulario
  */
 export type AftersaleEventWithUpdateFormValues = {
   aftersaleId: string
-  scheduledDate: string
+  scheduledDate: Date
   aftersaleStatusId: string
   contactPhone: string
   description: string

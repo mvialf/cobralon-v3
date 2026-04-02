@@ -1,7 +1,6 @@
 'use client'
 
 import * as React from 'react'
-import { format } from 'date-fns'
 import {
   ScrollableDialog,
   ScrollableDialogBody,
@@ -103,13 +102,13 @@ export function createCalendarEventDialog<TEvent extends BaseEvent, TFormValues>
       if (mode === 'edit' && event) {
         return {
           ...config.getEditEntityValues(event),
-          scheduledDate: format(new Date(event.scheduledDate), 'yyyy-MM-dd'),
+          scheduledDate: new Date(event.scheduledDate),
           teamTagIds: event.teamTags?.map((t) => t.id) || [],
         } as Partial<TFormValues>
       }
 
       if (mode === 'create' && defaultDate) {
-        return { scheduledDate: defaultDate } as unknown as Partial<TFormValues>
+        return { scheduledDate: new Date(defaultDate) } as unknown as Partial<TFormValues>
       }
 
       return {}

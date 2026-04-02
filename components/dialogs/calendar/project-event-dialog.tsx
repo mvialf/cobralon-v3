@@ -31,7 +31,7 @@ export const ProjectEventDialog = createCalendarEventDialog<
         if (mode === 'create') {
           await createMutation.mutateAsync({
             projectId: data.projectId,
-            scheduledDate: new Date(data.scheduledDate),
+            scheduledDate: data.scheduledDate,
             phone: data.phone,
             street: data.street,
             apartment: data.apartment,
@@ -46,7 +46,7 @@ export const ProjectEventDialog = createCalendarEventDialog<
           await updateMutation.mutateAsync({
             id: event.id,
             data: {
-              scheduledDate: new Date(data.scheduledDate),
+              scheduledDate: data.scheduledDate,
               teamTagIds: data.teamTagIds,
               tasks: data.tasks,
             },

@@ -11,7 +11,6 @@ import {
 import { useAftersaleStatuses } from '@/hooks/queries/use-aftersale-statuses'
 import { getRegionCodigoByNombre } from '@/lib/regiones-chile'
 
-import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { PhoneInput } from '@/components/ui/phone-input'
 import { Combobox } from '@/components/ui/combobox'
@@ -21,7 +20,7 @@ import { AftersaleSearchField } from '@/components/forms/search/aftersale-search
 import { AddressFields } from '@/components/forms/fields/address-fields'
 import { TodoListField } from '@/components/custom/todo'
 import { TeamTagsField } from '@/components/forms/fields/team-tags-field'
-import { formatDateForInput } from '@/lib/utils'
+import { DateField } from '@/components/ui/date-field'
 import {
   Form,
   FormControl,
@@ -81,7 +80,7 @@ export const AftersaleEventForm = React.forwardRef<
     resolver: zodResolver(createAftersaleEventWithUpdateSchema),
     defaultValues: {
       aftersaleId: '',
-      scheduledDate: '',
+      scheduledDate: undefined as unknown as Date,
       aftersaleStatusId: '',
       contactPhone: '',
       description: '',
@@ -153,7 +152,7 @@ export const AftersaleEventForm = React.forwardRef<
         // IMPORTANTE: Preservar teamTagIds existentes (vienen del evento, no del aftersale)
         const formData: AftersaleEventWithUpdateFormValues = {
           aftersaleId: data.id,
-          scheduledDate: form.getValues('scheduledDate') || '',
+          scheduledDate: form.getValues('scheduledDate'),
           aftersaleStatusId: data.aftersaleStatus.id,
           contactPhone: data.contactPhone || '',
           description: data.description || '',
@@ -213,15 +212,7 @@ export const AftersaleEventForm = React.forwardRef<
                 <FormItem>
                   <FormLabel>Fecha evento *</FormLabel>
                   <FormControl>
-                    <Input
-                      type="date"
-                      {...field}
-                      value={field.value ? formatDateForInput(field.value) : ''}
-                      onChange={(e) => {
-                        const dateValue = e.target.value
-                        field.onChange(dateValue)
-                      }}
-                    />
+                    <DateField field={field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>

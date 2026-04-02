@@ -30,6 +30,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Input } from '@/components/ui/input'
+import { DateField } from '@/components/ui/date-field'
 import { Textarea } from '@/components/ui/textarea'
 import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
@@ -64,7 +65,7 @@ export function RefundCreditDialog({
     ),
     defaultValues: {
       amount: availableCredit, // Pre-llenar con total (caso común)
-      refundDate: new Date().toISOString().split('T')[0], // Fecha actual
+      refundDate: new Date(), // Fecha actual
       refundMethod: 'TRANSFERENCIA',
       comments: '',
     },
@@ -156,7 +157,7 @@ export function RefundCreditDialog({
                 <FormItem>
                   <FormLabel>Fecha de devolución</FormLabel>
                   <FormControl>
-                    <Input type="date" max={new Date().toISOString().split('T')[0]} {...field} />
+                    <DateField field={field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>

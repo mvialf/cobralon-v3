@@ -10,7 +10,6 @@ import {
 } from '@/lib/validations/calendar-validations'
 import { useProjectStatuses } from '@/hooks/queries/use-project-statuses'
 
-import { Input } from '@/components/ui/input'
 import { PhoneInput } from '@/components/ui/phone-input'
 import { Combobox } from '@/components/ui/combobox'
 import { StatusOptionDisplay } from '@/components/ui/status-option-display'
@@ -23,7 +22,8 @@ import { useUninstallTags } from '@/hooks/use-uninstall-tags'
 import { TeamTagsField } from '@/components/forms/fields/team-tags-field'
 import type { UninstallTag } from '@/components/custom/tag-system/types'
 import { TodoListField } from '@/components/custom/todo'
-import { cn, formatDateForInput } from '@/lib/utils'
+import { cn } from '@/lib/utils'
+import { DateField } from '@/components/ui/date-field'
 import { getRegionCodigoByNombre } from '@/lib/regiones-chile'
 import {
   Form,
@@ -90,7 +90,7 @@ export const ProjectEventForm = React.forwardRef<ProjectEventFormHandle, Project
       resolver: zodResolver(createProjectEventWithProjectUpdateSchema),
       defaultValues: {
         projectId: '',
-        scheduledDate: '',
+        scheduledDate: undefined as unknown as Date,
         projectStatusId: '',
         phone: '',
         street: '',
@@ -181,7 +181,7 @@ export const ProjectEventForm = React.forwardRef<ProjectEventFormHandle, Project
           // IMPORTANTE: Preservar teamTagIds existentes (vienen del evento, no del proyecto)
           const formData = {
             projectId: data.id,
-            scheduledDate: form.getValues('scheduledDate') || '',
+            scheduledDate: form.getValues('scheduledDate'),
             projectStatusId: data.projectStatus?.id || '',
             phone: data.phone,
             street: data.street,
@@ -239,16 +239,7 @@ export const ProjectEventForm = React.forwardRef<ProjectEventFormHandle, Project
                   <FormItem className="">
                     <FormLabel>Fecha evento *</FormLabel>
                     <FormControl>
-                      <Input
-                        type="date"
-                        {...field}
-                        value={field.value ? formatDateForInput(field.value) : ''}
-                        onChange={(e) => {
-                          // Convertir string del input a Date
-                          const dateValue = e.target.value
-                          field.onChange(dateValue)
-                        }}
-                      />
+                      <DateField field={field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>

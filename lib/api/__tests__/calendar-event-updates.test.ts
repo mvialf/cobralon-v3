@@ -26,7 +26,7 @@ import type { AftersaleEventWithUpdateFormValues } from '@/lib/validations/after
 
 const mockVisitFormData: VisitEventWithUpdateFormValues = {
   visitId: '123e4567-e89b-12d3-a456-426614174000',
-  scheduledDate: '2025-11-28',
+  scheduledDate: new Date('2025-11-28'),
   visitStatusId: '123e4567-e89b-12d3-a456-426614174001',
   name: 'Juan Pérez',
   phone: '+56912345678',
@@ -40,7 +40,7 @@ const mockVisitFormData: VisitEventWithUpdateFormValues = {
 
 const mockAftersaleFormData: AftersaleEventWithUpdateFormValues = {
   aftersaleId: '123e4567-e89b-12d3-a456-426614174002',
-  scheduledDate: '2025-11-29',
+  scheduledDate: new Date('2025-11-29'),
   aftersaleStatusId: '123e4567-e89b-12d3-a456-426614174003',
   contactPhone: '+56987654321',
   description: 'Reparación de cortina en dormitorio',
@@ -436,7 +436,7 @@ describe('Tipos UpdateEventInput (commit 51cfac5)', () => {
     // Este test verifica en tiempo de compilación que teamTagIds existe
     const data: VisitEventWithUpdateFormValues = {
       visitId: 'test',
-      scheduledDate: '2025-01-01',
+      scheduledDate: new Date('2025-01-01'),
       visitStatusId: 'status-id',
       name: 'Test',
       street: 'Test St',
@@ -451,7 +451,7 @@ describe('Tipos UpdateEventInput (commit 51cfac5)', () => {
   it('AftersaleEventWithUpdateFormValues debe incluir teamTagIds', () => {
     const data: AftersaleEventWithUpdateFormValues = {
       aftersaleId: 'test',
-      scheduledDate: '2025-01-01',
+      scheduledDate: new Date('2025-01-01'),
       aftersaleStatusId: 'status-id',
       contactPhone: '+56912345678',
       description: 'Test',
@@ -468,7 +468,7 @@ describe('Tipos UpdateEventInput (commit 51cfac5)', () => {
   it('teamTagIds puede ser null', () => {
     const visitData: VisitEventWithUpdateFormValues = {
       visitId: 'test',
-      scheduledDate: '2025-01-01',
+      scheduledDate: new Date('2025-01-01'),
       visitStatusId: 'status-id',
       name: 'Test',
       street: 'Test St',
@@ -479,7 +479,7 @@ describe('Tipos UpdateEventInput (commit 51cfac5)', () => {
 
     const aftersaleData: AftersaleEventWithUpdateFormValues = {
       aftersaleId: 'test',
-      scheduledDate: '2025-01-01',
+      scheduledDate: new Date('2025-01-01'),
       aftersaleStatusId: 'status-id',
       contactPhone: '+56912345678',
       description: 'Test',

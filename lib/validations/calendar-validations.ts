@@ -72,7 +72,10 @@ export const updateVisitEventSchema = z.object({
 export const createProjectEventWithProjectUpdateSchema = z.object({
   // Datos del evento
   projectId: z.string().uuid('ID de proyecto inválido'),
-  scheduledDate: z.string().min(1, 'La fecha es requerida'),
+  scheduledDate: z.coerce.date({
+    required_error: 'La fecha es requerida',
+    invalid_type_error: 'Fecha inválida',
+  }),
   tasks: todoListOptionalSchema.optional(),
 
   // Datos del proyecto (validación consistente con project-validations.ts)
@@ -139,10 +142,10 @@ export type CreateProjectEventWithProjectUpdateInput = z.infer<
 >
 export type CalendarQueryInput = z.infer<typeof calendarQuerySchema>
 
-// Form values (scheduledDate como string para input type="date")
+// Form values
 export type ProjectEventFormValues = {
   projectId: string
-  scheduledDate: string
+  scheduledDate: Date
 }
 
 /**
@@ -150,7 +153,7 @@ export type ProjectEventFormValues = {
  */
 export type ProjectEventWithProjectUpdateFormValues = {
   projectId: string
-  scheduledDate: string
+  scheduledDate: Date
   tasks?: TodoItem[]
   projectStatusId?: string
   phone: string

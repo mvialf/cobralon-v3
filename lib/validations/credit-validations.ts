@@ -12,8 +12,9 @@ export const refundCreditSchema = z.object({
     })
     .positive('Monto debe ser positivo'),
 
-  refundDate: z.string({
+  refundDate: z.coerce.date({
     required_error: 'Fecha de devolución es requerida',
+    invalid_type_error: 'Fecha inválida',
   }),
 
   refundMethod: z.enum(['EFECTIVO', 'TRANSFERENCIA', 'CHEQUE'], {

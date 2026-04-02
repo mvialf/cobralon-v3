@@ -23,7 +23,7 @@ import {
 } from '@/components/forms/search/visit-search-field'
 import { AddressFields } from '@/components/forms/fields/address-fields'
 import { TeamTagsField } from '@/components/forms/fields/team-tags-field'
-import { formatDateForInput } from '@/lib/utils'
+import { DateField } from '@/components/ui/date-field'
 import {
   Form,
   FormControl,
@@ -55,7 +55,7 @@ export const VisitEventForm = React.forwardRef<VisitEventFormHandle, VisitEventF
       resolver: zodResolver(createVisitEventWithUpdateSchema),
       defaultValues: {
         visitId: '',
-        scheduledDate: '',
+        scheduledDate: undefined as unknown as Date,
         visitStatusId: '',
         name: '',
         phone: '',
@@ -122,7 +122,7 @@ export const VisitEventForm = React.forwardRef<VisitEventFormHandle, VisitEventF
           // IMPORTANTE: Preservar teamTagIds existentes (vienen del evento, no de la visita)
           const formData: VisitEventWithUpdateFormValues = {
             visitId: data.id,
-            scheduledDate: form.getValues('scheduledDate') || '',
+            scheduledDate: form.getValues('scheduledDate'),
             visitStatusId: data.visitStatus.id,
             name: data.name,
             phone: data.phone || '',
@@ -179,15 +179,7 @@ export const VisitEventForm = React.forwardRef<VisitEventFormHandle, VisitEventF
                   <FormItem>
                     <FormLabel>Fecha evento *</FormLabel>
                     <FormControl>
-                      <Input
-                        type="date"
-                        {...field}
-                        value={field.value ? formatDateForInput(field.value) : ''}
-                        onChange={(e) => {
-                          const dateValue = e.target.value
-                          field.onChange(dateValue)
-                        }}
-                      />
+                      <DateField field={field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>

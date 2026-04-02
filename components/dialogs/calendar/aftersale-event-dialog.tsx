@@ -46,7 +46,7 @@ export const AftersaleEventDialog = createCalendarEventDialog<
           await updateMutation.mutateAsync({
             id: event.id,
             data: {
-              scheduledDate: new Date(data.scheduledDate),
+              scheduledDate: data.scheduledDate,
               teamTagIds: data.teamTagIds,
             },
           })

@@ -14,7 +14,10 @@ import { optionalChilePhoneSchema, addressWithNullableApartmentSchema } from './
 export const createVisitEventWithUpdateSchema = z.object({
   // Datos del evento
   visitId: z.string().uuid('ID de visita inválido'),
-  scheduledDate: z.string().min(1, 'La fecha es requerida'),
+  scheduledDate: z.coerce.date({
+    required_error: 'La fecha es requerida',
+    invalid_type_error: 'Fecha inválida',
+  }),
 
   // Datos de la Visit (editables)
   visitStatusId: z.string().uuid('ID de estado inválido'),
@@ -40,11 +43,11 @@ export const createVisitEventWithUpdateSchema = z.object({
 export type CreateVisitEventWithUpdateInput = z.infer<typeof createVisitEventWithUpdateSchema>
 
 /**
- * Form values para el formulario (scheduledDate como string para input type="date")
+ * Form values para el formulario
  */
 export type VisitEventWithUpdateFormValues = {
   visitId: string
-  scheduledDate: string
+  scheduledDate: Date
   visitStatusId: string
   name: string
   phone?: string

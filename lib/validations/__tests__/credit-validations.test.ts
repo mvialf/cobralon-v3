@@ -3,7 +3,7 @@ import { refundCreditSchema, type RefundCreditFormData } from '../credit-validat
 
 const validInput: RefundCreditFormData = {
   amount: 50000,
-  refundDate: '2025-12-01',
+  refundDate: new Date('2025-12-01'),
   refundMethod: 'TRANSFERENCIA',
   comments: 'Devolución solicitada por cliente',
 }
