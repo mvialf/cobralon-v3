@@ -100,7 +100,7 @@ function PhoneInput({
         value={value}
         onChange={handleChange} // Usa el nuevo handler con auto-add de prefijo
         disabled={disabled}
-        className={cn(
+        inputClassName={cn(
           showCountryPrefix && 'pl-10', // Espacio para prefijo (+56)
           showIcon && 'pr-7', // Espacio para icono
           className
@@ -126,17 +126,19 @@ function PhoneInput({
 
 // Componente interno para el input (wrapper de shadcn/ui Input)
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-const InputComponent = React.forwardRef<HTMLInputElement, any>(({ className, ...props }, ref) => {
-  return (
-    <Input
-      ref={ref}
-      type="tel"
-      inputMode="tel"
-      className={cn('tabular-nums', className)}
-      {...props}
-    />
-  )
-})
+const InputComponent = React.forwardRef<HTMLInputElement, any>(
+  ({ className, inputClassName, ...props }, ref) => {
+    return (
+      <Input
+        ref={ref}
+        type="tel"
+        inputMode="tel"
+        className={cn('tabular-nums', inputClassName, className)}
+        {...props}
+      />
+    )
+  }
+)
 
 InputComponent.displayName = 'InputComponent'
 
