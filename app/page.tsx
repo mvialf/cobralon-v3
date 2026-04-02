@@ -192,6 +192,18 @@ export default async function HomePage() {
         {/* Proximas cuotas */}
         <DashboardList
           title="Proximas Cuotas"
+          headerRight={(() => {
+            const now = new Date()
+            const total = installments
+              .filter((inst) => {
+                const d = new Date(inst.dueDate)
+                return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear()
+              })
+              .reduce((sum, inst) => sum + inst.amount, 0)
+            return total > 0 ? (
+              <span className="text-sm font-medium">{formatCurrency(total)}</span>
+            ) : null
+          })()}
           gridArea="d"
           linkHref="/payments/installments"
           linkLabel="Ver todas las cuotas"

@@ -18,6 +18,7 @@ interface DashboardListItem {
 
 interface DashboardListProps {
   title: string
+  headerRight?: ReactNode
   items: DashboardListItem[]
   emptyMessage?: string
   linkHref: string
@@ -28,6 +29,7 @@ interface DashboardListProps {
 
 export function DashboardList({
   title,
+  headerRight,
   items,
   emptyMessage = 'Sin datos',
   linkHref,
@@ -47,7 +49,10 @@ export function DashboardList({
   return (
     <Card className={cn('gap-1.5 h-full flex flex-col', className)} style={{ gridArea }}>
       <CardHeader className="px-3 py-0 shrink-0">
-        <CardTitle className="text-sm font-medium">{title}</CardTitle>
+        <div className="flex items-center justify-between">
+          <CardTitle className="text-sm font-medium">{title}</CardTitle>
+          {headerRight}
+        </div>
       </CardHeader>
       <CardContent className="px-0 py-0 flex-1 flex flex-col min-h-0">
         {items.length === 0 ? (
