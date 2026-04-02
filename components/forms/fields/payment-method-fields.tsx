@@ -11,6 +11,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { computePaymentCommission } from '@/lib/business-logic/commission'
+import { formatCurrency } from '@/lib/format'
+
+interface CommissionTier {
+  minInstallments: number | null
+  maxInstallments: number | null
+  percentageFee: number
+  fixedFee: number
+}
 
 interface PaymentMethod {
   id: string
@@ -18,6 +27,7 @@ interface PaymentMethod {
   active?: boolean
   hasInstallments: boolean
   maxInstallments: number | null
+  commissionTiers?: CommissionTier[]
 }
 
 interface PaymentMethodFieldsProps {
@@ -31,6 +41,10 @@ interface PaymentMethodFieldsProps {
    * @default true
    */
   autoSelectFirst?: boolean
+  /** Monto del pago (para preview de comisión) */
+  amount?: number
+  /** Moneda del pago (para formatear preview de comisión) */
+  currency?: string
 }
 
 /**
@@ -48,6 +62,8 @@ export function PaymentMethodFields({
   loading = false,
   onPaymentMethodChange,
   autoSelectFirst = true,
+  amount,
+  currency = 'CLP',
 }: PaymentMethodFieldsProps) {
   const { setValue } = useFormContext()
 
@@ -72,10 +88,39 @@ export function PaymentMethodFields({
     }
   }, [autoSelectFirst, paymentMethods, watchedPaymentMethodId, setValue, onPaymentMethodChange])
 
+  // Watch cuotas seleccionadas y monto para preview de comisión
+  const watchedInstallments = useWatch({
+    control,
+    name: 'selectedInstallments',
+  })
+
+  const watchedAmount = useWatch({
+    control,
+    name: 'amount',
+  })
+
   const selectedPaymentMethod = React.useMemo(
     () => paymentMethods.find((m) => m.id === watchedPaymentMethodId),
     [paymentMethods, watchedPaymentMethodId]
   )
+
+  // Calcular preview de comisión
+  // Usa amount del prop si disponible, sino watch del formulario
+  const effectiveAmount = amount ?? (typeof watchedAmount === 'number' ? watchedAmount : 0)
+
+  const commissionPreview = React.useMemo(() => {
+    if (!effectiveAmount || effectiveAmount <= 0) return null
+    if (!selectedPaymentMethod?.commissionTiers?.length) return null
+
+    const tiers = selectedPaymentMethod.commissionTiers.map((t) => ({
+      minInstallments: t.minInstallments,
+      maxInstallments: t.maxInstallments,
+      percentageFee: Number(t.percentageFee),
+      fixedFee: Number(t.fixedFee),
+    }))
+
+    return computePaymentCommission(effectiveAmount, tiers, watchedInstallments)
+  }, [effectiveAmount, selectedPaymentMethod, watchedInstallments])
 
   return (
     <div className="space-y-4">
@@ -146,6 +191,21 @@ export function PaymentMethodFields({
             </FormItem>
           )}
         />
+      )}
+
+      {/* Preview de comisión */}
+      {commissionPreview && commissionPreview.commissionAmount > 0 && (
+        <div className="rounded-md bg-muted/50 px-3 py-2 text-xs text-muted-foreground">
+          <span>
+            Comisión: {commissionPreview.percentageFee}%
+            {commissionPreview.fixedFee > 0 && ` + ${formatCurrency(commissionPreview.fixedFee, currency)}`}
+            {' '}({formatCurrency(commissionPreview.commissionAmount, currency)})
+          </span>
+          <span className="mx-2">|</span>
+          <span className="font-medium text-foreground">
+            Neto: {formatCurrency(commissionPreview.netAmount, currency)}
+          </span>
+        </div>
       )}
     </div>
   )

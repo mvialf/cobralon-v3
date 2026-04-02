@@ -17,6 +17,9 @@ interface Payment {
   id: string
   type: 'Project' | 'Customer' // ← NUEVO: Tipo de pago
   amount: number
+  commissionAmount: number | null
+  netAmount: number | null
+  commissionRate: number | null
   currency: string
   date: Date | string // Compatible con API response
   reference: string | null
@@ -66,6 +69,24 @@ export function PaymentDetailsDialog({ payment, open, onOpenChange }: PaymentDet
               {formatCurrency(payment.amount, payment.currency)}
             </span>
           </div>
+
+          {/* Comisión (solo si tiene) */}
+          {payment.commissionAmount != null && payment.commissionAmount > 0 && (
+            <div className="rounded-md border bg-muted/50 p-3 space-y-1">
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">
+                  Comisión ({payment.commissionRate}%)
+                </span>
+                <span className="text-destructive">
+                  -{formatCurrency(payment.commissionAmount, payment.currency)}
+                </span>
+              </div>
+              <div className="flex justify-between text-sm font-medium">
+                <span>Neto recibido</span>
+                <span>{formatCurrency(payment.netAmount ?? 0, payment.currency)}</span>
+              </div>
+            </div>
+          )}
 
           <Separator />
 

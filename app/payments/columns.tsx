@@ -18,6 +18,8 @@ export interface Payment {
   id: string
   type: 'Project' | 'Customer' // ← Tipo de pago
   amount: number
+  commissionAmount: number | null
+  netAmount: number | null
   currency: string
   date: Date | string // Compatible con API response
   reference: string | null
@@ -184,6 +186,25 @@ export const createColumns = ({
       )
     },
     enableSorting: true,
+  },
+
+  // Neto (solo si tiene comisión)
+  {
+    accessorKey: 'netAmount',
+    header: ({ column }) => (
+      <DataTableColumnHeader column={column} title="Neto" className="justify-end" />
+    ),
+    cell: ({ row }) => {
+      const payment = row.original
+      if (payment.netAmount == null || payment.commissionAmount == null) return null
+      if (payment.commissionAmount === 0) return null
+      return (
+        <div className="text-right text-sm text-muted-foreground">
+          {formatCurrency(payment.netAmount, payment.currency)}
+        </div>
+      )
+    },
+    enableSorting: false,
   },
 
   // Fecha

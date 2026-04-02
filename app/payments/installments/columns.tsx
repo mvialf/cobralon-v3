@@ -12,6 +12,7 @@ export interface Installment {
   id: string
   installmentNumber: number
   amount: number
+  netAmount: number | null
   dueDate: string
   status: string // Derivado de dueDate por la API
   payment: {
@@ -109,6 +110,24 @@ export const createColumns = ({
       const currency = row.original.payment.currency
       return <div className="text-right font-medium">{formatCurrency(amount, currency)}</div>
     },
+  },
+  // Neto (solo si tiene comisión)
+  {
+    accessorKey: 'netAmount',
+    header: ({ column }) => (
+      <DataTableColumnHeader column={column} title="Neto" className="justify-end" />
+    ),
+    cell: ({ row }) => {
+      const netAmount = row.original.netAmount
+      const currency = row.original.payment.currency
+      if (netAmount == null) return null
+      return (
+        <div className="text-right text-sm text-muted-foreground">
+          {formatCurrency(netAmount, currency)}
+        </div>
+      )
+    },
+    enableSorting: false,
   },
   {
     accessorKey: 'dueDate',
