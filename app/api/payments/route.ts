@@ -9,6 +9,7 @@ import { withApiHandler, BusinessError } from '@/lib/api-handler'
 import { parsePaginationParams, buildPaginationResponse } from '@/lib/utils/pagination'
 import { canApplyCredit } from '@/lib/business-logic/credit-management'
 import { generatePrismaInstallmentsCreate } from '@/lib/business-logic/installments'
+import { computePaymentCommission, distributeNetToInstallments } from '@/lib/business-logic/commission'
 import {
   validatePaymentType,
   validateAllocationsSum,
@@ -351,7 +352,10 @@ export const POST = withApiHandler<CreatePaymentApiBody>(
     // Defer: iniciar 3 queries a DB antes de validaciones sync
     const dbQueriesPromise = Promise.all([
       prisma.customer.findUnique({ where: { id: customerId } }),
-      prisma.paymentMethod.findUnique({ where: { id: paymentMethodId } }),
+      prisma.paymentMethod.findUnique({
+        where: { id: paymentMethodId },
+        include: { commissionTiers: true },
+      }),
       prisma.project.findMany({
         where: { id: { in: projectIds } },
         select: { id: true, customerId: true, currency: true },
@@ -461,11 +465,23 @@ export const POST = withApiHandler<CreatePaymentApiBody>(
     // Crear el pago con sus allocations en una transacción
     const paymentDate = new Date(date)
 
+    // Calcular comisión del método de pago
+    const commissionTiers = paymentMethod.commissionTiers.map((t) => ({
+      minInstallments: t.minInstallments,
+      maxInstallments: t.maxInstallments,
+      percentageFee: Number(t.percentageFee),
+      fixedFee: Number(t.fixedFee),
+    }))
+    const commissionResult = computePaymentCommission(amount, commissionTiers, selectedInstallments)
+
     paymentLogger.info(
       {
         installments: selectedInstallments || 1,
         hasInstallments: !!selectedInstallments && selectedInstallments > 1,
         creditApplied: creditToApply,
+        commission: commissionResult
+          ? { amount: commissionResult.commissionAmount, rate: commissionResult.percentageFee }
+          : null,
       },
       'Creating payment in database'
     )
@@ -494,6 +510,10 @@ export const POST = withApiHandler<CreatePaymentApiBody>(
           reference: reference?.trim() || null,
           notes: notes?.trim() || null,
           selectedInstallments: selectedInstallments || null,
+          commissionAmount: commissionResult ? new Decimal(commissionResult.commissionAmount) : null,
+          netAmount: commissionResult ? new Decimal(commissionResult.netAmount) : null,
+          commissionRate: commissionResult ? new Decimal(commissionResult.percentageFee) : null,
+          commissionFixed: commissionResult ? new Decimal(commissionResult.fixedFee) : null,
           allocations: {
             create: allocations.map((a) => ({
               projectId: a.projectId,
@@ -530,6 +550,7 @@ export const POST = withApiHandler<CreatePaymentApiBody>(
               id: true,
               installmentNumber: true,
               amount: true,
+              netAmount: true,
               dueDate: true,
             },
             orderBy: { installmentNumber: 'asc' },
@@ -538,6 +559,31 @@ export const POST = withApiHandler<CreatePaymentApiBody>(
       })
 
       paymentLogger.debug({ paymentId: newPayment.id }, 'Payment created in transaction')
+
+      // ====================================================================
+      // PASO 1b: Distribuir neto entre installments (si hay comisión y cuotas)
+      // ====================================================================
+      if (commissionResult && newPayment.installments.length > 1) {
+        const installmentAmounts = newPayment.installments.map((inst) => Number(inst.amount))
+        const netAmounts = distributeNetToInstallments(
+          installmentAmounts,
+          commissionResult.netAmount
+        )
+
+        await Promise.all(
+          newPayment.installments.map((inst, idx) =>
+            tx.installment.update({
+              where: { id: inst.id },
+              data: { netAmount: new Decimal(netAmounts[idx]) },
+            })
+          )
+        )
+
+        paymentLogger.debug(
+          { installmentCount: newPayment.installments.length },
+          'Net amounts distributed to installments'
+        )
+      }
 
       // ====================================================================
       // PASO 2: Aplicar crédito del cliente (si corresponde)

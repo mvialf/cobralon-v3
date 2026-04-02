@@ -2,12 +2,22 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { createApiError, handleMutationError } from '@/lib/errors'
 
+export interface CommissionTier {
+  id: string
+  minInstallments: number | null
+  maxInstallments: number | null
+  percentageFee: number
+  fixedFee: number
+}
+
 export interface PaymentMethod {
   id: string
   name: string
   icon: string | null
   active: boolean
-  requiresReference: boolean
+  hasInstallments: boolean
+  maxInstallments: number | null
+  commissionTiers: CommissionTier[]
   order: number
 }
 

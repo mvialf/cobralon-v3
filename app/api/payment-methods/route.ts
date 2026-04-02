@@ -15,6 +15,9 @@ export const GET = withApiHandler(
     const paymentMethods = await prisma.paymentMethod.findMany({
       orderBy: [{ active: 'desc' }, { order: 'asc' }, { name: 'asc' }],
       include: {
+        commissionTiers: {
+          orderBy: [{ minInstallments: 'asc' }],
+        },
         _count: {
           select: { payments: true },
         },
@@ -32,7 +35,7 @@ export const GET = withApiHandler(
  */
 export const POST = withApiHandler<PaymentMethodFormValues>(
   async (_request, _logger, { body }) => {
-    const { name, icon } = body
+    const { name, icon, hasInstallments, maxInstallments, commissionTiers } = body
 
     // Validar que no exista un método con el mismo nombre
     const existing = await prisma.paymentMethod.findUnique({
@@ -50,15 +53,31 @@ export const POST = withApiHandler<PaymentMethodFormValues>(
 
     const newOrder = (maxOrder._max.order || 0) + 1
 
-    // Crear método de pago
+    // Crear método de pago con tiers de comisión
     const paymentMethod = await prisma.paymentMethod.create({
       data: {
         name,
         icon: icon || null,
         order: newOrder,
         active: true,
+        hasInstallments: hasInstallments || false,
+        maxInstallments: maxInstallments || null,
+        commissionTiers:
+          commissionTiers && commissionTiers.length > 0
+            ? {
+                create: commissionTiers.map((tier) => ({
+                  minInstallments: tier.minInstallments,
+                  maxInstallments: tier.maxInstallments,
+                  percentageFee: tier.percentageFee,
+                  fixedFee: tier.fixedFee,
+                })),
+              }
+            : undefined,
       },
       include: {
+        commissionTiers: {
+          orderBy: [{ minInstallments: 'asc' }],
+        },
         _count: {
           select: { payments: true },
         },

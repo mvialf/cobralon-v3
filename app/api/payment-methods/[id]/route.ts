@@ -13,7 +13,7 @@ import {
 export const PUT = withApiHandler<PaymentMethodFormValues>(
   async (_request, _logger, { params, body }) => {
     const { id } = params
-    const { name, icon, hasInstallments, maxInstallments } = body
+    const { name, icon, hasInstallments, maxInstallments, commissionTiers } = body
 
     // Verificar que el método existe
     const existing = await prisma.paymentMethod.findUnique({
@@ -35,7 +35,7 @@ export const PUT = withApiHandler<PaymentMethodFormValues>(
       }
     }
 
-    // Actualizar método de pago
+    // Actualizar método de pago con reemplazo atómico de tiers
     const updated = await prisma.paymentMethod.update({
       where: { id },
       data: {
@@ -43,8 +43,23 @@ export const PUT = withApiHandler<PaymentMethodFormValues>(
         icon: icon || null,
         hasInstallments,
         maxInstallments,
+        commissionTiers: {
+          deleteMany: {},
+          create:
+            commissionTiers && commissionTiers.length > 0
+              ? commissionTiers.map((tier) => ({
+                  minInstallments: tier.minInstallments,
+                  maxInstallments: tier.maxInstallments,
+                  percentageFee: tier.percentageFee,
+                  fixedFee: tier.fixedFee,
+                }))
+              : [],
+        },
       },
       include: {
+        commissionTiers: {
+          orderBy: [{ minInstallments: 'asc' }],
+        },
         _count: {
           select: { payments: true },
         },
