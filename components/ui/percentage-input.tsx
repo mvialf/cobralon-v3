@@ -78,9 +78,11 @@ function PercentageInput({
   onFocus,
   onBlur,
 }: PercentageInputProps) {
-  // Handler para seleccionar todo el contenido al hacer doble click
-  const handleDoubleClick = (e: React.MouseEvent<HTMLInputElement>) => {
-    e.currentTarget.select()
+  // Handler para seleccionar todo el contenido al enfocar
+  const handleFocus = (e: React.FocusEvent<HTMLInputElement>) => {
+    // setTimeout necesario porque react-number-format reposiciona el cursor tras el focus
+    setTimeout(() => e.target.select(), 0)
+    onFocus?.(e)
   }
 
   return (
@@ -115,9 +117,9 @@ function PercentageInput({
       name={name}
       disabled={disabled}
       placeholder={placeholder}
-      onFocus={onFocus}
+      onFocus={handleFocus}
       onBlur={onBlur}
-      onDoubleClick={handleDoubleClick}
+      onDoubleClick={(e) => e.currentTarget.select()}
       className={cn(
         'flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-base shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 md:text-sm',
         'aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive',

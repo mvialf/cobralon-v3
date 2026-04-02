@@ -118,8 +118,10 @@ function CurrencyInput({
     }
   }, [locale, currency])
 
-  // Handler para focus
+  // Handler para focus - seleccionar todo el contenido para facilitar edición
   const handleFocus = (e: React.FocusEvent<HTMLInputElement>) => {
+    // setTimeout necesario porque react-number-format reposiciona el cursor tras el focus
+    setTimeout(() => e.target.select(), 0)
     onFocus?.(e)
   }
 

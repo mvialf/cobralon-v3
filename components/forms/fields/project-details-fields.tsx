@@ -52,6 +52,7 @@ export function ProjectDetailsFields({
                   min="0"
                   {...field}
                   onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
+                  onFocus={(e) => e.target.select()}
                   disabled={disabled}
                 />
               </FormControl>
@@ -74,6 +75,7 @@ export function ProjectDetailsFields({
                   min="0"
                   {...field}
                   onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
+                  onFocus={(e) => e.target.select()}
                   disabled={disabled}
                 />
               </FormControl>
