@@ -29,6 +29,11 @@ export const GET = withApiHandler(
     const adjustments = await prisma.projectAdjustment.findMany({
       where: { projectId: params.id },
       orderBy: { appliedAt: 'desc' },
+      include: {
+        adjustmentReason: {
+          select: { name: true, warningLevel: true },
+        },
+      },
     })
 
     // Convertir Decimal a number para la respuesta JSON
@@ -53,7 +58,7 @@ export const GET = withApiHandler(
  */
 export const POST = withApiHandler<CreateProjectAdjustmentInput>(
   async (_request, _logger, { params, body }) => {
-    const { amount, reason, description, appliedAt } = body
+    const { amount, reason, reasonId, description, appliedAt } = body
 
     // Verificar que el proyecto existe
     const project = await prisma.project.findUnique({
@@ -89,6 +94,7 @@ export const POST = withApiHandler<CreateProjectAdjustmentInput>(
           projectId: params.id,
           amount: new Decimal(amount),
           reason,
+          reasonId: reasonId || null,
           description: description || null,
           appliedAt: appliedAt || new Date(),
         },

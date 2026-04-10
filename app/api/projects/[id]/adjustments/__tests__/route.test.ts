@@ -153,6 +153,11 @@ describe('GET /api/projects/[id]/adjustments', () => {
     expect(prisma.projectAdjustment.findMany).toHaveBeenCalledWith({
       where: { projectId: validProjectId },
       orderBy: { appliedAt: 'desc' },
+      include: {
+        adjustmentReason: {
+          select: { name: true, warningLevel: true },
+        },
+      },
     })
   })
 

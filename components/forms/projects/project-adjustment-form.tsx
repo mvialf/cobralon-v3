@@ -6,9 +6,9 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import {
   projectAdjustmentFormSchema,
   type ProjectAdjustmentFormValues,
-  ADJUSTMENT_REASONS,
   defaultProjectAdjustmentValues,
 } from '@/lib/validations/project-adjustment-validations'
+import { useAdjustmentReasons } from '@/hooks/queries/use-adjustment-reasons'
 import { formatCurrency } from '@/lib/format'
 
 import { Button } from '@/components/ui/button'
@@ -50,6 +50,10 @@ export function ProjectAdjustmentForm({
   currentBalance,
   currency,
 }: ProjectAdjustmentFormProps) {
+  const { data: adjustmentReasons = [], isLoading: loadingReasons } = useAdjustmentReasons()
+  // Filtrar solo razones activas
+  const activeReasons = adjustmentReasons.filter((r) => r.isActive)
+
   const form = useForm<ProjectAdjustmentFormValues>({
     resolver: zodResolver(projectAdjustmentFormSchema),
     defaultValues: defaultProjectAdjustmentValues,
@@ -75,16 +79,29 @@ export function ProjectAdjustmentForm({
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Razón del ajuste</FormLabel>
-                <Select onValueChange={field.onChange} value={field.value}>
+                <Select
+                  onValueChange={(value) => {
+                    // Guardar nombre de la razón y su ID
+                    const selected = activeReasons.find((r) => r.id === value)
+                    if (selected) {
+                      field.onChange(selected.name)
+                      form.setValue('reasonId', selected.id)
+                    }
+                  }}
+                  value={activeReasons.find((r) => r.name === field.value)?.id || ''}
+                  disabled={loadingReasons}
+                >
                   <FormControl>
                     <SelectTrigger>
-                      <SelectValue placeholder="Selecciona una razón" />
+                      <SelectValue
+                        placeholder={loadingReasons ? 'Cargando...' : 'Selecciona una razón'}
+                      />
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
-                    {ADJUSTMENT_REASONS.map((reason) => (
-                      <SelectItem key={reason} value={reason}>
-                        {reason}
+                    {activeReasons.map((reason) => (
+                      <SelectItem key={reason.id} value={reason.id}>
+                        {reason.name}
                       </SelectItem>
                     ))}
                   </SelectContent>

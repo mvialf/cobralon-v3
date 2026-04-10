@@ -568,6 +568,26 @@ async function main() {
   console.log(`    - Proyecto 006: $450k - $0 = $450k pendiente`)
   console.log(`    Total pendiente: $1,050k`)
 
+  // Seed adjustment reasons
+  console.log('\n📋 Seeding adjustment reasons...')
+  const adjustmentReasons = [
+    { name: 'Condonación de saldo menor', warningLevel: 'none', order: 1 },
+    { name: 'Descuento por pronto pago', warningLevel: 'none', order: 2 },
+    { name: 'Descuento comercial', warningLevel: 'none', order: 3 },
+    { name: 'Ajuste por error administrativo', warningLevel: 'none', order: 4 },
+    { name: 'Cliente no pagó saldo', warningLevel: 'critical', order: 5 },
+    { name: 'Otro', warningLevel: 'caution', order: 6 },
+  ]
+
+  for (const reason of adjustmentReasons) {
+    await prisma.adjustmentReason.upsert({
+      where: { name: reason.name },
+      update: { warningLevel: reason.warningLevel, order: reason.order },
+      create: reason,
+    })
+  }
+  console.log(`  ✅ ${adjustmentReasons.length} razones de ajuste creadas`)
+
   console.log('\n🎉 Seed completed successfully!')
 }
 

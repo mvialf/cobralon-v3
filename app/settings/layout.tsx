@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Globe, ListTodo, CreditCard, Upload } from 'lucide-react'
+import { Globe, ListTodo, CreditCard, Upload, FileWarning } from 'lucide-react'
 import { AppLayout } from '@/components/layout/app-layout'
 import { cn } from '@/lib/utils'
 
@@ -32,6 +32,11 @@ const settingsSections: SettingsSection[] = [
     title: 'Métodos de Pago',
     href: '/settings/payments',
     icon: CreditCard,
+  },
+  {
+    title: 'Razones de Ajuste',
+    href: '/settings/adjustment-reasons',
+    icon: FileWarning,
   },
 ]
 

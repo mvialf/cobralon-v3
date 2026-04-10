@@ -518,15 +518,34 @@ model ProjectAdjustment {
   id          String   @id @default(uuid())
   projectId   String
   amount      Decimal  @db.Decimal(12, 2) // Monto del ajuste (positivo = reduce balance)
-  reason      String   // Razón predefinida o personalizada
+  reason      String   // Nombre de la razón (redundancia para datos legacy)
+  reasonId    String?  // FK a AdjustmentReason (nullable para migración gradual)
   description String?  @db.Text // Notas adicionales opcionales
   appliedAt   DateTime @default(now()) // Fecha en que se aplicó el ajuste
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  project          Project           @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  adjustmentReason AdjustmentReason? @relation(fields: [reasonId], references: [id], onDelete: SetNull)
 
   @@index([projectId])
   @@index([appliedAt])
+  @@index([reasonId])
   @@map("project_adjustments")
+}
+
+// Razones configurables para ajustes de proyecto
+// Cada razón tiene un nivel de advertencia que alimenta el historial del cliente
+model AdjustmentReason {
+  id           String              @id @default(uuid())
+  name         String              @unique
+  warningLevel String              @default("none") // "none" | "caution" | "critical"
+  isActive     Boolean             @default(true)
+  order        Int                 @default(0)
+  createdAt    DateTime            @default(now())
+  updatedAt    DateTime            @updatedAt
+  adjustments  ProjectAdjustment[]
+
+  @@index([order])
+  @@map("adjustment_reasons")
 }

@@ -4,14 +4,12 @@
  * Valida:
  * - createProjectAdjustmentSchema
  * - projectAdjustmentFormSchema
- * - ADJUSTMENT_REASONS constantes
  */
 
 import { describe, it, expect } from 'vitest'
 import {
   createProjectAdjustmentSchema,
   projectAdjustmentFormSchema,
-  ADJUSTMENT_REASONS,
   defaultProjectAdjustmentValues,
 } from '../project-adjustment-validations'
 
@@ -234,24 +232,6 @@ describe('projectAdjustmentFormSchema', () => {
       })
       expect(result.success).toBe(false)
     })
-  })
-})
-
-describe('ADJUSTMENT_REASONS', () => {
-  it('debe contener las 5 razones predefinidas', () => {
-    expect(ADJUSTMENT_REASONS).toHaveLength(5)
-  })
-
-  it('debe incluir las razones esperadas', () => {
-    expect(ADJUSTMENT_REASONS).toContain('Condonación de saldo menor')
-    expect(ADJUSTMENT_REASONS).toContain('Descuento por pronto pago')
-    expect(ADJUSTMENT_REASONS).toContain('Descuento comercial')
-    expect(ADJUSTMENT_REASONS).toContain('Ajuste por error administrativo')
-    expect(ADJUSTMENT_REASONS).toContain('Otro')
-  })
-
-  it('debe tener Otro como última opción', () => {
-    expect(ADJUSTMENT_REASONS[ADJUSTMENT_REASONS.length - 1]).toBe('Otro')
   })
 })
 

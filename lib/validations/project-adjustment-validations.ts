@@ -1,20 +1,6 @@
 import { z } from 'zod'
 
 /**
- * Razones predefinidas para ajustes de proyecto
- * Estas son las opciones que aparecerán en el dropdown
- */
-export const ADJUSTMENT_REASONS = [
-  'Condonación de saldo menor',
-  'Descuento por pronto pago',
-  'Descuento comercial',
-  'Ajuste por error administrativo',
-  'Otro',
-] as const
-
-export type AdjustmentReason = (typeof ADJUSTMENT_REASONS)[number]
-
-/**
  * Schema para crear un ajuste de proyecto
  */
 export const createProjectAdjustmentSchema = z.object({
@@ -23,6 +9,7 @@ export const createProjectAdjustmentSchema = z.object({
     .positive('El monto debe ser positivo')
     .max(999999999.99, 'El monto es demasiado grande'),
   reason: z.string({ required_error: 'La razón es requerida' }).min(1, 'La razón es requerida'),
+  reasonId: z.string().uuid().optional().nullable(),
   description: z.string().optional().nullable(),
   appliedAt: z.coerce.date().optional(),
 })
@@ -38,6 +25,7 @@ export const projectAdjustmentFormSchema = z.object({
     .positive('El monto debe ser positivo')
     .max(999999999.99, 'El monto es demasiado grande'),
   reason: z.string({ required_error: 'La razón es requerida' }).min(1, 'La razón es requerida'),
+  reasonId: z.string().uuid().optional().nullable(),
   description: z.string().optional(),
   appliedAt: z.coerce.date().optional(),
 })
@@ -52,10 +40,15 @@ export type ProjectAdjustment = {
   projectId: string
   amount: number
   reason: string
+  reasonId: string | null
   description: string | null
   appliedAt: Date
   createdAt: Date
   updatedAt: Date
+  adjustmentReason?: {
+    name: string
+    warningLevel: string
+  } | null
 }
 
 /**
@@ -64,5 +57,6 @@ export type ProjectAdjustment = {
 export const defaultProjectAdjustmentValues: Partial<ProjectAdjustmentFormValues> = {
   amount: undefined,
   reason: '',
+  reasonId: null,
   description: '',
 }
