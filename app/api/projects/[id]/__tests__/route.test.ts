@@ -63,7 +63,7 @@ vi.mock('@/lib/business-logic/project-balance', () => ({
 }))
 
 vi.mock('@/lib/business-logic/totals', () => ({
-  calculateProjectTotal: vi.fn((subtotal: number, taxRate: number) => {
+  calculateProjectTotal: vi.fn((subtotal: number, taxRate: number, _currency?: string) => {
     return subtotal * (1 + taxRate / 100)
   }),
 }))
@@ -253,21 +253,21 @@ describe('PUT /api/projects/[id]', () => {
       const request = createRequest('PUT', { subtotal: 2000000 })
       await PUT(request, createParams(VALID_UUID))
 
-      expect(calculateProjectTotal).toHaveBeenCalledWith(2000000, 19)
+      expect(calculateProjectTotal).toHaveBeenCalledWith(2000000, 19, 'CLP')
     })
 
     it('debe recalcular total cuando cambia taxRate', async () => {
       const request = createRequest('PUT', { taxRate: 21 })
       await PUT(request, createParams(VALID_UUID))
 
-      expect(calculateProjectTotal).toHaveBeenCalledWith(1000000, 21)
+      expect(calculateProjectTotal).toHaveBeenCalledWith(1000000, 21, 'CLP')
     })
 
     it('debe recalcular cuando cambian ambos', async () => {
       const request = createRequest('PUT', { subtotal: 2000000, taxRate: 21 })
       await PUT(request, createParams(VALID_UUID))
 
-      expect(calculateProjectTotal).toHaveBeenCalledWith(2000000, 21)
+      expect(calculateProjectTotal).toHaveBeenCalledWith(2000000, 21, 'CLP')
     })
 
     it('debe IGNORAR totalAmount enviado por cliente', async () => {
@@ -278,7 +278,7 @@ describe('PUT /api/projects/[id]', () => {
       })
       await PUT(request, createParams(VALID_UUID))
 
-      expect(calculateProjectTotal).toHaveBeenCalledWith(2000000, 19)
+      expect(calculateProjectTotal).toHaveBeenCalledWith(2000000, 19, 'CLP')
     })
   })
 

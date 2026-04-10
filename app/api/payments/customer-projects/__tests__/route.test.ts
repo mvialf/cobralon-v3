@@ -147,7 +147,7 @@ describe('GET /api/payments/customer-projects', () => {
     expect(prisma.project.findMany).toHaveBeenCalledWith(
       expect.objectContaining({
         where: expect.objectContaining({
-          balance: { gt: 0 },
+          balance: { gt: 1 },
         }),
       })
     )

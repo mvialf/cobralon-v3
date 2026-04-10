@@ -37,7 +37,7 @@ export const GET = withLogging(async (request, logger) => {
       FROM "Project" p
       JOIN "Customer" c ON c.id = p."customerId"
       WHERE p."totalAmount" > 0
-        AND p.balance > 0
+        AND p.balance > 1
         AND (
           normalize_text(p."projectNumber") LIKE normalize_text(${`%${q}%`})
           OR normalize_text(COALESCE(p."projectName", '')) LIKE normalize_text(${`%${q}%`})

@@ -18,6 +18,13 @@ export const FINANCIAL = {
   TOLERANCE: 0.01,
 
   /**
+   * Tolerancia para considerar un balance como "pagado"
+   * Residuos por redondeo menores a este valor no generan deuda real.
+   * Valor basado en CLP (1 peso = unidad mínima sin centavos).
+   */
+  BALANCE_TOLERANCE: 1,
+
+  /**
    * Tasa de IVA por defecto (Chile)
    * Porcentaje aplicado a subtotal para calcular impuestos
    */
@@ -69,26 +76,31 @@ export const CURRENCY_CONFIG = {
   CLP: {
     locale: 'es-CL',
     decimals: 0,
+    balanceTolerance: 1,
     name: 'Peso Chileno',
   },
   USD: {
     locale: 'en-US',
     decimals: 2,
+    balanceTolerance: 0.01,
     name: 'Dólar Estadounidense',
   },
   EUR: {
     locale: 'es-ES',
     decimals: 2,
+    balanceTolerance: 0.01,
     name: 'Euro',
   },
   ARS: {
     locale: 'es-AR',
     decimals: 2,
+    balanceTolerance: 0.01,
     name: 'Peso Argentino',
   },
   MXN: {
     locale: 'es-MX',
     decimals: 2,
+    balanceTolerance: 0.01,
     name: 'Peso Mexicano',
   },
 } as const
@@ -118,4 +130,14 @@ export type CurrencyInfo = (typeof CURRENCY_CONFIG)[CurrencyCode]
  */
 export function getCurrencyConfig(currency: string): CurrencyInfo {
   return CURRENCY_CONFIG[currency as CurrencyCode] || CURRENCY_CONFIG.CLP
+}
+
+/**
+ * Obtiene la tolerancia de balance para una moneda
+ *
+ * @param currency - Código de moneda ISO 4217
+ * @returns Tolerancia de balance (CLP: 1, USD/EUR: 0.01)
+ */
+export function getBalanceTolerance(currency: string): number {
+  return getCurrencyConfig(currency).balanceTolerance
 }

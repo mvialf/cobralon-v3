@@ -42,8 +42,8 @@ export function ProjectFinancialFields({ control, currency }: ProjectFinancialFi
   // Calcular total automáticamente usando business logic
   const total = React.useMemo(() => {
     if (!subtotal) return 0
-    return calculateProjectTotal(subtotal, taxRate || 0)
-  }, [subtotal, taxRate])
+    return calculateProjectTotal(subtotal, taxRate || 0, currency || 'CLP')
+  }, [subtotal, taxRate, currency])
 
   return (
     <FormGrid columns={3}>

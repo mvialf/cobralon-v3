@@ -9,7 +9,7 @@
  * @module business-logic/totals
  */
 
-import { FINANCIAL } from '../constants/financial-constants'
+import { FINANCIAL, getCurrencyConfig } from '../constants/financial-constants'
 
 function validateNonNegativeAmount(amount: number, fieldName: string) {
   if (amount < 0) {
@@ -63,13 +63,37 @@ function validateTaxRate(taxRate: number) {
  */
 export function calculateProjectTotal(
   subtotal: number,
-  taxRate: number = FINANCIAL.DEFAULT_TAX_RATE
+  taxRate: number = FINANCIAL.DEFAULT_TAX_RATE,
+  currency?: string
 ): number {
   validateNonNegativeAmount(subtotal, 'subtotal')
   validateTaxRate(taxRate)
 
   const tax = subtotal * (taxRate / 100)
-  return subtotal + tax
+  const total = subtotal + tax
+
+  return currency ? roundForCurrency(total, currency) : total
+}
+
+/**
+ * Redondea un monto según los decimales de la moneda
+ *
+ * CLP → 0 decimales (Math.round), USD/EUR → 2 decimales
+ *
+ * @param amount - Monto a redondear
+ * @param currency - Código de moneda ISO 4217 (default: 'CLP')
+ * @returns Monto redondeado según la moneda
+ *
+ * @example
+ * ```ts
+ * roundForCurrency(1378692.35, 'CLP') // => 1378692
+ * roundForCurrency(99.999, 'USD')     // => 100.00
+ * ```
+ */
+export function roundForCurrency(amount: number, currency: string = 'CLP'): number {
+  const { decimals } = getCurrencyConfig(currency)
+  const factor = Math.pow(10, decimals)
+  return Math.round(amount * factor) / factor
 }
 
 /**

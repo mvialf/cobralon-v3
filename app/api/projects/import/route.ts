@@ -100,7 +100,8 @@ export const POST = withLogging(async (request, logger) => {
         const subtotal = new Decimal(projectData.subtotal)
         const taxRate = new Decimal(projectData.taxRate)
         const taxMultiplier = taxRate.dividedBy(100).plus(1)
-        const totalAmount = subtotal.times(taxMultiplier)
+        // Redondear según moneda (importación siempre CLP = 0 decimales)
+        const totalAmount = subtotal.times(taxMultiplier).toDecimalPlaces(0, Decimal.ROUND_HALF_UP)
 
         // 4. Mini-transacción: crear customer (si falta) + crear proyecto
         const project = await prisma.$transaction(async (tx) => {

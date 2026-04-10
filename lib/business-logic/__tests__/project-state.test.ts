@@ -6,6 +6,7 @@ import {
   getFinishedProjectsWhere,
   getProjectStateWhere,
 } from '../project-state'
+import { FINANCIAL } from '../../constants/financial-constants'
 
 describe('calculateProjectState', () => {
   describe('estado "Finalizado"', () => {
@@ -55,11 +56,11 @@ describe('calculateProjectState', () => {
   })
 
   describe('edge cases', () => {
-    it('debe manejar balance negativo (crédito a favor) como "Activo"', () => {
-      // Balance negativo significa que el cliente tiene crédito a favor
+    it('debe manejar balance negativo (crédito a favor) como "Finalizado"', () => {
+      // Balance negativo = sobrepago, se considera pagado
       const result = calculateProjectState(-500, true)
 
-      expect(result).toBe('Activo')
+      expect(result).toBe('Finalizado')
     })
 
     it('debe manejar balances muy grandes', () => {
@@ -68,10 +69,17 @@ describe('calculateProjectState', () => {
       expect(result).toBe('Activo')
     })
 
-    it('debe manejar balances decimales exactos', () => {
-      const result = calculateProjectState(0.01, true)
+    it('debe considerar residuales dentro de tolerancia como "Finalizado"', () => {
+      // Residuales por redondeo (< BALANCE_TOLERANCE = 1) se consideran pagados
+      expect(calculateProjectState(0.01, true)).toBe('Finalizado')
+      expect(calculateProjectState(0.35, true)).toBe('Finalizado')
+      expect(calculateProjectState(0.99, true)).toBe('Finalizado')
+      expect(calculateProjectState(1, true)).toBe('Finalizado')
+    })
 
-      expect(result).toBe('Activo')
+    it('debe considerar balances mayores a tolerancia como "Activo"', () => {
+      expect(calculateProjectState(1.01, true)).toBe('Activo')
+      expect(calculateProjectState(2, true)).toBe('Activo')
     })
 
     it('debe manejar balance 0 con múltiples decimales (.00)', () => {
@@ -253,10 +261,10 @@ describe('getActiveProjectsWhere', () => {
     expect(where.OR).toContainEqual({ projectStatus: null })
   })
 
-  it('debe incluir condición balance > 0', () => {
+  it('debe incluir condición balance > BALANCE_TOLERANCE', () => {
     const where = getActiveProjectsWhere()
 
-    expect(where.OR).toContainEqual({ balance: { gt: 0 } })
+    expect(where.OR).toContainEqual({ balance: { gt: FINANCIAL.BALANCE_TOLERANCE } })
   })
 })
 
@@ -274,10 +282,10 @@ describe('getFinishedProjectsWhere', () => {
     expect(where.AND).toContainEqual({ projectStatus: { isFinal: true } })
   })
 
-  it('debe requerir balance=0', () => {
+  it('debe requerir balance <= BALANCE_TOLERANCE', () => {
     const where = getFinishedProjectsWhere()
 
-    expect(where.AND).toContainEqual({ balance: { equals: 0 } })
+    expect(where.AND).toContainEqual({ balance: { lte: FINANCIAL.BALANCE_TOLERANCE } })
   })
 })
 

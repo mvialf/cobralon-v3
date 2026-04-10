@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { withApiHandler, BusinessError } from '@/lib/api-handler'
+import { FINANCIAL } from '@/lib/constants/financial-constants'
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
@@ -36,7 +37,7 @@ export const GET = withApiHandler(
       where: {
         customerId,
         totalAmount: { gt: 0 },
-        balance: { gt: 0 },
+        balance: { gt: FINANCIAL.BALANCE_TOLERANCE },
       },
       include: {
         customer: { select: { id: true, name: true } },

@@ -99,7 +99,8 @@ export const PUT = withApiHandler<UpdateProjectApiBody>(
       const subtotal = body.subtotal ?? existingProject.subtotal.toNumber()
       const taxRate = body.taxRate ?? existingProject.taxRate.toNumber()
 
-      const calculatedTotal = calculateProjectTotal(subtotal, taxRate)
+      const projectCurrency = body.currency ?? existingProject.currency
+      const calculatedTotal = calculateProjectTotal(subtotal, taxRate, projectCurrency)
       updatedTotalAmount = new Decimal(calculatedTotal)
 
       if (

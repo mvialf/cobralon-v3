@@ -43,7 +43,7 @@ vi.mock('@/lib/queries/project-list', () => ({
 
 // Mock de business logic
 vi.mock('@/lib/business-logic/totals', () => ({
-  calculateProjectTotal: vi.fn((subtotal: number, taxRate: number) => {
+  calculateProjectTotal: vi.fn((subtotal: number, taxRate: number, _currency?: string) => {
     return subtotal * (1 + taxRate / 100)
   }),
 }))
@@ -257,7 +257,7 @@ describe('POST /api/projects', () => {
       await callPOST(request)
 
       // Verificar que se llamó a calculateProjectTotal
-      expect(calculateProjectTotal).toHaveBeenCalledWith(1000000, 19)
+      expect(calculateProjectTotal).toHaveBeenCalledWith(1000000, 19, 'CLP')
     })
 
     it('debe IGNORAR totalAmount enviado por cliente', async () => {
@@ -269,7 +269,7 @@ describe('POST /api/projects', () => {
       await callPOST(request)
 
       // El servidor debe haber calculado el valor correcto
-      expect(calculateProjectTotal).toHaveBeenCalledWith(1000000, 19)
+      expect(calculateProjectTotal).toHaveBeenCalledWith(1000000, 19, 'CLP')
     })
 
     it('debe usar taxRate 19 por defecto', async () => {
@@ -277,21 +277,21 @@ describe('POST /api/projects', () => {
       const request = createPostRequest(noTaxRate)
       await callPOST(request)
 
-      expect(calculateProjectTotal).toHaveBeenCalledWith(1000000, 19)
+      expect(calculateProjectTotal).toHaveBeenCalledWith(1000000, 19, 'CLP')
     })
 
     it('debe respetar taxRate enviado', async () => {
       const request = createPostRequest({ ...validPayload, taxRate: 21 })
       await callPOST(request)
 
-      expect(calculateProjectTotal).toHaveBeenCalledWith(1000000, 21)
+      expect(calculateProjectTotal).toHaveBeenCalledWith(1000000, 21, 'CLP')
     })
 
     it('debe aceptar taxRate 0 (exento)', async () => {
       const request = createPostRequest({ ...validPayload, taxRate: 0 })
       await callPOST(request)
 
-      expect(calculateProjectTotal).toHaveBeenCalledWith(1000000, 0)
+      expect(calculateProjectTotal).toHaveBeenCalledWith(1000000, 0, 'CLP')
     })
   })
 

@@ -2,9 +2,11 @@
  * Business logic for calculating project state
  *
  * Project State Classification:
- * - "Activo": Project is not finalized OR has pending balance
- * - "Finalizado": Project has final status AND balance is fully paid (0)
+ * - "Activo": Project is not finalized OR has pending balance (> BALANCE_TOLERANCE)
+ * - "Finalizado": Project has final status AND balance is within tolerance (≤ BALANCE_TOLERANCE)
  */
+
+import { FINANCIAL } from '../constants/financial-constants'
 
 export type ProjectState = 'Activo' | 'Finalizado'
 
@@ -38,7 +40,7 @@ export function calculateProjectState(
   balance: number,
   isFinal: boolean | undefined | null
 ): ProjectState {
-  const isFullyPaid = balance === 0
+  const isFullyPaid = balance <= FINANCIAL.BALANCE_TOLERANCE
   const hasFinalStatus = isFinal ?? false
 
   return isFullyPaid && hasFinalStatus ? 'Finalizado' : 'Activo'
@@ -81,7 +83,7 @@ export type ProjectStateWhereClause = {
   }>
   AND?: Array<{
     projectStatus?: { isFinal: boolean }
-    balance?: { equals: number }
+    balance?: { equals?: number; lte?: number; gte?: number }
   }>
 }
 
@@ -104,7 +106,11 @@ export type ProjectStateWhereClause = {
  */
 export function getActiveProjectsWhere(): ProjectStateWhereClause {
   return {
-    OR: [{ projectStatus: { isFinal: false } }, { projectStatus: null }, { balance: { gt: 0 } }],
+    OR: [
+      { projectStatus: { isFinal: false } },
+      { projectStatus: null },
+      { balance: { gt: FINANCIAL.BALANCE_TOLERANCE } },
+    ],
   }
 }
 
@@ -126,7 +132,7 @@ export function getActiveProjectsWhere(): ProjectStateWhereClause {
  */
 export function getFinishedProjectsWhere(): ProjectStateWhereClause {
   return {
-    AND: [{ projectStatus: { isFinal: true } }, { balance: { equals: 0 } }],
+    AND: [{ projectStatus: { isFinal: true } }, { balance: { lte: FINANCIAL.BALANCE_TOLERANCE } }],
   }
 }
 

@@ -12,6 +12,7 @@ import {
   FINANCIAL,
   CURRENCY_CONFIG,
   getCurrencyConfig,
+  getBalanceTolerance,
   type CurrencyCode,
 } from '../financial-constants'
 
@@ -73,6 +74,16 @@ describe('FINANCIAL', () => {
       expect(FINANCIAL.DECIMAL_PRECISION).toBe(FINANCIAL.TOLERANCE)
     })
   })
+
+  describe('BALANCE_TOLERANCE', () => {
+    it('debe ser 1 (1 peso CLP = unidad mínima)', () => {
+      expect(FINANCIAL.BALANCE_TOLERANCE).toBe(1)
+    })
+
+    it('debe ser mayor que TOLERANCE', () => {
+      expect(FINANCIAL.BALANCE_TOLERANCE).toBeGreaterThan(FINANCIAL.TOLERANCE)
+    })
+  })
 })
 
 describe('CURRENCY_CONFIG', () => {
@@ -81,6 +92,7 @@ describe('CURRENCY_CONFIG', () => {
       expect(CURRENCY_CONFIG.CLP).toBeDefined()
       expect(CURRENCY_CONFIG.CLP.locale).toBe('es-CL')
       expect(CURRENCY_CONFIG.CLP.decimals).toBe(0) // Sin decimales
+      expect(CURRENCY_CONFIG.CLP.balanceTolerance).toBe(1)
       expect(CURRENCY_CONFIG.CLP.name).toBe('Peso Chileno')
     })
   })
@@ -90,6 +102,7 @@ describe('CURRENCY_CONFIG', () => {
       expect(CURRENCY_CONFIG.USD).toBeDefined()
       expect(CURRENCY_CONFIG.USD.locale).toBe('en-US')
       expect(CURRENCY_CONFIG.USD.decimals).toBe(2) // Con decimales
+      expect(CURRENCY_CONFIG.USD.balanceTolerance).toBe(0.01)
       expect(CURRENCY_CONFIG.USD.name).toBe('Dólar Estadounidense')
     })
   })
@@ -171,6 +184,20 @@ describe('getCurrencyConfig', () => {
       const config = getCurrencyConfig(code)
       expect(config).toEqual(CURRENCY_CONFIG[code])
     })
+  })
+})
+
+describe('getBalanceTolerance', () => {
+  it('debe retornar 1 para CLP', () => {
+    expect(getBalanceTolerance('CLP')).toBe(1)
+  })
+
+  it('debe retornar 0.01 para USD', () => {
+    expect(getBalanceTolerance('USD')).toBe(0.01)
+  })
+
+  it('debe retornar tolerancia de CLP para moneda desconocida', () => {
+    expect(getBalanceTolerance('UNKNOWN')).toBe(1)
   })
 })
 

@@ -226,7 +226,8 @@ export const POST = withApiHandler<CreateProjectApiBody>(
 
     // SEGURIDAD: Siempre calcular totalAmount en el servidor
     const finalTaxRate = taxRate ?? 19
-    const calculatedTotal = calculateProjectTotal(subtotal, finalTaxRate)
+    const projectCurrency = currency || 'CLP'
+    const calculatedTotal = calculateProjectTotal(subtotal, finalTaxRate, projectCurrency)
     const finalTotalAmount = calculatedTotal
 
     // Auditoría: Loggear si el cliente envió un totalAmount diferente

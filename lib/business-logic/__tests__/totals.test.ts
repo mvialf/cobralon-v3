@@ -4,6 +4,7 @@ import {
   calculateTax,
   validateProjectTotal,
   calculateSubtotalFromTotal,
+  roundForCurrency,
 } from '../totals'
 
 describe('calculateProjectTotal', () => {
@@ -177,6 +178,47 @@ describe('validateProjectTotal - edge cases de tolerancia', () => {
 
     // Cliente intenta pagar de más (sospechoso)
     expect(validateProjectTotal(1000, 19, 1500)).toBe(false)
+  })
+})
+
+describe('roundForCurrency', () => {
+  it('debe redondear a entero para CLP (0 decimales)', () => {
+    expect(roundForCurrency(1378692.35, 'CLP')).toBe(1378692)
+    expect(roundForCurrency(1378692.5, 'CLP')).toBe(1378693)
+    expect(roundForCurrency(1378692.49, 'CLP')).toBe(1378692)
+  })
+
+  it('debe redondear a 2 decimales para USD', () => {
+    expect(roundForCurrency(99.999, 'USD')).toBe(100.00)
+    expect(roundForCurrency(99.994, 'USD')).toBe(99.99)
+  })
+
+  it('debe usar CLP por defecto', () => {
+    expect(roundForCurrency(100.7)).toBe(101)
+  })
+
+  it('debe usar CLP para moneda desconocida', () => {
+    expect(roundForCurrency(100.7, 'UNKNOWN')).toBe(101)
+  })
+})
+
+describe('calculateProjectTotal con currency', () => {
+  it('debe redondear para CLP (caso del bug: 1158565 * 1.19)', () => {
+    // Este es el caso real del proyecto 19844
+    const result = calculateProjectTotal(1158565, 19, 'CLP')
+    expect(result).toBe(1378692) // Sin decimales
+    expect(Number.isInteger(result)).toBe(true)
+  })
+
+  it('debe mantener decimales para USD', () => {
+    const result = calculateProjectTotal(100, 19, 'USD')
+    expect(result).toBe(119)
+  })
+
+  it('sin currency debe mantener comportamiento original (sin redondeo)', () => {
+    const result = calculateProjectTotal(1158565, 19)
+    // Resultado con decimales de punto flotante
+    expect(result).toBeCloseTo(1378692.35, 2)
   })
 })
 
