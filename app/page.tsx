@@ -72,7 +72,7 @@ async function getUpcomingInstallments() {
 
 async function getRecentProjects() {
   const projects = await prisma.project.findMany({
-    orderBy: { createdAt: 'desc' },
+    orderBy: { date: 'desc' },
     take: 15,
     select: {
       id: true,
