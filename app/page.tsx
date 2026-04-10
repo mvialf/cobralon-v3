@@ -208,8 +208,8 @@ export default async function HomePage() {
           linkHref="/payments/installments"
           linkLabel="Ver todas las cuotas"
           emptyMessage="Sin cuotas pendientes"
-          items={installments.map((inst) => ({
-            id: inst.id,
+          items={installments.map((inst, idx) => ({
+            id: `${inst.id}-${idx}`,
             left: inst.project ? (
               <ProjectNameSummary
                 projectId={inst.project.id}
