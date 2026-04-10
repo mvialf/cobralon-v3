@@ -10,6 +10,8 @@ interface PaymentProgressSummaryProps {
   totalPaid: number
   /** Porcentaje pagado (0-100, puede tener decimales ej: 67.45) */
   percentPaid: number
+  /** Si el estado del proyecto es final (ej: Completado). Cambia badge a warning si hay balance pendiente */
+  isFinal?: boolean
   /** Código de moneda (ej: "CLP", "USD"). Si no se provee, usa configuración global */
   currency?: string
   /** Locale para formateo (ej: "es-CL", "en-US"). Si no se provee, usa configuración global */
@@ -29,15 +31,25 @@ function getCurrencyDecimals(currency: string): number {
 }
 
 /**
- * Determina el variant del Badge según el porcentaje pagado
- * Usa los umbrales definidos en PAYMENT_PROGRESS_THRESHOLDS
+ * Determina el variant del Badge según el porcentaje pagado y estado del proyecto
+ *
+ * Si el proyecto está en estado final (ej: Completado) pero no está 100% pagado,
+ * usa variant 'warning' (amarillo) para indicar que necesita ajuste/condonación.
  */
 function determineVariant(
-  percentPaid: number
-): 'success' | 'default' | 'secondary' | 'destructive' {
+  percentPaid: number,
+  isFinal?: boolean
+): 'success' | 'default' | 'secondary' | 'destructive' | 'warning' {
   if (percentPaid >= PAYMENT_PROGRESS_THRESHOLDS.COMPLETE) {
     return 'success' // Verde - Completamente pagado
-  } else if (percentPaid >= PAYMENT_PROGRESS_THRESHOLDS.HIGH) {
+  }
+
+  // Trabajo terminado pero balance pendiente → necesita atención
+  if (isFinal) {
+    return 'warning'
+  }
+
+  if (percentPaid >= PAYMENT_PROGRESS_THRESHOLDS.HIGH) {
     return 'default' // Neutral - Buen progreso
   } else if (percentPaid >= PAYMENT_PROGRESS_THRESHOLDS.MEDIUM) {
     return 'secondary' // Secundario - Progreso medio
@@ -80,6 +92,7 @@ function formatCurrency(amount: number, currency: string, locale: string): strin
 export function PaymentProgressSummary({
   totalPaid,
   percentPaid,
+  isFinal,
   currency: propCurrency,
   locale: propLocale,
   className,
@@ -93,8 +106,8 @@ export function PaymentProgressSummary({
   // Redondear porcentaje para mostrar (sin decimales)
   const percentRounded = Math.round(percentPaid)
 
-  // Determinar color del badge según umbrales
-  const variant = determineVariant(percentPaid)
+  // Determinar color del badge según umbrales y estado
+  const variant = determineVariant(percentPaid, isFinal)
 
   // Formatear monto con configuración regional
   const formattedAmount = formatCurrency(totalPaid, effectiveCurrency, effectiveLocale)

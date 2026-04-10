@@ -156,6 +156,7 @@ export const createColumns = ({
         <PaymentProgressSummary
           totalPaid={row.original.totalPaid}
           percentPaid={row.original.percentPaid}
+          isFinal={row.original.projectStatus?.isFinal}
         />
       )
     },
