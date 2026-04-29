@@ -340,11 +340,12 @@ describe('POST /api/payments', () => {
       expect(response.status).toBe(201)
     })
 
-    it('debe rechazar suma fuera de tolerancia', async () => {
+    it('debe rechazar suma fuera de tolerancia (CLP: diff >= $1)', async () => {
+      // CLP no tiene centavos, tolerancia = $1. Diferencia de $2 debe rechazarse.
       const request = createRequest({
         ...validPayload,
         amount: 100000,
-        allocations: [{ projectId: 'project-1', allocatedAmount: 100000.02 }],
+        allocations: [{ projectId: 'project-1', allocatedAmount: 100002 }],
       })
       const response = await callPOST(request)
 
