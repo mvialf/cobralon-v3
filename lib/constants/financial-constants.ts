@@ -8,49 +8,30 @@
  */
 
 /**
- * Constantes para cálculos financieros y validaciones
+ * Constantes financieras del sistema. Tolerancias monetarias se obtienen
+ * a través de `getBalanceTolerance(currency)` (más abajo) en lugar de
+ * constantes globales — distintas monedas tienen distinta granularidad.
  */
 export const FINANCIAL = {
-  /**
-   * Tolerancia para comparación de montos decimales (centavos)
-   * Usado en validaciones de suma de allocations
-   */
-  TOLERANCE: 0.01,
-
-  /**
-   * Tolerancia para considerar un balance como "pagado"
-   * Residuos por redondeo menores a este valor no generan deuda real.
-   * Valor basado en CLP (1 peso = unidad mínima sin centavos).
-   */
-  BALANCE_TOLERANCE: 1,
-
-  /**
-   * Tasa de IVA por defecto (Chile)
-   * Porcentaje aplicado a subtotal para calcular impuestos
-   */
+  /** Tasa de IVA por defecto (Chile) */
   DEFAULT_TAX_RATE: 19,
 
-  /**
-   * Rango válido para tasas de impuesto
-   */
+  /** Rango válido para tasas de impuesto */
   MIN_TAX_RATE: 0,
   MAX_TAX_RATE: 100,
 
-  /**
-   * Rango válido para cuotas sin interés
-   */
+  /** Rango válido para cuotas sin interés */
   MIN_INSTALLMENTS: 1,
   MAX_INSTALLMENTS: 12,
 
-  /**
-   * Días entre vencimientos de cuotas
-   * Usado para calcular fechas de vencimiento
-   */
+  /** Días entre vencimientos de cuotas */
   DAYS_PER_INSTALLMENT: 30,
 
   /**
-   * Precisión decimal para montos monetarios
-   * Usado en validaciones de Zod (multipleOf)
+   * Precisión decimal para montos monetarios.
+   * Usado en validaciones de Zod (multipleOf). Equivale a centavos (USD/EUR).
+   * Para CLP (sin centavos) la validación se relaja en lógica de negocio
+   * vía `getBalanceTolerance('CLP')`.
    */
   DECIMAL_PRECISION: 0.01,
 

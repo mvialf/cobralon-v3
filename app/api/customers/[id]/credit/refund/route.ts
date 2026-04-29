@@ -15,29 +15,29 @@ export const POST = withApiHandler<RefundCreditFormData>(
   async (_request, logger, { params, body }) => {
     const customerId = params.id
 
-    // Obtener cliente actual
-    const customer = await prisma.customer.findUnique({
-      where: { id: customerId },
-      select: { id: true, name: true },
-    })
-
-    if (!customer) {
-      throw new BusinessError('Cliente no encontrado', 404)
-    }
-
-    // Calcular creditBalance desde ledger
-    const creditBalance = await getCustomerCreditBalance(customerId)
-
-    // Validar que se puede hacer la devolución
-    const validation = canRefundCredit(body.amount, creditBalance)
-
-    if (!validation.valid) {
-      throw new BusinessError(validation.error!)
-    }
-
-    // Procesar devolución en transacción atómica
+    // Procesar devolución en transacción atómica.
+    // Lectura, validación y escritura se hacen DENTRO de la tx con lock pesimista
+    // sobre el Customer para evitar race conditions: dos refunds concurrentes
+    // (o un refund concurrente con un pago aplicando crédito) podrían leer el
+    // mismo saldo y consumir crédito que ya no existe.
     const result = await prisma.$transaction(async (tx: PrismaTransaction) => {
-      // 1. Crear registro de transacción de crédito
+      // Lock pesimista. Falla con P2025 si el cliente no existe.
+      const lockedRows = await tx.$queryRaw<Array<{ id: string; name: string }>>`
+        SELECT id, name FROM "Customer" WHERE id = ${customerId}::uuid FOR UPDATE
+      `
+      if (lockedRows.length === 0) {
+        throw new BusinessError('Cliente no encontrado', 404)
+      }
+      const customerName = lockedRows[0].name
+
+      // Re-leer saldo dentro de la tx (con lock ya tomado)
+      const creditBalance = await getCustomerCreditBalance(customerId, tx)
+
+      const validation = canRefundCredit(body.amount, creditBalance)
+      if (!validation.valid) {
+        throw new BusinessError(validation.error!)
+      }
+
       const transaction = await tx.creditTransaction.create({
         data: {
           customerId,
@@ -52,20 +52,22 @@ export const POST = withApiHandler<RefundCreditFormData>(
         },
       })
 
-      // 2. Obtener creditBalance actualizado desde ledger (dentro de tx)
       const newCreditBalance = await getCustomerCreditBalance(customerId, tx)
 
-      // 3. Obtener customer actualizado
       const updatedCustomer = await tx.customer.findUnique({
         where: { id: customerId },
       })
 
-      return { customer: { ...updatedCustomer, creditBalance: newCreditBalance }, transaction }
+      return {
+        customer: { ...updatedCustomer, creditBalance: newCreditBalance },
+        transaction,
+        customerName,
+      }
     })
 
     logger.info(
       { customerId, amount: body.amount, method: body.refundMethod },
-      `Credit refund processed for ${customer.name}`
+      `Credit refund processed for ${result.customerName}`
     )
 
     return NextResponse.json({

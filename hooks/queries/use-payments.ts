@@ -318,7 +318,12 @@ export function useCreatePayment() {
       // 2. Sum de allocations === amount
       // 3. No projectIds duplicados
       // 4. Todos los montos positivos
-      const validation = validatePaymentAllocations(data.type, data.amount, data.allocations)
+      const validation = validatePaymentAllocations(
+        data.type,
+        data.amount,
+        data.allocations,
+        data.currency
+      )
       if (!validation.valid) {
         throw new Error(validation.error)
       }

@@ -474,26 +474,26 @@ describe('calculateMaxCreditApplication', () => {
 describe('canApplyCredit', () => {
   describe('casos válidos', () => {
     it('debe permitir aplicar crédito dentro de límites', () => {
-      const result = canApplyCredit(50000, 100000, 200000)
+      const result = canApplyCredit(50000, 100000, 200000, 'CLP')
 
       expect(result.valid).toBe(true)
       expect(result.error).toBeUndefined()
     })
 
     it('debe permitir aplicar todo el crédito disponible', () => {
-      const result = canApplyCredit(100000, 100000, 200000)
+      const result = canApplyCredit(100000, 100000, 200000, 'CLP')
 
       expect(result.valid).toBe(true)
     })
 
     it('debe permitir aplicar crédito hasta el balance del proyecto', () => {
-      const result = canApplyCredit(200000, 500000, 200000)
+      const result = canApplyCredit(200000, 500000, 200000, 'CLP')
 
       expect(result.valid).toBe(true)
     })
 
     it('debe permitir aplicar crédito exacto a ambos límites', () => {
-      const result = canApplyCredit(100000, 100000, 100000)
+      const result = canApplyCredit(100000, 100000, 100000, 'CLP')
 
       expect(result.valid).toBe(true)
     })
@@ -501,14 +501,14 @@ describe('canApplyCredit', () => {
 
   describe('casos inválidos - validación de monto', () => {
     it('debe rechazar monto negativo', () => {
-      const result = canApplyCredit(-100, 100000, 200000)
+      const result = canApplyCredit(-100, 100000, 200000, 'CLP')
 
       expect(result.valid).toBe(false)
       expect(result.error).toBe('El monto debe ser positivo')
     })
 
     it('debe rechazar monto 0', () => {
-      const result = canApplyCredit(0, 100000, 200000)
+      const result = canApplyCredit(0, 100000, 200000, 'CLP')
 
       expect(result.valid).toBe(false)
       expect(result.error).toBe('El monto debe ser mayor a 0')
@@ -517,7 +517,7 @@ describe('canApplyCredit', () => {
 
   describe('casos inválidos - crédito insuficiente', () => {
     it('debe rechazar cuando excede crédito disponible', () => {
-      const result = canApplyCredit(150000, 100000, 200000)
+      const result = canApplyCredit(150000, 100000, 200000, 'CLP')
 
       expect(result.valid).toBe(false)
       expect(result.error).toContain('Crédito insuficiente')
@@ -525,7 +525,7 @@ describe('canApplyCredit', () => {
     })
 
     it('debe mostrar formato CLP en error', () => {
-      const result = canApplyCredit(200000, 50000, 300000)
+      const result = canApplyCredit(200000, 50000, 300000, 'CLP')
 
       expect(result.valid).toBe(false)
       expect(result.error).toContain('$50.000')
@@ -534,7 +534,7 @@ describe('canApplyCredit', () => {
 
   describe('casos inválidos - excede balance del proyecto', () => {
     it('debe rechazar cuando excede balance del proyecto', () => {
-      const result = canApplyCredit(250000, 500000, 200000)
+      const result = canApplyCredit(250000, 500000, 200000, 'CLP')
 
       expect(result.valid).toBe(false)
       expect(result.error).toContain('excede el balance del proyecto')
@@ -542,7 +542,7 @@ describe('canApplyCredit', () => {
     })
 
     it('debe mostrar formato CLP en error de balance', () => {
-      const result = canApplyCredit(150000, 300000, 100000)
+      const result = canApplyCredit(150000, 300000, 100000, 'CLP')
 
       expect(result.valid).toBe(false)
       expect(result.error).toContain('$100.000')
@@ -551,14 +551,14 @@ describe('canApplyCredit', () => {
 
   describe('múltiples validaciones fallando', () => {
     it('debe priorizar validación de monto negativo', () => {
-      const result = canApplyCredit(-100, 0, 0)
+      const result = canApplyCredit(-100, 0, 0, 'CLP')
 
       expect(result.valid).toBe(false)
       expect(result.error).toBe('El monto debe ser positivo')
     })
 
     it('debe priorizar validación de monto 0', () => {
-      const result = canApplyCredit(0, 0, 0)
+      const result = canApplyCredit(0, 0, 0, 'CLP')
 
       expect(result.valid).toBe(false)
       expect(result.error).toBe('El monto debe ser mayor a 0')
@@ -567,7 +567,7 @@ describe('canApplyCredit', () => {
     it('debe validar crédito antes que balance', () => {
       // Monto: 100k, Crédito: 50k, Balance: 30k
       // Falla en crédito insuficiente primero
-      const result = canApplyCredit(100000, 50000, 30000)
+      const result = canApplyCredit(100000, 50000, 30000, 'CLP')
 
       expect(result.valid).toBe(false)
       expect(result.error).toContain('Crédito insuficiente')
@@ -577,7 +577,7 @@ describe('canApplyCredit', () => {
   describe('escenarios de negocio', () => {
     it('cliente intenta usar más crédito del que tiene', () => {
       // Cliente tiene $100k, intenta aplicar $150k
-      const result = canApplyCredit(150000, 100000, 500000)
+      const result = canApplyCredit(150000, 100000, 500000, 'CLP')
 
       expect(result.valid).toBe(false)
       expect(result.error).toContain('Crédito insuficiente')
@@ -585,7 +585,7 @@ describe('canApplyCredit', () => {
 
     it('cliente intenta aplicar más que el balance pendiente', () => {
       // Balance proyecto: $50k, cliente tiene $200k, intenta aplicar $100k
-      const result = canApplyCredit(100000, 200000, 50000)
+      const result = canApplyCredit(100000, 200000, 50000, 'CLP')
 
       expect(result.valid).toBe(false)
       expect(result.error).toContain('excede el balance del proyecto')
@@ -593,7 +593,7 @@ describe('canApplyCredit', () => {
 
     it('aplicación válida de crédito parcial', () => {
       // Cliente tiene $500k, proyecto debe $1M, aplica $300k
-      const result = canApplyCredit(300000, 500000, 1000000)
+      const result = canApplyCredit(300000, 500000, 1000000, 'CLP')
 
       expect(result.valid).toBe(true)
     })

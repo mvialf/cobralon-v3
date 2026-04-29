@@ -12,7 +12,7 @@
  * @module validations/payment-business-rules
  */
 
-import { FINANCIAL } from '../constants/financial-constants'
+import { getBalanceTolerance } from '../constants/financial-constants'
 
 // ============================================================================
 // TYPES
@@ -90,39 +90,26 @@ export function validatePaymentType(
 }
 
 /**
- * Valida que la suma de allocations sea igual al monto total del pago
+ * Valida que la suma de allocations sea igual al monto total del pago.
  *
- * Usa tolerancia financiera (FINANCIAL.TOLERANCE = 0.01) para evitar
- * problemas de punto flotante.
+ * Usa tolerancia por moneda (`getBalanceTolerance`): CLP=1, USD/EUR=0.01, etc.
+ * En CLP no existen centavos, por lo que un desfase de centésimas es aceptable
+ * y un desfase >= $1 es rechazado.
  *
  * @param amount - Monto total del pago
  * @param allocations - Array de allocations
+ * @param currency - Código de moneda ISO (CLP, USD, EUR, ...)
  * @returns Resultado de validación
- *
- * @example
- * ```ts
- * // Válido: suma exacta
- * validateAllocationsSum(1000, [
- *   { projectId: 'abc', allocatedAmount: 600 },
- *   { projectId: 'def', allocatedAmount: 400 }
- * ])
- * // => { valid: true }
- *
- * // Inválido: suma no coincide
- * validateAllocationsSum(1000, [
- *   { projectId: 'abc', allocatedAmount: 500 }
- * ])
- * // => { valid: false, error: '...' }
- * ```
  */
 export function validateAllocationsSum(
   amount: number,
-  allocations: AllocationForValidation[]
+  allocations: AllocationForValidation[],
+  currency: string
 ): ValidationResult {
   const totalAllocated = allocations.reduce((sum, a) => sum + a.allocatedAmount, 0)
   const difference = Math.abs(totalAllocated - amount)
 
-  if (difference > FINANCIAL.TOLERANCE) {
+  if (difference > getBalanceTolerance(currency)) {
     return {
       valid: false,
       error: `Las asignaciones ($${totalAllocated.toFixed(2)}) no suman el monto total ($${amount.toFixed(2)})`,
@@ -230,14 +217,15 @@ export function validatePositiveAllocations(
 export function validatePaymentAllocations(
   type: PaymentType,
   amount: number,
-  allocations: AllocationForValidation[]
+  allocations: AllocationForValidation[],
+  currency: string
 ): ValidationResult {
   // 1. Validar tipo vs cantidad de allocations
   const typeResult = validatePaymentType(type, allocations)
   if (!typeResult.valid) return typeResult
 
   // 2. Validar suma de allocations
-  const sumResult = validateAllocationsSum(amount, allocations)
+  const sumResult = validateAllocationsSum(amount, allocations, currency)
   if (!sumResult.valid) return sumResult
 
   // 3. Validar no duplicados

@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { FINANCIAL } from '../constants/financial-constants'
+import { FINANCIAL, getBalanceTolerance } from '../constants/financial-constants'
 
 // Re-export business logic functions for convenience
 export { calculateProjectBalance } from '../business-logic/project-balance'
@@ -415,7 +415,8 @@ export const paymentToCustomerSchema = z
       const totalAllocated = data.allocations
         .filter((a) => a.allocatedAmount > 0)
         .reduce((sum, a) => sum + a.allocatedAmount, 0)
-      return Math.abs(totalAllocated - data.amount) < FINANCIAL.TOLERANCE
+      // Tolerancia laxa (CLP=1). El backend re-valida con la currency exacta del pago.
+      return Math.abs(totalAllocated - data.amount) <= getBalanceTolerance('CLP')
     },
     {
       message: 'La suma de los montos asignados debe ser igual al monto total del pago',

@@ -6,7 +6,7 @@
  * - "Finalizado": Project has final status AND balance is within tolerance (≤ BALANCE_TOLERANCE)
  */
 
-import { FINANCIAL } from '../constants/financial-constants'
+import { getBalanceTolerance } from '../constants/financial-constants'
 
 export type ProjectState = 'Activo' | 'Finalizado'
 
@@ -38,9 +38,10 @@ export type ProjectStateFilter = ProjectState | 'all'
  */
 export function calculateProjectState(
   balance: number,
-  isFinal: boolean | undefined | null
+  isFinal: boolean | undefined | null,
+  currency: string = 'CLP'
 ): ProjectState {
-  const isFullyPaid = balance <= FINANCIAL.BALANCE_TOLERANCE
+  const isFullyPaid = balance <= getBalanceTolerance(currency)
   const hasFinalStatus = isFinal ?? false
 
   return isFullyPaid && hasFinalStatus ? 'Finalizado' : 'Activo'
@@ -58,11 +59,12 @@ export function calculateProjectState(
 export function matchesProjectState(
   projectBalance: number,
   projectIsFinal: boolean | undefined | null,
-  filterState: ProjectStateFilter
+  filterState: ProjectStateFilter,
+  currency: string = 'CLP'
 ): boolean {
   if (filterState === 'all') return true
 
-  const projectState = calculateProjectState(projectBalance, projectIsFinal)
+  const projectState = calculateProjectState(projectBalance, projectIsFinal, currency)
   return projectState === filterState
 }
 
@@ -104,12 +106,12 @@ export type ProjectStateWhereClause = {
  * })
  * ```
  */
-export function getActiveProjectsWhere(): ProjectStateWhereClause {
+export function getActiveProjectsWhere(currency: string = 'CLP'): ProjectStateWhereClause {
   return {
     OR: [
       { projectStatus: { isFinal: false } },
       { projectStatus: null },
-      { balance: { gt: FINANCIAL.BALANCE_TOLERANCE } },
+      { balance: { gt: getBalanceTolerance(currency) } },
     ],
   }
 }
@@ -130,9 +132,12 @@ export function getActiveProjectsWhere(): ProjectStateWhereClause {
  * })
  * ```
  */
-export function getFinishedProjectsWhere(): ProjectStateWhereClause {
+export function getFinishedProjectsWhere(currency: string = 'CLP'): ProjectStateWhereClause {
   return {
-    AND: [{ projectStatus: { isFinal: true } }, { balance: { lte: FINANCIAL.BALANCE_TOLERANCE } }],
+    AND: [
+      { projectStatus: { isFinal: true } },
+      { balance: { lte: getBalanceTolerance(currency) } },
+    ],
   }
 }
 
@@ -149,13 +154,14 @@ export function getFinishedProjectsWhere(): ProjectStateWhereClause {
  * ```
  */
 export function getProjectStateWhere(
-  filterState: ProjectStateFilter
+  filterState: ProjectStateFilter,
+  currency: string = 'CLP'
 ): ProjectStateWhereClause | undefined {
   switch (filterState) {
     case 'Activo':
-      return getActiveProjectsWhere()
+      return getActiveProjectsWhere(currency)
     case 'Finalizado':
-      return getFinishedProjectsWhere()
+      return getFinishedProjectsWhere(currency)
     case 'all':
       return undefined
   }

@@ -6,7 +6,9 @@ import {
   getFinishedProjectsWhere,
   getProjectStateWhere,
 } from '../project-state'
-import { FINANCIAL } from '../../constants/financial-constants'
+import { getBalanceTolerance } from '../../constants/financial-constants'
+
+const CLP_TOLERANCE = getBalanceTolerance('CLP')
 
 describe('calculateProjectState', () => {
   describe('estado "Finalizado"', () => {
@@ -264,7 +266,7 @@ describe('getActiveProjectsWhere', () => {
   it('debe incluir condición balance > BALANCE_TOLERANCE', () => {
     const where = getActiveProjectsWhere()
 
-    expect(where.OR).toContainEqual({ balance: { gt: FINANCIAL.BALANCE_TOLERANCE } })
+    expect(where.OR).toContainEqual({ balance: { gt: CLP_TOLERANCE } })
   })
 })
 
@@ -285,7 +287,7 @@ describe('getFinishedProjectsWhere', () => {
   it('debe requerir balance <= BALANCE_TOLERANCE', () => {
     const where = getFinishedProjectsWhere()
 
-    expect(where.AND).toContainEqual({ balance: { lte: FINANCIAL.BALANCE_TOLERANCE } })
+    expect(where.AND).toContainEqual({ balance: { lte: CLP_TOLERANCE } })
   })
 })
 

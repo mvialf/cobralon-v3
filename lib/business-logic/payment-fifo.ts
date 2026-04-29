@@ -7,7 +7,8 @@
  * @module business-logic/payment-fifo
  */
 
-import { FINANCIAL } from '../constants/financial-constants'
+// Re-exportada desde validaciones para mantener un único lugar de definición.
+export { validateAllocationsSum } from '../validations/payment-business-rules'
 
 /**
  * Type para proyecto con balance pendiente (usado en FIFO)
@@ -117,50 +118,6 @@ export function calculateFIFO(
   }
 
   return allocations
-}
-
-/**
- * Valida que la suma de allocations manuales sea exactamente igual al monto total
- *
- * Usa tolerancia de centavos para evitar problemas de punto flotante.
- * Ver {@link FINANCIAL.TOLERANCE} para el valor de tolerancia.
- *
- * @param totalAmount - Monto total esperado del pago
- * @param allocations - Array de allocations manuales
- * @returns true si la suma coincide (dentro de la tolerancia)
- *
- * @example
- * ```ts
- * // Caso 1: Suma exacta
- * validateAllocationsSum(1000, [
- *   { allocatedAmount: 600 },
- *   { allocatedAmount: 400 }
- * ])
- * // => true (suma = 1000)
- *
- * // Caso 2: Diferencia dentro de tolerancia
- * validateAllocationsSum(1000, [
- *   { allocatedAmount: 600.01 },
- *   { allocatedAmount: 399.99 }
- * ])
- * // => true (suma = 1000.00, diferencia = 0)
- *
- * // Caso 3: Diferencia significativa
- * validateAllocationsSum(1000, [
- *   { allocatedAmount: 600 },
- *   { allocatedAmount: 350 }
- * ])
- * // => false (suma = 950, diferencia = 50)
- * ```
- *
- * @see {@link docs/project/analysis/frontend-calculations.md#6} - Análisis exhaustivo
- */
-export function validateAllocationsSum(
-  totalAmount: number,
-  allocations: Array<{ allocatedAmount: number }>
-): boolean {
-  const sum = allocations.reduce((acc, a) => acc + a.allocatedAmount, 0)
-  return Math.abs(sum - totalAmount) < FINANCIAL.TOLERANCE
 }
 
 /**

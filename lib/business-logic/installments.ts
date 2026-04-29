@@ -9,7 +9,7 @@
  * @module business-logic/installments
  */
 
-import { FINANCIAL } from '../constants/financial-constants'
+import { FINANCIAL, getBalanceTolerance } from '../constants/financial-constants'
 
 /**
  * Type para una cuota calculada
@@ -138,27 +138,23 @@ export function calculateInstallments(
 }
 
 /**
- * Valida que la suma de cuotas sea exactamente igual al monto total
+ * Valida que la suma de cuotas sea exactamente igual al monto total.
  *
- * Útil para verificar que el cálculo fue correcto antes de persistir en DB.
+ * Tolerancia depende de la moneda (CLP=$1, USD/EUR=$0.01).
  *
  * @param installments - Array de cuotas calculadas
  * @param expectedTotal - Monto total esperado
+ * @param currency - Código de moneda ISO. Por defecto CLP para retrocompatibilidad
+ *   con tests legacy en CLP-only.
  * @returns true si la suma es exacta (dentro de tolerancia)
- *
- * @example
- * ```ts
- * const installments = calculateInstallments(1000, 3, new Date())
- * const isValid = validateInstallmentsSum(installments, 1000)
- * // => true
- * ```
  */
 export function validateInstallmentsSum(
   installments: CalculatedInstallment[],
-  expectedTotal: number
+  expectedTotal: number,
+  currency: string = 'CLP'
 ): boolean {
   const sum = installments.reduce((acc, inst) => acc + inst.amount, 0)
-  return Math.abs(sum - expectedTotal) < FINANCIAL.TOLERANCE
+  return Math.abs(sum - expectedTotal) <= getBalanceTolerance(currency)
 }
 
 /**

@@ -16,11 +16,12 @@ import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { Decimal } from '@prisma/client/runtime/library'
 import { withLogging } from '@/lib/logger-middleware'
-import { FINANCIAL } from '@/lib/constants/financial-constants'
+import { getBalanceTolerance } from '@/lib/constants/financial-constants'
 
 interface InconsistentProject {
   id: string
   projectNumber: string
+  currency: string
   dbBalance: Decimal
   calculatedBalance: Decimal
 }
@@ -61,12 +62,15 @@ export const GET = withLogging(async (request, logger) => {
     result.totalProjects = await prisma.project.count()
     logger.info({ totalProjects: result.totalProjects }, 'Projects counted')
 
-    // Fase 1: Detectar inconsistencias directamente en SQL
-    // Compara balance almacenado vs calculado (totalAmount - SUM(allocations))
-    const inconsistent = await prisma.$queryRaw<InconsistentProject[]>`
+    // Fase 1: Detectar inconsistencias directamente en SQL.
+    // Cutoff laxo (>= 0.01, la tolerancia más pequeña entre monedas) para no
+    // perder inconsistencias en ninguna moneda. Después filtramos en JS por
+    // tolerancia exacta de cada moneda.
+    const candidates = await prisma.$queryRaw<InconsistentProject[]>`
       SELECT
         p.id,
         p."projectNumber",
+        p.currency,
         p.balance as "dbBalance",
         (COALESCE(p."totalAmount", 0) - COALESCE(
           (SELECT SUM(pa."allocatedAmount") FROM "PaymentAllocation" pa WHERE pa."projectId" = p.id), 0
@@ -76,8 +80,14 @@ export const GET = withLogging(async (request, logger) => {
         p.balance - (COALESCE(p."totalAmount", 0) - COALESCE(
           (SELECT SUM(pa."allocatedAmount") FROM "PaymentAllocation" pa WHERE pa."projectId" = p.id), 0
         ))
-      ) >= ${FINANCIAL.TOLERANCE}
+      ) >= 0.01
     `
+
+    const inconsistent = candidates.filter((row) => {
+      const dbBalance = Number(row.dbBalance)
+      const calculatedBalance = Number(row.calculatedBalance)
+      return Math.abs(dbBalance - calculatedBalance) > getBalanceTolerance(row.currency)
+    })
 
     result.inconsistentProjects = inconsistent.length
 

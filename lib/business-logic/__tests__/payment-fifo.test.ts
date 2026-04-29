@@ -3,12 +3,14 @@
  *
  * Valida:
  * - calculateFIFO()
- * - validateAllocationsSum()
  * - filterProjectsWithBalance()
+ *
+ * Tests de validateAllocationsSum viven en
+ * lib/validations/__tests__/payment-business-rules.test.ts (fuente única).
  */
 
 import { describe, it, expect } from 'vitest'
-import { calculateFIFO, validateAllocationsSum, filterProjectsWithBalance } from '../payment-fifo'
+import { calculateFIFO, filterProjectsWithBalance } from '../payment-fifo'
 import type { ProjectWithBalance } from '../payment-fifo'
 
 describe('calculateFIFO', () => {
@@ -308,87 +310,6 @@ describe('calculateFIFO', () => {
 
     expect(allocations[0].allocatedAmount).toBe(222222)
     expect(allocations[0].isFullyPaid).toBe(true)
-  })
-})
-
-describe('validateAllocationsSum', () => {
-  it('debe validar suma exacta', () => {
-    const allocations = [{ allocatedAmount: 600 }, { allocatedAmount: 400 }]
-
-    const isValid = validateAllocationsSum(1000, allocations)
-
-    expect(isValid).toBe(true)
-  })
-
-  it('debe validar dentro de tolerancia (0.01)', () => {
-    const allocations = [{ allocatedAmount: 600.01 }, { allocatedAmount: 399.99 }]
-
-    const isValid = validateAllocationsSum(1000, allocations)
-
-    // Suma = 1000.00, tolerancia permite diferencia < 0.01
-    expect(isValid).toBe(true)
-  })
-
-  it('debe rechazar diferencia significativa', () => {
-    const allocations = [{ allocatedAmount: 600 }, { allocatedAmount: 350 }]
-
-    const isValid = validateAllocationsSum(1000, allocations)
-
-    // Suma = 950, diferencia = 50 > tolerancia
-    expect(isValid).toBe(false)
-  })
-
-  it('debe validar array vacío cuando monto es 0', () => {
-    const allocations: Array<{ allocatedAmount: number }> = []
-
-    const isValid = validateAllocationsSum(0, allocations)
-
-    expect(isValid).toBe(true) // 0 === 0
-  })
-
-  it('debe rechazar array vacío cuando monto > 0', () => {
-    const allocations: Array<{ allocatedAmount: number }> = []
-
-    const isValid = validateAllocationsSum(1000, allocations)
-
-    expect(isValid).toBe(false) // 0 !== 1000
-  })
-
-  it('debe manejar una sola allocation', () => {
-    const allocations = [{ allocatedAmount: 1000 }]
-
-    const isValid = validateAllocationsSum(1000, allocations)
-
-    expect(isValid).toBe(true)
-  })
-
-  it('debe rechazar suma mayor que monto esperado', () => {
-    const allocations = [{ allocatedAmount: 600 }, { allocatedAmount: 500 }]
-
-    const isValid = validateAllocationsSum(1000, allocations)
-
-    // Suma = 1100 > 1000
-    expect(isValid).toBe(false)
-  })
-
-  it('debe manejar muchas allocations pequeñas', () => {
-    // 100 allocations de $10 cada una
-    const allocations = Array(100).fill({ allocatedAmount: 10 })
-
-    const isValid = validateAllocationsSum(1000, allocations)
-
-    expect(isValid).toBe(true)
-  })
-
-  it('debe detectar error acumulativo mayor que tolerancia', () => {
-    // 10 allocations con error que se acumula > 0.01
-    const allocations = Array(10).fill({ allocatedAmount: 100.002 })
-
-    // Suma real = 1000.02, esperado = 1000
-    const isValid = validateAllocationsSum(1000, allocations)
-
-    // Diferencia de 0.02 > tolerancia de 0.01
-    expect(isValid).toBe(false)
   })
 })
 

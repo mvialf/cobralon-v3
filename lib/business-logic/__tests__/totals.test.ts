@@ -131,34 +131,39 @@ describe('validateProjectTotal', () => {
     expect(validateProjectTotal(subtotal, taxRate, receivedTotal)).toBe(false)
   })
 
-  it('debe aceptar diferencias dentro de tolerancia de centavos', () => {
+  it('USD: debe aceptar diferencias dentro de tolerancia de centavos', () => {
     const subtotal = 1000000
     const taxRate = 19
     const receivedTotal = 1190000.005 // Diferencia < 0.01
-    expect(validateProjectTotal(subtotal, taxRate, receivedTotal)).toBe(true)
+    expect(validateProjectTotal(subtotal, taxRate, receivedTotal, 'USD')).toBe(true)
   })
 })
 
 describe('validateProjectTotal - edge cases de tolerancia', () => {
-  it('debe aceptar diferencia exactamente en el límite (< 0.01)', () => {
+  it('USD: debe aceptar diferencia menor a 0.01', () => {
     const subtotal = 1000
     const taxRate = 19
     const expectedTotal = subtotal * (1 + taxRate / 100) // 1190
 
-    // Diferencia de 0.009 (dentro de tolerancia)
-    expect(validateProjectTotal(subtotal, taxRate, expectedTotal + 0.009)).toBe(true)
-    expect(validateProjectTotal(subtotal, taxRate, expectedTotal - 0.009)).toBe(true)
+    expect(validateProjectTotal(subtotal, taxRate, expectedTotal + 0.009, 'USD')).toBe(true)
+    expect(validateProjectTotal(subtotal, taxRate, expectedTotal - 0.009, 'USD')).toBe(true)
   })
 
-  it('debe rechazar diferencia claramente >= 0.01', () => {
+  it('USD: debe rechazar diferencia >= 0.01', () => {
     const subtotal = 1000
     const taxRate = 19
     const expectedTotal = subtotal * (1 + taxRate / 100) // 1190
 
-    // Diferencia de 0.02 (claramente fuera de tolerancia)
-    // Nota: 0.01 exacto puede tener problemas de punto flotante
-    expect(validateProjectTotal(subtotal, taxRate, expectedTotal + 0.02)).toBe(false)
-    expect(validateProjectTotal(subtotal, taxRate, expectedTotal - 0.02)).toBe(false)
+    expect(validateProjectTotal(subtotal, taxRate, expectedTotal + 0.02, 'USD')).toBe(false)
+    expect(validateProjectTotal(subtotal, taxRate, expectedTotal - 0.02, 'USD')).toBe(false)
+  })
+
+  it('CLP: debe aceptar diferencia sub-peso', () => {
+    expect(validateProjectTotal(1000, 19, 1190.5, 'CLP')).toBe(true)
+  })
+
+  it('CLP: debe rechazar diferencia >= 1 peso', () => {
+    expect(validateProjectTotal(1000, 19, 1192, 'CLP')).toBe(false)
   })
 
   it('debe validar con diferentes tasas de impuesto', () => {
@@ -189,7 +194,7 @@ describe('roundForCurrency', () => {
   })
 
   it('debe redondear a 2 decimales para USD', () => {
-    expect(roundForCurrency(99.999, 'USD')).toBe(100.00)
+    expect(roundForCurrency(99.999, 'USD')).toBe(100.0)
     expect(roundForCurrency(99.994, 'USD')).toBe(99.99)
   })
 

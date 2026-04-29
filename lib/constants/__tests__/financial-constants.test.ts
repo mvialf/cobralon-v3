@@ -17,17 +17,6 @@ import {
 } from '../financial-constants'
 
 describe('FINANCIAL', () => {
-  describe('TOLERANCE', () => {
-    it('debe ser 0.01 (centavos)', () => {
-      expect(FINANCIAL.TOLERANCE).toBe(0.01)
-    })
-
-    it('debe ser inmutable (as const)', () => {
-      // TypeScript previene la modificación, pero verificamos el valor
-      expect(typeof FINANCIAL.TOLERANCE).toBe('number')
-    })
-  })
-
   describe('DEFAULT_TAX_RATE', () => {
     it('debe ser 19% (IVA Chile)', () => {
       expect(FINANCIAL.DEFAULT_TAX_RATE).toBe(19)
@@ -68,20 +57,6 @@ describe('FINANCIAL', () => {
   describe('DECIMAL_PRECISION', () => {
     it('debe ser 0.01 para precisión de centavos', () => {
       expect(FINANCIAL.DECIMAL_PRECISION).toBe(0.01)
-    })
-
-    it('debe ser igual a TOLERANCE', () => {
-      expect(FINANCIAL.DECIMAL_PRECISION).toBe(FINANCIAL.TOLERANCE)
-    })
-  })
-
-  describe('BALANCE_TOLERANCE', () => {
-    it('debe ser 1 (1 peso CLP = unidad mínima)', () => {
-      expect(FINANCIAL.BALANCE_TOLERANCE).toBe(1)
-    })
-
-    it('debe ser mayor que TOLERANCE', () => {
-      expect(FINANCIAL.BALANCE_TOLERANCE).toBeGreaterThan(FINANCIAL.TOLERANCE)
     })
   })
 })
@@ -201,33 +176,24 @@ describe('getBalanceTolerance', () => {
   })
 })
 
-describe('Uso de TOLERANCE en comparaciones financieras', () => {
-  it('debe permitir comparar montos con diferencia de centavos', () => {
-    const amount1 = 100.00
-    const amount2 = 100.005 // Diferencia < 0.01
-
-    const isWithinTolerance = Math.abs(amount1 - amount2) < FINANCIAL.TOLERANCE
-    expect(isWithinTolerance).toBe(true)
+describe('Uso de tolerancia por moneda en comparaciones financieras', () => {
+  it('USD: debe permitir comparar montos con diferencia menor a centavo', () => {
+    const tolerance = getBalanceTolerance('USD')
+    expect(Math.abs(100.0 - 100.005) <= tolerance).toBe(true)
   })
 
-  it('debe detectar diferencias mayores a centavos', () => {
-    const amount1 = 100.00
-    const amount2 = 100.02 // Diferencia > 0.01
-
-    const isWithinTolerance = Math.abs(amount1 - amount2) < FINANCIAL.TOLERANCE
-    expect(isWithinTolerance).toBe(false)
+  it('USD: debe detectar diferencias mayores a centavo', () => {
+    const tolerance = getBalanceTolerance('USD')
+    expect(Math.abs(100.0 - 100.02) <= tolerance).toBe(false)
   })
 
-  it('debe manejar errores de punto flotante típicos', () => {
-    // 0.1 + 0.2 = 0.30000000000000004 en JavaScript
-    const sum = 0.1 + 0.2
-    const expected = 0.3
+  it('CLP: tolerancia $1 acepta redondeos sub-peso', () => {
+    const tolerance = getBalanceTolerance('CLP')
+    expect(Math.abs(1000 - 1000.5) <= tolerance).toBe(true)
+  })
 
-    // Sin tolerancia, fallaría
-    expect(sum).not.toBe(expected)
-
-    // Con tolerancia, pasa
-    const isWithinTolerance = Math.abs(sum - expected) < FINANCIAL.TOLERANCE
-    expect(isWithinTolerance).toBe(true)
+  it('CLP: tolerancia $1 rechaza diferencias >= 1 peso', () => {
+    const tolerance = getBalanceTolerance('CLP')
+    expect(Math.abs(1000 - 1002) <= tolerance).toBe(false)
   })
 })

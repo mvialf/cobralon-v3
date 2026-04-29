@@ -10,7 +10,7 @@ import {
   getStateFacets,
 } from '@/lib/queries/project-list'
 import { calculateProjectTotal } from '@/lib/business-logic/totals'
-import { FINANCIAL } from '@/lib/constants/financial-constants'
+import { getBalanceTolerance } from '@/lib/constants/financial-constants'
 import type { ProjectListFilters } from '@/types/project-list'
 import { parsePaginationParams, buildPaginationResponse } from '@/lib/utils/pagination'
 import { withApiHandler, BusinessError } from '@/lib/api-handler'
@@ -233,7 +233,7 @@ export const POST = withApiHandler<CreateProjectApiBody>(
     // Auditoría: Loggear si el cliente envió un totalAmount diferente
     if (
       clientTotalAmount !== undefined &&
-      Math.abs(clientTotalAmount - calculatedTotal) > FINANCIAL.TOLERANCE
+      Math.abs(clientTotalAmount - calculatedTotal) > getBalanceTolerance(projectCurrency)
     ) {
       projectLogger.warn(
         {

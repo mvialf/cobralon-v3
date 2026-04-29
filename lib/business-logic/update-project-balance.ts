@@ -13,7 +13,7 @@
  * - Job Layer: Job nocturno de reconciliación detecta/corrige inconsistencias
  */
 
-import { FINANCIAL } from '../constants/financial-constants'
+import { getBalanceTolerance } from '../constants/financial-constants'
 
 import { prisma } from '@/lib/db'
 import { calculateProjectBalance } from './project-balance'
@@ -143,6 +143,7 @@ export async function verifyProjectBalance(projectId: string): Promise<boolean> 
     select: {
       totalAmount: true,
       balance: true,
+      currency: true,
       paymentAllocations: {
         select: {
           allocatedAmount: true,
@@ -162,9 +163,9 @@ export async function verifyProjectBalance(projectId: string): Promise<boolean> 
     })),
   })
 
-  // Comparar con tolerancia por redondeos decimales
+  // Comparar con tolerancia por moneda (CLP=1, USD=0.01).
   const dbBalance = Number(project.balance)
-  return Math.abs(dbBalance - calculatedBalance) < FINANCIAL.TOLERANCE
+  return Math.abs(dbBalance - calculatedBalance) <= getBalanceTolerance(project.currency)
 }
 
 /**

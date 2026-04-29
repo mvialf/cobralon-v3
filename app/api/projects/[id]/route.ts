@@ -4,7 +4,7 @@ import { Decimal } from '@prisma/client/runtime/library'
 import { ProjectUpdateInput } from '@/types/api'
 import { derivePaymentProgress } from '@/lib/business-logic/project-balance'
 import { calculateProjectTotal } from '@/lib/business-logic/totals'
-import { FINANCIAL } from '@/lib/constants/financial-constants'
+import { getBalanceTolerance } from '@/lib/constants/financial-constants'
 import { withApiHandler, BusinessError } from '@/lib/api-handler'
 import {
   updateProjectApiSchema,
@@ -105,7 +105,7 @@ export const PUT = withApiHandler<UpdateProjectApiBody>(
 
       if (
         body.totalAmount !== undefined &&
-        Math.abs(body.totalAmount - calculatedTotal) > FINANCIAL.TOLERANCE
+        Math.abs(body.totalAmount - calculatedTotal) > getBalanceTolerance(projectCurrency)
       ) {
         logger.warn(
           {

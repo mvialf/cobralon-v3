@@ -61,37 +61,83 @@ describe('validatePaymentType', () => {
 })
 
 describe('validateAllocationsSum', () => {
-  it('debe aceptar suma exacta', () => {
-    const result = validateAllocationsSum(1000, [
-      { projectId: 'abc', allocatedAmount: 600 },
-      { projectId: 'def', allocatedAmount: 400 },
-    ])
-    expect(result.valid).toBe(true)
+  describe('CLP (tolerancia = $1)', () => {
+    it('debe aceptar suma exacta', () => {
+      const result = validateAllocationsSum(
+        1000,
+        [
+          { projectId: 'abc', allocatedAmount: 600 },
+          { projectId: 'def', allocatedAmount: 400 },
+        ],
+        'CLP'
+      )
+      expect(result.valid).toBe(true)
+    })
+
+    it('debe aceptar diferencia menor a $1 (no hay centavos en CLP)', () => {
+      const result = validateAllocationsSum(
+        1000,
+        [{ projectId: 'abc', allocatedAmount: 1000.5 }],
+        'CLP'
+      )
+      expect(result.valid).toBe(true)
+    })
+
+    it('debe rechazar diferencia >= $1', () => {
+      const result = validateAllocationsSum(
+        1000,
+        [{ projectId: 'abc', allocatedAmount: 500 }],
+        'CLP'
+      )
+      expect(result.valid).toBe(false)
+      expect(result.error).toContain('no suman el monto total')
+    })
+
+    it('debe manejar allocation única', () => {
+      const result = validateAllocationsSum(
+        1000,
+        [{ projectId: 'abc', allocatedAmount: 1000 }],
+        'CLP'
+      )
+      expect(result.valid).toBe(true)
+    })
+
+    it('debe manejar muchas allocations sumando exacto', () => {
+      const allocations = Array(100)
+        .fill(0)
+        .map((_, i) => ({ projectId: `p${i}`, allocatedAmount: 10 }))
+      const result = validateAllocationsSum(1000, allocations, 'CLP')
+      expect(result.valid).toBe(true)
+    })
   })
 
-  it('debe aceptar diferencia dentro de tolerancia (0.01)', () => {
-    const result = validateAllocationsSum(1000, [{ projectId: 'abc', allocatedAmount: 1000.005 }])
-    expect(result.valid).toBe(true)
-  })
+  describe('USD (tolerancia = $0.01)', () => {
+    it('debe aceptar diferencia dentro de centavo', () => {
+      const result = validateAllocationsSum(
+        1000,
+        [{ projectId: 'abc', allocatedAmount: 1000.005 }],
+        'USD'
+      )
+      expect(result.valid).toBe(true)
+    })
 
-  it('debe rechazar diferencia fuera de tolerancia', () => {
-    const result = validateAllocationsSum(1000, [{ projectId: 'abc', allocatedAmount: 500 }])
-    expect(result.valid).toBe(false)
-    expect(result.error).toContain('no suman el monto total')
-  })
+    it('debe rechazar diferencia mayor a centavo', () => {
+      const result = validateAllocationsSum(100, [{ projectId: 'a', allocatedAmount: 99.5 }], 'USD')
+      expect(result.valid).toBe(false)
+    })
 
-  it('debe manejar allocation única', () => {
-    const result = validateAllocationsSum(1000, [{ projectId: 'abc', allocatedAmount: 1000 }])
-    expect(result.valid).toBe(true)
-  })
-
-  it('debe manejar múltiples allocations con decimales', () => {
-    const result = validateAllocationsSum(100, [
-      { projectId: 'a', allocatedAmount: 33.33 },
-      { projectId: 'b', allocatedAmount: 33.33 },
-      { projectId: 'c', allocatedAmount: 33.34 },
-    ])
-    expect(result.valid).toBe(true)
+    it('debe manejar múltiples allocations con decimales', () => {
+      const result = validateAllocationsSum(
+        100,
+        [
+          { projectId: 'a', allocatedAmount: 33.33 },
+          { projectId: 'b', allocatedAmount: 33.33 },
+          { projectId: 'c', allocatedAmount: 33.34 },
+        ],
+        'USD'
+      )
+      expect(result.valid).toBe(true)
+    })
   })
 })
 
@@ -152,50 +198,74 @@ describe('validatePositiveAllocations', () => {
 
 describe('validatePaymentAllocations (función completa)', () => {
   it('debe aceptar pago Project válido', () => {
-    const result = validatePaymentAllocations('Project', 1000, [
-      { projectId: 'abc', allocatedAmount: 1000 },
-    ])
+    const result = validatePaymentAllocations(
+      'Project',
+      1000,
+      [{ projectId: 'abc', allocatedAmount: 1000 }],
+      'CLP'
+    )
     expect(result.valid).toBe(true)
   })
 
   it('debe aceptar pago Customer válido con múltiples allocations', () => {
-    const result = validatePaymentAllocations('Customer', 1000, [
-      { projectId: 'abc', allocatedAmount: 600 },
-      { projectId: 'def', allocatedAmount: 400 },
-    ])
+    const result = validatePaymentAllocations(
+      'Customer',
+      1000,
+      [
+        { projectId: 'abc', allocatedAmount: 600 },
+        { projectId: 'def', allocatedAmount: 400 },
+      ],
+      'CLP'
+    )
     expect(result.valid).toBe(true)
   })
 
   it('debe fallar en primera validación que falla (tipo)', () => {
-    const result = validatePaymentAllocations('Project', 1000, [
-      { projectId: 'abc', allocatedAmount: 500 },
-      { projectId: 'def', allocatedAmount: 500 },
-    ])
+    const result = validatePaymentAllocations(
+      'Project',
+      1000,
+      [
+        { projectId: 'abc', allocatedAmount: 500 },
+        { projectId: 'def', allocatedAmount: 500 },
+      ],
+      'CLP'
+    )
     expect(result.valid).toBe(false)
     expect(result.error).toContain('exactamente 1 asignación')
   })
 
   it('debe fallar en validación de suma si tipo pasa', () => {
-    const result = validatePaymentAllocations('Customer', 1000, [
-      { projectId: 'abc', allocatedAmount: 100 },
-    ])
+    const result = validatePaymentAllocations(
+      'Customer',
+      1000,
+      [{ projectId: 'abc', allocatedAmount: 100 }],
+      'CLP'
+    )
     expect(result.valid).toBe(false)
     expect(result.error).toContain('no suman el monto total')
   })
 
   it('debe fallar en validación de duplicados si suma pasa', () => {
-    const result = validatePaymentAllocations('Customer', 1000, [
-      { projectId: 'abc', allocatedAmount: 500 },
-      { projectId: 'abc', allocatedAmount: 500 },
-    ])
+    const result = validatePaymentAllocations(
+      'Customer',
+      1000,
+      [
+        { projectId: 'abc', allocatedAmount: 500 },
+        { projectId: 'abc', allocatedAmount: 500 },
+      ],
+      'CLP'
+    )
     expect(result.valid).toBe(false)
     expect(result.error).toContain('múltiples veces')
   })
 
   it('debe fallar en validación de montos positivos', () => {
-    const result = validatePaymentAllocations('Customer', 0, [
-      { projectId: 'abc', allocatedAmount: 0 },
-    ])
+    const result = validatePaymentAllocations(
+      'Customer',
+      0,
+      [{ projectId: 'abc', allocatedAmount: 0 }],
+      'CLP'
+    )
     // La validación de suma pasará (0 = 0), pero la de positivos fallará
     expect(result.valid).toBe(false)
   })

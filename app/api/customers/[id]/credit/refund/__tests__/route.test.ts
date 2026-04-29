@@ -18,10 +18,7 @@ import { Prisma } from '@prisma/client'
 // Mock de logger-middleware (requerido por withApiHandler)
 vi.mock('@/lib/logger-middleware', () => ({
   withLogging: (handler: Function) => {
-    return async (
-      request: NextRequest,
-      context?: { params: Promise<Record<string, string>> }
-    ) => {
+    return async (request: NextRequest, context?: { params: Promise<Record<string, string>> }) => {
       const mockLogger = {
         debug: vi.fn(),
         info: vi.fn(),
@@ -96,6 +93,7 @@ describe('POST /api/customers/[id]/credit/refund', () => {
 
     vi.mocked(prisma.$transaction).mockImplementation(async (fn) => {
       const mockTx = {
+        $queryRaw: vi.fn().mockResolvedValue([{ id: VALID_UUID, name: 'Test Customer' }]),
         customer: {
           findUnique: vi.fn().mockResolvedValue({
             id: VALID_UUID,
@@ -159,7 +157,18 @@ describe('POST /api/customers/[id]/credit/refund', () => {
 
   describe('validaciones de cliente', () => {
     it('debe retornar 404 cuando cliente no existe', async () => {
-      vi.mocked(prisma.customer.findUnique).mockResolvedValue(null)
+      // El cliente ahora se busca con SELECT ... FOR UPDATE dentro de la tx.
+      // Si no existe, $queryRaw retorna [] y el handler lanza BusinessError 404.
+      vi.mocked(prisma.$transaction).mockImplementation(async (fn) => {
+        const mockTx = {
+          $queryRaw: vi.fn().mockResolvedValue([]),
+          creditTransaction: {
+            create: vi.fn(),
+            aggregate: vi.fn().mockResolvedValue({ _sum: { amount: new Prisma.Decimal(0) } }),
+          },
+        }
+        return fn(mockTx as never)
+      })
 
       const request = createRequest(validPayload)
       const response = await POST(request, createParams())
@@ -245,6 +254,7 @@ describe('POST /api/customers/[id]/credit/refund', () => {
       vi.mocked(prisma.$transaction).mockImplementation(async (fn) => {
         transactionFnCalled = true
         const mockTx = {
+          $queryRaw: vi.fn().mockResolvedValue([{ id: VALID_UUID, name: 'Test' }]),
           customer: {
             findUnique: vi.fn().mockResolvedValue({
               id: VALID_UUID,
@@ -270,6 +280,7 @@ describe('POST /api/customers/[id]/credit/refund', () => {
       let createdTransaction: Record<string, unknown> | null = null
       vi.mocked(prisma.$transaction).mockImplementation(async (fn) => {
         const mockTx = {
+          $queryRaw: vi.fn().mockResolvedValue([{ id: VALID_UUID, name: 'Test' }]),
           customer: {
             findUnique: vi.fn().mockResolvedValue({
               id: VALID_UUID,
@@ -299,6 +310,7 @@ describe('POST /api/customers/[id]/credit/refund', () => {
       let createdTransaction: Record<string, unknown> | null = null
       vi.mocked(prisma.$transaction).mockImplementation(async (fn) => {
         const mockTx = {
+          $queryRaw: vi.fn().mockResolvedValue([{ id: VALID_UUID, name: 'Test' }]),
           customer: {
             findUnique: vi.fn().mockResolvedValue({
               id: VALID_UUID,

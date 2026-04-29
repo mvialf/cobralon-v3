@@ -12,7 +12,7 @@ import {
   parseProjectsWithBalance,
 } from '@/lib/validations/payment-validations'
 import { calculateFIFO } from '@/lib/business-logic/payment-fifo'
-import { FINANCIAL } from '@/lib/constants/financial-constants'
+import { getBalanceTolerance } from '@/lib/constants/financial-constants'
 import { formatCurrency } from '@/lib/format'
 import { cn } from '@/lib/utils'
 
@@ -226,7 +226,10 @@ export function PaymentToCustomerForm({
     watchedAllocations?.reduce((sum, a) => sum + (a.allocatedAmount || 0), 0) || 0
 
   const difference = watchedAmount - totalAllocated
-  const isValidSum = Math.abs(difference) < FINANCIAL.TOLERANCE
+  // Moneda del cliente: derivada del primer proyecto. El backend valida que todos
+  // los proyectos del cliente compartan moneda, así que tomar el primero es seguro.
+  const formCurrency = customerProjects[0]?.currency ?? 'CLP'
+  const isValidSum = Math.abs(difference) <= getBalanceTolerance(formCurrency)
 
   // Submit handler
   const handleSubmit = (values: PaymentToCustomerFormValues) => {
@@ -244,7 +247,7 @@ export function PaymentToCustomerForm({
     // 3. Validar suma (con las allocations filtradas)
     const totalAllocatedSubmit = allocationsWithValue.reduce((sum, a) => sum + a.allocatedAmount, 0)
     const differenceSubmit = watchedAmount - totalAllocatedSubmit
-    if (Math.abs(differenceSubmit) >= FINANCIAL.TOLERANCE) {
+    if (Math.abs(differenceSubmit) > getBalanceTolerance(formCurrency)) {
       form.setError('allocations', {
         message: 'La suma de allocations debe ser igual al monto total',
       })

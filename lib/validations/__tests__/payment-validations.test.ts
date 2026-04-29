@@ -606,16 +606,13 @@ describe('paymentToCustomerSchema (flujo 1:N)', () => {
       expect(result.success).toBe(true)
     })
 
-    it('debe rechazar diferencia exactamente igual a TOLERANCE (0.01)', () => {
+    it('debe rechazar diferencia mayor a tolerancia CLP ($1)', () => {
+      // El schema usa tolerancia laxa CLP=$1. Diferencia de $2 debe rechazarse.
       const result = paymentToCustomerSchema.safeParse({
         ...validPayment,
-        amount: 1000000.01,
+        amount: 1000002,
         allocations: [
           { projectId: '550e8400-e29b-41d4-a716-446655440002', allocatedAmount: 600000 },
-          // 600000 + 400000 = 1000000
-          // Diferencia: 1000000.01 - 1000000 = 0.01 (EXACTAMENTE igual a TOLERANCE)
-          // La validación es < TOLERANCE (estricta), NO <=
-          // Por lo tanto, debe RECHAZAR ❌
           { projectId: '550e8400-e29b-41d4-a716-446655440003', allocatedAmount: 400000 },
         ],
       })

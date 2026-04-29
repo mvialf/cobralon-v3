@@ -17,6 +17,7 @@
 import { prisma } from '@/lib/db'
 import type { PrismaTransaction } from '@/lib/db/types'
 import type { PrismaClient } from '@prisma/client'
+import { getBalanceTolerance } from '@/lib/constants/financial-constants'
 
 /**
  * Calcula el creditBalance de un cliente desde el ledger CreditTransaction.
@@ -159,14 +160,19 @@ export interface CreditApplicationValidation {
  * @param requestedAmount - Amount user wants to apply
  * @param customerCredit - Available customer credit
  * @param projectBalance - Current project balance
+ * @param currency - Código de moneda ISO (CLP, USD, ...). Determina la tolerancia
+ *   por redondeos: CLP=1, USD/EUR=0.01.
  *
  * @returns Validation result with error message if invalid
  */
 export function canApplyCredit(
   requestedAmount: number,
   customerCredit: number,
-  projectBalance: number
+  projectBalance: number,
+  currency: string
 ): CreditApplicationValidation {
+  const tolerance = getBalanceTolerance(currency)
+
   if (requestedAmount < 0) {
     return { valid: false, error: 'El monto debe ser positivo' }
   }
@@ -175,14 +181,14 @@ export function canApplyCredit(
     return { valid: false, error: 'El monto debe ser mayor a 0' }
   }
 
-  if (requestedAmount > customerCredit) {
+  if (requestedAmount - customerCredit > tolerance) {
     return {
       valid: false,
       error: `Crédito insuficiente. Disponible: $${customerCredit.toLocaleString('es-CL')}`,
     }
   }
 
-  if (requestedAmount > projectBalance) {
+  if (requestedAmount - projectBalance > tolerance) {
     return {
       valid: false,
       error: `El monto excede el balance del proyecto ($${projectBalance.toLocaleString('es-CL')})`,

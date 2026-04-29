@@ -9,7 +9,7 @@
  * @module business-logic/totals
  */
 
-import { FINANCIAL, getCurrencyConfig } from '../constants/financial-constants'
+import { FINANCIAL, getCurrencyConfig, getBalanceTolerance } from '../constants/financial-constants'
 
 function validateNonNegativeAmount(amount: number, fieldName: string) {
   if (amount < 0) {
@@ -144,10 +144,11 @@ export function calculateTax(
 export function validateProjectTotal(
   subtotal: number,
   taxRate: number,
-  receivedTotal: number
+  receivedTotal: number,
+  currency: string = 'CLP'
 ): boolean {
   const expectedTotal = calculateProjectTotal(subtotal, taxRate)
-  return Math.abs(expectedTotal - receivedTotal) < FINANCIAL.TOLERANCE
+  return Math.abs(expectedTotal - receivedTotal) <= getBalanceTolerance(currency)
 }
 
 /**

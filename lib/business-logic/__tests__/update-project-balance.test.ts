@@ -39,21 +39,27 @@ function createMockProject(overrides: {
   total?: number
   balance?: number
   totalAmount?: number | null
+  currency?: string
   paymentAllocations?: Array<{ allocatedAmount: number | Decimal }>
   adjustments?: Array<{ amount: number | Decimal }>
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
 }): any {
   return {
     id: overrides.id ?? 'project-1',
     total: new Decimal(overrides.total ?? 1000000),
     balance: new Decimal(overrides.balance ?? 1000000),
-    totalAmount: overrides.totalAmount !== undefined
-      ? (overrides.totalAmount === null ? null : new Decimal(overrides.totalAmount))
-      : new Decimal(overrides.total ?? 1000000),
+    currency: overrides.currency ?? 'CLP',
+    totalAmount:
+      overrides.totalAmount !== undefined
+        ? overrides.totalAmount === null
+          ? null
+          : new Decimal(overrides.totalAmount)
+        : new Decimal(overrides.total ?? 1000000),
     paymentAllocations: (overrides.paymentAllocations ?? []).map((alloc) => ({
-      allocatedAmount: typeof alloc.allocatedAmount === 'number'
-        ? new Decimal(alloc.allocatedAmount)
-        : alloc.allocatedAmount,
+      allocatedAmount:
+        typeof alloc.allocatedAmount === 'number'
+          ? new Decimal(alloc.allocatedAmount)
+          : alloc.allocatedAmount,
     })),
     adjustments: (overrides.adjustments ?? []).map((adj) => ({
       amount: typeof adj.amount === 'number' ? new Decimal(adj.amount) : adj.amount,
@@ -307,11 +313,11 @@ describe('verifyProjectBalance', () => {
     expect(result).toBe(true)
   })
 
-  it('debe fallar si diferencia excede tolerancia', async () => {
+  it('debe fallar si diferencia excede tolerancia (CLP: diff >= $1)', async () => {
     const mockProject = createMockProject({
       id: 'project-4',
       total: 1000000,
-      balance: 500000.02, // Diferencia de 0.02 (fuera de tolerancia)
+      balance: 500002, // Diferencia de $2 (fuera de tolerancia CLP=$1)
       paymentAllocations: [{ allocatedAmount: 500000 }],
     })
 
@@ -562,14 +568,14 @@ describe('Escenarios de integración', () => {
     const mockProject = createMockProject({
       id: 'project-int-2',
       total: 1000000,
-      balance: 999999, // Modificado externamente (incorrecto)
+      balance: 999998, // Modificado externamente (incorrecto)
       paymentAllocations: [{ allocatedAmount: 0 }],
     })
 
     vi.mocked(prisma.project.findUnique).mockResolvedValue(mockProject)
 
-    // Balance calculado debería ser 1,000,000, pero DB tiene 999,999
+    // Balance calculado debería ser 1,000,000, pero DB tiene 999,998 (diff $2 > tolerancia CLP=$1)
     const isConsistent = await verifyProjectBalance('project-int-2')
-    expect(isConsistent).toBe(false) // Diferencia de 1 > tolerancia
+    expect(isConsistent).toBe(false)
   })
 })
