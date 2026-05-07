@@ -39,8 +39,8 @@ export function InstallmentsPageClient() {
     pageSize: 50,
   })
 
-  // Filtro de estado con "pending" por defecto
-  const [statusFilter, setStatusFilter] = useState<string[]>(['pending'])
+  // Filtro de estado con "upcoming" por defecto
+  const [statusFilter, setStatusFilter] = useState<string[]>(['upcoming'])
 
   // Rango de fechas derivado del mes seleccionado
   const monthRange = useMemo(() => getMonthRange(monthOffset), [monthOffset])
@@ -53,7 +53,7 @@ export function InstallmentsPageClient() {
       // Si hay 1 filtro seleccionado, pasarlo al server; si hay 0 o 2, no filtrar
       status:
         statusFilter.length === 1
-          ? (statusFilter[0] as 'pending' | 'paid')
+          ? (statusFilter[0] as 'upcoming' | 'due')
           : undefined,
       startDate: monthRange.startDate,
       endDate: monthRange.endDate,
@@ -73,8 +73,8 @@ export function InstallmentsPageClient() {
 
   // Opciones para el filtro de estado
   const statusOptions = [
-    { label: 'Pendiente', value: 'pending' },
-    { label: 'Pagado', value: 'paid' },
+    { label: 'Próxima', value: 'upcoming' },
+    { label: 'Vencida', value: 'due' },
   ]
 
   return (

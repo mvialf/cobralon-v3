@@ -104,7 +104,7 @@ describe('GET /api/installments', () => {
 
   describe('filtros', () => {
     it('debe filtrar por status (derivado de dueDate)', async () => {
-      await GET(createRequest({ status: 'pending' }))
+      await GET(createRequest({ status: 'upcoming' }))
 
       expect(prisma.installment.findMany).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -192,7 +192,7 @@ describe('GET /api/installments', () => {
     it('debe combinar múltiples filtros', async () => {
       await GET(
         createRequest({
-          status: 'paid',
+          status: 'due',
           customerId: 'customer-1',
           startDate: '2024-01-01',
         })
@@ -231,7 +231,7 @@ describe('GET /api/installments', () => {
           installmentNumber: 1,
           amount: new Decimal(100000),
           dueDate: new Date(),
-          status: 'pending',
+          status: 'upcoming',
           payment: {
             id: 'pay-1',
             amount: new Decimal(300000),

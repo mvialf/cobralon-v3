@@ -17,7 +17,7 @@ import type { Installment } from '@/app/payments/installments/columns'
 export interface InstallmentsQueryParams {
   page?: number
   limit?: number
-  status?: 'pending' | 'paid'
+  status?: 'upcoming' | 'due'
   paymentId?: string
   customerId?: string
   startDate?: string
@@ -45,7 +45,7 @@ export interface InstallmentsResponse {
  * @param params - Filtros opcionales
  * @param params.page - Número de página (default: 1)
  * @param params.limit - Registros por página (default: 50, max: 100)
- * @param params.status - Filtro por estado derivado: 'pending' | 'paid'
+ * @param params.status - Filtro por estado derivado: 'upcoming' | 'due'
  */
 export function useInstallments(params: InstallmentsQueryParams = {}) {
   return useQuery({

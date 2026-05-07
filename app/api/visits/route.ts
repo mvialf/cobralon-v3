@@ -8,6 +8,7 @@ import {
   type CreateVisitApiBody,
 } from '@/lib/validations/visit-validations'
 import { queryVisitList, countVisits, getVisitStatusFacets } from '@/lib/queries/visit-list'
+import { parseDateAsLocal } from '@/lib/timezone'
 
 import { z } from 'zod'
 
@@ -91,7 +92,8 @@ export const POST = withApiHandler<CreateVisitApiBody>(
   async (_request, logger, { body }) => {
     logger.debug({ body }, 'Creating new visit')
 
-    // Transformar payload: date string → Date
+    // Transformar payload: date string → Date (parseado como fecha local)
+    // parseDateAsLocal evita el problema de new Date("YYYY-MM-DD") que interpreta como UTC
     const visitData = {
       name: body.name,
       phone: body.phone || null,
@@ -100,7 +102,7 @@ export const POST = withApiHandler<CreateVisitApiBody>(
       comuna: body.comuna,
       region: body.region,
       visitStatusId: body.visitStatusId,
-      date: new Date(body.date),
+      date: parseDateAsLocal(body.date.substring(0, 10)),
       scheduledTime: body.scheduledTime || null,
       observations: body.observations || null,
     }

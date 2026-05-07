@@ -5,6 +5,7 @@
  * - calculateInstallments()
  * - validateInstallmentsSum()
  * - getTotalPendingInstallments()
+ * - getInstallmentStatus()
  * - generatePrismaInstallmentsCreate()
  */
 
@@ -13,6 +14,7 @@ import {
   calculateInstallments,
   validateInstallmentsSum,
   getTotalPendingInstallments,
+  getInstallmentStatus,
   generatePrismaInstallmentsCreate,
 } from '../installments'
 
@@ -28,15 +30,15 @@ describe('calculateInstallments', () => {
     expect(result).toHaveLength(3)
     expect(result[0].installmentNumber).toBe(1)
     expect(result[0].amount).toBe(333.33)
-    expect(result[0].dueDate).toEqual(new Date('2025-01-15')) // +0 días
+    expect(result[0].dueDate).toEqual(new Date('2025-01-15')) // mes +0
 
     expect(result[1].installmentNumber).toBe(2)
     expect(result[1].amount).toBe(333.33)
-    expect(result[1].dueDate).toEqual(new Date('2025-02-14')) // +30 días
+    expect(result[1].dueDate).toEqual(new Date('2025-02-15')) // mes +1
 
     expect(result[2].installmentNumber).toBe(3)
     expect(result[2].amount).toBeCloseTo(333.34, 2) // ← Absorbe 0.01
-    expect(result[2].dueDate).toEqual(new Date('2025-03-16')) // +60 días
+    expect(result[2].dueDate).toEqual(new Date('2025-03-15')) // mes +2
 
     // Validar suma exacta
     const sum = result.reduce((acc, inst) => acc + inst.amount, 0)
@@ -76,12 +78,12 @@ describe('calculateInstallments', () => {
     expect(sum).toBe(100)
   })
 
-  it('debe generar fechas de vencimiento correctas (cada 30 días)', () => {
+  it('debe generar fechas de vencimiento mensuales (mismo día cada mes)', () => {
     const result = calculateInstallments(300, 3, new Date('2025-01-15'))
 
-    expect(result[0].dueDate).toEqual(new Date('2025-01-15')) // Cuota 1: +0 días
-    expect(result[1].dueDate).toEqual(new Date('2025-02-14')) // Cuota 2: +30 días
-    expect(result[2].dueDate).toEqual(new Date('2025-03-16')) // Cuota 3: +60 días
+    expect(result[0].dueDate).toEqual(new Date('2025-01-15')) // Cuota 1: mes +0
+    expect(result[1].dueDate).toEqual(new Date('2025-02-15')) // Cuota 2: mes +1
+    expect(result[2].dueDate).toEqual(new Date('2025-03-15')) // Cuota 3: mes +2
   })
 
   it('debe lanzar error si installments < 1', () => {
@@ -163,14 +165,14 @@ describe('calculateInstallments', () => {
     expect(sum).toBeCloseTo(0.1, 2)
   })
 
-  it('debe calcular fechas correctas para 12 cuotas (casi 1 año)', () => {
+  it('debe calcular fechas correctas para 12 cuotas (1 año completo)', () => {
     const result = calculateInstallments(1200, 12, new Date('2025-01-01'))
 
     // Primera cuota: día del pago
     expect(result[0].dueDate).toEqual(new Date('2025-01-01'))
 
-    // Última cuota: +330 días (11 * 30)
-    expect(result[11].dueDate).toEqual(new Date('2025-11-27'))
+    // Última cuota: +11 meses
+    expect(result[11].dueDate).toEqual(new Date('2025-12-01'))
   })
 })
 
@@ -308,11 +310,30 @@ describe('generatePrismaInstallmentsCreate', () => {
     })
   })
 
-  it('debe generar fechas de vencimiento mensuales (cada 30 días)', () => {
+  it('debe generar fechas de vencimiento mensuales (mismo día cada mes)', () => {
     const result = generatePrismaInstallmentsCreate(900, 3, baseDate, MockDecimal)
 
     expect(result!.create[0].dueDate).toEqual(new Date('2025-01-15'))
-    expect(result!.create[1].dueDate).toEqual(new Date('2025-02-14'))
-    expect(result!.create[2].dueDate).toEqual(new Date('2025-03-16'))
+    expect(result!.create[1].dueDate).toEqual(new Date('2025-02-15'))
+    expect(result!.create[2].dueDate).toEqual(new Date('2025-03-15'))
+  })
+})
+
+describe('getInstallmentStatus', () => {
+  it('debe retornar "due" para cuotas con fecha de vencimiento pasada', () => {
+    const pastDate = new Date('2020-01-01')
+    expect(getInstallmentStatus(pastDate)).toBe('due')
+  })
+
+  it('debe retornar "upcoming" para cuotas con fecha de vencimiento futura', () => {
+    const futureDate = new Date('2099-01-01')
+    expect(getInstallmentStatus(futureDate)).toBe('upcoming')
+  })
+
+  it('debe usar timezone de la aplicación para la comparación', () => {
+    // Una cuota que vence hoy debe ser "due"
+    const today = new Date()
+    today.setHours(12, 0, 0, 0) // Mediodía de hoy
+    expect(getInstallmentStatus(today)).toBe('due')
   })
 })

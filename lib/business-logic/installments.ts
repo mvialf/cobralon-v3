@@ -10,6 +10,8 @@
  */
 
 import { FINANCIAL } from '../constants/financial-constants'
+import { addMonths } from 'date-fns'
+import { isPastOrToday, isFuture } from '@/lib/timezone'
 
 /**
  * Type para una cuota calculada
@@ -47,8 +49,8 @@ export interface CalculatedInstallment {
  * // Resultado:
  * // [
  * //   { installmentNumber: 1, amount: 333.33, dueDate: '2025-01-15' },
- * //   { installmentNumber: 2, amount: 333.33, dueDate: '2025-02-14' },
- * //   { installmentNumber: 3, amount: 333.34, dueDate: '2025-03-16' }  ← Absorbe 0.01
+ * //   { installmentNumber: 2, amount: 333.33, dueDate: '2025-02-15' },
+ * //   { installmentNumber: 3, amount: 333.34, dueDate: '2025-03-15' }  ← Absorbe 0.01
  * // ]
  * // SUMA: 333.33 + 333.33 + 333.34 = 1000.00 ✅ Exacto
  * ```
@@ -61,8 +63,8 @@ export interface CalculatedInstallment {
  * // Resultado:
  * // [
  * //   { installmentNumber: 1, amount: 400.00, dueDate: '2025-01-01' },
- * //   { installmentNumber: 2, amount: 400.00, dueDate: '2025-01-31' },
- * //   { installmentNumber: 3, amount: 400.00, dueDate: '2025-03-02' }
+ * //   { installmentNumber: 2, amount: 400.00, dueDate: '2025-02-01' },
+ * //   { installmentNumber: 3, amount: 400.00, dueDate: '2025-03-01' }
  * // ]
  * ```
  *
@@ -120,12 +122,11 @@ export function calculateInstallments(
     // Determinar monto de esta cuota
     const installmentAmount = isLastInstallment ? lastInstallmentAmount : baseInstallmentAmount
 
-    // Calcular fecha de vencimiento
-    // Cuota 1: +0 días (fecha del pago)
-    // Cuota 2: +30 días
-    // Cuota N: +(N-1)*30 días
-    const dueDate = new Date(paymentDate)
-    dueDate.setDate(dueDate.getDate() + (i - 1) * FINANCIAL.DAYS_PER_INSTALLMENT)
+    // Calcular fecha de vencimiento usando meses calendarios
+    // Cuota 1: mes 0 (fecha del pago)
+    // Cuota 2: mes +1
+    // Cuota N: mes +(N-1)
+    const dueDate = addMonths(paymentDate, i - 1)
 
     result.push({
       installmentNumber: i,
@@ -165,45 +166,40 @@ export function validateInstallmentsSum(
  * Deriva el estado de una cuota a partir de su fecha de vencimiento.
  * Las cuotas son puramente informativas — no afectan balances ni FIFO.
  *
+ * Usa la timezone de la aplicación (America/Santiago) para comparar
+ * correctamente sin depender del timezone del servidor (UTC en Vercel).
+ *
  * @param dueDate - Fecha de vencimiento de la cuota
- * @returns 'paid' si ya venció (dueDate <= hoy), 'pending' si aún no
+ * @returns 'due' si ya venció (dueDate <= hoy en TZ local), 'upcoming' si aún no
  */
-export function getInstallmentStatus(dueDate: Date): 'paid' | 'pending' {
-  const today = new Date()
-  today.setHours(0, 0, 0, 0)
-  const due = new Date(dueDate)
-  due.setHours(0, 0, 0, 0)
-  return due <= today ? 'paid' : 'pending'
+export function getInstallmentStatus(dueDate: Date): 'due' | 'upcoming' {
+  return isPastOrToday(dueDate) ? 'due' : 'upcoming'
 }
 
 /**
  * Calcula el total de cuotas pendientes (con vencimiento futuro)
  *
+ * Usa la timezone de la aplicación para comparar correctamente.
+ *
  * @param installments - Array de cuotas con fecha de vencimiento
- * @returns Suma de montos de cuotas pendientes
+ * @returns Suma de montos de cuotas con vencimiento futuro
  *
  * @example
  * ```ts
  * const installments = [
- *   { amount: 100, dueDate: new Date('2025-01-01') }, // pasada → paid
- *   { amount: 100, dueDate: new Date('2099-01-01') }, // futura → pending
- *   { amount: 100, dueDate: new Date('2099-02-01') }, // futura → pending
+ *   { amount: 100, dueDate: new Date('2025-01-01') }, // pasada → due
+ *   { amount: 100, dueDate: new Date('2099-01-01') }, // futura → upcoming
+ *   { amount: 100, dueDate: new Date('2099-02-01') }, // futura → upcoming
  * ]
  * getTotalPendingInstallments(installments)
- * // => 200 (solo las pendientes)
+ * // => 200 (solo las upcoming)
  * ```
  */
 export function getTotalPendingInstallments(
   installments: Array<{ amount: number; dueDate: Date }>
 ): number {
-  const today = new Date()
-  today.setHours(0, 0, 0, 0)
   return installments
-    .filter((inst) => {
-      const due = new Date(inst.dueDate)
-      due.setHours(0, 0, 0, 0)
-      return due > today
-    })
+    .filter((inst) => isFuture(inst.dueDate))
     .reduce((sum, inst) => sum + inst.amount, 0)
 }
 

@@ -4,6 +4,7 @@ import { Prisma } from '@prisma/client'
 import { withLogging } from '@/lib/logger-middleware'
 import { parsePaginationParams, buildPaginationResponse } from '@/lib/utils/pagination'
 import { getInstallmentStatus } from '@/lib/business-logic/installments'
+import { getEndOfTodayAppTZ } from '@/lib/timezone'
 
 /**
  * GET /api/installments
@@ -13,7 +14,7 @@ import { getInstallmentStatus } from '@/lib/business-logic/installments'
  * Query params:
  *   - page: número de página (default: 1)
  *   - limit: registros por página (default: 10, max: 100)
- *   - status: filtrar por estado derivado ('pending' o 'paid') — se traduce a filtro por dueDate
+ *   - status: filtrar por estado derivado ('upcoming' o 'due') — se traduce a filtro por dueDate
  *   - paymentId: filtrar por pago específico
  *   - customerId: filtrar por cliente específico
  *   - startDate: filtrar cuotas con vencimiento desde esta fecha (ISO string)
@@ -37,16 +38,13 @@ export const GET = withLogging(async (request, logger) => {
     const where: Prisma.InstallmentWhereInput = {}
 
     // Estado derivado: status se traduce a filtro por dueDate
+    // Usa timezone de la aplicación para comparar correctamente
     if (status) {
-      const today = new Date()
-      today.setHours(0, 0, 0, 0)
-      // Ajustar al final del día para incluir cuotas de hoy como "paid"
-      const endOfToday = new Date(today)
-      endOfToday.setHours(23, 59, 59, 999)
+      const endOfToday = getEndOfTodayAppTZ()
 
-      if (status === 'paid') {
+      if (status === 'due') {
         where.dueDate = { ...((where.dueDate as object) || {}), lte: endOfToday }
-      } else if (status === 'pending') {
+      } else if (status === 'upcoming') {
         where.dueDate = { ...((where.dueDate as object) || {}), gt: endOfToday }
       }
     }

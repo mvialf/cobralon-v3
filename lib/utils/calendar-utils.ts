@@ -9,6 +9,7 @@ import {
 } from 'date-fns'
 import { es } from 'date-fns/locale'
 import type { CalendarEvent } from '@/lib/types/calendar'
+import { getTodayAppTZ } from '@/lib/timezone'
 
 /**
  * Obtiene los 7 días de la semana para una fecha dada
@@ -52,8 +53,8 @@ export function getVisibleDateRange(
       return { start, end }
     }
     case 'agenda': {
-      // Agenda muestra 30 días desde hoy
-      const start = startOfDay(new Date())
+      // Agenda muestra 30 días desde hoy (timezone de la aplicación)
+      const start = startOfDay(getTodayAppTZ())
       const end = addDays(start, 30)
       return { start, end }
     }

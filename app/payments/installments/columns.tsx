@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge'
 import { DataTableColumnHeader } from '@/components/data-table'
 import { formatDate, formatCurrency } from '@/lib/format'
 import { ProjectNameSummary } from '@/components/summarys/project-name-summary'
+import { isPastOrToday } from '@/lib/timezone'
 
 export interface Installment {
   id: string
@@ -134,16 +135,12 @@ export const createColumns = ({
     header: ({ column }) => <DataTableColumnHeader column={column} title="Vencimiento" />,
     cell: ({ row }) => {
       const date = new Date(row.getValue('dueDate'))
-      const today = new Date()
-      today.setHours(0, 0, 0, 0)
-      const dueDate = new Date(date)
-      dueDate.setHours(0, 0, 0, 0)
-      const isOverdue = dueDate < today
+      const isOverdue = !isPastOrToday(date) && date < new Date()
 
       return (
         <div className={isOverdue ? 'text-red-600 font-medium' : ''}>
           {formatDate(row.getValue('dueDate'), 'short', locale)}
-          {isOverdue && row.original.status === 'pending' && (
+          {isOverdue && row.original.status === 'upcoming' && (
             <div className="text-xs">Vencido</div>
           )}
         </div>
@@ -156,8 +153,8 @@ export const createColumns = ({
     cell: ({ row }) => {
       const status = row.getValue('status') as string
       return (
-        <Badge variant={status === 'paid' ? 'success' : 'secondary'}>
-          {status === 'paid' ? 'Pagado' : 'Pendiente'}
+        <Badge variant={status === 'due' ? 'destructive' : 'secondary'}>
+          {status === 'due' ? 'Vencida' : 'Próxima'}
         </Badge>
       )
     },
