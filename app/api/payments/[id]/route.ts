@@ -166,13 +166,22 @@ export const DELETE = withApiHandler(
       if (creditTransactions.length > 0) {
         const reversals = creditTransactions.map((ct) => {
           const ctAmount = Number(ct.amount)
+
+          // Reversión explícita según tipo:
+          // - OVERPAYMENT: monto positivo → reversión negativa (resta crédito)
+          // - APPLIED: monto negativo → reversión positiva (devuelve crédito)
+          const reversalAmount =
+            ct.type === 'OVERPAYMENT'
+              ? -Math.abs(ctAmount)
+              : Math.abs(ctAmount)
+
           deleteLogger.info(
-            { transactionId: ct.id, type: ct.type, amount: ctAmount },
+            { transactionId: ct.id, type: ct.type, amount: ctAmount, reversalAmount },
             'Credit transaction reversed'
           )
           return {
             customerId: ct.customerId,
-            amount: new Decimal(-ctAmount),
+            amount: new Decimal(reversalAmount),
             type: CreditTransactionType.ADJUSTMENT,
             description: `Reversión por eliminación de pago ${id.slice(0, 8)}`,
             paymentId: null,

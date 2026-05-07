@@ -47,7 +47,9 @@ export const GET = withLogging(async (request, logger) => {
   const { page, limit, skip } = parsePaginationParams(searchParams)
 
   // Filtros de server-side filtering
-  const search = searchParams.get('search') || ''
+  const rawSearch = searchParams.get('search') || ''
+  // Escapa caracteres especiales de LIKE (% y _) para evitar patrones no intencionales
+  const search = rawSearch.replace(/([%_])/g, '\\$1')
   const type = searchParams.get('type') || ''
   const paymentMethodId = searchParams.get('paymentMethodId') || ''
   const projectNumber = searchParams.get('projectNumber') || ''
@@ -445,22 +447,9 @@ export const POST = withApiHandler<CreatePaymentApiBody>(
     paymentLogger.debug('All validations passed')
 
     // ========================================================================
-    // VALIDACIÓN BÁSICA DE CRÉDITO (sin lectura de DB - se valida dentro de tx)
+    // CRÉDITO A APLICAR (se valida dentro de la transacción con datos frescos)
     // ========================================================================
     const creditToApply = creditApplied || 0
-
-    if (creditToApply > 0) {
-      paymentLogger.debug({ creditToApply }, 'Credit application requested')
-
-      // Solo permitir aplicar crédito en pagos tipo "Project" con 1 allocation
-      if (type !== 'Project' || allocations.length !== 1) {
-        paymentLogger.warn('Credit can only be applied to Project payments with 1 allocation')
-        return NextResponse.json(
-          { error: 'El crédito solo puede aplicarse a pagos de proyecto únicos' },
-          { status: 400 }
-        )
-      }
-    }
 
     // Crear el pago con sus allocations en una transacción
     const paymentDate = new Date(date)
@@ -708,6 +697,7 @@ export const POST = withApiHandler<CreatePaymentApiBody>(
               projectId: project.id,
               metadata: {
                 paymentAmount: amount,
+                creditApplied: creditToApply,
                 projectBalance: balance,
                 overpaymentAmount,
                 paymentDate: paymentDate.toISOString(),
