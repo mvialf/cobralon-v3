@@ -369,74 +369,27 @@ return {
 
 ## 4. Flujo de Cuotas (Installments)
 
-### 4.1 🟡 Fechas de Vencimiento con Suma de Días en Vez de Meses
+### 4.1 ✅ Fechas de Vencimiento con Suma de Días en Vez de Meses
 
-**Contexto:**
-Las cuotas se generan sumando 30 días a la fecha anterior.
+> ✅ **RESUELTO** — `calculateInstallments` ahora usa `addMonths` de `date-fns` para mantener el mismo día de cada mes.
 
-**Problema:**
-Sumar 30 días no produce fechas mensuales consistentes:
-- Cuota 1: 15 de enero
-- Cuota 2: 14 de febrero (31 días después)
-- Cuota 3: 16 de marzo (30 días después del 14 de febrero)
+**Solución aplicada:**
+Reemplazado `dueDate.setDate(dueDate.getDate() + (i - 1) * 30)` por `addMonths(paymentDate, i - 1)`.
 
-Los clientes esperan que las cuotas caigan el **mismo día de cada mes**.
-
-**Código (líneas 127-128 de `lib/business-logic/installments.ts`):**
-```typescript
-const dueDate = new Date(paymentDate)
-dueDate.setDate(dueDate.getDate() + (i - 1) * FINANCIAL.DAYS_PER_INSTALLMENT)
-```
-
-**Impacto:**
-- Confusión para el cliente (fechas de pago irregulares).
-- Dificultad para predecir fechas de vencimiento.
-
-**Solución Propuesta:**
-Usar `date-fns/addMonths` para mantener el mismo día de cada mes:
-
-```typescript
-import { addMonths } from 'date-fns'
-const dueDate = addMonths(paymentDate, i - 1)
-```
-
-**Archivos Afectados:**
-- `lib/business-logic/installments.ts`
-- Tests de installments
+**Antes:** 15 ene → 14 feb → 16 mar (30 días cada una)
+**Ahora:** 15 ene → 15 feb → 15 mar (mismo día cada mes)
 
 ---
 
-### 4.2 🟡 Semántica Confusa de "paid" en Cuotas
+### 4.2 ✅ Semántica Confusa de "paid" en Cuotas
 
-**Contexto:**
-Una cuota se marca como "paid" automáticamente cuando su fecha de vencimiento llega (`dueDate <= today`).
+> ✅ **RESUELTO** — Terminología cambiada a `'due'` (vencida) y `'upcoming'` (próxima).
 
-**Problema:**
-"Pagada" no significa que el cliente pagó. Significa que "venció". Esto es confuso para usuarios y reportes.
+**Solución aplicada:**
+- `'paid'` → `'due'` (badge `destructive`, label "Vencida")
+- `'pending'` → `'upcoming'` (badge `secondary`, label "Próxima")
 
-**Código (`lib/business-logic/installments.ts` línea 171-177):**
-```typescript
-export function getInstallmentStatus(dueDate: Date): 'paid' | 'pending' {
-  // ...
-  return due <= today ? 'paid' : 'pending'  // "paid" = vencida, no pagada realmente
-}
-```
-
-**Impacto:**
-- Reportes de "cuotas pagadas" son engañosos.
-- Los usuarios pueden pensar que el cliente ya pagó cuando solo venció la fecha.
-
-**Solución Propuesta:**
-Cambiar la terminología:
-- `'paid'` → `'due'` (vencida) o `'matured'`
-- `'pending'` → `'upcoming'` (próxima)
-
-Documentar explícitamente que las cuotas son puramente informativas y no representan pagos reales.
-
-**Archivos Afectados:**
-- `lib/business-logic/installments.ts`
-- `app/payments/installments/columns.tsx`
-- `app/payments/installments/page.tsx`
+Documentado que las cuotas son puramente informativas y no representan pagos reales.
 
 ---
 
@@ -1403,115 +1356,75 @@ No está claro:
 
 ## 14. Timezone y Manejo de Fechas
 
-### 14.1 🟡 `getInstallmentStatus` — Timezone del Servidor
+### 14.1 ✅ `getInstallmentStatus` — Timezone del Servidor
 
-**Archivo:** `lib/business-logic/installments.ts:171-177`
+> ✅ **RESUELTO** — Todas las comparaciones de fechas usan `lib/timezone.ts` con `America/Santiago`.
 
-**Contexto:**
-La función determina si una cuota está "pagada" (vencida) comparando con `new Date()`.
+**Solución aplicada:**
+1. Creado `lib/timezone.ts` como helper centralizado con funciones `getTodayAppTZ()`, `isPastOrToday()`, `isFuture()`, `parseDateAsLocal()`, etc.
+2. `getInstallmentStatus()` ahora usa `isPastOrToday()` que compara en la timezone de la aplicación.
+3. `getTotalPendingInstallments()` también usa `isFuture()` para consistencia.
+4. `app/api/installments/route.ts` usa `getEndOfTodayAppTZ()` para el filtro de status.
+5. `lib/utils/calendar-utils.ts` usa `getTodayAppTZ()` en la vista agenda.
 
-**Problema:**
-```typescript
-export function getInstallmentStatus(dueDate: Date): 'paid' | 'pending' {
-  const today = new Date()
-  today.setHours(0, 0, 0, 0)
-  const due = new Date(dueDate)
-  due.setHours(0, 0, 0, 0)
-  return due <= today ? 'paid' : 'pending'
-}
-```
-
-`new Date()` usa la timezone del servidor. Si el servidor está en UTC y el cliente en America/Santiago (UTC-4 en invierno):
-- Una cuota con `dueDate = 2025-05-15 00:00:00 CLT` se almacena como `2025-05-15 04:00:00 UTC`.
-- El servidor a las `2025-05-15 02:00:00 UTC` (que es `2025-05-14 22:00:00 CLT`) ve `today = 2025-05-15 UTC`.
-- La cuota aparece como "paid" 2 horas antes de que venza para el cliente.
-
-**Impacto:**
-- Cuotas aparecen como vencidas antes de lo esperado.
-- Diferencias entre lo que ve el usuario y lo que muestra el sistema.
-
-**Solución Propuesta:**
-Usar timezone consistente:
-```typescript
-import { formatDate, toZonedTime } from 'date-fns-tz'
-
-const TZ = 'America/Santiago'
-const today = toZonedTime(new Date(), TZ)
-const due = toZonedTime(dueDate, TZ)
-```
-
-O almacenar fechas como strings `YYYY-MM-DD` sin componente de tiempo.
-
-**Archivos Afectados:**
+**Archivos modificados:**
+- `lib/timezone.ts` (nuevo)
 - `lib/business-logic/installments.ts`
-- Cualquier función que compare fechas con "hoy"
+- `app/api/installments/route.ts`
+- `lib/utils/calendar-utils.ts`
 
 ---
 
-### 14.2 🟡 `Visit.POST` — `new Date(body.date)` Sin Timezone
+### 14.2 ✅ `Visit.POST` — `new Date(body.date)` Sin Timezone
 
-**Archivo:** `app/api/visits/route.ts:81`
+> ✅ **RESUELTO** — Parseo de fecha usa `parseDateAsLocal()` que interpreta YYYY-MM-DD como fecha local.
 
-**Contexto:**
-El endpoint crea visitas parseando la fecha con `new Date(body.date)`.
+**Solución aplicada:**
+El endpoint POST de visitas ahora usa `parseDateAsLocal(body.date.substring(0, 10))` en vez de `new Date(body.date)`. Esto evita que `"2025-05-15"` se interprete como UTC midnight.
 
-**Problema:**
-```typescript
-date: new Date(body.date),  // ← "2025-05-15" → UTC midnight
-```
-
-Si `body.date` es `"2025-05-15"` (sin hora):
-- JavaScript lo interpreta como `2025-05-15 00:00:00 UTC`.
-- En Chile (CLT = UTC-4), esto es `2025-05-14 20:00:00`.
-- El usuario ve la visita un día antes en la UI.
-
-**Impacto:**
-- Visitas agendadas para el 15 aparecen como el 14.
-- Confusión para el equipo que usa el calendario.
-
-**Solución Propuesta:**
-Parsear explícitamente como fecha local:
-```typescript
-import { parseISO, toZonedTime } from 'date-fns-tz'
-
-const TZ = 'America/Santiago'
-const localDate = toZonedTime(parseISO(body.date + 'T00:00:00'), TZ)
-```
-
-O mejor, almacenar como `@db.Date` (sin componente de tiempo) en Prisma:
-```prisma
-date DateTime @db.Date  // Ya usado en ProjectEvent, VisitEvent
-```
-
-**Archivos Afectados:**
+**Archivos modificados:**
 - `app/api/visits/route.ts`
-- `prisma/schema.prisma` (cambiar `Visit.date` a `@db.Date`)
 
 ---
 
-### 14.3 🟡 `calculatePaymentDistribution` — No Considera Moneda
+### 14.3 ✅ Fechas de Vencimiento con Suma de Días en Vez de Meses
 
-**Archivo:** `lib/business-logic/credit-management.ts:97-121`
+> ✅ **RESUELTO** — `calculateInstallments` ahora usa `addMonths` de `date-fns`.
 
-**Contexto:**
-La función distribuye un pago entre proyectos del cliente.
+**Solución aplicada:**
+Reemplazado `dueDate.setDate(dueDate.getDate() + (i - 1) * 30)` por `addMonths(paymentDate, i - 1)`. Las cuotas ahora caen el mismo día de cada mes.
 
-**Problema:**
-Asume que `projectBalance` y `paymentAmount` están en la misma moneda. Si un proyecto está en USD y el pago en CLP, la distribución será incorrecta.
+**Ejemplo:**
+- Antes: 15 ene → 14 feb → 16 mar (30 días cada una)
+- Ahora: 15 ene → 15 feb → 15 mar (mismo día cada mes)
 
-**Solución Propuesta:**
-Agregar validación de moneda o parámetro de conversión:
-```typescript
-if (project.currency !== paymentCurrency) {
-  throw new BusinessError(
-    `Moneda del proyecto (${project.currency}) no coincide con moneda del pago (${paymentCurrency})`,
-    400
-  )
-}
-```
+**Archivos modificados:**
+- `lib/business-logic/installments.ts`
+- Tests actualizados
 
-**Archivos Afectados:**
-- `lib/business-logic/credit-management.ts`
+---
+
+### 14.4 ✅ Semántica Confusa de "paid" en Cuotas
+
+> ✅ **RESUELTO** — Terminología cambiada a `'due'` (vencida) y `'upcoming'` (próxima).
+
+**Solución aplicada:**
+- `'paid'` → `'due'` (badge `destructive`, label "Vencida")
+- `'pending'` → `'upcoming'` (badge `secondary`, label "Próxima")
+
+**Archivos modificados:**
+- `lib/business-logic/installments.ts`
+- `app/api/installments/route.ts`
+- `app/payments/installments/page-client.tsx`
+- `app/payments/installments/columns.tsx`
+- `hooks/queries/use-installments.ts`
+- Tests actualizados
+
+---
+
+### 14.5 🟡 `calculatePaymentDistribution` — No Considera Moneda
+
+> **PENDIENTE** — Ver sección 9.3 (Decimal vs number). No es problema de timezone.
 
 ---
 
