@@ -1,0 +1,5 @@
+[mcp_servers.neon]
+url = "https://mcp.neon.tech/mcp"
+
+[mcp_servers.vercel]
+url = "https://mcp.vercel.com/mvialf-7000s-projects/cobralon"
