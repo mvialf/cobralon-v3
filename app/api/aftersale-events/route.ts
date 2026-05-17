@@ -1,18 +1,55 @@
 import { NextResponse } from 'next/server'
+import { z } from 'zod'
 import { prisma } from '@/lib/db'
 import { withApiHandler, BusinessError } from '@/lib/api-handler'
 import {
   createAftersaleEventSchema,
   type CreateAftersaleEventInput,
 } from '@/lib/validations/calendar-validations'
+import {
+  createAftersaleEventWithUpdateSchema,
+  type CreateAftersaleEventWithUpdateInput,
+} from '@/lib/validations/aftersale-event-validations'
+import { createAftersaleEventWithRelatedUpdates } from '@/lib/business-logic/calendar-event-creation'
+
+const createAftersaleEventRequestSchema = z.union([
+  createAftersaleEventWithUpdateSchema,
+  createAftersaleEventSchema.strict(),
+])
+
+type CreateAftersaleEventRequest = CreateAftersaleEventInput | CreateAftersaleEventWithUpdateInput
+
+function isAftersaleEventWithUpdateInput(
+  body: CreateAftersaleEventRequest
+): body is CreateAftersaleEventWithUpdateInput {
+  return 'aftersaleStatusId' in body && 'contactPhone' in body && 'street' in body
+}
 
 /**
  * POST /api/aftersale-events
  *
  * Crea un nuevo evento de postventa
  */
-export const POST = withApiHandler<CreateAftersaleEventInput>(
-  async (_request, _logger, { body }) => {
+export const POST = withApiHandler<CreateAftersaleEventRequest>(
+  async (_request, logger, { body }) => {
+    if (isAftersaleEventWithUpdateInput(body)) {
+      const result = await prisma.$transaction((tx) =>
+        createAftersaleEventWithRelatedUpdates(tx, body, logger)
+      )
+
+      logger.info(
+        {
+          eventId: result.event.id,
+          aftersaleId: body.aftersaleId,
+          aftersaleUpdated: result.aftersaleUpdated,
+          projectUpdated: result.projectUpdated,
+        },
+        'Aftersale event created with updates'
+      )
+
+      return NextResponse.json(result, { status: 201 })
+    }
+
     // Verificar que la postventa existe
     const aftersale = await prisma.aftersale.findUnique({
       where: { id: body.aftersaleId },
@@ -79,5 +116,5 @@ export const POST = withApiHandler<CreateAftersaleEventInput>(
 
     return NextResponse.json(newEvent, { status: 201 })
   },
-  { bodySchema: createAftersaleEventSchema, fallbackError: 'Error al crear evento' }
+  { bodySchema: createAftersaleEventRequestSchema, fallbackError: 'Error al crear evento' }
 )

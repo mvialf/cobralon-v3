@@ -341,23 +341,24 @@ Decisión documentada y migración aplicada si corresponde.
 
 ### P2-06 - Directorios `*-with-update` Duplican Endpoints
 
-**Estado:** Abierto
+**Estado:** Resuelto
 **Tipo:** Mantenibilidad
 **Impacto:** Dos rutas para responsabilidades similares elevan el riesgo de bugs divergentes.
 
 **Evidencia:**
-- `app/api/project-events-with-update`
-- `app/api/aftersale-events-with-update`
-- `app/api/visit-events-with-update`
-- Hooks todavía los llaman para ciertos flujos.
+- La lógica transaccional de creación de evento + actualización relacionada quedó centralizada en `lib/business-logic/calendar-event-creation.ts`.
+- `POST /api/project-events`, `POST /api/visit-events` y `POST /api/aftersale-events` aceptan payload simple y payload extendido.
+- Los hooks `useCreate*EventWithUpdate` ahora llaman a endpoints canónicos.
+- `app/api/*-events-with-update` queda solo como wrapper legacy liviano.
 
-**Acción recomendada:**
-1. Identificar qué ruta usa cada hook.
-2. Consolidar funcionalidad en los endpoints oficiales.
-3. Eliminar rutas duplicadas.
+**Acción aplicada:**
+1. Se consolidó la funcionalidad en los endpoints oficiales.
+2. Se migraron los hooks a rutas canónicas.
+3. Se reemplazó la implementación duplicada de rutas `*-with-update` por wrappers de compatibilidad.
+4. Se agregaron tests para payload simple y extendido en proyecto, visita y postventa.
 
 **Criterio de cierre:**
-No quedan rutas `*-with-update` ni referencias en hooks.
+No queda lógica duplicada ni referencias en hooks a rutas `*-with-update`; las rutas legacy solo delegan en la implementación compartida.
 
 ---
 
@@ -566,6 +567,7 @@ Estos puntos no deben aparecer como pendientes en el checklist principal.
 | `search-projects` con `balance > 1` hardcoded | Resuelto | Usa `FINANCIAL.BALANCE_TOLERANCE`. |
 | `Project.PUT` recalcula balance sin ajustes | Obsoleto | Ya no recalcula/escribe balance persistido. |
 | Testing de imports/adjustments inexistente | Obsoleto parcial | Existen tests para varios endpoints antes listados como sin cobertura. Exports endpoint siguen siendo candidatos. |
+| Endpoints `*-with-update` duplicados | Resuelto | Los hooks usan rutas canónicas y las rutas legacy son wrappers sobre lógica compartida. |
 
 ---
 
@@ -585,7 +587,6 @@ Estos puntos no deben aparecer como pendientes en el checklist principal.
 - [ ] Alertar/loggear saldos negativos de crédito.
 - [ ] Limitar errores Zod en `withApiHandler`.
 - [ ] Agregar rate limiting o documentar protección externa de login/auth.
-- [ ] Consolidar endpoints `*-with-update`.
 
 ### Mes Actual
 

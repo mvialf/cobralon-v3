@@ -79,7 +79,7 @@ interface CreateProjectEventWithUpdateResponse {
 async function createProjectEventWithUpdate(
   data: CreateProjectEventWithUpdateInput
 ): Promise<CreateProjectEventWithUpdateResponse> {
-  const response = await fetch('/api/project-events-with-update', {
+  const response = await fetch('/api/project-events', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data),

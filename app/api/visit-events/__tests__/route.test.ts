@@ -19,8 +19,10 @@ vi.mock('@/lib/logger-middleware')
 // Mock de Prisma
 vi.mock('@/lib/db', () => ({
   prisma: {
+    $transaction: vi.fn(),
     visit: {
       findUnique: vi.fn(),
+      update: vi.fn(),
     },
     visitEvent: {
       findFirst: vi.fn(),
@@ -50,6 +52,7 @@ async function callPOST(body: Record<string, unknown>) {
 describe('POST /api/visit-events', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    vi.mocked(prisma.$transaction).mockImplementation(async (callback) => callback(prisma as never))
 
     // Mocks por defecto: visita existe, no finalizada, sin duplicados
     vi.mocked(prisma.visit.findUnique).mockResolvedValue({
@@ -62,6 +65,7 @@ describe('POST /api/visit-events', () => {
       },
     } as never)
     vi.mocked(prisma.visitEvent.findFirst).mockResolvedValue(null)
+    vi.mocked(prisma.visit.update).mockResolvedValue({ id: 'visit-1' } as never)
     vi.mocked(prisma.visitEvent.create).mockResolvedValue({
       id: 've-new',
       visitId: 'visit-1',
@@ -259,6 +263,95 @@ describe('POST /api/visit-events', () => {
       // No debería incluir teamTags si está vacío
       const call = vi.mocked(prisma.visitEvent.create).mock.calls[0][0]
       expect(call.data.teamTags).toBeUndefined()
+    })
+  })
+
+  describe('creación transaccional con actualización de visita', () => {
+    it('debe actualizar visita y crear evento con payload extendido', async () => {
+      vi.mocked(prisma.visit.findUnique).mockResolvedValue({
+        id: 'visit-1',
+        name: 'Nombre anterior',
+        phone: '+56911111111',
+        street: 'Calle antigua',
+        apartment: null,
+        comuna: 'Santiago',
+        region: 'Región Metropolitana de Santiago',
+        observations: null,
+        visitStatusId: '00000000-0000-0000-0000-000000000020',
+        visitStatus: { isFinal: false },
+      } as never)
+
+      const response = await callPOST({
+        visitId: VALID_UUID,
+        scheduledDate: '2025-01-15',
+        visitStatusId: '00000000-0000-0000-0000-000000000021',
+        name: 'Cliente actualizado',
+        phone: '+56912345678',
+        observations: 'Observación',
+        street: 'Calle nueva',
+        apartment: null,
+        comuna: 'Providencia',
+        region: '13',
+        teamTagIds: ['00000000-0000-0000-0000-000000000010'],
+      })
+      const data = await response.json()
+
+      expect(response.status).toBe(201)
+      expect(data.visitUpdated).toBe(true)
+      expect(data.event.id).toBe('ve-new')
+      expect(prisma.$transaction).toHaveBeenCalled()
+      expect(prisma.visit.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: VALID_UUID },
+          data: expect.objectContaining({
+            name: 'Cliente actualizado',
+            region: 'Región Metropolitana de Santiago',
+          }),
+        })
+      )
+      expect(prisma.visitEvent.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            visitId: VALID_UUID,
+            teamTags: {
+              connect: [{ id: '00000000-0000-0000-0000-000000000010' }],
+            },
+          }),
+        })
+      )
+    })
+
+    it('debe crear evento sin actualizar visita cuando no hay cambios', async () => {
+      vi.mocked(prisma.visit.findUnique).mockResolvedValue({
+        id: 'visit-1',
+        name: 'Cliente actual',
+        phone: '+56912345678',
+        street: 'Calle actual',
+        apartment: null,
+        comuna: 'Providencia',
+        region: 'Región Metropolitana de Santiago',
+        observations: 'Observación',
+        visitStatusId: '00000000-0000-0000-0000-000000000021',
+        visitStatus: { isFinal: false },
+      } as never)
+
+      const response = await callPOST({
+        visitId: VALID_UUID,
+        scheduledDate: '2025-01-15',
+        visitStatusId: '00000000-0000-0000-0000-000000000021',
+        name: 'Cliente actual',
+        phone: '+56912345678',
+        observations: 'Observación',
+        street: 'Calle actual',
+        apartment: null,
+        comuna: 'Providencia',
+        region: '13',
+      })
+      const data = await response.json()
+
+      expect(response.status).toBe(201)
+      expect(data.visitUpdated).toBe(false)
+      expect(prisma.visit.update).not.toHaveBeenCalled()
     })
   })
 

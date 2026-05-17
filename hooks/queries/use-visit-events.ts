@@ -82,7 +82,7 @@ interface CreateVisitEventWithUpdateResponse {
 async function createVisitEventWithUpdate(
   data: CreateVisitEventWithUpdateInput
 ): Promise<CreateVisitEventWithUpdateResponse> {
-  const response = await fetch('/api/visit-events-with-update', {
+  const response = await fetch('/api/visit-events', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data),

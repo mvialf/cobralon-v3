@@ -19,8 +19,13 @@ vi.mock('@/lib/logger-middleware')
 // Mock de Prisma
 vi.mock('@/lib/db', () => ({
   prisma: {
+    $transaction: vi.fn(),
     aftersale: {
       findUnique: vi.fn(),
+      update: vi.fn(),
+    },
+    project: {
+      update: vi.fn(),
     },
     aftersaleEvent: {
       findFirst: vi.fn(),
@@ -49,6 +54,7 @@ async function callPOST(body: Record<string, unknown>) {
 describe('POST /api/aftersale-events', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    vi.mocked(prisma.$transaction).mockImplementation(async (callback) => callback(prisma as never))
 
     vi.mocked(prisma.aftersale.findUnique).mockResolvedValue({
       id: 'aftersale-1',
@@ -60,6 +66,8 @@ describe('POST /api/aftersale-events', () => {
       },
     } as never)
     vi.mocked(prisma.aftersaleEvent.findFirst).mockResolvedValue(null)
+    vi.mocked(prisma.aftersale.update).mockResolvedValue({ id: 'aftersale-1' } as never)
+    vi.mocked(prisma.project.update).mockResolvedValue({ id: 'proj-1' } as never)
     vi.mocked(prisma.aftersaleEvent.create).mockResolvedValue({
       id: 'ae-new',
       aftersaleId: 'aftersale-1',
@@ -246,6 +254,121 @@ describe('POST /api/aftersale-events', () => {
       expect(response.status).toBe(201)
       const call = vi.mocked(prisma.aftersaleEvent.create).mock.calls[0][0]
       expect(call.data.teamTags).toBeUndefined()
+    })
+  })
+
+  describe('creación transaccional con actualización de postventa', () => {
+    it('debe actualizar postventa, proyecto y crear evento con payload extendido', async () => {
+      vi.mocked(prisma.aftersale.findUnique).mockResolvedValue({
+        id: 'aftersale-1',
+        projectId: 'proj-1',
+        aftersaleStatusId: '00000000-0000-0000-0000-000000000020',
+        contactPhone: '+56911111111',
+        description: 'Anterior',
+        tasks: [],
+        aftersaleStatus: { isFinal: false },
+        project: {
+          id: 'proj-1',
+          street: 'Calle antigua',
+          apartment: null,
+          comuna: 'Santiago',
+          region: 'Región Metropolitana de Santiago',
+        },
+      } as never)
+
+      const response = await callPOST({
+        aftersaleId: VALID_UUID,
+        scheduledDate: '2025-01-15',
+        aftersaleStatusId: '00000000-0000-0000-0000-000000000021',
+        contactPhone: '+56912345678',
+        description: 'Nueva descripción',
+        tasks: [
+          {
+            id: '00000000-0000-0000-0000-000000000030',
+            text: 'Tarea',
+            completed: false,
+          },
+        ],
+        street: 'Calle nueva',
+        apartment: null,
+        comuna: 'Providencia',
+        region: '13',
+        teamTagIds: ['00000000-0000-0000-0000-000000000010'],
+      })
+      const data = await response.json()
+
+      expect(response.status).toBe(201)
+      expect(data.aftersaleUpdated).toBe(true)
+      expect(data.projectUpdated).toBe(true)
+      expect(data.event.id).toBe('ae-new')
+      expect(prisma.$transaction).toHaveBeenCalled()
+      expect(prisma.aftersale.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: VALID_UUID },
+          data: expect.objectContaining({
+            contactPhone: '+56912345678',
+            description: 'Nueva descripción',
+          }),
+        })
+      )
+      expect(prisma.project.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: 'proj-1' },
+          data: expect.objectContaining({
+            street: 'Calle nueva',
+            region: 'Región Metropolitana de Santiago',
+          }),
+        })
+      )
+      expect(prisma.aftersaleEvent.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            aftersaleId: VALID_UUID,
+            teamTags: {
+              connect: [{ id: '00000000-0000-0000-0000-000000000010' }],
+            },
+          }),
+        })
+      )
+    })
+
+    it('debe crear evento sin actualizar entidades cuando no hay cambios', async () => {
+      vi.mocked(prisma.aftersale.findUnique).mockResolvedValue({
+        id: 'aftersale-1',
+        projectId: 'proj-1',
+        aftersaleStatusId: '00000000-0000-0000-0000-000000000021',
+        contactPhone: '+56912345678',
+        description: 'Actual',
+        tasks: [],
+        aftersaleStatus: { isFinal: false },
+        project: {
+          id: 'proj-1',
+          street: 'Calle actual',
+          apartment: null,
+          comuna: 'Providencia',
+          region: 'Región Metropolitana de Santiago',
+        },
+      } as never)
+
+      const response = await callPOST({
+        aftersaleId: VALID_UUID,
+        scheduledDate: '2025-01-15',
+        aftersaleStatusId: '00000000-0000-0000-0000-000000000021',
+        contactPhone: '+56912345678',
+        description: 'Actual',
+        tasks: [],
+        street: 'Calle actual',
+        apartment: null,
+        comuna: 'Providencia',
+        region: '13',
+      })
+      const data = await response.json()
+
+      expect(response.status).toBe(201)
+      expect(data.aftersaleUpdated).toBe(false)
+      expect(data.projectUpdated).toBe(false)
+      expect(prisma.aftersale.update).not.toHaveBeenCalled()
+      expect(prisma.project.update).not.toHaveBeenCalled()
     })
   })
 

@@ -1,18 +1,52 @@
 import { NextResponse } from 'next/server'
+import { z } from 'zod'
 import { prisma } from '@/lib/db'
 import { withApiHandler, BusinessError } from '@/lib/api-handler'
 import {
   createProjectEventSchema,
+  createProjectEventWithProjectUpdateSchema,
   type CreateProjectEventInput,
+  type CreateProjectEventWithProjectUpdateInput,
 } from '@/lib/validations/calendar-validations'
+import { createProjectEventWithProjectUpdate } from '@/lib/business-logic/calendar-event-creation'
+
+const createProjectEventRequestSchema = z.union([
+  createProjectEventWithProjectUpdateSchema,
+  createProjectEventSchema.strict(),
+])
+
+type CreateProjectEventRequest = CreateProjectEventInput | CreateProjectEventWithProjectUpdateInput
+
+function isProjectEventWithUpdateInput(
+  body: CreateProjectEventRequest
+): body is CreateProjectEventWithProjectUpdateInput {
+  return 'phone' in body && 'street' in body && 'windowsCount' in body && 'squareMeters' in body
+}
 
 /**
  * POST /api/project-events
  *
  * Crea un nuevo evento de calendario para un proyecto
  */
-export const POST = withApiHandler<CreateProjectEventInput>(
+export const POST = withApiHandler<CreateProjectEventRequest>(
   async (_request, logger, { body }) => {
+    if (isProjectEventWithUpdateInput(body)) {
+      const result = await prisma.$transaction((tx) =>
+        createProjectEventWithProjectUpdate(tx, body, logger)
+      )
+
+      logger.info(
+        {
+          eventId: result.event.id,
+          projectId: body.projectId,
+          projectUpdated: result.projectUpdated,
+        },
+        'Project event created with optional project update'
+      )
+
+      return NextResponse.json(result, { status: 201 })
+    }
+
     // Verificar que el proyecto existe y no está finalizado
     const project = await prisma.project.findUnique({
       where: { id: body.projectId },
@@ -72,5 +106,5 @@ export const POST = withApiHandler<CreateProjectEventInput>(
 
     return NextResponse.json(event, { status: 201 })
   },
-  { bodySchema: createProjectEventSchema, fallbackError: 'Error al crear evento' }
+  { bodySchema: createProjectEventRequestSchema, fallbackError: 'Error al crear evento' }
 )

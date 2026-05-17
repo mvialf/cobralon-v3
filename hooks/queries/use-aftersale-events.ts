@@ -85,7 +85,7 @@ interface CreateAftersaleEventWithUpdateResponse {
 async function createAftersaleEventWithUpdate(
   data: CreateAftersaleEventWithUpdateInput
 ): Promise<CreateAftersaleEventWithUpdateResponse> {
-  const response = await fetch('/api/aftersale-events-with-update', {
+  const response = await fetch('/api/aftersale-events', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data),
