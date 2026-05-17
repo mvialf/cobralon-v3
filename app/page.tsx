@@ -6,15 +6,97 @@ import { Badge } from '@/components/ui/badge'
 import { prisma } from '@/lib/db'
 import { formatCurrency } from '@/lib/format'
 import { DashboardActivityList } from '@/components/summarys/dashboard-activity-list'
+import { MonthlySalesSelector } from '@/components/summarys/monthly-sales-selector'
 
-async function getMonthlySales() {
+interface HomePageProps {
+  searchParams?: Promise<{
+    month?: string | string[]
+  }>
+}
+
+interface DashboardMonth {
+  value: string
+  label: string
+  start: Date
+  end: Date
+}
+
+function getMonthValue(date: Date) {
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+
+  return `${year}-${month}`
+}
+
+function getMonthLabel(date: Date) {
+  return new Intl.DateTimeFormat('es-CL', {
+    month: 'long',
+    year: 'numeric',
+  }).format(date)
+}
+
+function createDashboardMonth(value: string): DashboardMonth {
+  const [year, month] = value.split('-').map(Number)
+  const start = new Date(year, month - 1, 1)
+  const end = new Date(year, month, 0, 23, 59, 59, 999)
+
+  return {
+    value,
+    label: getMonthLabel(start),
+    start,
+    end,
+  }
+}
+
+function resolveSelectedMonth(monthParam: string | string[] | undefined) {
   const now = new Date()
-  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1)
-  const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999)
+  const rawMonth = Array.isArray(monthParam) ? monthParam[0] : monthParam
 
+  if (rawMonth && /^\d{4}-\d{2}$/.test(rawMonth)) {
+    const [year, month] = rawMonth.split('-').map(Number)
+
+    if (month >= 1 && month <= 12 && year >= 1900 && year <= 3000) {
+      return createDashboardMonth(rawMonth)
+    }
+  }
+
+  return createDashboardMonth(getMonthValue(now))
+}
+
+async function getAvailableMonths(selectedMonth: DashboardMonth) {
+  const oldestProject = await prisma.project.findFirst({
+    orderBy: { date: 'asc' },
+    select: { date: true },
+  })
+
+  const now = new Date()
+  const start = oldestProject?.date ?? now
+  const cursor = new Date(start.getFullYear(), start.getMonth(), 1)
+  const end = new Date(now.getFullYear(), now.getMonth(), 1)
+  const months: Array<{ value: string; label: string }> = []
+
+  while (cursor <= end) {
+    months.push({
+      value: getMonthValue(cursor),
+      label: getMonthLabel(cursor),
+    })
+    cursor.setMonth(cursor.getMonth() + 1)
+  }
+
+  if (!months.some((month) => month.value === selectedMonth.value)) {
+    months.push({
+      value: selectedMonth.value,
+      label: selectedMonth.label,
+    })
+  }
+
+  return months.reverse()
+}
+
+async function getMonthlySales(month: DashboardMonth) {
   const projects = await prisma.project.findMany({
     where: {
-      date: { gte: startOfMonth, lte: endOfMonth },
+      date: { gte: month.start, lte: month.end },
     },
     select: {
       subtotal: true,
@@ -138,9 +220,13 @@ async function getRecentPayments() {
   }))
 }
 
-export default async function HomePage() {
-  const [sales, installments, recentProjects, recentPayments] = await Promise.all([
-    getMonthlySales(),
+export default async function HomePage({ searchParams }: HomePageProps) {
+  const resolvedSearchParams = await searchParams
+  const selectedMonth = resolveSelectedMonth(resolvedSearchParams?.month)
+
+  const [sales, availableMonths, installments, recentProjects, recentPayments] = await Promise.all([
+    getMonthlySales(selectedMonth),
+    getAvailableMonths(selectedMonth),
     getUpcomingInstallments(),
     getRecentProjects(),
     getRecentPayments(),
@@ -168,8 +254,9 @@ export default async function HomePage() {
         {/* Ventas mensuales */}
         <Card className="gap-1.5" style={{ gridArea: 'a' }}>
           <CardHeader className="px-3 py-0">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Ventas del Mes
+            <CardTitle className="flex items-center gap-1.5 text-sm font-medium text-muted-foreground">
+              <span>Ventas</span>
+              <MonthlySalesSelector selectedMonth={selectedMonth.value} months={availableMonths} />
             </CardTitle>
           </CardHeader>
           <CardContent className="px-3 py-0">
