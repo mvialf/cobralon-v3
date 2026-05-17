@@ -164,9 +164,9 @@ export default async function HomePage() {
             "f f f g g g d d d"
             "f f f g g g d d d"
             "f f f g g g d d d"
-            "f f f g g g h h h"
-            "f f f g g g h h h"
-            "f f f g g g h h h"
+            "f f f g g g d d d"
+            "f f f g g g d d d"
+            "f f f g g g d d d"
           `,
         }}
       >
@@ -315,16 +315,6 @@ export default async function HomePage() {
             ),
           }))}
         />
-
-        {/* Panel inferior derecho */}
-        <Card className="gap-1.5" style={{ gridArea: 'h' }}>
-          <CardHeader className="px-3 py-0">
-            <CardTitle className="text-sm font-medium">Card H</CardTitle>
-          </CardHeader>
-          <CardContent className="px-3 py-0">
-            <p className="text-sm text-muted-foreground">Panel inferior</p>
-          </CardContent>
-        </Card>
       </div>
     </AppLayout>
   )
