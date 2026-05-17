@@ -1,2683 +1,619 @@
 # Análisis de Mejoras y Bugs Potenciales - Proyecto Cobralon
 
-> **Fecha de análisis:** 2026-05-07
-> **Versión del proyecto:** 3.1.0
-> **Branch analizado:** `dev2`
-> **Propósito:** Documento exhaustivo de problemas técnicos, bugs potenciales, inconsistencias de flujo y mejoras arquitectónicas. Cualquier agente o desarrollador debe poder entender el contexto, el problema y la solución propuesta sin necesidad de explorar el código adicionalmente.
+> **Última validación:** 2026-05-17
+> **Proyecto:** Cobralon
+> **Objetivo:** Backlog técnico verificable para priorizar bugs, riesgos operacionales y mejoras arquitectónicas.
+> **Estado del documento anterior:** reescrito por drift contra el código actual. La versión anterior mezclaba pendientes, resueltos, duplicados y hallazgos obsoletos.
 
 ---
 
-## Tabla de Contenidos
+## Cómo Usar Este Documento
 
-1. [Flujo de Pagos (Payments, Allocations, FIFO, Credit)](#1-flujo-de-pagos)
-2. [Flujo de Proyectos (Projects, Balances, Adjustments)](#2-flujo-de-proyectos)
-3. [Flujo de Clientes y Créditos](#3-flujo-de-clientes-y-créditos)
-4. [Flujo de Cuotas (Installments)](#4-flujo-de-cuotas)
-5. [Flujo de Postventa y Visitas](#5-flujo-de-postventa-y-visitas)
-6. [Flujo de Calendario](#6-flujo-de-calendario)
-7. [Validaciones y Seguridad](#7-validaciones-y-seguridad)
-8. [Integridad de Datos y Race Conditions](#8-integridad-de-datos)
-9. [Arquitectura y Patrones](#9-arquitectura-y-patrones)
-10. [Dependencias y Build](#10-dependencias-y-build)
-11. [Autorización y Control de Acceso](#11-autorización-y-control-de-acceso)
-12. [Endpoints de Import/Export](#12-endpoints-de-importexport)
-13. [Inconsistencias de Patrones API](#13-inconsistencias-de-patrones-api)
-14. [Timezone y Manejo de Fechas](#14-timezone-y-manejo-de-fechas)
-15. [Base de Datos — Integridad Adicional](#15-base-de-datos--integridad-adicional)
-16. [Optimización de Base de Datos y Queries](#16-optimización-de-base-de-datos-y-queries)
-17. [Testing — Cobertura](#17-testing--cobertura)
-18. [Configuración y Entorno](#18-configuración-y-entorno)
+Cada hallazgo usa un ID estable para evitar duplicados y reaperturas accidentales.
 
----
+| Campo | Significado |
+|-------|-------------|
+| **Estado** | `Abierto`, `Validar`, `Obsoleto`, `Resuelto` |
+| **Evidencia** | Archivo/línea o comportamiento observado en el código |
+| **Criterio de cierre** | Condición concreta para marcarlo como resuelto |
+| **Tipo** | `Bug`, `Seguridad`, `Operacional`, `Arquitectura`, `Mantenibilidad`, `Testing` |
 
-## Leyenda de Severidad
+### Severidad
 
-| Icono | Nivel | Definición |
-|-------|-------|------------|
-| 🔴 | **Crítico** | Puede causar pérdida de dinero, corrupción de datos o comportamiento errático en producción. Requiere atención inmediata. |
-| 🟡 | **Medio** | Puede causar inconsistencias menores, bugs de UX o deuda técnica que escalará. Debe resolverse en el corto plazo. |
-| 🟢 | **Bajo** | Mejora de calidad de código, performance o mantenibilidad. No afecta funcionalidad actual. |
+| Nivel | Definición |
+|-------|------------|
+| **P0 - Crítico** | Riesgo de pérdida de dinero, escalada de privilegios, corrupción de datos o caída operacional relevante. |
+| **P1 - Alto** | Bug funcional o deuda técnica que puede afectar flujos importantes en producción. |
+| **P2 - Medio** | Inconsistencia, riesgo edge o mejora necesaria para escalar con menos fricción. |
+| **P3 - Bajo** | Limpieza, mantenibilidad o mejora de calidad sin impacto funcional inmediato. |
 
 ---
 
-## 1. Flujo de Pagos (Payments, Allocations, FIFO, Credit)
+## Resumen Ejecutivo
 
-### 1.1 🟡 POST /api/payments — Validación Redundante de Crédito Fuera de Transacción
+El documento anterior no debe usarse como backlog directo. Los puntos sobre `Project.balance`, `updateMultipleProjectBalances`, cron de reconciliación, timezone de cuotas y varios tests ya están resueltos u obsoletos.
 
-> ✅ **RESUELTO** — Validación fuera de transacción eliminada. La validación dentro de la transacción es suficiente y más segura.
+Los riesgos vigentes más importantes son:
 
-**Contexto:**
-El endpoint POST tenía una validación de `creditApplied` en dos etapas:
-1. **Fuera de la transacción** (líneas 452-463): validaba que `creditApplied > 0` solo se permita en pagos tipo "Project" con 1 allocation.
-2. **Dentro de la transacción** (líneas 593-647): lee el balance real del cliente y valida que el crédito sea suficiente.
-
-**Solución aplicada:**
-Eliminada la validación fuera de la transacción. La validación dentro de la transacción es suficiente y más segura porque lee datos frescos.
+1. **Crédito aplicado a proyecto:** el flujo UI puede no enviar `creditApplied`, y `ProjectFinancials` no descuenta transacciones `APPLIED`.
+2. **Autorización por rol:** el middleware valida sesión, pero no autorización por rol.
+3. **`/api/users`:** endpoint autenticado pero sobre-privilegiado, sin Zod ni `withApiHandler`.
+4. **Exports/imports masivos:** varios endpoints cargan todo en memoria o procesan batches sin límite.
+5. **Crédito/refund:** hay validación fuera de transacción y ocultamiento de saldos negativos.
 
 ---
 
-### 1.2 🟡 Sobrepago (Overpayment) — Falta de Contexto en Metadata
+## P0 - Crítico
 
-> ✅ **RESUELTO** — `creditApplied` agregado al metadata del `OVERPAYMENT`.
+### P0-01 - Crédito Aplicado Puede No Reducir el Balance Derivado del Proyecto
 
-**Contexto:**
-Cuando un pago genera que el balance del proyecto sea negativo, el sistema automáticamente:
-1. Ajusta el balance a 0.
-2. Crea un `CreditTransaction` tipo `OVERPAYMENT` con el excedente.
+**Estado:** Abierto
+**Tipo:** Bug financiero
+**Impacto:** Crédito del cliente puede consumirse sin reflejarse correctamente en el balance financiero del proyecto.
 
-**Solución aplicada:**
-Agregado `creditApplied: creditToApply` al metadata del `OVERPAYMENT` para auditoría completa.
+**Evidencia:**
+- `paymentToProjectToPayload()` no incluye `creditApplied`, aunque el formulario 1:1 lo maneja.
+  - `lib/validations/payment-validations.ts`
+- `ProjectFinancials` calcula balance como:
+  - `totalAmount - PaymentAllocation - ProjectAdjustment`
+  - No descuenta `CreditTransaction` tipo `APPLIED`.
+  - `prisma/migrations/20260517120000_create_project_financials_view/migration.sql`
+- `POST /api/payments` sí crea `CreditTransaction` tipo `APPLIED`, pero la allocation sigue usando solo `amount`.
+  - `app/api/payments/route.ts`
 
----
+**Riesgo concreto:**
+Si un usuario aplica crédito a un pago de proyecto, puede disminuir el crédito disponible del cliente sin disminuir el balance del proyecto, dependiendo del payload real enviado.
 
-### 1.3 🟢 DELETE /api/payments/[id] — Reversión de Crédito Depende del Signo del Monto
+**Acción recomendada:**
+1. Definir contrato financiero:
+   - Opción A: `Payment.amount` representa solo dinero nuevo y `PaymentAllocation.allocatedAmount = amount + creditApplied`.
+   - Opción B: `PaymentAllocation` representa solo dinero nuevo y `ProjectFinancials` descuenta `CreditTransaction.APPLIED`.
+2. Corregir `paymentToProjectToPayload()` para enviar `creditApplied`.
+3. Agregar tests de integración para pago 1:1 con crédito aplicado.
 
-> ✅ **RESUELTO** — Reversión explícita según tipo de transacción.
-
-**Contexto:**
-Al eliminar un pago, se crean transacciones de `ADJUSTMENT` para revertir los créditos asociados.
-
-**Solución aplicada:**
-La lógica de reversión ahora es explícita según tipo:
-- `OVERPAYMENT` → `-Math.abs(ctAmount)` (resta crédito)
-- `APPLIED` → `Math.abs(ctAmount)` (devuelve crédito)
-
----
-
-### 1.4 🟢 Búsqueda de Pagos — Patrón Frágil de SQL
-
-> ✅ **RESUELTO** — Caracteres especiales de LIKE (`%`, `_`) se escapan antes de usar en queries.
-
-**Contexto:**
-El GET de pagos usa `$queryRaw` con `normalize_text()` para búsqueda sin acentos.
-
-**Solución aplicada:**
-Caracteres especiales de LIKE (`%` y `_`) se escapan con `replace(/([%_])/g, '\\$1')` al inicio del handler. Aplica a búsqueda principal y facets.
+**Criterio de cierre:**
+Un pago de proyecto con `amount = 100`, `creditApplied = 50` reduce el crédito del cliente en 50 y reduce el balance del proyecto en 150, con test automatizado.
 
 ---
 
-## 2. Flujo de Proyectos (Projects, Balances, Adjustments)
+### P0-02 - Falta Autorización por Rol en Endpoints Sensibles
 
-### 2.1 ✅ Campo `balance` Persistido — Riesgo de Desincronización Crónica
+**Estado:** Abierto
+**Tipo:** Seguridad
+**Impacto:** Cualquier usuario autenticado puede ejecutar operaciones que deberían requerir admin o permisos específicos.
 
-**Contexto:**
-`Project.balance` es un campo calculado que se almacena en la DB (schema Prisma línea 171). Su fórmula es:
-```
-balance = totalAmount - SUM(allocations.allocatedAmount) - SUM(adjustments.amount)
+**Evidencia:**
+- `middleware.ts` valida sesión con `auth.api.getSession()`, pero no revisa `session.user.role`.
+- No se encontró patrón central tipo `requireRole`, `requireAdmin` o checks por endpoint.
+- `User.role` existe en Prisma, pero no parece aplicarse a rutas API.
+
+**Endpoints de alto riesgo:**
+- Deletes de customers, projects, payments, aftersales y visits.
+- Ajustes financieros de proyecto.
+- Import masivo.
+- Devoluciones de crédito.
+- Gestión de usuarios.
+
+**Acción recomendada:**
+Crear autorización centralizada en `lib/api-handler.ts` o helper dedicado:
+
+```ts
+requireRole(['admin'])
+requireRole(['admin', 'finance'])
 ```
 
-**Problema:**
-El balance se actualiza **manualmente** mediante `updateMultipleProjectBalances()` después de cada operación de pago. Si alguna operación:
-- Falla silenciosamente después de crear el pago pero antes de actualizar el balance.
-- Es editada directamente en DB (sin pasar por la aplicación).
-- Tiene un bug en un endpoint secundario.
+Aplicar primero a:
+1. `/api/users`
+2. Ajustes de proyecto
+3. Devolución de crédito
+4. Imports
+5. Deletes
 
-El balance queda desincronizado. **La existencia del cron `reconcile-balances` es evidencia directa** de que este problema ocurre en producción.
+**Criterio de cierre:**
+Los endpoints sensibles retornan `403` para usuarios autenticados sin rol permitido, con tests.
 
-**Impacto:**
-- Un proyecto puede mostrar balance $0 cuando en realidad debe $100.000.
-- Un proyecto puede mostrar deuda cuando ya está pagado.
-- Decisiones de negocio basadas en balance incorrecto (ej: no enviar a cobranza).
+---
 
-**Estado:** Resuelto parcialmente en implementación actual.
+### P0-03 - `/api/users` Está Autenticado Pero Sobre-Privilegiado
 
-**Solución aplicada:**
-El runtime dejó de depender de `Project.balance` y ahora lee el balance desde la view derivada `ProjectFinancials`:
+**Estado:** Abierto
+**Tipo:** Seguridad
+**Impacto:** Cualquier usuario autenticado podría listar o crear usuarios.
+
+**Evidencia:**
+- `app/api/users/route.ts` no usa `withApiHandler`.
+- No tiene validación Zod.
+- Usa `console.error` en vez de logger estructurado.
+- `GET` retorna `prisma.user.findMany()` sin minimizar campos.
+- `POST` crea usuarios sin autorización admin explícita.
+
+**Corrección recomendada:**
+1. Envolver con `withApiHandler`.
+2. Agregar schema Zod estricto.
+3. Requerir rol `admin`.
+4. En `GET`, retornar solo campos necesarios: `id`, `name`, `email`, `role`, `createdAt`.
+5. Limitar paginación y validar `limit/offset`.
+
+**Criterio de cierre:**
+`GET` y `POST /api/users` requieren admin, validan input y tienen tests para `401/403/400/201`.
+
+---
+
+## P1 - Alto
+
+### P1-01 - Refund de Crédito Valida Fuera de Transacción
+
+**Estado:** Abierto
+**Tipo:** Bug financiero / Concurrencia
+**Impacto:** Dos requests concurrentes podrían validar contra el mismo saldo y crear retiros que dejan ledger negativo.
+
+**Evidencia:**
+- `app/api/customers/[id]/credit/refund/route.ts` calcula `creditBalance` antes de la transacción.
+- Dentro de la transacción crea `WITHDRAWAL` y luego calcula el nuevo saldo, pero no revalida antes de crear.
+
+**Acción recomendada:**
+Mover lectura y validación de saldo dentro de la transacción antes de crear el `WITHDRAWAL`.
+
+**Criterio de cierre:**
+El endpoint revalida saldo en la transacción y un test cubre doble refund concurrente o intento de refund mayor al saldo.
+
+---
+
+### P1-02 - Balances Negativos de Crédito se Ocultan
+
+**Estado:** Abierto
+**Tipo:** Integridad de datos
+**Impacto:** Bugs financieros pueden quedar invisibles porque el sistema retorna `0` en vez del saldo real negativo.
+
+**Evidencia:**
+- `getCustomerCreditBalance()` usa `Math.max(0, rawBalance)`.
+- `getCustomerCreditBalances()` aplica el mismo patrón batch.
+
+**Acción recomendada:**
+1. Calcular `rawBalance`.
+2. Loggear warning/error estructurado si `rawBalance < 0`.
+3. Definir si la función debe retornar saldo raw o saldo clamp.
+
+**Criterio de cierre:**
+Un ledger negativo queda visible en logs/alertas y existe test para saldo negativo.
+
+---
+
+### P1-03 - Exports Cargan Todos los Datos en Memoria
+
+**Estado:** Abierto
+**Tipo:** Operacional
+**Impacto:** Riesgo de OOM, timeout o caída de función serverless con datasets grandes.
+
+**Evidencia:**
+- `app/api/customers/export/route.ts` usa `findMany()` sin límite.
+- `app/api/payments/export/route.ts` usa `findMany()` sin límite.
+- `app/api/projects/export/route.ts` consulta todos los resultados filtrados sin límite.
+
+**Acción recomendada:**
+Opción inicial pragmática:
+1. Agregar `MAX_EXPORT_ROWS`.
+2. Aplicar filtros en DB.
+3. Retornar error o advertencia si excede el límite.
+
+Opción robusta:
+1. Export streaming CSV/XLSX.
+2. Job asíncrono para archivos grandes.
+
+**Criterio de cierre:**
+Los exports tienen límite explícito o streaming, y tests cubren límite excedido.
+
+---
+
+### P1-04 - Imports Sin Límite de Batch Size
+
+**Estado:** Abierto
+**Tipo:** Operacional / DB
+**Impacto:** Transacciones largas, timeouts y locks excesivos.
+
+**Evidencia:**
+- `app/api/customers/import/route.ts` crea una transacción con todas las filas.
+- Revisar también `payments/import` y `projects/import`.
+
+**Acción recomendada:**
+1. Definir `MAX_IMPORT_ROWS`.
+2. Procesar en chunks (`BATCH_SIZE`, por ejemplo 250 o 500).
+3. Retornar resumen por chunk con errores acumulados.
+
+**Criterio de cierre:**
+Imports rechazan o chunkear datasets grandes y tienen tests para límites.
+
+---
+
+### P1-05 - Transacción de Creación de Pagos Sigue Siendo Larga
+
+**Estado:** Validar
+**Tipo:** Performance / Concurrencia
+**Impacto:** Mayor latencia y riesgo de deadlocks bajo carga.
+
+**Evidencia:**
+- `POST /api/payments` crea payment, allocations, installments, actualiza cuotas, crea transacciones de crédito y recorre proyectos con sobrepago dentro de una sola transacción.
+
+**Acción recomendada:**
+1. Corregir primero P0-01 para no optimizar sobre un contrato financiero ambiguo.
+2. Reemplazar loops de `creditTransaction.create()` por `createMany()` cuando aplique.
+3. Medir duración de transacción antes/después.
+
+**Criterio de cierre:**
+Hay benchmark o métrica de duración y se eliminan writes secuenciales innecesarios.
+
+---
+
+## P2 - Medio
+
+### P2-01 - `parsePaginationParams` Puede Devolver `NaN`
+
+**Estado:** Abierto
+**Tipo:** Bug de validación
+**Impacto:** Queries con `skip/take` inválidos.
+
+**Evidencia:**
+- `lib/utils/pagination.ts` usa `Math.max(1, parseInt(...))`.
+- `parseInt('abc')` produce `NaN`; `Math.max(1, NaN)` sigue siendo `NaN`.
+
+**Acción recomendada:**
+Normalizar con `Number.isFinite()` o helper `parsePositiveInt`.
+
+**Criterio de cierre:**
+Inputs inválidos (`page=abc`, `limit=abc`, negativos, cero) devuelven defaults seguros con tests.
+
+---
+
+### P2-02 - `withApiHandler` Usa `bodySchema.parse()`
+
+**Estado:** Abierto
+**Tipo:** Robustez API
+**Impacto:** Errores Zod pueden ser demasiado extensos si llega un payload grande o muy inválido.
+
+**Evidencia:**
+- `lib/api-handler.ts` usa `bodySchema.parse(rawBody)`.
+- El error se captura, pero no se limita explícitamente la cantidad de issues devueltos.
+
+**Acción recomendada:**
+Usar `safeParse()` y limitar detalles a un máximo razonable. Evaluar límite de tamaño de body si se considera vector real.
+
+**Criterio de cierre:**
+Respuesta de validación entrega máximo N errores y test cubre payload inválido masivo.
+
+---
+
+### P2-03 - Falta Rate Limiting en Login/Auth
+
+**Estado:** Abierto
+**Tipo:** Seguridad
+**Impacto:** Fuerza bruta contra login si no hay protección externa.
+
+**Evidencia:**
+- `middleware.ts` permite `/api/auth/*` como ruta pública.
+- No se observó rate limiting local.
+
+**Acción recomendada:**
+Si hay Cloudflare/Vercel/WAF, documentar la regla. Si no, implementar rate limiting server-side o edge-compatible.
+
+**Criterio de cierre:**
+Existe rate limiting documentado y probado para login/auth.
+
+---
+
+### P2-04 - Conflictos de Equipo en Calendario No Se Validan
+
+**Estado:** Abierto
+**Tipo:** Regla de negocio
+**Impacto:** Un mismo integrante puede quedar asignado a eventos superpuestos.
+
+**Evidencia:**
+- No se observó validación de conflicto por `teamTagIds`.
+- Los eventos validan payload y duplicados por entidad/fecha, pero no disponibilidad de equipo.
+
+**Acción recomendada:**
+Definir primero si los eventos tienen hora/rango o solo fecha. Sin rango horario, la regla sería por día completo.
+
+**Criterio de cierre:**
+Crear/editar evento retorna `409` si un team tag queda doblemente asignado según la regla definida.
+
+---
+
+### P2-05 - Unique por Entidad y Fecha Bloquea Múltiples Eventos en el Mismo Día
+
+**Estado:** Validar con negocio
+**Tipo:** Regla de negocio / DB
+**Impacto:** No permite dos eventos del mismo proyecto/postventa/visita en una misma fecha.
+
+**Evidencia:**
+- `ProjectEvent`: `@@unique([projectId, scheduledDate])`
+- `AftersaleEvent`: `@@unique([aftersaleId, scheduledDate])`
+- `VisitEvent`: `@@unique([visitId, scheduledDate])`
+
+**Acción recomendada:**
+Confirmar si el negocio necesita múltiples eventos por día. Si sí:
+1. Eliminar unique constraint con migración.
+2. Reemplazar duplicado accidental por validación de aplicación opcional.
+
+**Criterio de cierre:**
+Decisión documentada y migración aplicada si corresponde.
+
+---
+
+### P2-06 - Directorios `*-with-update` Duplican Endpoints
+
+**Estado:** Abierto
+**Tipo:** Mantenibilidad
+**Impacto:** Dos rutas para responsabilidades similares elevan el riesgo de bugs divergentes.
+
+**Evidencia:**
+- `app/api/project-events-with-update`
+- `app/api/aftersale-events-with-update`
+- `app/api/visit-events-with-update`
+- Hooks todavía los llaman para ciertos flujos.
+
+**Acción recomendada:**
+1. Identificar qué ruta usa cada hook.
+2. Consolidar funcionalidad en los endpoints oficiales.
+3. Eliminar rutas duplicadas.
+
+**Criterio de cierre:**
+No quedan rutas `*-with-update` ni referencias en hooks.
+
+---
+
+### P2-07 - JSON `tasks` Tiene Validación de App Pero No Constraint DB
+
+**Estado:** Abierto
+**Tipo:** Integridad DB
+**Impacto:** Inserts directos pueden guardar JSON no-array.
+
+**Evidencia:**
+- `Aftersale.tasks` y `ProjectEvent.tasks` son `Json`.
+- La validación Zod de app existe para aftersales, pero DB acepta cualquier JSON válido.
+
+**Acción recomendada:**
+Agregar constraints SQL:
 
 ```sql
-CREATE OR REPLACE VIEW "ProjectFinancials" AS
-SELECT
-  p.id AS "projectId",
-  COALESCE(pa."allocatedTotal", 0)::numeric(12, 2) AS "allocatedTotal",
-  COALESCE(adj."adjustmentTotal", 0)::numeric(12, 2) AS "adjustmentTotal",
-  (...)::numeric(12, 2) AS "rawBalance",
-  GREATEST(0, (...))::numeric(12, 2) AS balance,
-  GREATEST(0, -(...))::numeric(12, 2) AS overpayment
-FROM "Project" p
+CHECK (jsonb_typeof(tasks) = 'array')
 ```
 
-La columna legacy `Project.balance` permanece en el schema por compatibilidad de DB, pero los endpoints principales ya no la escriben ni la usan como fuente de verdad.
-
-**Archivos modificados:**
-- `prisma/migrations/20260517120000_create_project_financials_view/migration.sql`
-- `lib/business-logic/project-financials.ts`
-- `app/api/payments/*`
-- `app/api/projects/*`
-- `app/api/customers/*`
-- `app/projects/page.tsx`
-- `app/page.tsx`
-- `lib/queries/project-list.ts`
+**Criterio de cierre:**
+Migración con constraints y test/seed que confirma rechazo de JSON inválido.
 
 ---
 
-### 2.2 ✅ `updateMultipleProjectBalances` — N+1 Queries Secuenciales
-
-**Contexto:**
-Después de crear/eliminar un pago, se actualizan los balances de todos los proyectos afectados.
-
-**Problema:**
-`updateMultipleProjectBalances` usa un `for...of` secuencial donde cada iteración hace 2 queries (findUnique + update). Para un pago tipo "Customer" con 10 proyectos, son **20 queries secuenciales dentro de la misma transacción**.
-
-**Código actual (`lib/business-logic/update-project-balance.ts` líneas 117-126):**
-```typescript
-export async function updateMultipleProjectBalances(
-  projectIds: string[],
-  tx?: PrismaTransaction
-): Promise<number> {
-  for (const projectId of projectIds) {
-    await updateProjectBalance(projectId, tx)  // findUnique + update
-  }
-  return projectIds.length
-}
-```
-
-**Impacto:**
-- Transacciones más largas = mayor riesgo de deadlock.
-- Mayor latencia en el endpoint POST de pagos.
-- A escala (100+ proyectos por pago), esto sería insostenible.
-
-**Estado:** Resuelto eliminando el patrón.
-
-**Solución aplicada:**
-`lib/business-logic/update-project-balance.ts` y su suite antigua fueron eliminados. Los endpoints de pagos y ajustes ya no recalculan ni escriben `Project.balance`; validan y responden con balance derivado desde `ProjectFinancials`.
-
----
-
-### 2.3 🟡 `calculateProjectBalance` — No Considera Ajustes (`ProjectAdjustment`)
-
-**Contexto:**
-La función pura `calculateProjectBalance` (línea 81 de `lib/business-logic/project-balance.ts`) calcula el balance como `totalAmount - totalPaid`. Pero `_updateBalanceInternal` (línea 73 del mismo archivo) resta también los ajustes.
-
-**Problema actualizado:**
-La fórmula persistida/manual fue eliminada de los endpoints principales, pero la función pura `calculateProjectBalance()` sigue existiendo para tests/utilidades legacy y calcula `totalAmount - allocations` sin ajustes. No debe usarse como fuente de verdad para vistas financieras con ajustes; la fuente correcta es `ProjectFinancials`.
-
-**Código:**
-```typescript
-// calculateProjectBalance (línea 81-101)
-export function calculateProjectBalance(project: ProjectWithAllocations): ProjectBalanceResult {
-  const totalPaid = project.allocations?.reduce((sum, alloc) => sum + alloc.allocatedAmount, 0) || 0
-  const balance = totalAmount - totalPaid  // ← Sin ajustes
-  // ...
-}
-
-```
-
-**Solución Propuesta:**
-Si se mantiene esta utilidad, renombrarla para dejar explícito que ignora ajustes o extenderla con un parámetro opcional `adjustments`:
-
-```typescript
-export function calculateProjectBalance(
-  project: ProjectWithAllocations,
-  adjustments?: Array<{ amount: number }>
-): ProjectBalanceResult {
-  // ...
-  const totalAdjustments = adjustments?.reduce((sum, adj) => sum + adj.amount, 0) || 0
-  const balance = totalAmount - totalPaid - totalAdjustments
-  // ...
-}
-```
-
-**Archivos Afectados:**
-- `lib/business-logic/project-balance.ts`
-- Todos los callers de `calculateProjectBalance`
-
----
-
-### 2.4 🟢 `derivePaymentProgress` — División por Cero Mal Manejada
-
-**Contexto:**
-`derivePaymentProgress` calcula métricas de display a partir de `total` y `balance` persistidos.
-
-**Problema:**
-Si `total = 0` y `balance < 0` (sobrepago en proyecto sin monto), `totalPaid` será positivo pero `percentPaid = 0`.
-
-**Código (línea 132-137):**
-```typescript
-export function derivePaymentProgress(total: number, balance: number): PaymentProgressResult {
-  const totalPaid = total - balance  // 0 - (-100) = 100
-  const percentPaid = total > 0 ? (totalPaid / total) * 100 : 0  // 0
-  // ...
-}
-```
-
-**Impacto:**
-- Caso edge poco probable, pero indica que `total = 0` no está bien manejado.
-
-**Solución Propuesta:**
-Documentar el comportamiento esperado cuando `total = 0`, o retornar `percentPaid = 100` cuando `balance <= 0 && total === 0`.
-
-**Archivos Afectados:**
-- `lib/business-logic/project-balance.ts`
-
----
-
-## 3. Flujo de Clientes y Créditos
-
-### 3.1 🟡 `getCustomerCreditBalance` — Oculta Balances Negativos
-
-**Contexto:**
-La función calcula el crédito del cliente sumando todas las `CreditTransaction` y aplicando `Math.max(0, ...)`.
-
-**Problema:**
-Si por algún bug las transacciones resultan en un balance negativo (ej: se consumió más crédito del que se generó), la función retorna `0` en vez del valor negativo. **Esto oculta bugs de integridad**.
-
-**Código (línea 29-38 de `lib/business-logic/credit-management.ts`):**
-```typescript
-export async function getCustomerCreditBalance(...): Promise<number> {
-  const result = await db.creditTransaction.aggregate({
-    where: { customerId },
-    _sum: { amount: true },
-  })
-  return Math.max(0, Number(result._sum.amount ?? 0))  // ← Oculta negativos
-}
-```
-
-**Impacto:**
-- Un bug que genere crédito negativo nunca será detectado.
-- El sistema permitirá transacciones que matemáticamente son inválidas.
-
-**Solución Propuesta:**
-Loggear un warning cuando el balance real sea negativo:
-
-```typescript
-const rawBalance = Number(result._sum.amount ?? 0)
-if (rawBalance < 0) {
-  logger.warn({ customerId, rawBalance }, 'Customer credit balance is negative - possible data integrity issue')
-}
-return Math.max(0, rawBalance)
-```
-
-**Archivos Afectados:**
-- `lib/business-logic/credit-management.ts`
-
----
-
-### 3.2 🟡 POST /api/customers/[id]/credit/refund — Doble Cálculo de Balance
-
-**Contexto:**
-El endpoint de devolución de crédito calcula el balance dos veces:
-1. Fuera de la transacción (línea 29): para validar `canRefundCredit`.
-2. Dentro de la transacción (línea 56): para obtener el balance actualizado.
-
-**Problema:**
-La validación fuera de la transacción es redundante. Entre línea 29 y línea 56, otro request puede modificar el crédito. La validación dentro de la transacción es la que realmente importa.
-
-**Código:**
-```typescript
-// Fuera de la transacción (línea 29)
-const creditBalance = await getCustomerCreditBalance(customerId)
-
-// Validación (línea 32)
-const validation = canRefundCredit(body.amount, creditBalance)
-
-// Dentro de la transacción (línea 56)
-const newCreditBalance = await getCustomerCreditBalance(customerId, tx)
-```
-
-**Solución Propuesta:**
-Eliminar el cálculo fuera de la transacción. Calcular el balance solo dentro de la transacción y validar ahí.
-
-**Archivos Afectados:**
-- `app/api/customers/[id]/credit/refund/route.ts`
-
----
-
-### 3.3 🟢 `canRefundCredit` — Formato de Moneda Inconsistente
-
-**Contexto:**
-La función retorna mensajes de error con el monto formateado usando `toLocaleString('es-CL')`.
-
-**Problema:**
-`toLocaleString` usa el locale del runtime del servidor. Si el servidor está configurado en inglés, el formato será incorrecto. Además, no incluye el símbolo de moneda ni los separadores correctos para CLP.
-
-**Código (línea 211-215):**
-```typescript
-return {
-  valid: false,
-  error: `El monto excede el crédito disponible ($${customerCredit.toLocaleString('es-CL')})`,
-}
-```
-
-**Solución Propuesta:**
-Usar la función de formateo existente del proyecto (`lib/format.ts`):
-
-```typescript
-import { formatCurrency } from '@/lib/format'
-return {
-  valid: false,
-  error: `El monto excede el crédito disponible (${formatCurrency(customerCredit, 'CLP')})`,
-}
-```
-
-**Archivos Afectados:**
-- `lib/business-logic/credit-management.ts`
-
----
-
-## 4. Flujo de Cuotas (Installments)
-
-### 4.1 ✅ Fechas de Vencimiento con Suma de Días en Vez de Meses
-
-> ✅ **RESUELTO** — `calculateInstallments` ahora usa `addMonths` de `date-fns` para mantener el mismo día de cada mes.
-
-**Solución aplicada:**
-Reemplazado `dueDate.setDate(dueDate.getDate() + (i - 1) * 30)` por `addMonths(paymentDate, i - 1)`.
-
-**Antes:** 15 ene → 14 feb → 16 mar (30 días cada una)
-**Ahora:** 15 ene → 15 feb → 15 mar (mismo día cada mes)
-
----
-
-### 4.2 ✅ Semántica Confusa de "paid" en Cuotas
-
-> ✅ **RESUELTO** — Terminología cambiada a `'due'` (vencida) y `'upcoming'` (próxima).
-
-**Solución aplicada:**
-- `'paid'` → `'due'` (badge `destructive`, label "Vencida")
-- `'pending'` → `'upcoming'` (badge `secondary`, label "Próxima")
-
-Documentado que las cuotas son puramente informativas y no representan pagos reales.
-
----
-
-### 4.3 🟢 `validateInstallmentsSum` — No Valida Cuotas Individuales
-
-**Contexto:**
-La función valida que la suma de todas las cuotas sea igual al monto total.
-
-**Problema:**
-No valida que cada cuota individual sea positiva. En casos edge (monto muy pequeño, muchas cuotas), las primeras cuotas pueden ser $0.00.
-
-**Ejemplo:** $0.10 en 12 cuotas:
-- baseAmount = Math.floor(0.10/12 * 100) / 100 = 0.00
-- 11 cuotas de $0.00 + 1 cuota de $0.10
-
-**Impacto:**
-- UX confusa (cuotas de $0).
-
-**Solución Propuesta:**
-Agregar validación de que cada cuota > 0, o establecer un monto mínimo por cuota.
-
-**Archivos Afectados:**
-- `lib/business-logic/installments.ts`
-
----
-
-## 5. Flujo de Postventa y Visitas
-
-### 5.1 🟡 `Aftersale.tasks` — JSON sin Schema de Validación
-
-**Contexto:**
-El campo `tasks` en `Aftersale` es de tipo `Json` en Prisma (schema línea 349).
-
-**Problema:**
-No hay validación de schema en el backend. El frontend podría enviar:
-- Un objeto en vez de array.
-- Un array con objetos de forma inesperada.
-- Strings en vez de objetos.
-
-**Impacto:**
-- Corrupción de datos.
-- Errores en el frontend al iterar sobre `tasks`.
-
-**Solución Propuesta:**
-Agregar validación Zod para `tasks` en los endpoints POST/PUT de aftersales:
-
-```typescript
-const taskSchema = z.object({
-  id: z.string(),
-  description: z.string(),
-  completed: z.boolean(),
-  createdAt: z.string().datetime(),
-})
-
-const tasksSchema = z.array(taskSchema).default([])
-```
-
-**Archivos Afectados:**
-- `app/api/aftersales/route.ts`
-- `app/api/aftersales/[id]/route.ts`
-- `lib/validations/aftersale-validations.ts`
-
----
-
-### 5.2 🟡 `Visit.scheduledTime` — String sin Formato Validado
-
-**Contexto:**
-El campo `scheduledTime` almacena strings como "10:30" o "14:00".
-
-**Problema:**
-No hay constraint de formato. Puede contener "25:99", "mañana", o cualquier string.
-
-**Impacto:**
-- Datos corruptos en la DB.
-- Errores de parsing en el frontend.
-
-**Solución Propuesta:**
-Agregar validación Zod con regex:
-
-```typescript
-const timeSchema = z.string().regex(/^([01]\d|2[0-3]):([0-5]\d)$/, 'Formato inválido. Use HH:mm')
-```
-
-**Archivos Afectados:**
-- `lib/validations/visit-validations.ts`
-- `app/api/visits/route.ts`
-- `app/api/visits/[id]/route.ts`
-
----
-
-## 6. Flujo de Calendario
-
-### 6.1 🟡 Sin Validación de Conflicto de Equipo
-
-**Contexto:**
-Los eventos de calendario (`ProjectEvent`, `AftersaleEvent`, `VisitEvent`) pueden tener múltiples `TeamTag` asignados.
-
-**Problema:**
-No hay validación de que un mismo miembro del equipo no esté asignado a dos eventos en la misma fecha/hora.
-
-**Escenario:**
-Juan Pérez asignado a:
-- Evento A: 15 de mayo, 10:00-12:00
-- Evento B: 15 de mayo, 11:00-13:00
-
-El sistema lo permite sin advertencia.
-
-**Impacto:**
-- Bajo con equipo pequeño, pero crítico para escalar.
-
-**Solución Propuesta:**
-Agregar validación en el POST/PUT de eventos que verifique si algún `TeamTag` ya está ocupado en esa fecha:
-
-```typescript
-// Pseudo-código
-const conflictingEvents = await tx.projectEvent.findMany({
-  where: {
-    scheduledDate,
-    teamTags: { some: { id: { in: teamTagIds } } },
-    NOT: { id: currentEventId },  // Excluir evento actual en edición
-  },
-})
-if (conflictingEvents.length > 0) {
-  throw new BusinessError('Algunos miembros del equipo ya tienen eventos asignados en esta fecha', 409)
-}
-```
-
-**Archivos Afectados:**
-- `app/api/project-events/route.ts`
-- `app/api/project-events/[id]/route.ts`
-- `app/api/aftersale-events/route.ts`
-- `app/api/visit-events/route.ts`
-
----
-
-### 6.2 🟡 `ProjectEvent` — `@@unique([projectId, scheduledDate])` Bloquea Múltiples Eventos/Día
-
-**Contexto:**
-El schema tiene una constraint unique que impide más de un evento por proyecto por día.
-
-**Problema:**
-Si un proyecto necesita múltiples visitas en un día (ej: mañana y tarde), el sistema lo rechaza.
-
-**Schema (línea 430):**
-```prisma
-@@unique([projectId, scheduledDate])
-```
-
-**Impacto:**
-- Restricción artificial del flujo de negocio.
-
-**Solución Propuesta:**
-Eliminar la constraint unique. Un proyecto puede necesitar múltiples eventos el mismo día. Si se necesita prevenir duplicados accidentales, hacerlo a nivel de aplicación (validar en el endpoint) en vez de a nivel de DB.
-
-**Archivos Afectados:**
-- `prisma/schema.prisma`
-- `app/api/project-events/route.ts` (agregar validación de duplicado opcional)
-
----
-
-## 7. Validaciones y Seguridad
-
-### 7.1 🟡 `withApiHandler` — `bodySchema.parse()` sin `safeParse`
-
-**Contexto:**
-El middleware `withApiHandler` usa `bodySchema.parse(rawBody)` para validar el body.
-
-**Problema:**
-`parse()` lanza `ZodError` con todos los detalles de validación. Si un atacante envía un payload gigante con muchos campos inválidos, la respuesta de error podría ser masiva (potencial vector de DoS por tamaño de respuesta).
-
-**Código (`lib/api-handler.ts` línea 191):**
-```typescript
-body = bodySchema.parse(rawBody)
-```
-
-**Impacto:**
-- Respuestas de error potencialmente grandes.
-- No hay límite en la cantidad de errores de validación reportados.
-
-**Solución Propuesta:**
-Usar `safeParse` y limitar la cantidad de errores reportados:
-
-```typescript
-const parseResult = bodySchema.safeParse(rawBody)
-if (!parseResult.success) {
-  const limitedErrors = parseResult.error.errors.slice(0, 5)
-  return NextResponse.json(
-    { error: 'Datos inválidos', details: limitedErrors },
-    { status: 400 }
-  )
-}
-body = parseResult.data
-```
-
-**Archivos Afectados:**
-- `lib/api-handler.ts`
-
----
-
-### 7.2 🟡 Sin Rate Limiting en Login
-
-**Contexto:**
-El middleware (`middleware.ts`) protege rutas con autenticación, pero no hay rate limiting en `/login` ni `/api/auth/*`.
-
-**Problema:**
-Un atacante puede hacer fuerza bruta ilimitada contra el login.
-
-**Impacto:**
-- Cuentas con contraseñas débiles pueden ser comprometidas.
-
-**Solución Propuesta:**
-Agregar rate limiting:
-- En `middleware.ts`: usar un Map en memoria para trackear intentos por IP.
-- O usar un servicio de rate limiting de Vercel/Cloudflare.
-- Limitar a 5 intentos por IP cada 15 minutos.
-
-**Archivos Afectados:**
-- `middleware.ts`
-- O configuración de infraestructura (Vercel/Cloudflare)
-
----
-
-### 7.3 🟢 `better-auth` — `requireEmailVerification: false`
-
-**Contexto:**
-La configuración de Better Auth no requiere verificación de email.
-
-**Problema:**
-Cualquiera puede crear una cuenta con cualquier email sin verificar que sea suyo.
-
-**Impacto:**
-- Si existe algún endpoint para cambiar roles, un atacante podría crear una cuenta admin.
-- Suplantación de identidad.
-
-**Solución Propuesta:**
-Evaluar si el negocio necesita verificación de email. Si el sistema es interno (solo empleados), considerar:
-- Mantener `requireEmailVerification: false` pero restringir el registro a admins.
-- O habilitar verificación si se abre el sistema a clientes.
-
-**Archivos Afectados:**
-- `lib/auth.ts`
-
----
-
-## 8. Integridad de Datos y Race Conditions
-
-### 8.1 🟡 `PaymentAllocation` — Sin Validación de `allocatedAmount <= project.balance`
-
-**Contexto:**
-Una allocation asigna un monto de un pago a un proyecto. No hay constraint que garantice que la allocation no exceda el balance del proyecto.
-
-**Problema:**
-Un bug en frontend o un endpoint podría crear una allocation mayor al balance. El sistema lo maneja como "sobrepago" (genera crédito), pero esto podría no ser la intención del usuario.
-
-**Impacto:**
-- Usuario puede crear créditos accidentalmente sin darse cuenta.
-- Posible vector de fraude si un usuario malintencionado explota esto.
-
-**Solución Propuesta:**
-Agregar validación en el POST de pagos:
-
-```typescript
-for (const alloc of allocations) {
-  const project = projects.find(p => p.id === alloc.projectId)
-  if (project && alloc.allocatedAmount > Number(project.balance)) {
-    return NextResponse.json(
-      { error: `La allocation para el proyecto ${project.projectNumber} excede su balance` },
-      { status: 400 }
-    )
-  }
-}
-```
-
-**Nota:** Esta validación debe ser **opcional** o con confirmación explícita, porque hay casos válidos donde se quiere pagar de más (generar crédito).
-
-**Archivos Afectados:**
-- `app/api/payments/route.ts`
-
----
-
-### 8.2 🟡 `ProjectAdjustment` — Sin Validación de `amount <= balance`
-
-**Contexto:**
-`ProjectAdjustment` permite ajustar (reducir) el balance de un proyecto. Se usa para descuentos o condonaciones.
-
-**Problema:**
-No hay validación de que el ajuste no exceda el balance actual. Un ajuste de $200.000 en un proyecto con balance de $100.000 generaría balance negativo (-$100.000).
-
-**Impacto:**
-- Posible error de captura que pase desapercibido.
-- Inconsistencia contable.
-
-**Solución Propuesta:**
-Agregar validación en el endpoint de ajustes:
-
-```typescript
-if (adjustmentAmount > Number(project.balance)) {
-  throw new BusinessError('El ajuste no puede exceder el balance del proyecto', 400)
-}
-```
-
-O requerir confirmación explícita si el ajuste iguala o excede el balance.
-
-**Archivos Afectados:**
-- `app/api/projects/[id]/adjustments/route.ts`
-
----
-
-### 8.3 🟢 Sobrepago — Sin Registro de Usuario Autorizador
-
-**Contexto:**
-Cuando un pago genera sobrepago, se crea un `CreditTransaction` tipo `OVERPAYMENT`.
-
-**Problema:**
-El `metadata` no incluye quién (qué usuario) realizó el pago que generó el sobrepago.
-
-**Impacto:**
-- Dificultad en auditoría.
-- Si hay disputas, no se puede identificar al responsable.
-
-**Solución Propuesta:**
-Agregar `userId` al `metadata` del `CreditTransaction`. Requiere obtener el usuario autenticado desde la sesión.
-
-**Archivos Afectados:**
-- `app/api/payments/route.ts`
-- `lib/auth.ts` (para obtener userId de la sesión)
-
----
-
-## 9. Arquitectura y Patrones
-
-### 9.1 🔴 Uso de `db:push` en Producción — Sin Migraciones Versionadas
-
-**Contexto:**
-El directorio `prisma/migrations/` solo contiene `.gitkeep`. El script `db:push` (línea 27 de `package.json`) se usa para aplicar cambios de schema.
-
-**Problema:**
-`db:push`:
-- Puede eliminar columnas si se renombra un campo (pérdida de datos).
-- No permite rollback.
-- No se puede usar en CI/CD de forma segura.
-- No hay historial de cambios de schema.
-
-**Impacto:**
-- Alto riesgo de pérdida de datos en producción.
-- Imposible revertir cambios problemáticos.
-- Colisiones si dos desarrolladores hacen cambios simultáneos.
-
-**Solución Propuesta:**
-Migrar inmediatamente a `prisma migrate dev` / `prisma migrate deploy`:
-
-```bash
-# Crear primera migración con el schema actual
-npx prisma migrate dev --name init
-
-# En CI/CD y producción, usar:
-npx prisma migrate deploy
-```
-
-**Nota:** Los 5 planes técnicos pendientes (`plans/`) requieren cambios de schema. Sin migraciones, el riesgo es muy alto.
-
-**Archivos Afectados:**
-- `package.json` (scripts `db:push` → `db:migrate`)
-- `prisma/migrations/` (crear migraciones iniciales)
-- Documentación de deploy
-
----
-
-### 9.2 🟡 `relationLoadStrategy: 'join'` — Preview Feature en Producción
-
-**Contexto:**
-El schema Prisma usa `previewFeatures = ["relationJoins"]` (línea 3).
-
-**Problema:**
-Las preview features de Prisma no tienen garantías de estabilidad. Pueden cambiar de comportamiento o ser eliminadas.
-
-**Impacto:**
-- Si Prisma elimina `relationJoins`, todas las queries que lo usan fallarán.
-- Actualizaciones de Prisma pueden romper la aplicación.
-
-**Solución Propuesta:**
-- Monitorear el roadmap de Prisma.
-- Tener un plan de contingencia para reemplazar `relationJoins` con `include` manual si es necesario.
-- Considerar pin de versión de Prisma hasta que `relationJoins` sea estable.
-
-**Archivos Afectados:**
-- `prisma/schema.prisma`
-- Todos los endpoints que usan `relationLoadStrategy: 'join'`
-
----
-
-### 9.3 🟢 Inconsistencia en Manejo de `Decimal` vs `number`
-
-**Contexto:**
-El sistema mezcla `Decimal` (Prisma) y `number` (JavaScript) sin una estrategia consistente.
-
-**Ejemplos:**
-- `lib/business-logic/credit-management.ts`: retorna `number`.
-- `app/api/payments/route.ts`: usa `new Decimal(amount)` para escritura.
-- `lib/business-logic/project-balance.ts`: usa `number` para cálculos.
-
-**Problema:**
-`Number(new Decimal('0.1')) + Number(new Decimal('0.2'))` puede dar `0.30000000000000004` debido a la aritmética de punto flotante.
-
-**Impacto:**
-- Comparaciones de igualdad pueden fallar silenciosamente.
-- Montos financieros pueden tener centavos de diferencia.
-
-**Solución Propuesta:**
-Establecer una regla clara:
-- **DB/Prisma:** Siempre usar `Decimal`.
-- **Cálculos financieros:** Usar `Decimal` o una librería de precisión arbitraria.
-- **Frontend/Display:** Convertir a `number` solo al mostrar al usuario.
-- **API responses:** Enviar `number` (JSON no soporta Decimal), pero documentar que pueden haber redondeos.
-
-**Archivos Afectados:**
-- Múltiples archivos en `lib/business-logic/`, `app/api/`, `hooks/`
-
----
-
-### 9.4 🟢 `prisma.$transaction` — Sin Isolation Level Especificado
-
-**Contexto:**
-Las transacciones de Prisma en PostgreSQL usan `Serializable` por defecto.
-
-**Problema:**
-`Serializable` es el nivel más restrictivo. En transacciones largas (como la creación de pagos con múltiples allocations, installments, credit transactions y updates de balance), puede causar:
-- Deadlocks.
-- Performance degradada bajo carga.
-
-**Solución Propuesta:**
-Para lecturas no críticas, considerar `RepeatableRead`:
-
-```typescript
-await prisma.$transaction(async (tx) => {
-  // ...
-}, { isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead })
-```
-
-Mantener `Serializable` solo para operaciones financieras críticas.
-
-**Archivos Afectados:**
-- `app/api/payments/route.ts`
-- `app/api/payments/[id]/route.ts`
-- `app/api/customers/[id]/credit/refund/route.ts`
-
----
-
-## 10. Dependencias y Build
-
-### 10.1 🟢 Dependencias No Usadas (Detectadas por Knip)
-
-**Contexto:**
-`knip` detectó 22 dependencias no usadas y 7 devDependencies no usadas.
-
-**Lista completa:**
-- `@dnd-kit/modifiers`
-- `@radix-ui/react-accordion`
-- `@radix-ui/react-aspect-ratio`
-- `@radix-ui/react-avatar`
-- `@radix-ui/react-context-menu`
-- `@radix-ui/react-hover-card`
-- `@radix-ui/react-menubar`
-- `@radix-ui/react-navigation-menu`
-- `@radix-ui/react-radio-group`
-- `@radix-ui/react-scroll-area`
-- `@radix-ui/react-slider`
-- `@radix-ui/react-switch`
-- `@radix-ui/react-toast`
-- `autoprefixer`
-- `embla-carousel-react`
-- `input-otp`
-- `pino-pretty`
-- `react-resizable-panels`
-- `recharts`
-- `rut.js`
-- `tailwindcss-animate`
-- `vaul`
-
-**devDependencies no usadas:**
-- `@types/pino`
-- `eslint-config-next`
-- `eslint-config-prettier`
-- `eslint-plugin-prettier`
-- `eslint-plugin-unused-imports`
-- `tailwindcss`
-- `tw-animate-css`
-
-**Nota:** Algunas de estas dependencias pueden ser usadas indirectamente (ej: `tailwindcss` es usado por PostCSS aunque no se importe directamente en JS). Revisar manualmente antes de eliminar.
-
-**Archivos Afectados:**
-- `package.json`
-
----
-
-### 10.2 🟢 Archivos Huérfanos (Detectados por Knip)
-
-**Contexto:**
-`knip` detectó 26 archivos que no son importados por ningún otro archivo del proyecto.
-
-**Lista completa:**
-- `check-payment-types.mjs`
-- `check-regions.mjs`
-- `components/calendar/dnd/draggable-event-card.tsx`
-- `components/calendar/dnd/droppable-day-cell.tsx`
-- `components/providers/database-keepalive-provider.tsx`
-- `components/settings/sortable-aftersale-status-item.tsx`
-- `components/settings/sortable-status-item.tsx`
-- `components/settings/sortable-visit-status-item.tsx`
-- `components/ui/radio-group.tsx`
-- `components/ui/rut-input.tsx`
-- `components/ui/scroll-area.tsx`
-- `components/ui/use-mobile.tsx`
-- `hooks/use-database-keepalive.ts`
-- `hooks/use-rut-input.ts`
-- `lib/rut-validations.ts`
-- `lib/test-utils/api-test-helpers.ts`
-- `scripts/create-admin.ts`
-- `scripts/delete-transactional-data.ts`
-- `scripts/fix-overpayment-credit.ts`
-- `scripts/populate-project-balances.ts`
-- `tests/e2e/auth.setup.ts`
-- `tests/e2e/helpers/wait-for-table.ts`
-- `tests/e2e/page-objects/dialogs/new-visit.dialog.ts`
-- `tests/fixtures/custom-matchers.ts`
-- `tests/fixtures/generate-fixtures.ts`
-- `update-payment-types.mjs`
-
-**Nota:** Algunos de estos archivos pueden ser entry points (ej: `auth.setup.ts` para Playwright) o scripts one-shot. Revisar manualmente antes de eliminar.
-
-**Archivos Afectados:**
-- Múltiples archivos en la raíz y subdirectorios.
-
----
-
-### 10.3 🟢 Prettier Warnings en Lint
-
-**Contexto:**
-`npm run lint` reporta 90 warnings de `prettier/prettier`.
-
-**Problema:**
-Warnings de Prettier en el lint indican que el código no está formateado consistentemente.
-
-**Solución Propuesta:**
-Ejecutar `npm run format` para formatear todo el codebase, y considerar agregar un pre-commit hook de Husky para evitar que código sin formatear llegue al repo.
-
-**Archivos Afectados:**
-- Todo el codebase (`**/*.{ts,tsx,js,jsx,json,md,css}`)
-
----
-
----
-
-## 11. Autorización y Control de Acceso
-
-### 11.1 🔴 Sin Verificación de Roles en NINGÚN Endpoint
-
-**Archivos:** Todos los endpoints de API, `middleware.ts`
-
-**Contexto:**
-El middleware (`middleware.ts`) solo verifica autenticación (sesión válida), pero **no verifica roles**. No hay un solo endpoint que verifique `session.user.role === 'admin'` antes de permitir operaciones destructivas o sensibles.
-
-**Problema:**
-Cualquier usuario autenticado, sin importar su rol, puede:
-- Eliminar clientes, proyectos, pagos, aftersales, visitas.
-- Crear ajustes de proyecto (descuentos, condonaciones).
-- Crear nuevos usuarios (ver issue 11.2).
-- Importar datos masivos (customers, payments, projects).
-- Devolver créditos a clientes.
-- Reordenar eventos de calendario.
-
-**Impacto:**
-- Un usuario con rol `user` tiene los mismos privilegios que un `admin`.
-- Si una cuenta es comprometida, el atacante tiene control total.
-- No hay separación de responsabilidades (SoD).
-
-**Solución Propuesta:**
-Opción A — Middleware de autorización:
-```typescript
-// middleware.ts o lib/with-authz.ts
-export function requireRole(handler: Handler, roles: string[]) {
-  return async (request: Request, context: Context) => {
-    const session = await getSession(request)
-    if (!roles.includes(session?.user?.role)) {
-      return NextResponse.json({ error: 'No autorizado' }, { status: 403 })
-    }
-    return handler(request, context)
-  }
-}
-```
-
-Opción B — Verificación en cada endpoint sensible:
-```typescript
-// En DELETE /api/projects/[id]/route.ts
-const session = await getSession()
-if (session?.user?.role !== 'admin') {
-  return NextResponse.json({ error: 'Requiere rol admin' }, { status: 403 })
-}
-```
-
-**Archivos Afectados:**
-- `middleware.ts` (agregar lógica de autorización)
-- Todos los endpoints DELETE, POST de import, PUT de ajustes
-- `app/api/users/route.ts` (especialmente crítico)
-
----
-
-### 11.2 🔴 `/api/users` — Endpoint Sin Autenticación ni Validación
-
-**Archivo:** `app/api/users/route.ts`
-
-**Contexto:**
-Este endpoint POST permite crear usuarios directamente.
-
-**Problema:**
-- **No usa `withApiHandler`** — no tiene validación automática de body.
-- **No verifica autenticación** — no hay llamada a `getSession()` ni middleware de auth.
-- **No hay validación Zod** — hay un TODO comentado en línea 73:
-  ```typescript
-  // TODO: Add validation with Zod for production use
-  ```
-- **Sin protección contra creación de admins** — si el schema permite enviar `role`, cualquiera puede crear un usuario admin.
-
-**Impacto:**
-- Cualquier persona que conozca la URL puede crear usuarios en el sistema.
-- Potencial escalada de privilegios si el role es enviable.
-- Sin validación de email, nombre, o password.
-
-**Solución Propuesta:**
-1. Envolver el endpoint con `withApiHandler`.
-2. Agregar validación Zod estricta:
-   ```typescript
-   const createUserSchema = z.object({
-     name: z.string().min(2).max(100),
-     email: z.string().email(),
-     password: z.string().min(8),
-     role: z.enum(['user', 'admin']).default('user'),
-   })
-   ```
-3. Requerir autenticación + rol admin para crear usuarios.
-4. Eliminar el TODO y implementar la validación.
-
-**Archivos Afectados:**
-- `app/api/users/route.ts`
-
----
-
-### 11.3 ✅ `/api/cron/reconcile-balances` — Sin Protección CRON_SECRET
-
-**Archivo:** `middleware.ts:32` + `app/api/cron/reconcile-balances/route.ts`
-
-**Contexto:**
-El middleware permite acceso a `/api/cron/*` sin autenticación:
-```typescript
-// middleware.ts línea 32
-pathname.startsWith('/api/cron/') ||  // ← Permite acceso sin auth
-```
-
-El comentario dice "tiene su propia autenticación via CRON_SECRET", pero **el endpoint nunca verifica el CRON_SECRET**.
-
-**Problema:**
-Cualquier persona puede ejecutar el cron manualmente enviando un POST a `/api/cron/reconcile-balances`. Esto puede:
-- Sobrecargar la DB con queries de reconciliación.
-- Ocultar actividad maliciosa entre ejecuciones legítimas.
-- Ser usado como vector de DoS si se llama repetidamente.
-
-**Estado:** Resuelto eliminando el endpoint.
-
-**Solución aplicada:**
-El cron `reconcile-balances` fue eliminado porque el balance de proyecto ahora es derivado desde `ProjectFinancials`. También se quitó la excepción pública `pathname.startsWith('/api/cron/')` del middleware y se removió `CRON_SECRET` de `.env.example`.
-
-**Archivos Afectados:**
-- `app/api/cron/reconcile-balances/route.ts`
-- `middleware.ts`
-- `.env.example`
-
----
-
-## 12. Endpoints de Import/Export
-
-### 12.1 🟡 Endpoints de Export Sin Límite de Registros (OOM Risk)
-
-**Archivos:**
-- `app/api/customers/export/route.ts:33`
-- `app/api/payments/export/route.ts:80`
-- `app/api/projects/export/route.ts:62`
-
-**Contexto:**
-Los endpoints de export hacen `findMany()` sin límite para obtener todos los registros y generar un archivo Excel.
-
-**Problema:**
-Si la DB tiene 100K+ registros:
-- Se cargan TODOS en memoria del servidor Node.js.
-- Se construye un workbook de xlsx en memoria.
-- El proceso puede exceder el límite de memoria (512MB en Vercel hobby, 1GB+ en pro).
-- Resultado: **OOM crash** o timeout de 60s.
-
-```typescript
-// customers/export - sin limit
-const allCustomers = await prisma.customer.findMany({
-  include: { projects: true, payments: true }  // ← Incluye relaciones
-})
-```
-
-**Impacto:**
-- Crash del servidor en producción con datos reales.
-- Timeout que retorna error 504 al usuario.
-- En Vercel, el serverless function se termina y se pierde el request.
-
-**Solución Propuesta:**
-Opción A — Límite máximo con advertencia:
-```typescript
-const MAX_EXPORT = 10000
-const allCustomers = await prisma.customer.findMany({
-  take: MAX_EXPORT,
-  // ...
-})
-if (totalCount > MAX_EXPORT) {
-  // Agregar nota en el Excel: "Export limitado a 10K registros"
-}
-```
-
-Opción B — Streaming para archivos grandes:
-- Usar `@fast-csv` o similar para streaming.
-- Retornar un `ReadableStream` como response.
-- Más complejo pero soporta cualquier volumen.
-
-**Archivos Afectados:**
-- `app/api/customers/export/route.ts`
-- `app/api/payments/export/route.ts`
-- `app/api/projects/export/route.ts`
-
----
-
-### 12.2 ✅ `/api/payments/import` — Sin Recálculo de Balance Post-Import
-
-**Archivo:** `app/api/payments/import/route.ts:123-142`
-
-**Contexto:**
-El endpoint de importación de pagos crea payments y allocations desde un archivo Excel.
-
-**Problema:**
-Crea los payments y allocations pero **NO llama a `updateProjectBalance()`** después de cada payment. Los balances de los proyectos importados quedan desincronizados hasta que el cron nocturno los corrija.
-
-```typescript
-const payment = await prisma.$transaction(async (tx) => {
-  await tx.payment.create({ ... })
-  await tx.paymentAllocation.create({ ... })
-  // ❌ Falta: updateProjectBalance(projectId, tx)
-})
-```
-
-**Impacto:**
-- Los balances de proyectos importados serán incorrectos durante horas (hasta el cron).
-- Si el cron falla, los balances quedan incorrectos indefinidamente.
-- Usuarios ven balances erróneos inmediatamente después de importar.
-
-**Estado:** Resuelto por eliminación de balance persistido.
-
-**Solución aplicada:**
-Ya no es necesario recalcular `Project.balance` después de imports. Los balances se derivan desde `PaymentAllocation` + `ProjectAdjustment` vía `ProjectFinancials`, por lo que un import que crea allocations queda reflejado al consultar la view.
-
-**Archivos Afectados:**
-- `app/api/payments/import/route.ts`
-- `prisma/migrations/20260517120000_create_project_financials_view/migration.sql`
-
----
-
-### 12.3 🟡 `/api/customers/import` — Sin Límite de Batch Size
-
-**Archivo:** `app/api/customers/import/route.ts:83-91`
-
-**Contexto:**
-El endpoint crea un `$transaction` con una operación por cada cliente importado.
-
-**Problema:**
-Si se envían 10K clientes en un solo request:
-- La transacción tendrá 10K operaciones.
-- Puede exceder el timeout de la DB.
-- Puede exceder el timeout del serverless function (60s en Vercel).
-- Bloquea tablas durante la transacción.
-
-```typescript
-const created = await prisma.$transaction(
-  validatedCustomers.map((customer) =>
-    prisma.customer.create({ ... })
-  )
-)
-```
-
-**Solución Propuesta:**
-Limitar el batch size y chunkear:
-```typescript
-const BATCH_SIZE = 500
-const chunks = chunk(validatedCustomers, BATCH_SIZE)
-for (const chunk of chunks) {
-  await prisma.$transaction(chunk.map(c => prisma.customer.create({ data: c })))
-}
-```
-
-**Archivos Afectados:**
-- `app/api/customers/import/route.ts`
-- `app/api/payments/import/route.ts`
-- `app/api/projects/import/route.ts`
-
----
-
-## 13. Inconsistencias de Patrones API
-
-### 13.1 🟡 `withLogging` vs `withApiHandler` — Doble Patrón Inconsistente
-
-**Archivo:** `lib/api-handler.ts:158`
-
-**Contexto:**
-Existen dos wrappers para endpoints de API:
-- `withApiHandler` — valida UUID, parsea body con Zod, maneja errores, incluye logging.
-- `withLogging` — solo agrega logging estructurado, sin validación.
-
-**Problema:**
-~20 endpoints usan `withLogging` directo en vez de `withApiHandler`:
-
-**Endpoints que usan `withLogging` directo (sin validación automática):**
-- GET `/api/payments`
-- GET `/api/projects`
-- GET `/api/customers`
-- GET `/api/calendar-events`
-- GET `/api/installments`
-- GET `/api/visits`
-- GET `/api/customers/[id]/account`
-- GET `/api/customers/[id]/credit`
-- Todos los endpoints de export
-- Todos los endpoints de import
-
-**Endpoints que usan `withApiHandler`:**
-- POST `/api/payments`
-- PUT/DELETE `/api/payments/[id]`
-- POST `/api/projects`
-- PUT `/api/projects/[id]`
-- etc.
-
-Los que usan `withLogging` directo:
-- No tienen validación de UUID en params.
-- No tienen parsing de body con Zod automático.
-- Manejo de errores inconsistente.
-
-**Solución Propuesta:**
-Crear un `withApiHandlerForGET` que no requiera body schema pero mantenga las demás validaciones:
-```typescript
-export function withApiHandlerForGET(
-  handler: GetHandler,
-  options?: { validateParams?: boolean }
-) {
-  return withLogging(async (request, context) => {
-    if (options?.validateParams !== false) {
-      validateUuid(context.params)
-    }
-    return handler(request, context)
-  })
-}
-```
-
-O migrar todos los GET a `withApiHandler` con `bodySchema: z.undefined()`.
-
-**Archivos Afectados:**
-- `lib/api-handler.ts`
-- ~20 archivos de endpoints GET
-
----
-
-### 13.2 🟡 SQL de Búsqueda Duplicado en 5+ Endpoints
-
-**Archivos:**
-- `app/api/payments/route.ts:92-101`
-- `app/api/customers/route.ts:44-49`
-- `app/api/projects/search/route.ts`
-- `lib/queries/project-list.ts:61-68`
-- `app/api/payments/search-projects/route.ts:38-45`
-
-**Contexto:**
-El patrón de búsqueda con `normalize_text()` está copiado en múltiples endpoints.
-
-**Problema:**
-```sql
-WHERE normalize_text(c.name) LIKE normalize_text(${`%${search}%`})
-   OR normalize_text(c.email) LIKE normalize_text(${`%${search}%`})
-   OR normalize_text(p."projectNumber") LIKE normalize_text(${`%${search}%`})
-```
-
-Duplicado en al menos 5 lugares. Si se necesita:
-- Cambiar la lógica de búsqueda (ej: agregar búsqueda por teléfono).
-- Agregar soporte para búsqueda fuzzy.
-- Escapar caracteres especiales de LIKE (`%`, `_`).
-
-Hay que modificar todos los endpoints individualmente.
-
-**Solución Propuesta:**
-Crear una función helper:
-```typescript
-// lib/utils/search.ts
-export function buildSearchCondition(
-  fields: string[],
-  search: string
-): Sql {
-  const escaped = search.replace(/[%_]/g, '\\$&')
-  const patterns = fields.map(f =>
-    sql`normalize_text(${Prisma.sql([f])}) LIKE normalize_text(${`%${escaped}%`})`
-  )
-  return Prisma.sql([patterns.join(' OR ')])
-}
-```
-
-**Archivos Afectados:**
-- `lib/utils/search.ts` (nuevo)
-- 5+ archivos de endpoints
-
----
-
-### 13.3 🟡 Directorios `*-with-update` — Código Duplicado/Experimental
-
-**Archivos:**
-- `app/api/project-events-with-update/route.ts`
-- `app/api/aftersale-events-with-update/route.ts`
-- `app/api/visit-events-with-update/route.ts`
-
-**Contexto:**
-Existen directorios duplicados para eventos de calendario con funcionalidad de update.
-
-**Problema:**
-No está claro:
-- Cuáles son los endpoints "oficiales" (`project-events/` vs `project-events-with-update/`).
-- Si los originales son legacy o los nuevos son experimentales.
-- Si ambos están en uso por el frontend.
-
-**Impacto:**
-- Confusión para desarrolladores nuevos.
-- Bugs fixados en uno pueden no replicarse en el otro.
-- Mayor superficie de mantenimiento.
-
-**Solución Propuesta:**
-1. Identificar cuál versión usa el frontend.
-2. Consolidar en un solo endpoint con funcionalidad opcional.
-3. Eliminar el duplicado.
-4. Documentar la decisión.
-
-**Archivos Afectados:**
-- `app/api/project-events-with-update/`
-- `app/api/aftersale-events-with-update/`
-- `app/api/visit-events-with-update/`
-- Frontend components que llaman estos endpoints
-
----
-
-## 14. Timezone y Manejo de Fechas
-
-### 14.1 ✅ `getInstallmentStatus` — Timezone del Servidor
-
-> ✅ **RESUELTO** — Todas las comparaciones de fechas usan `lib/timezone.ts` con `America/Santiago`.
-
-**Solución aplicada:**
-1. Creado `lib/timezone.ts` como helper centralizado con funciones `getTodayAppTZ()`, `isPastOrToday()`, `isFuture()`, `parseDateAsLocal()`, etc.
-2. `getInstallmentStatus()` ahora usa `isPastOrToday()` que compara en la timezone de la aplicación.
-3. `getTotalPendingInstallments()` también usa `isFuture()` para consistencia.
-4. `app/api/installments/route.ts` usa `getEndOfTodayAppTZ()` para el filtro de status.
-5. `lib/utils/calendar-utils.ts` usa `getTodayAppTZ()` en la vista agenda.
+### P2-08 - `ProjectAdjustment.amount` No Tiene CHECK DB
 
-**Archivos modificados:**
-- `lib/timezone.ts` (nuevo)
-- `lib/business-logic/installments.ts`
-- `app/api/installments/route.ts`
-- `lib/utils/calendar-utils.ts`
+**Estado:** Abierto
+**Tipo:** Integridad DB
+**Impacto:** Inserts directos podrían crear ajustes negativos.
 
----
-
-### 14.2 ✅ `Visit.POST` — `new Date(body.date)` Sin Timezone
-
-> ✅ **RESUELTO** — Parseo de fecha usa `parseDateAsLocal()` que interpreta YYYY-MM-DD como fecha local.
-
-**Solución aplicada:**
-El endpoint POST de visitas ahora usa `parseDateAsLocal(body.date.substring(0, 10))` en vez de `new Date(body.date)`. Esto evita que `"2025-05-15"` se interprete como UTC midnight.
-
-**Archivos modificados:**
-- `app/api/visits/route.ts`
-
----
-
-### 14.3 ✅ Fechas de Vencimiento con Suma de Días en Vez de Meses
-
-> ✅ **RESUELTO** — `calculateInstallments` ahora usa `addMonths` de `date-fns`.
-
-**Solución aplicada:**
-Reemplazado `dueDate.setDate(dueDate.getDate() + (i - 1) * 30)` por `addMonths(paymentDate, i - 1)`. Las cuotas ahora caen el mismo día de cada mes.
-
-**Ejemplo:**
-- Antes: 15 ene → 14 feb → 16 mar (30 días cada una)
-- Ahora: 15 ene → 15 feb → 15 mar (mismo día cada mes)
-
-**Archivos modificados:**
-- `lib/business-logic/installments.ts`
-- Tests actualizados
-
----
-
-### 14.4 ✅ Semántica Confusa de "paid" en Cuotas
-
-> ✅ **RESUELTO** — Terminología cambiada a `'due'` (vencida) y `'upcoming'` (próxima).
-
-**Solución aplicada:**
-- `'paid'` → `'due'` (badge `destructive`, label "Vencida")
-- `'pending'` → `'upcoming'` (badge `secondary`, label "Próxima")
-
-**Archivos modificados:**
-- `lib/business-logic/installments.ts`
-- `app/api/installments/route.ts`
-- `app/payments/installments/page-client.tsx`
-- `app/payments/installments/columns.tsx`
-- `hooks/queries/use-installments.ts`
-- Tests actualizados
-
----
-
-### 14.5 🟡 `calculatePaymentDistribution` — No Considera Moneda
-
-> **PENDIENTE** — Ver sección 9.3 (Decimal vs number). No es problema de timezone.
-
----
-
-## 15. Base de Datos — Integridad Adicional
-
-### 15.1 🟡 `CreditTransaction` — Sin Índice Compuesto `[customerId, type]`
-
-**Archivo:** `prisma/schema.prisma:478-506`
-
-**Contexto:**
-`getCustomerCreditBalance` filtra por `customerId` y agrupa por tipo.
-
-**Problema:**
-Hay índice en `[customerId, createdAt]` pero no en `[customerId, type]`. Consultas que filtran por tipo de transacción para un cliente específico no usan índice compuesto óptimo.
-
-**Solución Propuesta:**
-```prisma
-@@index([customerId, createdAt(sort: Desc)])
-@@index([customerId, type])  // ← Agregar
-@@index([type])
-```
-
-**Archivos Afectados:**
-- `prisma/schema.prisma`
-
----
-
-### 15.2 🟡 `ProjectAdjustment` — Sin Restricción de `amount > 0`
-
-**Archivo:** `prisma/schema.prisma:517-535`
-
-**Contexto:**
-`ProjectAdjustment` almacena montos de descuentos/condonaciones.
-
-**Problema:**
-El schema no tiene constraint de CHECK para garantizar que `amount` sea positivo. La validación está solo en el Zod schema del API, pero un INSERT directo a la DB podría crear ajustes negativos.
-
-**Solución Propuesta:**
-Agregar validación a nivel de aplicación con trigger o constraint:
-```prisma
-// No soportado nativamente en Prisma, pero se puede agregar con SQL raw en migración:
-// ALTER TABLE "project_adjustments" ADD CONSTRAINT positive_amount CHECK (amount > 0);
-```
-
-O al menos validar en el endpoint (ya debería estar hecho, pero verificar).
-
-**Archivos Afectados:**
-- `prisma/schema.prisma`
-- `app/api/projects/[id]/adjustments/route.ts`
-
----
-
-### 15.3 🟡 `Aftersale.tasks` y `ProjectEvent.tasks` — JSON sin Constraint de Tipo
-
-**Archivos:** `prisma/schema.prisma:349, 423`
-
-**Contexto:**
-Los campos `tasks` son de tipo `Json` con default `"[]"`.
-
-**Problema:**
-PostgreSQL JSON type acepta cualquier JSON válido (objetos, strings, numbers, null). No hay constraint que garantice que siempre sea un array.
-
-**Solución Propuesta:**
-Agregar constraint a nivel de DB mediante migración raw:
-```sql
-ALTER TABLE "Aftersale" ADD CONSTRAINT tasks_is_array
-  CHECK (jsonb_typeof(tasks) = 'array');
-
-ALTER TABLE "project_events" ADD CONSTRAINT tasks_is_array
-  CHECK (jsonb_typeof(tasks) = 'array');
-```
-
-Y validar con Zod en los endpoints (ya cubierto en issue 5.1).
-
-**Archivos Afectados:**
-- `prisma/schema.prisma`
-- Migraciones SQL
-
----
-
-### 15.4 🟡 `Project` — Sin Índice GIN para Búsqueda en `projectNumber`
-
-**Archivo:** `prisma/schema.prisma:156-197`
-
-**Contexto:**
-Hay `@@unique([projectNumber])` pero las búsquedas usan `normalize_text(p."projectNumber") LIKE normalize_text(...)`.
-
-**Problema:**
-El índice unique no ayuda con búsquedas LIKE que usan funciones. Con miles de proyectos, la búsqueda será secuencial.
-
-**Solución Propuesta:**
-Agregar extensión `pg_trgm` e índice GIN (requiere migración SQL raw):
-```sql
-CREATE EXTENSION IF NOT EXISTS pg_trgm;
-CREATE INDEX idx_project_number_search ON "Project"
-  USING GIN (normalize_text("projectNumber") gin_trgm_ops);
-```
-
-**Archivos Afectados:**
-- `prisma/schema.prisma`
-- Migración SQL
-
----
-
-### 15.5 🟡 `Customer.DELETE` — Cascade Sin Advertencia
-
-**Archivo:** `app/api/customers/[id]/route.ts:78-95` + `prisma/schema.prisma`
-
-**Contexto:**
-Eliminar un cliente tiene `onDelete: Cascade` en el schema para projects, payments, creditTransactions.
-
-**Problema:**
-No hay verificación de la cantidad de datos que se perderán. Un cliente con 50 proyectos, 200 pagos y 30 transacciones de crédito se elimina sin advertencia.
-
-**Solución Propuesta:**
-Agregar conteo previo y requerir confirmación:
-```typescript
-const counts = await Promise.all([
-  prisma.project.count({ where: { customerId: id } }),
-  prisma.payment.count({ where: { customerId: id } }),
-  prisma.creditTransaction.count({ where: { customerId: id } }),
-])
-// Retornar counts al frontend para confirmación
-```
-
-**Archivos Afectados:**
-- `app/api/customers/[id]/route.ts`
-- Frontend delete dialog
-
----
-
-## 16. Optimización de Base de Datos y Queries
-
-### 16.1 🟡 Índices Redundantes en el Schema
-
-**Archivo:** `prisma/schema.prisma`
-
-**Contexto:**
-PostgreSQL crea automáticamente índices para columnas `@unique` y el prefijo de índices compuestos `@@unique` ya cubre queries que filtran por las primeras columnas.
-
-**Índices redundantes identificados:**
-
-| Tabla | Índice Redundante | Línea | Razón |
-|-------|------------------|-------|-------|
-| `User` | `@@index([email])` | 28 | `@unique` ya crea índice automático |
-| `CommissionTier` | `@@index([paymentMethodId])` | 227 | `@@unique([paymentMethodId, minInstallments, maxInstallments])` ya lo cubre como prefijo |
-| `PaymentAllocation` | `@@index([projectId])` | 287 | `@@index([projectId, paymentId])` ya lo cubre |
-| `BadgeColor` | `@@index([order])` | 111 | Tabla de catálogo (~10 filas), overhead innecesario |
-| `BadgeColor` | `@@index([isActive])` | 112 | Tabla de catálogo (~10 filas), overhead innecesario |
-
-**Impacto:**
-- Cada índice redundante agrega overhead en cada INSERT/UPDATE/DELETE.
-- Desperdicio de espacio en disco.
-- En tablas pequeñas el impacto es mínimo, pero es deuda técnica.
-
-**Solución Propuesta:**
-Eliminar los 5 índices redundantes del schema y generar migración.
-
-**Archivos Afectados:**
-- `prisma/schema.prisma`
-
----
-
-### 16.2 🟡 Índices Faltantes para Patrones de Query Comunes
-
-**Archivo:** `prisma/schema.prisma`
-
-**Contexto:**
-Varias queries filtran por combinaciones de columnas que no tienen índices compuestos.
-
-**Índices faltantes:**
-
-```prisma
-// ProjectStatus — queries filtran por isFinal + isActive
-@@index([isFinal, isActive])
-
-// AftersaleStatus — búsqueda de activos no finales
-@@index([isFinal, isActive])
-
-// CreditTransaction — queries de balance por tipo de cliente
-@@index([customerId, type])
-```
-
-**Impacto:**
-- Queries de calendar-events y project search hacen JOIN con ProjectStatus filtrando por `isFinal` + `isActive` sin índice compuesto.
-- `getCustomerCreditBalance` filtra por `customerId` pero no tiene índice optimizado para queries que también agrupan por tipo.
-
-**Archivos Afectados:**
-- `prisma/schema.prisma`
-
----
-
-### 16.3 ✅ `updateMultipleProjectBalances` — N+1 Queries Secuenciales (ALTO IMPACTO)
-
-**Archivo:** `lib/business-logic/update-project-balance.ts:103-109`
-
-**Contexto:**
-Después de crear/eliminar un pago, se actualizan los balances de todos los proyectos afectados. Esta es la función más llamada en la transacción más crítica del sistema.
-
-**Problema:**
-```typescript
-// ACTUAL: 2N queries secuenciales dentro de transacción
-export async function updateMultipleProjectBalances(
-  projectIds: string[],
-  tx?: PrismaTransaction
-): Promise<number> {
-  for (const projectId of projectIds) {
-    await updateProjectBalance(projectId, tx)  // findUnique + update
-  }
-  return projectIds.length
-}
-```
-
-Para un pago FIFO con 5 proyectos = **10 queries secuenciales** dentro de la misma transacción. Cada query espera a la anterior, manteniendo locks de DB.
-
-**Impacto:**
-- Transacciones más largas = mayor riesgo de deadlock.
-- Mayor latencia en el endpoint POST de pagos.
-- A escala (100+ proyectos por pago), insostenible.
-
-**Estado:** Resuelto eliminando el recálculo manual.
-
-**Solución aplicada:**
-La función `updateMultipleProjectBalances` fue eliminada junto con `updateProjectBalance`. La transacción crítica de pagos ya no ejecuta el loop N+1 ni escribe `Project.balance`; usa `ProjectFinancials` para validar crédito/sobrepago con datos derivados.
-
-**Archivos Afectados:**
-- `lib/business-logic/update-project-balance.ts`
-- `app/api/payments/route.ts`
-- `app/api/payments/[id]/route.ts`
-- `app/api/projects/[id]/adjustments/route.ts`
-
----
-
-### 16.4 🔴 Transacción POST /api/payments — Excesivamente Larga
-
-**Archivo:** `app/api/payments/route.ts:308-430`
-
-**Contexto:**
-La transacción de creación de pagos es la más compleja del sistema. Maneja allocations, installments, comisiones, créditos y sobrepagos.
-
-**Problema actualizado:**
-La transacción sigue siendo compleja, aunque el recálculo manual de balance ya fue eliminado:
-1. Crear payment + allocations + installments
-2. Promise.all con N updates de installments (distribución de neto)
-3. Leer credit balance + balance derivado desde `ProjectFinancials` (Promise.all)
-4. Crear credit transaction (si aplica crédito)
-5. Leer proyectos afectados (findMany)
-6. Loop: para cada proyecto con sobrepago → create de crédito
-
-El loop de sobrepagos es particularmente problemático:
-```typescript
-for (const project of updatedProjects) {
-  if (overpaymentAmount > 0) {
-    await tx.creditTransaction.create({ data: { ... } })
-  }
-}
-```
-
-**Impacto:**
-- Bloquea otros writes a Project/Payment durante la transacción.
-- Mayor probabilidad de deadlocks bajo carga concurrente.
-- Timeout de transacción si hay muchos proyectos.
-
-**Solución Propuesta:**
-Usar `createMany` para sobrepagos:
-```typescript
-const overpayments = updatedProjects
-  .map((project) => buildOverpayment(project))
-  .filter(Boolean)
-
-if (overpayments.length > 0) {
-  await tx.creditTransaction.createMany({
-    data: overpayments,
-  })
-}
-```
-
-**Resultado esperado:** Reducir writes secuenciales de sobrepago dentro de la transacción.
-
-**Archivos Afectados:**
-- `app/api/payments/route.ts`
-
----
-
-### 16.5 🔴 Exports Sin Paginación — Riesgo de OOM
-
-**Archivos:**
-- `app/api/projects/export/route.ts:66-83`
-- `app/api/payments/export/route.ts:88-115`
-- `app/api/customers/export/route.ts:27-33`
-
-**Contexto:**
-Los endpoints de export generan archivos Excel descargando todos los registros de una tabla.
-
-**Problema:**
-```typescript
-// projects/export — carga TODOS los proyectos con relaciones profundas
-const allProjects = await prisma.project.findMany({
-  relationLoadStrategy: 'join',
-  where,
-  orderBy: { createdAt: 'desc' },
-  include: {
-    customer: { select: { id: true, name: true, phone: true, email: true } },
-    projectStatus: { include: { color: true } },
-  },
-})
-// Luego filtra en memoria (líneas 86-111)
-```
-
-Si la DB tiene 100K+ registros:
-- Se cargan TODOS en memoria del servidor Node.js.
-- Se construye un workbook de xlsx en memoria.
-- En Vercel: límite de 512MB (hobby) o 1GB+ (pro) → **OOM crash**.
-- Timeout de serverless function (60s en Vercel).
-
-Además, el filtro de búsqueda se aplica **en memoria** en vez de en la DB.
-
-**Impacto:**
-- Crash del servidor en producción con datos reales.
-- Error 504 para el usuario.
-- Función serverless terminada abruptamente.
-
-**Solución Propuesta:**
-
-Opción A — Límite máximo con advertencia:
-```typescript
-const MAX_EXPORT = 10000
-const allProjects = await prisma.project.findMany({
-  where,  // ← Filtro en DB, no en memoria
-  take: MAX_EXPORT,
-  select: {  // ← select específico, no include completo
-    id: true,
-    projectNumber: true,
-    projectName: true,
-    totalAmount: true,
-    balance: true,
-    customer: { select: { id: true, name: true } },
-    projectStatus: { select: { id: true, name: true } },
-  },
-  orderBy: { createdAt: 'desc' },
-})
-```
-
-Opción B — Streaming para archivos grandes (más complejo):
-- Usar `@fast-csv` o similar para streaming.
-- Retornar un `ReadableStream` como response.
-- Soporta cualquier volumen de datos.
-
-**Archivos Afectados:**
-- `app/api/projects/export/route.ts`
-- `app/api/payments/export/route.ts`
-- `app/api/customers/export/route.ts`
-
----
-
-### 16.6 🟡 Two-Step Lookups — Doble Roundtrip Innecesario
-
-**Archivos:**
-- `app/api/payments/search-projects/route.ts:35-64`
-- `app/api/projects/search/route.ts:41-74`
-- `app/api/aftersales/search-active/route.ts:56-111`
-
-**Contexto:**
-Tres endpoints usan el patrón "obtener IDs primero, luego datos completos" para búsquedas con texto.
-
-**Problema:**
-```typescript
-// Paso 1: Raw query para obtener IDs
-const matchingIds = await prisma.$queryRaw<Array<{ id: string }>>`
-  SELECT p.id FROM "Project" p JOIN "Customer" c ...
-  WHERE normalize_text(c.name) LIKE normalize_text(${`%${search}%`})
-`
-
-// Paso 2: Prisma query para obtener datos completos
-const projects = await prisma.project.findMany({
-  where: { id: { in: matchingIds.map(r => r.id) } },
-  include: { customer: true }
-})
-```
-
-Dos roundtrips a la DB cuando uno bastaría. El patrón de "IDs primero" es útil para paginación con conteo separado, pero innecesario aquí con LIMIT 50.
-
-**Impacto:**
-- Latencia duplicada para cada búsqueda.
-- Mayor carga en la DB.
-
-**Solución Propuesta:**
-Un solo query con `where` directo:
-```typescript
-const projects = await prisma.project.findMany({
-  where: {
-    totalAmount: { gt: 0 },
-    balance: { gt: FINANCIAL.BALANCE_TOLERANCE },
-    OR: [
-      { projectNumber: { contains: q } },
-      { projectName: { contains: q } },
-      { customer: { name: { contains: q } } },
-    ],
-  },
-  select: {
-    id: true,
-    projectNumber: true,
-    balance: true,
-    customer: { select: { id: true, name: true } },
-  },
-  take: limit,
-  orderBy: { createdAt: 'desc' },
-})
-```
-
-**Resultado esperado:** Reduce roundtrips de 2 a 1 por request (~50% menos latencia de DB).
-
-**Archivos Afectados:**
-- `app/api/payments/search-projects/route.ts`
-- `app/api/projects/search/route.ts`
-- `app/api/aftersales/search-active/route.ts`
-
----
-
-### 16.7 🟡 Calendar Events — Includes Excesivamente Profundos
-
-**Archivo:** `app/api/calendar-events/route.ts:58-86`
-
-**Contexto:**
-El endpoint de eventos de calendario carga 3 tipos de eventos (project, aftersale, visit) con relaciones profundamente anidadas.
-
-**Problema:**
-```typescript
-// ACTUAL: customer: true → TODOS los campos del customer
-include: {
-  project: {
-    include: {
-      customer: true,  // ← 15+ campos innecesarios
-      projectStatus: { include: { color: true } },
-      uninstallTags: { include: { uninstallTag: { include: { color: true } } } }
-    }
-  },
-  teamTags: { include: { color: true } }
-}
-```
-
-`customer: true` incluye todos los campos (id, name, phone, email, createdAt, updatedAt). Lo mismo se repite para los 3 tipos de eventos.
-
-**Impacto:**
-- Payload de red ~40-60% más grande de lo necesario.
-- Mayor tiempo de serialización JSON.
-- Mayor consumo de memoria en el servidor.
-
-**Solución Propuesta:**
-```typescript
-include: {
-  project: {
-    select: {
-      id: true,
-      projectNumber: true,
-      projectName: true,
-      customer: { select: { id: true, name: true, phone: true } },
-      projectStatus: {
-        select: {
-          id: true,
-          name: true,
-          color: { select: { bgClass: true, textClass: true } },
-        },
-      },
-    },
-  },
-  teamTags: {
-    select: {
-      id: true,
-      name: true,
-      abbreviation: true,
-      color: { select: { bgClass: true, textClass: true } },
-    },
-  },
-}
-```
-
-**Archivos Afectados:**
-- `app/api/calendar-events/route.ts`
-
----
-
-### 16.8 🟡 Queries Secuenciales que Pueden Ser Paralelas
-
-**Archivos:**
-- `app/api/customers/[id]/credit/route.ts:21-54`
-- `app/api/payments/[id]/route.ts` (DELETE)
-- `app/api/projects/[id]/route.ts` (PUT)
-
-**Contexto:**
-Varios endpoints ejecutan queries independientes de forma secuencial cuando podrían ejecutarse en paralelo.
-
-**Problema 1 — `GET /api/customers/[id]/credit`:**
-```typescript
-// ACTUAL: secuencial
-const customer = await prisma.customer.findUnique({...})
-const creditBalance = await getCustomerCreditBalance(customerId)
-```
-
-**Solución:**
-```typescript
-const [customer, creditBalance] = await Promise.all([
-  prisma.customer.findUnique({...}),
-  getCustomerCreditBalance(customerId)
-])
-```
-
-**Problema 2 — `DELETE /api/payments/[id]`:**
-```typescript
-// ACTUAL: lectura fuera de transacción, luego transacción
-const existingPayment = await prisma.payment.findUnique({...})
-await prisma.$transaction(async (tx) => { ... })
-```
-
-Esto también crea una **race condition**: entre la lectura inicial y la transacción, el pago podría ser modificado/eliminado por otra request.
-
-**Solución:**
-```typescript
-await prisma.$transaction(async (tx) => {
-  const existingPayment = await tx.payment.findUnique({...})
-  // ... resto de lógica dentro de la transacción
-})
-```
-
-**Problema 3 — `PUT /api/projects/[id]`:**
-```typescript
-// ACTUAL: cálculo de balance fuera de transacción
-const allocationsSum = await prisma.paymentAllocation.aggregate({
-  where: { projectId: id },
-  _sum: { allocatedAmount: true }
-})
-const totalPaid = allocationsSum._sum.allocatedAmount?.toNumber() || 0
-updatedBalance = new Decimal(newTotalAmount - totalPaid)
-
-// Luego en transacción
-await prisma.$transaction(async (tx) => {
-  await tx.project.update({ where: { id }, data: updateData })
-})
-```
-
-Si alguien crea un pago entre la lectura y el update, el balance será incorrecto.
-
-**Solución:** Mover el cálculo dentro de la transacción.
-
-**Archivos Afectados:**
-- `app/api/customers/[id]/credit/route.ts`
-- `app/api/payments/[id]/route.ts`
-- `app/api/projects/[id]/route.ts`
-
----
-
-### 16.9 🟡 Endpoints Sin Límites de Seguridad
-
-**Archivos:**
-- `app/api/aftersales/route.ts:16-48`
-- `app/api/customers/list/route.ts:13-22`
-- `app/api/customers/[id]/account/route.ts:29-43`
-
-**Contexto:**
-Varios endpoints hacen `findMany` sin ningún límite de registros.
-
-| Endpoint | Archivo | Límite Actual | Recomendado |
-|----------|---------|---------------|-------------|
-| `/api/aftersales` | `app/api/aftersales/route.ts:16-48` | Ninguno | `take: 500` |
-| `/api/customers/list` | `app/api/customers/list/route.ts:13-22` | Ninguno | `take: 1000` |
-| `/api/customers/[id]/account` | `app/api/customers/[id]/account/route.ts:29-43` | Ninguno | `take: 100` + paginación |
-
-**Problema:**
-Sin límites, un cliente con cientos de proyectos o miles de aftersales causará queries lentas y payloads grandes.
-
-**Solución Propuesta:**
-Agregar `take` como safety limit en todos los `findMany` sin paginación:
-```typescript
-const aftersales = await prisma.aftersale.findMany({
-  relationLoadStrategy: 'join',
-  orderBy: { reportedAt: 'desc' },
-  take: 500,  // ← Safety limit
-  include: { project: {...}, aftersaleStatus: {...} }
-})
-```
-
-**Archivos Afectados:**
-- `app/api/aftersales/route.ts`
-- `app/api/customers/list/route.ts`
-- `app/api/customers/[id]/account/route.ts`
-
----
-
-### 16.10 🟡 `GET /api/payments` — DISTINCT con JOINs Innecesarios
-
-**Archivo:** `app/api/payments/route.ts:86-93`
-
-**Contexto:**
-La búsqueda de pagos usa `SELECT DISTINCT` porque los LEFT JOINs con PaymentAllocation y Project pueden duplicar filas.
-
-**Problema:**
-```sql
--- ACTUAL: DISTINCT necesario por LEFT JOINs
-SELECT DISTINCT pm.id
-FROM "Payment" pm
-JOIN "Customer" c ON c.id = pm."customerId"
-LEFT JOIN "PaymentAllocation" pa ON pa."paymentId" = pm.id
-LEFT JOIN "Project" p ON p.id = pa."projectId"
-WHERE normalize_text(c.name) LIKE normalize_text(...)
-   OR normalize_text(p."projectNumber") LIKE normalize_text(...)
-```
-
-El DISTINCT fuerza un sort/dedup en PostgreSQL que puede ser costoso con muchos resultados.
-
-**Solución Propuesta:**
-Usar UNION en vez de DISTINCT — elimina duplicados automáticamente y permite mejor plan de ejecución:
-```sql
-SELECT pm.id FROM "Payment" pm
-JOIN "Customer" c ON c.id = pm."customerId"
-WHERE normalize_text(c.name) LIKE normalize_text(${`%${search}%`})
-UNION
-SELECT pm.id FROM "Payment" pm
-JOIN "PaymentAllocation" pa ON pa."paymentId" = pm.id
-JOIN "Project" p ON p.id = pa."projectId"
-WHERE normalize_text(p."projectNumber") LIKE normalize_text(${`%${search}%`})
-   OR normalize_text(COALESCE(p."projectName", '')) LIKE normalize_text(${`%${search}%`})
-```
-
-**Archivos Afectados:**
-- `app/api/payments/route.ts`
-
----
-
-### 16.11 ✅ Cron Reconcile — Batch Update Ineficiente
-
-**Archivo:** `app/api/cron/reconcile-balances/route.ts:112-119`
-
-**Contexto:**
-El cron job de reconciliación de balances corrige proyectos con balances inconsistentes.
-
-**Problema:**
-```typescript
-// ACTUAL: un update por proyecto
-await prisma.$transaction(
-  inconsistent.map(({ id, calculatedBalance }) =>
-    prisma.project.update({ where: { id }, data: { balance: new Decimal(Number(calculatedBalance)) } })
-  )
-)
-```
-
-Si hay 500 proyectos inconsistentes, crea 500 operaciones individuales en la transacción.
-
-**Estado:** Resuelto eliminando el cron.
-
-**Solución aplicada:**
-El endpoint `app/api/cron/reconcile-balances/route.ts` fue eliminado. La reconciliación de balances dejó de ser necesaria porque el balance se deriva desde la view `ProjectFinancials`.
-
-**Archivos Afectados:**
-- `app/api/cron/reconcile-balances/route.ts`
-
----
-
-### 16.12 🟢 `verifyProjectBalance` — Lectura Wasteful de Allocations
-
-**Archivo:** `lib/business-logic/update-project-balance.ts:120-148`
-
-**Contexto:**
-La función verifica si el balance almacenado coincide con el calculado.
-
-**Problema:**
-```typescript
-export async function verifyProjectBalance(projectId: string): Promise<boolean> {
-  const project = await prisma.project.findUnique({
-    where: { id: projectId },
-    select: {
-      totalAmount: true,
-      balance: true,
-      paymentAllocations: { select: { allocatedAmount: true } }  // ← Lee TODAS las allocations
-    }
-  })
-  // ... calcula y compara
-}
-```
-
-Lee todas las allocations completas solo para verificar consistencia. Si se llama frecuentemente, es wasteful.
-
-**Solución Propuesta:**
-Usar query SQL directa como en el cron job:
-```typescript
-const result = await prisma.$queryRaw<{ diff: number }[]>`
-  SELECT ABS(p.balance - (
-    p."totalAmount" - COALESCE(
-      (SELECT SUM(pa."allocatedAmount") FROM "PaymentAllocation" pa WHERE pa."projectId" = p.id), 0
-    )
-  )) as diff
-  FROM "Project" p
-  WHERE p.id = ${projectId}
-`
-return Number(result[0]?.diff) < FINANCIAL.TOLERANCE
-```
-
-**Archivos Afectados:**
-- `lib/business-logic/update-project-balance.ts`
-
----
+**Evidencia:**
+- `ProjectAdjustment.amount` es `Decimal`, sin constraint DB.
+- La app valida, pero DB no.
 
-### 16.13 🟢 Queries Redundantes en `project-list.ts`
+**Acción recomendada:**
+Agregar constraint SQL `amount > 0`.
 
-**Archivo:** `lib/queries/project-list.ts:48-140`
+**Criterio de cierre:**
+Migración aplicada y test DB o integración cubre monto negativo.
 
-**Contexto:**
-Las funciones `queryProjectList`, `countProjects`, `getStatusFacets`, y `getStateFacets` comparten lógica WHERE con JOINs.
-
-**Problema:**
-Cada función reconstruye las mismas condiciones WHERE dinámicas con los mismos JOINs. Si se necesita cambiar la lógica de filtrado, hay que modificar 4 funciones.
-
-**Solución Propuesta:**
-Extraer la construcción del WHERE a una función compartida:
-```typescript
-function buildProjectWhere(filters: ProjectFilters): Prisma.Sql {
-  // Construye el WHERE una sola vez
-  return sql`...`
-}
-```
-
-**Archivos Afectados:**
-- `lib/queries/project-list.ts`
-
 ---
-
-### 16.14 🟢 Columna Legacy `projectStatusLegacy` sin Uso
-
-**Archivo:** `prisma/schema.prisma:167`
-
-**Contexto:**
-Columna de migración legacy para compatibilidad con datos antiguos.
 
-**Problema:**
-```prisma
-projectStatusLegacy String @default("") @map("projectStatus")
-```
-
-Ocupa espacio en cada fila de Project (~20 bytes + overhead). Si ya no se usa en código, es espacio desperdiciado.
+### P2-09 - Índices Faltantes/Redundantes
 
-**Solución Propuesta:**
-1. Verificar si se usa en código (grep por `projectStatusLegacy` y `projectStatus` mapeado).
-2. Si no se usa, eliminar en migración:
-   ```bash
-   npx prisma migrate dev --name remove_project_status_legacy
-   ```
+**Estado:** Validar con query plans
+**Tipo:** Performance DB
+**Impacto:** Overhead de escritura o queries menos eficientes.
 
-**Archivos Afectados:**
-- `prisma/schema.prisma`
+**Evidencia inicial:**
+- `User.email` tiene `@unique` y además `@@index([email])`.
+- `CreditTransaction` no tiene índice compuesto `[customerId, type]`.
+- `CommissionTier.paymentMethodId` puede estar cubierto por unique compuesto.
 
----
+**Acción recomendada:**
+1. Revisar `EXPLAIN ANALYZE` de queries reales.
+2. Eliminar redundantes solo con migración revisada.
+3. Agregar índices faltantes solo donde haya patrón de query confirmado.
 
-## 17. Testing — Cobertura
-
-### 16.1 🟡 Endpoints Sin Tests
-
-**Archivos sin tests detectados:**
-- `app/api/users/route.ts` — Sin tests (especialmente crítico dado el issue 11.2)
-- `app/api/calendar-events/route.ts` — Sin tests
-- `app/api/calendar-events/reorder/route.ts` — Sin tests
-- `app/api/project-events/[id]/route.ts` — Sin tests
-- `app/api/test/cleanup/route.ts` — Sin tests
-- `app/api/health/warmup/route.ts` — Sin tests
-- Todos los endpoints de export — Sin tests
-- Todos los endpoints de import — Sin tests
-- `app/api/payments/import/route.ts` — Sin tests (crítico dado el issue 12.2)
-- `app/api/projects/[id]/adjustments/route.ts` — Sin tests
-
-**Impacto:**
-Cambios en estos endpoints pueden introducir bugs sin detección automática. Los issues 11.2 (users sin auth) y 12.2 (import sin balance recalc) podrían haberse detectado con tests.
-
-**Solución Propuesta:**
-Priorizar tests para:
-1. Endpoints financieros (payments import/export, adjustments).
-2. Endpoints de seguridad (users, cron).
-3. Endpoints de datos masivos (import/export).
-
-**Archivos Afectados:**
-- `tests/` (agregar tests faltantes)
+**Criterio de cierre:**
+Migración de índices basada en query plans o patrones confirmados.
 
 ---
-
-### 16.2 🟡 Tests de Business Logic — Casos Edge No Cubiertos
 
-**Archivos:**
-- `lib/business-logic/installments.ts` — No hay tests para `generatePrismaInstallmentsCreate`
-- `lib/business-logic/commission.ts` — No hay tests para `distributeNetToInstallments`
-- `lib/business-logic/project-state.ts` — No hay tests para los Prisma Where clause helpers
-- `lib/business-logic/totals.ts` — No hay tests para redondeo con diferentes monedas
+### P2-10 - `calculateProjectBalance()` Sigue Ignorando Ajustes
 
-**Solución Propuesta:**
-Agregar tests unitarios para cada función pura de business logic, especialmente:
-- Casos edge con montos pequeños ($0.10).
-- Casos con monedas diferentes.
-- Casos con fechas límite (fin de mes, año bisiesto).
+**Estado:** Abierto
+**Tipo:** Legacy / Mantenibilidad
+**Impacto:** Callers legacy pueden calcular un balance distinto a `ProjectFinancials`.
 
----
-
-## 18. Configuración y Entorno
-
-### 17.1 🟡 Sin Validación de Variables de Entorno al Inicio
-
-**Archivos:** `lib/db.ts`, `lib/auth.ts`, `middleware.ts`
-
-**Contexto:**
-No hay un archivo que valide que todas las variables de entorno requeridas están presentes al inicio de la aplicación.
-
-**Problema:**
-Si `DATABASE_URL` falta o tiene formato incorrecto:
-- El error ocurre en runtime cuando se hace la primera query.
-- El mensaje de error es críptico (Prisma error).
-- No hay forma de detectar el problema antes de que llegue tráfico.
-
-Variables que deberían validarse:
-- `DATABASE_URL` (requerida)
-- `DIRECT_URL` (requerida)
-- `BETTER_AUTH_SECRET` (requerida)
-- `BETTER_AUTH_URL` (requerida)
-- `NODE_ENV` (opcional, pero útil validar)
-
-**Solución Propuesta:**
-Crear `lib/env.ts`:
-```typescript
-import { z } from 'zod'
-
-const envSchema = z.object({
-  DATABASE_URL: z.string().url(),
-  DIRECT_URL: z.string().url(),
-  BETTER_AUTH_SECRET: z.string().min(32),
-  BETTER_AUTH_URL: z.string().url(),
-  NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
-})
-
-export const env = envSchema.parse(process.env)
-```
+**Evidencia:**
+- `lib/business-logic/project-balance.ts` calcula `totalAmount - allocations`.
+- No considera `ProjectAdjustment`.
 
-Importar en el entry point (`app/layout.tsx` o `middleware.ts`) para validar al inicio.
+**Acción recomendada:**
+Renombrar a `calculateProjectBalanceWithoutAdjustments()` o extender firma para recibir ajustes.
 
-**Archivos Afectados:**
-- `lib/env.ts` (nuevo)
-- `lib/db.ts` (usar `env.DATABASE_URL`)
-- `lib/auth.ts` (usar `env.BETTER_AUTH_SECRET`)
+**Criterio de cierre:**
+No hay función con nombre ambiguo que ignore ajustes sin declararlo.
 
 ---
-
-### 17.2 🟡 `middleware.ts` — Error en Catch Usa `console` en Vez de Logger
 
-**Archivo:** `middleware.ts:55-58`
+### P2-11 - Cuotas de Monto Cero en Montos Pequeños
 
-**Contexto:**
-El middleware captura errores de autenticación y redirige a login.
+**Estado:** Abierto
+**Tipo:** UX / Validación financiera
+**Impacto:** Montos pequeños con muchas cuotas pueden generar cuotas `$0`.
 
-**Problema:**
-```typescript
-} catch (error) {
-  console.error('Error en middleware de auth:', error)  // ← console, no logger
-  return NextResponse.redirect(new URL('/login', request.url))
-}
-```
+**Evidencia:**
+- `calculateInstallments(0.1, 12, ...)` puede generar cuotas de 0.
+- `validateInstallmentsSum()` valida suma, no monto individual positivo.
 
-Usa `console.error` en vez del logger estructurado (`pino`). Esto significa:
-- El error no tiene contexto (request ID, IP, user agent).
-- No se puede buscar/filter en logs de producción.
-- Inconsistente con el resto del logging de la aplicación.
-
-**Solución Propuesta:**
-```typescript
-import { logger } from '@/lib/logger'
-
-} catch (error) {
-  logger.error({ error, url: request.url }, 'Error en middleware de auth')
-  return NextResponse.redirect(new URL('/login', request.url))
-}
-```
+**Acción recomendada:**
+Definir monto mínimo por cuota o rechazar combinaciones donde alguna cuota sea 0.
 
-**Archivos Afectados:**
-- `middleware.ts`
+**Criterio de cierre:**
+Test de monto pequeño con muchas cuotas rechaza o distribuye sin cuotas cero.
 
 ---
-
-### 17.3 🟡 `pagination.ts` — Sin Validación de NaN
-
-**Archivo:** `lib/utils/pagination.ts:11-13`
 
-**Contexto:**
-La función de paginación parsea `page` y `limit` de searchParams.
+## P3 - Bajo
 
-**Problema:**
-```typescript
-const page = Math.max(1, parseInt(searchParams.get('page') || '1'))
-const limit = Math.min(parseInt(searchParams.get('limit') || String(defaultLimit)), 100)
-```
-
-`parseInt('abc')` retorna `NaN`. `Math.max(1, NaN)` retorna `NaN`. `Math.min(NaN, 100)` retorna `NaN`.
+### P3-01 - Formato de Moneda en Mensajes Usa `toLocaleString`
 
-Resultado: queries con `skip: NaN` y `take: NaN`, que Prisma maneja de forma impredecible.
+**Estado:** Abierto
+**Tipo:** Consistencia UX
+**Evidencia:** `canRefundCredit()` y `canApplyCredit()` formatean montos con `$${value.toLocaleString('es-CL')}`.
 
-**Solución Propuesta:**
-```typescript
-const page = Math.max(1, parseInt(searchParams.get('page') || '1') || 1)
-const limit = Math.min(parseInt(searchParams.get('limit') || String(defaultLimit)) || defaultLimit, 100)
-```
+**Acción recomendada:** Usar `formatCurrency()` centralizado.
 
-**Archivos Afectados:**
-- `lib/utils/pagination.ts`
+**Criterio de cierre:** Mensajes financieros usan el helper común.
 
 ---
-
-### 17.4 🟡 `Customer.PUT` — Email Trim Inconsistente
 
-**Archivo:** `app/api/customers/[id]/route.ts:54-58`
+### P3-02 - `derivePaymentProgress()` Tiene Edge Case con `total = 0`
 
-**Contexto:**
-El endpoint actualiza el email de un cliente con trim.
+**Estado:** Abierto
+**Tipo:** Edge case / Display
+**Evidencia:** Retorna `percentPaid = 0` cuando `total === 0`, incluso si `balance <= 0`.
 
-**Problema:**
-```typescript
-// Verificación de duplicado (sin trim)
-const duplicateEmail = await prisma.customer.findFirst({
-  where: { email },  // ← email sin trim
-})
+**Acción recomendada:** Documentar comportamiento o retornar 100% cuando total es 0 y no hay deuda.
 
-// Update (con trim)
-...(email !== undefined && { email: email?.trim() || null }),
-```
-
-Si un usuario actualiza su email de `"test@example.com"` a `" test@example.com "`:
-- La verificación busca `" test@example.com "` (con espacios) → no encuentra duplicado.
-- El update guarda `"test@example.com"` (con trim).
-- Si ya existe `"test@example.com"`, el update fallará con error de unique constraint.
-
-Pero si el email original era `"test@example.com"` y se intenta cambiar a `"test@example.com "`:
-- La verificación busca `"test@example.com "` → no encuentra duplicado.
-- El update guarda `"test@example.com"` → funciona.
-- Pero la verificación fue innecesaria.
-
-**Solución Propuesta:**
-Aplicar trim antes de la verificación:
-```typescript
-const trimmedEmail = email?.trim() || null
-if (trimmedEmail) {
-  const duplicateEmail = await prisma.customer.findFirst({
-    where: { email: trimmedEmail, id: { not: id } },
-  })
-  if (duplicateEmail) {
-    return NextResponse.json({ error: 'Email ya registrado' }, { status: 409 })
-  }
-}
-```
-
-**Archivos Afectados:**
-- `app/api/customers/[id]/route.ts`
+**Criterio de cierre:** Tests cubren `total = 0`.
 
 ---
-
-### 17.5 🟡 `/api/payments/search-projects` — Hardcoded `balance > 1`
-
-**Archivo:** `app/api/payments/search-projects/route.ts:41`
-
-**Contexto:**
-La query raw busca proyectos con balance pendiente.
-
-**Problema:**
-```sql
-WHERE p."totalAmount" > 0
-  AND p.balance > 1  -- ← Hardcoded
-```
-
-Debería usar `FINANCIAL.BALANCE_TOLERANCE` (definido en constants). Si la tolerancia cambia, este endpoint no se actualiza.
-
-**Solución Propuesta:**
-```typescript
-WHERE p."totalAmount" > 0
-  AND p.balance > ${FINANCIAL.BALANCE_TOLERANCE}
-```
 
-**Archivos Afectados:**
-- `app/api/payments/search-projects/route.ts`
-- `lib/constants/financial.ts`
+### P3-03 - `relationJoins` Sigue Como Preview Feature
 
----
-
-### 17.6 🟡 `Project.PUT` — Cambio de `customerId` Sin Migrar Créditos
-
-**Archivo:** `app/api/projects/[id]/route.ts:73-78`
-
-**Contexto:**
-El endpoint permite cambiar el cliente asignado a un proyecto.
-
-**Problema:**
-Si se cambia el `customerId` de un proyecto:
-- Las `CreditTransaction` asociadas a ese proyecto siguen apuntando al proyecto.
-- Pero el `customerId` de la transacción no se actualiza.
-- `getCustomerCreditBalance(customerId)` filtra por `customerId` de la transacción, no del proyecto.
-- Las transacciones quedan "huérfanas" del cliente original.
-
-**Impacto:**
-- El balance de crédito del cliente original queda incorrecto.
-- El nuevo cliente no ve las transacciones de crédito del proyecto.
-- Auditoría inconsistente.
-
-**Solución Propuesta:**
-Opción A — Bloquear cambio si hay transacciones:
-```typescript
-const creditTxCount = await tx.creditTransaction.count({
-  where: { projectId: id }
-})
-if (creditTxCount > 0) {
-  throw new BusinessError('No se puede cambiar el cliente de un proyecto con transacciones de crédito', 400)
-}
-```
+**Estado:** Validar periódicamente
+**Tipo:** Dependencia / Arquitectura
+**Evidencia:** `previewFeatures = ["relationJoins"]` en `prisma/schema.prisma`.
 
-Opción B — Migrar transacciones:
-```typescript
-await tx.creditTransaction.updateMany({
-  where: { projectId: id },
-  data: { customerId: newCustomerId }
-})
-```
+**Acción recomendada:** Revisar compatibilidad al actualizar Prisma y mantener versión pineada.
 
-**Archivos Afectados:**
-- `app/api/projects/[id]/route.ts`
+**Criterio de cierre:** Decisión documentada o feature estable en versión usada.
 
 ---
 
-### 17.7 🟡 `Project.PUT` — Recálculo de Balance Sin Considerar Ajustes
+### P3-04 - Mezcla de `Decimal` y `number`
 
-**Archivo:** `app/api/projects/[id]/route.ts:89-95`
+**Estado:** Abierto
+**Tipo:** Arquitectura financiera
+**Impacto:** Riesgo de diferencias de redondeo en casos edge.
 
-**Contexto:**
-Cuando se actualiza el `totalAmount` de un proyecto, se recalcula el balance.
+**Acción recomendada:**
+Definir regla:
+- DB y cálculos financieros: `Decimal`.
+- API/display: `number` solo en serialización.
 
-**Problema:**
-```typescript
-const newTotalAmount = finalTotalAmount.toNumber()
-updatedBalance = new Decimal(newTotalAmount - totalPaid)
-// ❌ Falta: - totalAdjustments
-```
-
-Si un proyecto tiene ajustes (descuentos/condonaciones) y se modifica su subtotal, el balance queda incorrecto porque no resta los ajustes existentes.
-
-**Ejemplo:**
-- Proyecto: totalAmount = $100.000, paid = $50.000, adjustments = $20.000
-- Balance real = $100.000 - $50.000 - $20.000 = $30.000
-- Se cambia totalAmount a $120.000
-- Balance calculado = $120.000 - $50.000 = $70.000 ❌
-- Balance correcto = $120.000 - $50.000 - $20.000 = $50.000 ✅
-
-**Solución Propuesta:**
-```typescript
-const adjustments = await tx.projectAdjustment.aggregate({
-  where: { projectId: id },
-  _sum: { amount: true },
-})
-const totalAdjustments = adjustments._sum.amount?.toNumber() || 0
-updatedBalance = new Decimal(newTotalAmount - totalPaid - totalAdjustments)
-```
-
-**Archivos Afectados:**
-- `app/api/projects/[id]/route.ts`
+**Criterio de cierre:**
+Guía documentada y helpers financieros no mezclan sin conversión explícita.
 
 ---
 
-### 17.8 🟡 `/api/test/cleanup` — Protección Solo por NODE_ENV
+### P3-05 - Limpieza de Dependencias y Archivos Huérfanos
 
-**Archivo:** `app/api/test/cleanup/route.ts:44`
+**Estado:** Validar antes de eliminar
+**Tipo:** Mantenibilidad
+**Evidencia:** Knip reporta dependencias y archivos potencialmente no usados.
 
-**Contexto:**
-El endpoint de cleanup para testing solo verifica `NODE_ENV`.
-
-**Problema:**
-```typescript
-if (process.env.NODE_ENV === 'production') {
-  return NextResponse.json({ error: '...' }, { status: 403 })
-}
-```
-
-Si alguien despliega con `NODE_ENV=staging` o `NODE_ENV=preview`, el endpoint queda expuesto sin autenticación adicional.
-
-**Solución Propuesta:**
-Agregar un `TEST_SECRET` o token de autenticación:
-```typescript
-const testSecret = request.headers.get('x-test-secret')
-if (testSecret !== process.env.TEST_SECRET) {
-  return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-}
-```
+**Acción recomendada:**
+Ejecutar `npm run lint:deep`, revisar manualmente entrypoints, scripts one-shot y archivos usados por Playwright/config.
 
-**Archivos Afectados:**
-- `app/api/test/cleanup/route.ts`
-- `.env.example` (agregar TEST_SECRET)
+**Criterio de cierre:**
+Dependencias realmente no usadas eliminadas; falsos positivos documentados.
 
 ---
 
-### 17.9 🟡 `calculateProjectTotal` — Redondeo Inconsistente con DB
+### P3-06 - Variables de Entorno Sin Matriz Verificada
 
-**Archivo:** `lib/business-logic/totals.ts:65-81`
+**Estado:** Validar
+**Tipo:** Configuración
+**Problema anterior:** El documento viejo asumía variables de Better Auth no observadas directamente en el código.
 
-**Contexto:**
-La función usa `Math.round` para redondeo de montos.
+**Acción recomendada:**
+Crear matriz:
 
-**Problema:**
-```typescript
-export function roundForCurrency(amount: number, currency: string = 'CLP'): number {
-  const factor = Math.pow(10, decimals)
-  return Math.round(amount * factor) / factor  // ← Math.round
-}
-```
-
-PostgreSQL `Decimal(12,2)` usa banker's rounding (round half to even). En casos edge (x.xx5), los resultados pueden diferir:
-- `Math.round(2.5)` = 3 (JavaScript)
-- `ROUND(2.5)` = 2 (PostgreSQL banker's rounding)
-
-**Impacto:**
-- Diferencia de 1 centavo en casos edge.
-- Acumulable con múltiples cálculos.
-
-**Solución Propuesta:**
-Usar el mismo algoritmo que PostgreSQL o documentar la diferencia. Para CLP (sin decimales), la diferencia no aplica.
+| Variable | Fuente en código | Requerida | Entorno |
+|----------|------------------|-----------|---------|
+| `DATABASE_URL` | Prisma datasource | Sí | server |
+| `DIRECT_URL` | Prisma datasource | Sí | server |
+| `NEXT_PUBLIC_APP_URL` | `.env.example` | Validar | client/server |
 
-**Archivos Afectados:**
-- `lib/business-logic/totals.ts`
+**Criterio de cierre:**
+`lib/env.ts` valida solo variables realmente usadas o requeridas indirectamente.
 
 ---
 
-### 17.10 🟢 `validateProjectTotal` — Tolerancia No Considera Moneda
+## Hallazgos Resueltos u Obsoletos
 
-**Archivo:** `lib/business-logic/totals.ts:123-130`
-
-**Contexto:**
-La validación usa `FINANCIAL.TOLERANCE` (0.01) para todas las monedas.
-
-**Problema:**
-Para CLP (sin decimales), la tolerancia debería ser 1, no 0.01.
-
-**Solución Propuesta:**
-```typescript
-const tolerance = getBalanceTolerance(currency)  // CLP = 1, USD = 0.01
-if (Math.abs(difference) > tolerance) {
-  // ...
-}
-```
+Estos puntos no deben aparecer como pendientes en el checklist principal.
 
-**Archivos Afectados:**
-- `lib/business-logic/totals.ts`
+| ID anterior | Estado actual | Motivo |
+|------------|---------------|--------|
+| Validación redundante fuerte de `creditApplied` fuera de transacción | Obsoleto | La validación relevante ocurre dentro de la transacción. Solo queda una validación barata de tipo. |
+| Metadata de `OVERPAYMENT` sin `creditApplied` | Resuelto | Metadata ya incluye `creditApplied`. |
+| Reversión de crédito por signo ambiguo | Resuelto | DELETE de pagos revierte según tipo de transacción. |
+| LIKE sin escapar en búsqueda de pagos | Resuelto | `%` y `_` se escapan en pagos. |
+| `Project.balance` como fuente runtime | Resuelto parcial | Runtime principal usa `ProjectFinancials`; columna legacy sigue en schema. |
+| `updateMultipleProjectBalances` N+1 | Resuelto | La función fue eliminada. |
+| Cron `reconcile-balances` sin protección | Obsoleto | Endpoint eliminado. |
+| Import de pagos sin recalcular balance | Obsoleto | Balance se deriva desde `ProjectFinancials`. |
+| Cuotas por suma de 30 días | Resuelto | Usa `addMonths()`. |
+| Estados de cuotas `paid/pending` confusos | Resuelto | Usa `due/upcoming`. |
+| Timezone de cuotas/visitas | Resuelto | Usa helpers en `lib/timezone.ts`. |
+| `search-projects` con `balance > 1` hardcoded | Resuelto | Usa `FINANCIAL.BALANCE_TOLERANCE`. |
+| `Project.PUT` recalcula balance sin ajustes | Obsoleto | Ya no recalcula/escribe balance persistido. |
+| Testing de imports/adjustments inexistente | Obsoleto parcial | Existen tests para varios endpoints antes listados como sin cobertura. Exports endpoint siguen siendo candidatos. |
 
 ---
 
-### 17.11 🟢 `formatCurrency` — Fallback Silencioso para Moneda Desconocida
+## Checklist Priorizado
 
-**Archivo:** `lib/format.ts:20-31`
+### Semana 1
 
-**Contexto:**
-La función acepta un parámetro `currency` y usa `currencyConfig`.
+- [ ] Corregir contrato de `creditApplied` en pago 1:1 y `ProjectFinancials`.
+- [ ] Agregar autorización por rol centralizada.
+- [ ] Proteger `/api/users` con admin, Zod y campos mínimos.
+- [ ] Mover validación de refund de crédito dentro de transacción.
+- [ ] Corregir `parsePaginationParams` contra `NaN`.
 
-**Problema:**
-```typescript
-const config = currencyConfig[currency] || currencyConfig.CLP  // ← Fallback silencioso
-```
-
-Si se pasa una moneda no configurada (ej: "EUR"), usa CLP sin warning ni error.
-
-**Solución Propuesta:**
-```typescript
-const config = currencyConfig[currency]
-if (!config) {
-  logger.warn({ currency }, 'Unknown currency, falling back to CLP')
-  return formatCurrency(amount, 'CLP')
-}
-```
-
-**Archivos Afectados:**
-- `lib/format.ts`
+### Semana 2
 
----
+- [ ] Agregar límites a exports e imports.
+- [ ] Alertar/loggear saldos negativos de crédito.
+- [ ] Limitar errores Zod en `withApiHandler`.
+- [ ] Agregar rate limiting o documentar protección externa de login/auth.
+- [ ] Consolidar endpoints `*-with-update`.
 
-### 17.12 🟡 `/api/project-events/[id]` PATCH — Sin Manejo de Unique Constraint
-
-**Archivo:** `app/api/project-events/[id]/route.ts:27-35`
-
-**Contexto:**
-El PATCH para drag & drop actualiza la fecha de un evento.
-
-**Problema:**
-No verifica que la nueva fecha no cause conflicto con el unique constraint `[projectId, scheduledDate]`. Si un usuario arrastra un evento a una fecha donde ya existe otro, Prisma lanzará P2002 (unique constraint violation) con un error genérico.
-
-**Solución Propuesta:**
-Manejar P2002 específicamente:
-```typescript
-catch (error) {
-  if (error.code === 'P2002') {
-    return NextResponse.json(
-      { error: 'Ya existe un evento para este proyecto en esta fecha' },
-      { status: 409 }
-    )
-  }
-  throw error
-}
-```
+### Mes Actual
 
-**Archivos Afectados:**
-- `app/api/project-events/[id]/route.ts`
-- `app/api/aftersale-events/[id]/route.ts`
-- `app/api/visit-events/[id]/route.ts`
+- [ ] Resolver regla de negocio de múltiples eventos por día.
+- [ ] Validar conflictos de equipo en calendario.
+- [ ] Agregar constraints DB para JSON `tasks` y `ProjectAdjustment.amount`.
+- [ ] Revisar índices con query plans.
+- [ ] Estandarizar Decimal vs number.
 
 ---
-
-### 17.13 🟡 `/api/aftersales/[id]` PUT — Actualización de Proyecto Sin Verificar `isFinal`
-
-**Archivo:** `app/api/aftersales/[id]/route.ts:107-117`
 
-**Contexto:**
-Cuando se actualiza un aftersale, también se actualiza el proyecto con nuevos datos de dirección.
+## Reglas Para Mantener Este Documento
 
-**Problema:**
-No se verifica si el proyecto está finalizado (`projectStatus.isFinal === true`), lo cual podría ser una violación de reglas de negocio.
+1. No agregar hallazgos sin evidencia verificable.
+2. No dejar issues resueltos en el checklist principal.
+3. Si un punto es hipótesis operacional, marcarlo como `Validar`, no como bug confirmado.
+4. Cada issue debe tener criterio de cierre.
+5. Al cerrar un issue, moverlo a "Hallazgos Resueltos u Obsoletos" con fecha y PR/commit si existe.
+6. Regenerar o revisar TOC y numeración cuando se edite.
 
-**Solución Propuesta:**
-```typescript
-if (project.projectStatus?.isFinal) {
-  return NextResponse.json(
-    { error: 'No se puede modificar un proyecto finalizado' },
-    { status: 400 }
-  )
-}
-```
-
-**Archivos Afectados:**
-- `app/api/aftersales/[id]/route.ts`
-
----
-
-## Checklist de Acción Priorizada
-
-### Inmediata (Esta Semana)
-- [ ] 🔴 Migrar de `db:push` a `prisma migrate dev` / `prisma migrate deploy`
-- [ ] 🔴 Arreglar PUT de pagos para recalcular comisiones
-- [ ] 🔴 Documentar/estandarizar si `Payment.amount` incluye o no `creditApplied`
-- [x] ✅ Eliminar `updateMultipleProjectBalances` y derivar balance con `ProjectFinancials` (issues 2.1, 2.2, 16.3)
-- [ ] 🔴 Optimizar transacción POST pagos con createMany/updateMany (issue 16.4)
-- [ ] 🟡 Agregar validación Zod para `Aftersale.tasks`
-- [ ] 🟡 Agregar validación de formato HH:mm para `Visit.scheduledTime`
-
-### Corto Plazo (Próximas 2 Semanas)
-- [ ] 🟡 Eliminar validación redundante de crédito fuera de transacción
-- [ ] 🟡 Agregar `creditApplied` al metadata de `OVERPAYMENT`
-- [ ] 🟡 Corregir `calculateProjectBalance` para considerar ajustes
-- [ ] 🟡 Unificar two-step lookups en queries únicos (issue 16.6)
-- [ ] 🟡 Agregar límites de seguridad a exports (issue 16.5)
-- [ ] 🟡 Cambiar fechas de cuotas a `addMonths`
-- [ ] 🟡 Revisar archivos huérfanos y eliminar los realmente no usados
-- [ ] 🟡 Eliminar índices redundantes del schema (issue 16.1)
-- [ ] 🟡 Agregar índices compuestos faltantes (issue 16.2)
-
-### Mediano Plazo (Próximo Mes)
-- [ ] 🔴 Eliminar campo `balance` persistido y calcular en tiempo real
-- [ ] 🟡 Implementar rate limiting en login
-- [ ] 🟡 Validar conflictos de equipo en calendario
-- [ ] 🟡 Optimizar calendar events con select específico (issue 16.7)
-- [ ] 🟡 Reemplazar DISTINCT por UNION en payments search (issue 16.10)
-- [ ] 🟡 Optimizar cron reconcile con batch SQL (issue 16.11)
-- [ ] 🟢 Eliminar dependencias no usadas
-- [ ] 🟢 Estandarizar uso de `Decimal` vs `number`
-- [ ] 🟢 Eliminar columna legacy `projectStatusLegacy` (issue 16.14)
-
 ---
 
-## Referencias a Planes Técnicos Existentes
+## Referencias
 
-Este documento complementa los planes técnicos ya existentes en `plans/`:
-
-| Plan | Estado | Relación con este Documento |
-|------|--------|----------------------------|
-| `derive-customer-credit-balance.md` | ✅ Completado | Elimina `Customer.creditBalance` persistido |
-| `fix-n-plus-1-and-redundant-queries.md` | ✅ Completado (parcial) | Batch update de balances, optimización de queries |
-| `migrate-endpoints-to-sql-pattern.md` | ✅ Completado | Migración de endpoints a SQL raw |
-| `replace-installment-cron-with-derived-state.md` | ✅ Completado | Elimina cron de cuotas, estado derivado |
-| `unify-project-total-fields.md` | ✅ Completado | Elimina campo `total` duplicado |
-
----
+Planes técnicos existentes relacionados:
 
-*Documento generado automáticamente por análisis de código. Última actualización: 2026-05-07.*
+- `plans/derive-customer-credit-balance.md`
+- `plans/fix-n-plus-1-and-redundant-queries.md`
+- `plans/migrate-endpoints-to-sql-pattern.md`
+- `plans/replace-installment-cron-with-derived-state.md`
+- `plans/unify-project-total-fields.md`
