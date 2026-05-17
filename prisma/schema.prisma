@@ -78,35 +78,36 @@ model Verification {
 }
 
 model Customer {
-  id                 String              @id @default(uuid())
-  name               String
-  phone              String
-  email              String?
-  createdAt          DateTime            @default(now())
-  updatedAt          DateTime            @updatedAt
-  payments           Payment[]
-  projects           Project[]
-  creditTransactions CreditTransaction[]
+  id                  String               @id @default(uuid())
+  name                String
+  phone               String
+  email               String?
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
+  payments            Payment[]
+  projects            Project[]
+  creditTransactions  CreditTransaction[]
+  projectApplications ProjectApplication[]
 
   @@index([name])
   @@index([email])
 }
 
 model BadgeColor {
-  id               String           @id @default(uuid())
-  name             String           @unique
-  key              String           @unique
-  bgClass          String
-  textClass        String           @default("text-white")
-  order            Int              @default(0)
-  isActive         Boolean          @default(true)
-  createdAt        DateTime         @default(now())
-  updatedAt        DateTime         @updatedAt
-  projectStatuses  ProjectStatus[]
-  uninstallTags    UninstallTag[]
+  id                String            @id @default(uuid())
+  name              String            @unique
+  key               String            @unique
+  bgClass           String
+  textClass         String            @default("text-white")
+  order             Int               @default(0)
+  isActive          Boolean           @default(true)
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+  projectStatuses   ProjectStatus[]
+  uninstallTags     UninstallTag[]
   aftersaleStatuses AftersaleStatus[]
-  visitStatuses    VisitStatus[]
-  teamTags         TeamTag[]
+  visitStatuses     VisitStatus[]
+  teamTags          TeamTag[]
 
   @@index([order])
   @@index([isActive])
@@ -115,8 +116,8 @@ model BadgeColor {
 // TeamTag: Integrantes del equipo para asignar a eventos de calendario
 model TeamTag {
   id           String     @id @default(uuid())
-  name         String     @unique  // Nombre completo del integrante
-  abbreviation String              // Iniciales (ej: "JP" para Juan Pérez)
+  name         String     @unique // Nombre completo del integrante
+  abbreviation String // Iniciales (ej: "JP" para Juan Pérez)
   colorId      String
   order        Int        @default(0)
   isActive     Boolean    @default(true)
@@ -154,7 +155,7 @@ model ProjectStatus {
 }
 
 model Project {
-  id                  String              @id @default(uuid())
+  id                  String                @id @default(uuid())
   projectNumber       String
   projectName         String?
   customerId          String
@@ -164,26 +165,27 @@ model Project {
   comuna              String
   region              String
   projectStatusId     String?
-  projectStatusLegacy String              @default("") @map("projectStatus")
-  date                DateTime            @default(now())
-  subtotal            Decimal             @db.Decimal(12, 2)
-  taxRate             Decimal             @default(19.0) @db.Decimal(5, 2)
-  balance             Decimal             @default(0) @db.Decimal(12, 2) // Saldo pendiente (totalAmount - totalPaid) - calculado
-  windowsCount        Int                 @default(0)
-  squareMeters        Decimal             @default(0) @db.Decimal(10, 2)
+  projectStatusLegacy String                @default("") @map("projectStatus")
+  date                DateTime              @default(now())
+  subtotal            Decimal               @db.Decimal(12, 2)
+  taxRate             Decimal               @default(19.0) @db.Decimal(5, 2)
+  balance             Decimal               @default(0) @db.Decimal(12, 2) // Saldo pendiente (totalAmount - totalPaid) - calculado
+  windowsCount        Int                   @default(0)
+  squareMeters        Decimal               @default(0) @db.Decimal(10, 2)
   description         String?
-  createdAt           DateTime            @default(now())
-  updatedAt           DateTime            @updatedAt
-  currency            String              @default("CLP")
-  totalAmount         Decimal             @default(0) @db.Decimal(12, 2)
+  createdAt           DateTime              @default(now())
+  updatedAt           DateTime              @updatedAt
+  currency            String                @default("CLP")
+  totalAmount         Decimal               @default(0) @db.Decimal(12, 2)
   uninstallTags       ProjectUninstallTag[]
   paymentAllocations  PaymentAllocation[]
+  projectApplications ProjectApplication[]
   aftersales          Aftersale[]
   calendarEvents      ProjectEvent[]
   creditTransactions  CreditTransaction[]
   adjustments         ProjectAdjustment[] // Ajustes (descuentos, condonaciones)
-  customer            Customer            @relation(fields: [customerId], references: [id], onDelete: Cascade)
-  projectStatus       ProjectStatus?      @relation(fields: [projectStatusId], references: [id], onDelete: Restrict)
+  customer            Customer              @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  projectStatus       ProjectStatus?        @relation(fields: [projectStatusId], references: [id], onDelete: Restrict)
 
   @@unique([projectNumber])
   @@index([customerId])
@@ -228,27 +230,28 @@ model CommissionTier {
 }
 
 model Payment {
-  id                   String              @id @default(uuid())
-  amount               Decimal             @db.Decimal(12, 2)
+  id                   String               @id @default(uuid())
+  amount               Decimal              @db.Decimal(12, 2)
   currency             String
   date                 DateTime
   reference            String?
   notes                String?
   customerId           String
   paymentMethodId      String
-  createdAt            DateTime            @default(now())
-  updatedAt            DateTime            @updatedAt
+  createdAt            DateTime             @default(now())
+  updatedAt            DateTime             @updatedAt
   selectedInstallments Int?
-  type                 String              @default("Project")
-  commissionAmount     Decimal?            @db.Decimal(12, 2) // Comisión calculada al registrar
-  netAmount            Decimal?            @db.Decimal(12, 2) // amount - commissionAmount
-  commissionRate       Decimal?            @db.Decimal(5, 2) // % aplicado (auditoría)
-  commissionFixed      Decimal?            @db.Decimal(12, 2) // Fee fijo aplicado (auditoría)
+  type                 String               @default("Project")
+  commissionAmount     Decimal?             @db.Decimal(12, 2) // Comisión calculada al registrar
+  netAmount            Decimal?             @db.Decimal(12, 2) // amount - commissionAmount
+  commissionRate       Decimal?             @db.Decimal(5, 2) // % aplicado (auditoría)
+  commissionFixed      Decimal?             @db.Decimal(12, 2) // Fee fijo aplicado (auditoría)
   installments         Installment[]
-  customer             Customer            @relation(fields: [customerId], references: [id])
-  paymentMethod        PaymentMethod       @relation(fields: [paymentMethodId], references: [id])
+  customer             Customer             @relation(fields: [customerId], references: [id])
+  paymentMethod        PaymentMethod        @relation(fields: [paymentMethodId], references: [id])
   allocations          PaymentAllocation[]
   creditTransactions   CreditTransaction[]
+  projectApplications  ProjectApplication[]
 
   @@index([customerId])
   @@index([paymentMethodId])
@@ -259,28 +262,29 @@ model Payment {
 }
 
 model Installment {
-  id                String    @id @default(uuid())
+  id                String   @id @default(uuid())
   paymentId         String
   installmentNumber Int
-  amount            Decimal   @db.Decimal(12, 2)
-  netAmount         Decimal?  @db.Decimal(12, 2) // Monto neto de esta cuota
+  amount            Decimal  @db.Decimal(12, 2)
+  netAmount         Decimal? @db.Decimal(12, 2) // Monto neto de esta cuota
   dueDate           DateTime
-  createdAt         DateTime  @default(now())
-  updatedAt         DateTime  @updatedAt
-  payment           Payment   @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  payment           Payment  @relation(fields: [paymentId], references: [id], onDelete: Cascade)
 
   @@index([paymentId])
   @@index([dueDate])
 }
 
 model PaymentAllocation {
-  id              String   @id @default(uuid())
-  paymentId       String
-  projectId       String
-  allocatedAmount Decimal  @db.Decimal(12, 2)
-  createdAt       DateTime @default(now())
-  payment         Payment  @relation(fields: [paymentId], references: [id], onDelete: Cascade)
-  project         Project  @relation(fields: [projectId], references: [id])
+  id                 String              @id @default(uuid())
+  paymentId          String
+  projectId          String
+  allocatedAmount    Decimal             @db.Decimal(12, 2)
+  createdAt          DateTime            @default(now())
+  payment            Payment             @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+  project            Project             @relation(fields: [projectId], references: [id])
+  projectApplication ProjectApplication?
 
   @@unique([paymentId, projectId])
   @@index([paymentId])
@@ -289,15 +293,15 @@ model PaymentAllocation {
 }
 
 model UninstallTag {
-  id           String     @id @default(uuid())
-  name         String     @unique
+  id           String                @id @default(uuid())
+  name         String                @unique
   abbreviation String
   colorId      String
-  order        Int        @default(0)
-  isActive     Boolean    @default(true)
-  createdAt    DateTime   @default(now())
-  updatedAt    DateTime   @updatedAt
-  color        BadgeColor @relation(fields: [colorId], references: [id], onDelete: Restrict)
+  order        Int                   @default(0)
+  isActive     Boolean               @default(true)
+  createdAt    DateTime              @default(now())
+  updatedAt    DateTime              @updatedAt
+  color        BadgeColor            @relation(fields: [colorId], references: [id], onDelete: Restrict)
   projects     ProjectUninstallTag[]
 
   @@index([colorId])
@@ -307,13 +311,13 @@ model UninstallTag {
 
 // Tabla pivot para relación M:M entre Project y UninstallTag
 model ProjectUninstallTag {
-  id             String       @id @default(uuid())
+  id             String   @id @default(uuid())
   projectId      String
   uninstallTagId String
-  createdAt      DateTime     @default(now())
+  createdAt      DateTime @default(now())
 
-  project        Project      @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  uninstallTag   UninstallTag @relation(fields: [uninstallTagId], references: [id], onDelete: Cascade)
+  project      Project      @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  uninstallTag UninstallTag @relation(fields: [uninstallTagId], references: [id], onDelete: Cascade)
 
   @@unique([projectId, uninstallTagId])
   @@index([projectId])
@@ -340,17 +344,17 @@ model AftersaleStatus {
 }
 
 model Aftersale {
-  id                String            @id @default(uuid())
+  id                String           @id @default(uuid())
   projectId         String
   aftersaleStatusId String
-  contactPhone      String            @default("")
+  contactPhone      String           @default("")
   description       String
   reportedAt        DateTime
-  tasks             Json              @default("[]") // Lista de tareas para resolver el caso
-  createdAt         DateTime          @default(now())
-  updatedAt         DateTime          @updatedAt
-  project           Project           @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  aftersaleStatus   AftersaleStatus   @relation(fields: [aftersaleStatusId], references: [id], onDelete: Restrict)
+  tasks             Json             @default("[]") // Lista de tareas para resolver el caso
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+  project           Project          @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  aftersaleStatus   AftersaleStatus  @relation(fields: [aftersaleStatusId], references: [id], onDelete: Restrict)
   calendarEvents    AftersaleEvent[]
 
   @@index([projectId])
@@ -359,15 +363,15 @@ model Aftersale {
 }
 
 model VisitStatus {
-  id        String   @id @default(uuid())
-  name      String   @unique
-  order     Int      @default(0)
+  id        String     @id @default(uuid())
+  name      String     @unique
+  order     Int        @default(0)
   colorId   String
-  isInitial Boolean  @default(false)
-  isFinal   Boolean  @default(false)
-  isActive  Boolean  @default(true)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  isInitial Boolean    @default(false)
+  isFinal   Boolean    @default(false)
+  isActive  Boolean    @default(true)
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
   visits    Visit[]
   color     BadgeColor @relation(fields: [colorId], references: [id], onDelete: Restrict)
 
@@ -377,32 +381,32 @@ model VisitStatus {
 }
 
 model Visit {
-  id            String        @id @default(uuid())
-  name          String        // Nombre del prospecto
-  phone         String?       // Teléfono de contacto
+  id    String  @id @default(uuid())
+  name  String // Nombre del prospecto
+  phone String? // Teléfono de contacto
 
   // Dirección (igual que Project)
-  street        String?       // Calle (opcional, se completa al agendar evento)
-  apartment     String?       // Depto/Oficina (opcional)
-  comuna        String        // Comuna
-  region        String        // Región
+  street    String? // Calle (opcional, se completa al agendar evento)
+  apartment String? // Depto/Oficina (opcional)
+  comuna    String // Comuna
+  region    String // Región
 
   // Estado configurable
   visitStatusId String
-  visitStatus   VisitStatus   @relation(fields: [visitStatusId], references: [id], onDelete: Restrict)
+  visitStatus   VisitStatus @relation(fields: [visitStatusId], references: [id], onDelete: Restrict)
 
   // Fecha de solicitud
-  date          DateTime
+  date DateTime
 
   // Hora agendada (formato HH:mm, informativo/referencial)
-  scheduledTime String?       // Ej: "10:30", "14:00"
+  scheduledTime String? // Ej: "10:30", "14:00"
 
   // Observaciones
-  observations  String?       @db.Text
+  observations String? @db.Text
 
   // Metadata
-  createdAt     DateTime      @default(now())
-  updatedAt     DateTime      @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   // Relaciones
   calendarEvents VisitEvent[]
@@ -424,8 +428,8 @@ model ProjectEvent {
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
-  project       Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  teamTags      TeamTag[] // Integrantes asignados al evento
+  project  Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  teamTags TeamTag[] // Integrantes asignados al evento
 
   @@unique([projectId, scheduledDate])
   @@index([projectId])
@@ -436,16 +440,16 @@ model ProjectEvent {
 
 // Eventos de calendario para postventas
 model AftersaleEvent {
-  id            String    @id @default(uuid())
+  id            String   @id @default(uuid())
   aftersaleId   String
-  scheduledDate DateTime  @db.Date
-  order         Int       @default(0) // Orden dentro del día para drag & drop
-  notes         String?   @db.Text
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  scheduledDate DateTime @db.Date
+  order         Int      @default(0) // Orden dentro del día para drag & drop
+  notes         String?  @db.Text
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 
-  aftersale     Aftersale @relation(fields: [aftersaleId], references: [id], onDelete: Cascade)
-  teamTags      TeamTag[] // Integrantes asignados al evento
+  aftersale Aftersale @relation(fields: [aftersaleId], references: [id], onDelete: Cascade)
+  teamTags  TeamTag[] // Integrantes asignados al evento
 
   @@unique([aftersaleId, scheduledDate])
   @@index([aftersaleId])
@@ -464,8 +468,8 @@ model VisitEvent {
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
-  visit         Visit    @relation(fields: [visitId], references: [id], onDelete: Cascade)
-  teamTags      TeamTag[] // Integrantes asignados al evento
+  visit    Visit     @relation(fields: [visitId], references: [id], onDelete: Cascade)
+  teamTags TeamTag[] // Integrantes asignados al evento
 
   @@unique([visitId, scheduledDate])
   @@index([visitId])
@@ -476,27 +480,28 @@ model VisitEvent {
 
 // Sistema de Créditos por Sobrepago
 model CreditTransaction {
-  id          String                 @id @default(uuid())
-  customerId  String
-  customer    Customer               @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  id         String   @id @default(uuid())
+  customerId String
+  customer   Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
 
   // Monto: positivo = incremento, negativo = decremento
-  amount      Decimal                @db.Decimal(12, 2)
+  amount Decimal @db.Decimal(12, 2)
 
   type        CreditTransactionType
-  description String?                @db.Text
+  description String?               @db.Text
 
   // Referencias opcionales para trazabilidad
-  projectId   String?
-  project     Project?               @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  projectId String?
+  project   Project? @relation(fields: [projectId], references: [id], onDelete: SetNull)
 
-  paymentId   String?
-  payment     Payment?               @relation(fields: [paymentId], references: [id], onDelete: SetNull)
+  paymentId          String?
+  payment            Payment?            @relation(fields: [paymentId], references: [id], onDelete: SetNull)
+  projectApplication ProjectApplication?
 
   // Metadata adicional (método de devolución, fecha de devolución, etc.)
-  metadata    Json?
+  metadata Json?
 
-  createdAt   DateTime               @default(now())
+  createdAt DateTime @default(now())
 
   @@index([customerId, createdAt(sort: Desc)])
   @@index([type])
@@ -507,10 +512,44 @@ model CreditTransaction {
 
 enum CreditTransactionType {
   OVERPAYMENT // Sobrepago generado en proyecto
-  APPLIED     // Crédito aplicado a pago de proyecto
-  REFUND      // Devolución recibida del negocio
-  WITHDRAWAL  // Retiro solicitado por cliente
-  ADJUSTMENT  // Ajuste manual (admin)
+  APPLIED // Crédito aplicado a pago de proyecto
+  REFUND // Devolución recibida del negocio
+  WITHDRAWAL // Retiro solicitado por cliente
+  ADJUSTMENT // Ajuste manual (admin)
+}
+
+enum ProjectApplicationSourceType {
+  CASH
+  CUSTOMER_CREDIT
+  ADJUSTMENT
+}
+
+model ProjectApplication {
+  id                  String                       @id @default(uuid())
+  projectId           String
+  customerId          String
+  amount              Decimal                      @db.Decimal(12, 2)
+  sourceType          ProjectApplicationSourceType
+  paymentId           String?
+  paymentAllocationId String?                      @unique
+  creditTransactionId String?                      @unique
+  projectAdjustmentId String?                      @unique
+  createdAt           DateTime                     @default(now())
+
+  project           Project            @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  customer          Customer           @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  payment           Payment?           @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+  paymentAllocation PaymentAllocation? @relation(fields: [paymentAllocationId], references: [id], onDelete: Cascade)
+  creditTransaction CreditTransaction? @relation(fields: [creditTransactionId], references: [id], onDelete: SetNull)
+  projectAdjustment ProjectAdjustment? @relation(fields: [projectAdjustmentId], references: [id], onDelete: Cascade)
+
+  @@index([projectId])
+  @@index([customerId])
+  @@index([sourceType])
+  @@index([paymentId])
+  @@index([projectId, sourceType])
+  @@index([customerId, createdAt(sort: Desc)])
+  @@map("project_applications")
 }
 
 // Ajustes de proyecto (descuentos, condonaciones)
@@ -518,15 +557,16 @@ model ProjectAdjustment {
   id          String   @id @default(uuid())
   projectId   String
   amount      Decimal  @db.Decimal(12, 2) // Monto del ajuste (positivo = reduce balance)
-  reason      String   // Nombre de la razón (redundancia para datos legacy)
-  reasonId    String?  // FK a AdjustmentReason (nullable para migración gradual)
+  reason      String // Nombre de la razón (redundancia para datos legacy)
+  reasonId    String? // FK a AdjustmentReason (nullable para migración gradual)
   description String?  @db.Text // Notas adicionales opcionales
   appliedAt   DateTime @default(now()) // Fecha en que se aplicó el ajuste
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  project          Project           @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  adjustmentReason AdjustmentReason? @relation(fields: [reasonId], references: [id], onDelete: SetNull)
+  project            Project             @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  adjustmentReason   AdjustmentReason?   @relation(fields: [reasonId], references: [id], onDelete: SetNull)
+  projectApplication ProjectApplication?
 
   @@index([projectId])
   @@index([appliedAt])

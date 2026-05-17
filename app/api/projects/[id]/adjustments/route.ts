@@ -64,6 +64,7 @@ export const POST = withApiHandler<CreateProjectAdjustmentInput>(
       where: { id: params.id },
       select: {
         id: true,
+        customerId: true,
       },
     })
 
@@ -84,7 +85,7 @@ export const POST = withApiHandler<CreateProjectAdjustmentInput>(
         )
       }
 
-      return tx.projectAdjustment.create({
+      const adjustment = await tx.projectAdjustment.create({
         data: {
           projectId: params.id,
           amount: new Decimal(amount),
@@ -94,6 +95,19 @@ export const POST = withApiHandler<CreateProjectAdjustmentInput>(
           appliedAt: appliedAt || new Date(),
         },
       })
+
+      await tx.projectApplication.create({
+        data: {
+          projectId: params.id,
+          customerId: project.customerId,
+          amount: new Decimal(amount),
+          sourceType: 'ADJUSTMENT',
+          projectAdjustmentId: adjustment.id,
+          createdAt: adjustment.createdAt,
+        },
+      })
+
+      return adjustment
     })
 
     return NextResponse.json(

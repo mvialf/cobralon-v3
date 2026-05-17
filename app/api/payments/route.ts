@@ -15,7 +15,7 @@ import {
 } from '@/lib/business-logic/commission'
 import {
   validatePaymentType,
-  validateAllocationsSum,
+  validatePaymentApplicationSum,
   validateNoDuplicateProjects,
   validateSameCustomer,
   validateSameCurrency,
@@ -27,6 +27,26 @@ import {
 import type { PrismaTransaction } from '@/lib/db/types'
 import { getCustomerCreditBalance } from '@/lib/business-logic/credit-management'
 import { getProjectsFinancials } from '@/lib/business-logic/project-financials'
+
+type ProjectApplicationWriter = PrismaTransaction & {
+  projectApplication: {
+    createMany: (args: { data: ProjectApplicationCreateManyRow[] }) => Promise<unknown>
+  }
+}
+
+type NormalizedAllocation = CreatePaymentApiBody['allocations'][number] & {
+  creditApplied: number
+}
+
+type ProjectApplicationCreateManyRow = {
+  projectId: string
+  customerId: string
+  paymentId: string
+  paymentAllocationId?: string
+  creditTransactionId?: string
+  amount: Prisma.Decimal
+  sourceType: 'CASH' | 'CUSTOMER_CREDIT'
+}
 
 /**
  * GET /api/payments
@@ -185,6 +205,7 @@ export const GET = withLogging(async (request, logger) => {
           allocations: {
             select: {
               id: true,
+              projectId: true,
               allocatedAmount: true,
               project: {
                 select: {
@@ -335,10 +356,25 @@ export const POST = withApiHandler<CreatePaymentApiBody>(
       paymentMethodId,
       reference,
       notes,
-      allocations,
+      allocations: rawAllocations,
       selectedInstallments,
-      creditApplied: creditApplied,
+      creditApplied: legacyCreditApplied,
     } = body
+    const parsedAllocationCreditTotal = rawAllocations.reduce(
+      (sum, allocation) => sum + (allocation.creditApplied ?? 0),
+      0
+    )
+    const allocations: NormalizedAllocation[] = rawAllocations.map((allocation, index) => ({
+      ...allocation,
+      creditApplied:
+        index === 0 &&
+        type === 'Project' &&
+        parsedAllocationCreditTotal === 0 &&
+        legacyCreditApplied > 0
+          ? legacyCreditApplied
+          : (allocation.creditApplied ?? 0),
+    }))
+    const totalCreditToApply = allocations.reduce((sum, a) => sum + a.creditApplied, 0)
 
     // Child logger con contexto de negocio
     const paymentLogger = logger.child({
@@ -433,9 +469,26 @@ export const POST = withApiHandler<CreatePaymentApiBody>(
       return NextResponse.json({ error: currencyValidation.error }, { status: 400 })
     }
 
-    // Verificar que la suma de allocations sea igual al amount
+    // ========================================================================
+    // CRÉDITO A APLICAR (se valida dentro de la transacción con datos frescos)
+    // ========================================================================
+    const legacyCreditToApply = legacyCreditApplied || 0
+    if (legacyCreditToApply > 0 && type !== 'Project') {
+      return NextResponse.json(
+        { error: 'El crédito top-level solo puede aplicarse a pagos de proyecto' },
+        { status: 400 }
+      )
+    }
+
+    // Verificar que la suma de allocations sea igual al total aplicado.
+    // Payment.amount es dinero nuevo; creditApplied es aplicación separada.
     // Usa validación centralizada de payment-business-rules.ts
-    const sumValidation = validateAllocationsSum(amount, allocations)
+    const sumValidation = validatePaymentApplicationSum(
+      type,
+      amount,
+      totalCreditToApply,
+      allocations
+    )
     if (!sumValidation.valid) {
       paymentLogger.warn(
         {
@@ -448,17 +501,6 @@ export const POST = withApiHandler<CreatePaymentApiBody>(
     }
 
     paymentLogger.debug('All validations passed')
-
-    // ========================================================================
-    // CRÉDITO A APLICAR (se valida dentro de la transacción con datos frescos)
-    // ========================================================================
-    const creditToApply = creditApplied || 0
-    if (creditToApply > 0 && type !== 'Project') {
-      return NextResponse.json(
-        { error: 'El crédito solo puede aplicarse a pagos de proyecto' },
-        { status: 400 }
-      )
-    }
 
     // Crear el pago con sus allocations en una transacción
     const paymentDate = new Date(date)
@@ -476,7 +518,7 @@ export const POST = withApiHandler<CreatePaymentApiBody>(
       {
         installments: selectedInstallments || 1,
         hasInstallments: !!selectedInstallments && selectedInstallments > 1,
-        creditApplied: creditToApply,
+        creditApplied: totalCreditToApply,
         commission: commissionResult
           ? { amount: commissionResult.commissionAmount, rate: commissionResult.percentageFee }
           : null,
@@ -516,10 +558,12 @@ export const POST = withApiHandler<CreatePaymentApiBody>(
           commissionRate: commissionResult ? new Decimal(commissionResult.percentageFee) : null,
           commissionFixed: commissionResult ? new Decimal(commissionResult.fixedFee) : null,
           allocations: {
-            create: allocations.map((a) => ({
-              projectId: a.projectId,
-              allocatedAmount: new Decimal(a.allocatedAmount),
-            })),
+            create: allocations
+              .filter((a) => a.allocatedAmount > 0)
+              .map((a) => ({
+                projectId: a.projectId,
+                allocatedAmount: new Decimal(a.allocatedAmount),
+              })),
           },
           installments: generatePrismaInstallmentsCreate(
             amount,
@@ -534,6 +578,7 @@ export const POST = withApiHandler<CreatePaymentApiBody>(
           allocations: {
             select: {
               id: true,
+              projectId: true,
               allocatedAmount: true,
               project: {
                 select: {
@@ -591,52 +636,131 @@ export const POST = withApiHandler<CreatePaymentApiBody>(
       // Lectura + validación + aplicación DENTRO de la transacción para
       // evitar race conditions en creditBalance
       // ====================================================================
-      if (creditToApply > 0) {
+      const creditByProject = new Map<string, number>(
+        allocations
+          .filter((allocation) => allocation.creditApplied > 0)
+          .map((allocation) => [allocation.projectId, allocation.creditApplied])
+      )
+      const appliedCreditTransactionByProject = new Map<string, string>()
+
+      if (totalCreditToApply > 0) {
         // Leer datos DENTRO de la transacción (snapshot consistente)
-        const [customerCreditBalance, projectBalance] = await Promise.all([
-          getCustomerCreditBalance(customerId, tx),
-          Promise.resolve(initialFinancials.get(allocations[0].projectId)?.balance),
-        ])
+        const customerCreditBalance = await getCustomerCreditBalance(customerId, tx)
 
-        if (projectBalance === undefined) {
-          throw new BusinessError('Proyecto no encontrado durante validación de crédito', 404)
+        if (totalCreditToApply > customerCreditBalance) {
+          throw new BusinessError(
+            `Crédito insuficiente. Disponible: $${customerCreditBalance.toLocaleString('es-CL')}`,
+            400
+          )
         }
 
-        // Validar con datos frescos de la transacción
-        const creditValidation = canApplyCredit(
-          creditToApply,
-          customerCreditBalance,
-          projectBalance
-        )
-        if (!creditValidation.valid) {
-          throw new BusinessError(creditValidation.error!, 400)
+        for (const allocation of allocations) {
+          const creditAmount = allocation.creditApplied
+          if (creditAmount <= 0) continue
+
+          const projectFinancials = initialFinancials.get(allocation.projectId)
+          if (!projectFinancials) {
+            throw new BusinessError('Proyecto no encontrado durante validación de crédito', 404)
+          }
+
+          const balanceAfterCash = Math.max(
+            0,
+            projectFinancials.balance - allocation.allocatedAmount
+          )
+          const creditValidation = canApplyCredit(
+            creditAmount,
+            customerCreditBalance,
+            balanceAfterCash
+          )
+          if (!creditValidation.valid) {
+            throw new BusinessError(creditValidation.error!, 400)
+          }
         }
 
-        // Crear registro de transacción de crédito
-        await tx.creditTransaction.create({
-          data: {
-            customerId,
-            amount: new Prisma.Decimal(-creditToApply), // Negativo = salida de crédito
-            type: 'APPLIED',
-            description: `Crédito aplicado al pago ${newPayment.id.slice(0, 8)}`,
-            paymentId: newPayment.id,
-            projectId: allocations[0].projectId,
-            metadata: {
-              paymentAmount: amount,
-              creditApplied: creditToApply,
-              paymentDate: paymentDate.toISOString(),
+        for (const allocation of allocations) {
+          const creditAmount = allocation.creditApplied
+          if (creditAmount <= 0) continue
+
+          const appliedCreditTransaction = await tx.creditTransaction.create({
+            data: {
+              customerId,
+              amount: new Prisma.Decimal(-creditAmount), // Negativo = salida de crédito
+              type: 'APPLIED',
+              description: `Crédito aplicado al pago ${newPayment.id.slice(0, 8)}`,
+              paymentId: newPayment.id,
+              projectId: allocation.projectId,
+              metadata: {
+                paymentAmount: amount,
+                creditApplied: creditAmount,
+                paymentDate: paymentDate.toISOString(),
+              },
             },
-          },
-        })
+            select: { id: true },
+          })
+          appliedCreditTransactionByProject.set(allocation.projectId, appliedCreditTransaction.id)
+        }
 
         paymentLogger.info(
           {
             paymentId: newPayment.id,
-            creditApplied: creditToApply,
+            creditApplied: totalCreditToApply,
             previousCredit: customerCreditBalance,
           },
           'Credit applied successfully in transaction'
         )
+      }
+
+      const projectApplicationRows: ProjectApplicationCreateManyRow[] = []
+
+      const paymentAllocationByProject = new Map(
+        newPayment.allocations.map((allocation) => [
+          allocation.project.id,
+          { id: allocation.id, amount: Number(allocation.allocatedAmount) },
+        ])
+      )
+      for (const project of projects) {
+        const startingFinancials = initialFinancials.get(project.id)
+        if (!startingFinancials) {
+          throw new BusinessError('Proyecto no encontrado durante aplicación de pago', 404)
+        }
+
+        const allocation = paymentAllocationByProject.get(project.id)
+        const cashAmount = allocation?.amount ?? 0
+        const creditAmount = creditByProject.get(project.id) ?? 0
+        const cashApplicationAmount = cashAmount
+
+        if (allocation && cashApplicationAmount > 0) {
+          projectApplicationRows.push({
+            projectId: project.id,
+            customerId: project.customerId,
+            paymentId: newPayment.id,
+            paymentAllocationId: allocation.id,
+            amount: new Prisma.Decimal(cashApplicationAmount),
+            sourceType: 'CASH',
+          })
+        }
+
+        if (creditAmount > 0) {
+          const appliedCreditTransactionId = appliedCreditTransactionByProject.get(project.id)
+          if (!appliedCreditTransactionId) {
+            throw new BusinessError('No se pudo registrar la aplicación de crédito', 500)
+          }
+
+          projectApplicationRows.push({
+            projectId: project.id,
+            customerId: project.customerId,
+            paymentId: newPayment.id,
+            creditTransactionId: appliedCreditTransactionId,
+            amount: new Prisma.Decimal(creditAmount),
+            sourceType: 'CUSTOMER_CREDIT',
+          })
+        }
+      }
+
+      if (projectApplicationRows.length > 0) {
+        await (tx as ProjectApplicationWriter).projectApplication.createMany({
+          data: projectApplicationRows,
+        })
       }
 
       // ====================================================================
@@ -666,10 +790,16 @@ export const POST = withApiHandler<CreatePaymentApiBody>(
         }
 
         const allocatedAmount = allocationByProject.get(project.id) ?? 0
-        const overpaymentAmount = Math.max(0, allocatedAmount - startingFinancials.balance)
+        const creditAppliedToProject = creditByProject.get(project.id) ?? 0
+        const cashCapacityAfterCredit = Math.max(
+          0,
+          startingFinancials.balance - creditAppliedToProject
+        )
+        const overpaymentAmount = Math.max(0, allocatedAmount - cashCapacityAfterCredit)
 
         if (overpaymentAmount > 0) {
-          const rawBalanceAfterPayment = startingFinancials.rawBalance - allocatedAmount
+          const rawBalanceAfterPayment =
+            startingFinancials.rawBalance - allocatedAmount - creditAppliedToProject
 
           paymentLogger.info(
             {
@@ -692,7 +822,7 @@ export const POST = withApiHandler<CreatePaymentApiBody>(
               projectId: project.id,
               metadata: {
                 paymentAmount: amount,
-                creditApplied: creditToApply,
+                creditApplied: creditAppliedToProject,
                 projectBalance: rawBalanceAfterPayment,
                 overpaymentAmount,
                 paymentDate: paymentDate.toISOString(),
@@ -719,7 +849,7 @@ export const POST = withApiHandler<CreatePaymentApiBody>(
         paymentId: payment.id,
         allocationsCreated: payment.allocations.length,
         installmentsCreated: payment.installments.length,
-        creditApplied: creditToApply,
+        creditApplied: totalCreditToApply,
       },
       'Payment created successfully (atomic transaction completed)'
     )

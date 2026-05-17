@@ -13,8 +13,9 @@
 
 'use client'
 
+import { useEffect } from 'react'
 import { type UseFormReturn } from 'react-hook-form'
-import { DollarSign, TrendingDown, Wallet } from 'lucide-react'
+import { CreditCard, DollarSign, TrendingDown, Wallet } from 'lucide-react'
 import { FormField, FormItem, FormLabel, FormControl, FormMessage } from '@/components/ui/form'
 import { CurrencyInput } from '@/components/ui/currency-input'
 import { Alert, AlertDescription } from '@/components/ui/alert'
@@ -27,6 +28,7 @@ interface CreditApplicationFieldsProps {
   customerCredit: number
   projectBalance: number
   customerName: string
+  currency?: string
 }
 
 export function CreditApplicationFields({
@@ -34,13 +36,26 @@ export function CreditApplicationFields({
   customerCredit,
   projectBalance,
   customerName,
+  currency = 'CLP',
 }: CreditApplicationFieldsProps) {
   const creditApplied = form.watch('creditApplied') || 0
-  const maxApplicable = calculateMaxCreditApplication(customerCredit, projectBalance)
+  const paymentAmount = form.watch('amount') || 0
+  const balanceAfterPayment = Math.max(0, projectBalance - paymentAmount)
+  const maxApplicable = calculateMaxCreditApplication(customerCredit, balanceAfterPayment)
+  const totalApplied = paymentAmount + creditApplied
 
   // Cálculo de balances después de aplicar crédito
   const newCustomerCredit = customerCredit - creditApplied
-  const projectedProjectBalance = projectBalance - creditApplied
+  const projectedProjectBalance = projectBalance - totalApplied
+
+  useEffect(() => {
+    if (creditApplied > maxApplicable) {
+      form.setValue('creditApplied', maxApplicable, {
+        shouldDirty: true,
+        shouldValidate: true,
+      })
+    }
+  }, [creditApplied, form, maxApplicable])
 
   return (
     <div className="space-y-4 rounded-lg border p-4 bg-muted/30">
@@ -54,9 +69,10 @@ export function CreditApplicationFields({
         <DollarSign className="h-4 w-4" />
         <AlertDescription>
           <span className="font-medium">{customerName}</span> tiene{' '}
-          <span className="font-bold text-primary">{formatCurrency(customerCredit, 'CLP')}</span> de
-          crédito disponible. Puedes aplicar hasta{' '}
-          <span className="font-bold">{formatCurrency(maxApplicable, 'CLP')}</span> a este proyecto.
+          <span className="font-bold text-primary">{formatCurrency(customerCredit, currency)}</span>{' '}
+          de crédito disponible. Puedes aplicar hasta{' '}
+          <span className="font-bold">{formatCurrency(maxApplicable, currency)}</span> a este
+          proyecto.
         </AlertDescription>
       </Alert>
 
@@ -86,44 +102,63 @@ export function CreditApplicationFields({
         )}
       />
 
-      {/* Visual Summary si hay crédito aplicado */}
-      {creditApplied > 0 && (
-        <div className="space-y-2 rounded-md bg-background p-3 text-sm">
-          <div className="font-medium text-muted-foreground">Resumen de Aplicación:</div>
+      {/* Visual Summary */}
+      <div className="space-y-2 rounded-md bg-background p-3 text-sm">
+        <div className="font-medium text-muted-foreground">Resumen de Aplicación:</div>
 
-          {/* Crédito del cliente */}
-          <div className="flex items-center justify-between">
-            <span className="flex items-center gap-1.5">
-              <TrendingDown className="h-4 w-4 text-orange-500" />
-              Crédito de {customerName}:
-            </span>
-            <div className="text-right">
-              <div className="line-through text-muted-foreground">
-                {formatCurrency(customerCredit, 'CLP')}
-              </div>
-              <div className="font-semibold text-orange-600">
-                {formatCurrency(newCustomerCredit, 'CLP')}
-              </div>
-            </div>
-          </div>
-
-          {/* Balance del proyecto */}
-          <div className="flex items-center justify-between">
-            <span className="flex items-center gap-1.5">
-              <TrendingDown className="h-4 w-4 text-green-500" />
-              Balance del Proyecto:
-            </span>
-            <div className="text-right">
-              <div className="line-through text-muted-foreground">
-                {formatCurrency(projectBalance, 'CLP')}
-              </div>
-              <div className="font-semibold text-green-600">
-                {formatCurrency(projectedProjectBalance, 'CLP')}
-              </div>
-            </div>
-          </div>
+        <div className="flex items-center justify-between">
+          <span className="flex items-center gap-1.5">
+            <DollarSign className="h-4 w-4 text-primary" />
+            Dinero recibido:
+          </span>
+          <span className="font-semibold">{formatCurrency(paymentAmount, currency)}</span>
         </div>
-      )}
+
+        <div className="flex items-center justify-between">
+          <span className="flex items-center gap-1.5">
+            <CreditCard className="h-4 w-4 text-orange-500" />
+            Crédito aplicado:
+          </span>
+          <span className="font-semibold text-orange-600">
+            {formatCurrency(creditApplied, currency)}
+          </span>
+        </div>
+
+        <div className="flex items-center justify-between border-t pt-2">
+          <span className="font-medium">Total aplicado:</span>
+          <span className="font-semibold">{formatCurrency(totalApplied, currency)}</span>
+        </div>
+
+        <div className="flex items-center justify-between">
+          <span className="flex items-center gap-1.5">
+            <TrendingDown className="h-4 w-4 text-green-500" />
+            Balance final:
+          </span>
+          <span className="font-semibold text-green-600">
+            {formatCurrency(projectedProjectBalance, currency)}
+          </span>
+        </div>
+
+        {creditApplied > 0 && (
+          <>
+            {/* Crédito del cliente */}
+            <div className="flex items-center justify-between border-t pt-2">
+              <span className="flex items-center gap-1.5">
+                <TrendingDown className="h-4 w-4 text-orange-500" />
+                Crédito de {customerName}:
+              </span>
+              <div className="text-right">
+                <div className="line-through text-muted-foreground">
+                  {formatCurrency(customerCredit, currency)}
+                </div>
+                <div className="font-semibold text-orange-600">
+                  {formatCurrency(newCustomerCredit, currency)}
+                </div>
+              </div>
+            </div>
+          </>
+        )}
+      </div>
     </div>
   )
 }

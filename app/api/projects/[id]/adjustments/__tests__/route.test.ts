@@ -40,6 +40,9 @@ vi.mock('@/lib/db', () => ({
       findMany: vi.fn(),
       create: vi.fn(),
     },
+    projectApplication: {
+      create: vi.fn(),
+    },
     $transaction: vi.fn(),
   },
 }))
@@ -174,6 +177,7 @@ describe('POST /api/projects/[id]/adjustments', () => {
 
     vi.mocked(prisma.project.findUnique).mockResolvedValue({
       id: validProjectId,
+      customerId: 'customer-1',
       balance: new Decimal(100000),
       totalAmount: new Decimal(1190000),
     } as never)
@@ -195,8 +199,10 @@ describe('POST /api/projects/[id]/adjustments', () => {
             id: 'adj-1',
             amount: new Decimal(50000),
             reason: 'DISCOUNT',
+            createdAt: new Date('2025-01-01T00:00:00Z'),
           }),
         },
+        projectApplication: { create: vi.fn() },
       }
       return fn(mockTx as never)
     })
@@ -245,6 +251,7 @@ describe('POST /api/projects/[id]/adjustments', () => {
           },
         ]),
         projectAdjustment: { create: vi.fn() },
+        projectApplication: { create: vi.fn() },
       }
       return fn(mockTx as never)
     })
@@ -276,8 +283,10 @@ describe('POST /api/projects/[id]/adjustments', () => {
             id: 'adj-1',
             amount: new Decimal(50000),
             reason: 'DISCOUNT',
+            createdAt: new Date('2025-01-01T00:00:00Z'),
           }),
         },
+        projectApplication: { create: vi.fn() },
       }
       return fn(mockTx as never)
     })
@@ -302,6 +311,7 @@ describe('POST /api/projects/[id]/adjustments', () => {
           },
         ]),
         projectAdjustment: { create: vi.fn() },
+        projectApplication: { create: vi.fn() },
       }
       return fn(mockTx as never)
     })

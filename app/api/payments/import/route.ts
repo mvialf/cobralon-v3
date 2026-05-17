@@ -3,6 +3,7 @@ import { prisma } from '@/lib/db'
 import { withLogging } from '@/lib/logger-middleware'
 import { type ParsedPaymentRow } from '@/lib/excel/payment-parser'
 import { Decimal } from '@prisma/client/runtime/library'
+import { getProjectFinancials } from '@/lib/business-logic/project-financials'
 
 /**
  * POST /api/payments/import
@@ -145,10 +146,15 @@ export const POST = withLogging(async (request, logger) => {
           selectedInstallments = paymentData.selectedInstallments
         }
 
-        // 4. Crear pago con transacción (Payment + PaymentAllocation)
+        // 4. Crear pago con transacción (Payment + PaymentAllocation + ProjectApplication)
         const amount = new Decimal(paymentData.amount)
 
         const payment = await prisma.$transaction(async (tx) => {
+          const financials = await getProjectFinancials(project.id, tx)
+          if (!financials) {
+            throw new Error(`No se pudo calcular balance del proyecto "${paymentData.projectNumber}"`)
+          }
+
           // Crear Payment
           const newPayment = await tx.payment.create({
             data: {
@@ -165,13 +171,48 @@ export const POST = withLogging(async (request, logger) => {
           })
 
           // Crear PaymentAllocation (100% del monto al proyecto)
-          await tx.paymentAllocation.create({
+          const allocation = await tx.paymentAllocation.create({
             data: {
               paymentId: newPayment.id,
               projectId: project.id,
               allocatedAmount: amount,
             },
           })
+
+          if (paymentData.amount > 0) {
+            await tx.projectApplication.create({
+              data: {
+                projectId: project.id,
+                customerId: project.customerId,
+                paymentId: newPayment.id,
+                paymentAllocationId: allocation.id,
+                amount,
+                sourceType: 'CASH',
+                createdAt: allocation.createdAt,
+              },
+            })
+          }
+
+          const overpaymentAmount = Math.max(0, paymentData.amount - financials.balance)
+          if (overpaymentAmount > 0) {
+            await tx.creditTransaction.create({
+              data: {
+                customerId: project.customerId,
+                amount: new Decimal(overpaymentAmount),
+                type: 'OVERPAYMENT',
+                description: `Sobrepago generado en importación - Proyecto P-${project.projectNumber}`,
+                paymentId: newPayment.id,
+                projectId: project.id,
+                metadata: {
+                  paymentAmount: paymentData.amount,
+                  projectBalance: financials.balance - paymentData.amount,
+                  overpaymentAmount,
+                  imported: true,
+                  paymentDate: paymentData.date.toISOString(),
+                },
+              },
+            })
+          }
 
           return newPayment
         })

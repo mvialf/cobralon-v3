@@ -76,7 +76,7 @@ async function getRecentProjects() {
       projectNumber: string
       projectName: string | null
       totalAmount: unknown
-      allocatedTotal: unknown
+      settledTotal: unknown
       currency: string
       customerName: string
     }>
@@ -86,7 +86,7 @@ async function getRecentProjects() {
       p."projectNumber",
       p."projectName",
       p."totalAmount",
-      pf."allocatedTotal",
+      pf."settledTotal",
       p.currency,
       c.name AS "customerName"
     FROM "Project" p
@@ -104,7 +104,7 @@ async function getRecentProjects() {
       projectName: p.projectName,
       customerName: p.customerName,
       total,
-      totalPaid: Number(p.allocatedTotal),
+      totalPaid: Number(p.settledTotal),
       currency: p.currency,
     }
   })

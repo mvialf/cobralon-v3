@@ -9,7 +9,10 @@ type PrismaDb = typeof prisma | PrismaTransaction
 export interface ProjectFinancials {
   projectId: string
   allocatedTotal: number
+  appliedCashTotal: number
+  appliedCreditTotal: number
   adjustmentTotal: number
+  settledTotal: number
   rawBalance: number
   balance: number
   overpayment: number
@@ -21,7 +24,10 @@ export interface ProjectFinancials {
 interface ProjectFinancialsRawRow {
   projectId: string
   allocatedTotal: Prisma.Decimal
+  appliedCashTotal?: Prisma.Decimal
+  appliedCreditTotal?: Prisma.Decimal
   adjustmentTotal: Prisma.Decimal
+  settledTotal?: Prisma.Decimal
   rawBalance: Prisma.Decimal
   balance: Prisma.Decimal
   overpayment: Prisma.Decimal
@@ -31,7 +37,10 @@ export const PROJECT_FINANCIALS_SELECT = Prisma.sql`
   SELECT
     pf."projectId",
     pf."allocatedTotal",
+    pf."appliedCashTotal",
+    pf."appliedCreditTotal",
     pf."adjustmentTotal",
+    pf."settledTotal",
     pf."rawBalance",
     pf.balance,
     pf.overpayment
@@ -40,18 +49,25 @@ export const PROJECT_FINANCIALS_SELECT = Prisma.sql`
 
 export function mapProjectFinancials(row: ProjectFinancialsRawRow): ProjectFinancials {
   const allocatedTotal = Number(row.allocatedTotal)
+  const appliedCashTotal = Number(row.appliedCashTotal ?? row.allocatedTotal)
+  const appliedCreditTotal = Number(row.appliedCreditTotal ?? 0)
+  const adjustmentTotal = Number(row.adjustmentTotal)
+  const settledTotal = Number(row.settledTotal ?? allocatedTotal + adjustmentTotal)
   const balance = Number(row.balance)
-  const totalAmount = allocatedTotal + Number(row.adjustmentTotal) + Number(row.rawBalance)
+  const totalAmount = settledTotal + Number(row.rawBalance)
 
   return {
     projectId: row.projectId,
     allocatedTotal,
-    adjustmentTotal: Number(row.adjustmentTotal),
+    appliedCashTotal,
+    appliedCreditTotal,
+    adjustmentTotal,
+    settledTotal,
     rawBalance: Number(row.rawBalance),
     balance,
     overpayment: Number(row.overpayment),
-    totalPaid: allocatedTotal,
-    percentPaid: totalAmount > 0 ? (allocatedTotal / totalAmount) * 100 : 0,
+    totalPaid: settledTotal,
+    percentPaid: totalAmount > 0 ? (settledTotal / totalAmount) * 100 : 0,
     hasDebt: balance > FINANCIAL.BALANCE_TOLERANCE,
   }
 }

@@ -133,6 +133,24 @@ export function validateAllocationsSum(
 }
 
 /**
+ * Valida que la suma de allocations coincida con el dinero nuevo recibido.
+ *
+ * Semántica actual:
+ * - Payment.amount representa solo dinero nuevo recibido.
+ * - PaymentAllocation representa distribución del dinero nuevo.
+ * - creditApplied se registra por separado como ProjectApplication.
+ * - La suma de allocations solo valida dinero nuevo recibido.
+ */
+export function validatePaymentApplicationSum(
+  type: PaymentType,
+  amount: number,
+  creditApplied: number,
+  allocations: AllocationForValidation[]
+): ValidationResult {
+  return validateAllocationsSum(amount, allocations)
+}
+
+/**
  * Valida que no haya projectIds duplicados en las allocations
  *
  * Un pago no puede asignar el mismo proyecto más de una vez.
@@ -205,7 +223,7 @@ export function validatePositiveAllocations(
  *
  * Valida en orden:
  * 1. Tipo vs cantidad de allocations
- * 2. Suma de allocations vs monto total
+ * 2. Suma de allocations vs total aplicado
  * 3. No projectIds duplicados
  * 4. Todos los montos positivos
  *
@@ -230,14 +248,15 @@ export function validatePositiveAllocations(
 export function validatePaymentAllocations(
   type: PaymentType,
   amount: number,
-  allocations: AllocationForValidation[]
+  allocations: AllocationForValidation[],
+  creditApplied = 0
 ): ValidationResult {
   // 1. Validar tipo vs cantidad de allocations
   const typeResult = validatePaymentType(type, allocations)
   if (!typeResult.valid) return typeResult
 
   // 2. Validar suma de allocations
-  const sumResult = validateAllocationsSum(amount, allocations)
+  const sumResult = validatePaymentApplicationSum(type, amount, creditApplied, allocations)
   if (!sumResult.valid) return sumResult
 
   // 3. Validar no duplicados

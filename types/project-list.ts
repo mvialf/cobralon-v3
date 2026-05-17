@@ -29,7 +29,10 @@ export interface ProjectListRawRow {
   balance: Decimal
   projectId: string
   allocatedTotal: Decimal
+  appliedCashTotal: Decimal
+  appliedCreditTotal: Decimal
   adjustmentTotal: Decimal
+  settledTotal: Decimal
   rawBalance: Decimal
   overpayment: Decimal
   windowsCount: number

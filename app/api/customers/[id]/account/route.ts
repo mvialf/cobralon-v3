@@ -8,7 +8,7 @@ interface CustomerAccountProjectRow {
   projectName: string | null
   totalAmount: unknown
   currency: string
-  allocatedTotal: unknown
+  settledTotal: unknown
   balance: unknown
 }
 
@@ -53,7 +53,7 @@ export const GET = withLogging(async (_request, logger, context) => {
         p."projectName",
         p."totalAmount",
         p.currency,
-        pf."allocatedTotal",
+        pf."settledTotal",
         pf.balance
       FROM "Project" p
       JOIN "ProjectFinancials" pf ON pf."projectId" = p.id
@@ -67,7 +67,7 @@ export const GET = withLogging(async (_request, logger, context) => {
       projectNumber: project.projectNumber,
       projectName: project.projectName,
       totalAmount: Number(project.totalAmount),
-      totalPaid: Number(project.allocatedTotal),
+      totalPaid: Number(project.settledTotal),
       balance: Number(project.balance),
       currency: project.currency,
     }))

@@ -478,10 +478,12 @@ describe('paymentToCustomerSchema (flujo 1:N)', () => {
       {
         projectId: '550e8400-e29b-41d4-a716-446655440002',
         allocatedAmount: 600000,
+        creditApplied: 0,
       },
       {
         projectId: '550e8400-e29b-41d4-a716-446655440003',
         allocatedAmount: 400000,
+        creditApplied: 0,
       },
     ],
   }
@@ -885,6 +887,7 @@ describe('paymentToProjectToPayload', () => {
     expect(payload.type).toBe('Project')
     expect(payload.customerId).toBe('cust-123')
     expect(payload.amount).toBe(1000000)
+    expect(payload.creditApplied).toBe(50000)
     expect(payload.currency).toBe('CLP')
     expect(payload.date).toEqual(formValues.date)
     expect(payload.paymentMethodId).toBe('pm-123')
@@ -893,7 +896,7 @@ describe('paymentToProjectToPayload', () => {
     expect(payload.selectedInstallments).toBe(3)
   })
 
-  it('debe crear allocation 1:1 con el monto completo', () => {
+  it('debe crear allocation 1:1 solo con dinero recibido', () => {
     const payload = paymentToProjectToPayload(formValues, project)
 
     expect(payload.allocations).toHaveLength(1)
@@ -923,6 +926,18 @@ describe('paymentToProjectToPayload', () => {
     )
     expect(payload.selectedInstallments).toBeNull()
   })
+
+  it('debe enviar creditApplied en 0 cuando no viene informado', () => {
+    const { creditApplied, ...valuesWithoutCredit } = formValues
+    const payload = paymentToProjectToPayload(
+      valuesWithoutCredit as unknown as PaymentToProjectFormValues,
+      project
+    )
+
+    expect(creditApplied).toBe(50000)
+    expect(payload.creditApplied).toBe(0)
+    expect(payload.allocations[0].allocatedAmount).toBe(valuesWithoutCredit.amount)
+  })
 })
 
 describe('paymentToCustomerToPayload', () => {
@@ -934,8 +949,8 @@ describe('paymentToCustomerToPayload', () => {
     selectedInstallments: 6,
     notes: 'Multiple projects',
     allocations: [
-      { projectId: 'proj-1', allocatedAmount: 600000 },
-      { projectId: 'proj-2', allocatedAmount: 400000 },
+      { projectId: 'proj-1', allocatedAmount: 600000, creditApplied: 50000 },
+      { projectId: 'proj-2', allocatedAmount: 400000, creditApplied: 25000 },
     ],
   }
 
@@ -960,10 +975,12 @@ describe('paymentToCustomerToPayload', () => {
     expect(payload.allocations[0]).toEqual({
       projectId: 'proj-1',
       allocatedAmount: 600000,
+      creditApplied: 50000,
     })
     expect(payload.allocations[1]).toEqual({
       projectId: 'proj-2',
       allocatedAmount: 400000,
+      creditApplied: 25000,
     })
   })
 

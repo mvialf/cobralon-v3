@@ -4,7 +4,7 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import { useForm, useFieldArray } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useQuery } from '@tanstack/react-query'
-import { Trash2 } from 'lucide-react'
+import { CreditCard, Trash2 } from 'lucide-react'
 import {
   paymentToCustomerSchema,
   type PaymentToCustomerFormValues,
@@ -124,6 +124,18 @@ export function PaymentToCustomerForm({
   // Memoize para evitar re-renders infinitos
   const projects = useMemo(() => projectsData || EMPTY_PROJECTS, [projectsData])
 
+  const { data: customerCreditData } = useQuery({
+    queryKey: ['customer-credit', selectedCustomerId],
+    queryFn: async () => {
+      if (!selectedCustomerId) return null
+      const res = await fetch(`/api/customers/${selectedCustomerId}/credit`)
+      if (!res.ok) return null
+      return res.json()
+    },
+    enabled: !!selectedCustomerId,
+  })
+  const customerCreditBalance = Number(customerCreditData?.creditBalance ?? 0)
+
   // Fetch payment methods
   const { data: paymentMethodsData } = useQuery({
     queryKey: ['payment-methods'],
@@ -152,6 +164,7 @@ export function PaymentToCustomerForm({
       const initialAllocations = projects.map((project) => ({
         projectId: project.id,
         allocatedAmount: 0,
+        creditApplied: 0,
       }))
       replace(initialAllocations)
     } else {
@@ -193,6 +206,7 @@ export function PaymentToCustomerForm({
       update(index, {
         projectId: field.projectId,
         allocatedAmount: fifoAllocation?.allocatedAmount || 0,
+        creditApplied: form.getValues(`allocations.${index}.creditApplied`) || 0,
       })
     })
   }, [watchedAmount, customerProjects, form, fields, update])
@@ -224,14 +238,26 @@ export function PaymentToCustomerForm({
   // useFieldArray.update() sí crea nueva referencia (modo FIFO), por eso FIFO funcionaba.
   const totalAllocated =
     watchedAllocations?.reduce((sum, a) => sum + (a.allocatedAmount || 0), 0) || 0
+  const totalCreditApplied =
+    watchedAllocations?.reduce((sum, a) => sum + (a.creditApplied || 0), 0) || 0
 
   const difference = watchedAmount - totalAllocated
   const isValidSum = Math.abs(difference) < FINANCIAL.TOLERANCE
+  const remainingCredit = customerCreditBalance - totalCreditApplied
+  const hasCreditOverBalance = (watchedAllocations || []).some((allocation) => {
+    const project = customerProjects.find((p) => p.id === allocation.projectId)
+    if (!project) return false
+    const balanceAfterCash = Math.max(0, project.balance - (allocation.allocatedAmount || 0))
+    return (allocation.creditApplied || 0) - balanceAfterCash >= FINANCIAL.TOLERANCE
+  })
+  const isValidCredit = remainingCredit >= -FINANCIAL.TOLERANCE && !hasCreditOverBalance
 
   // Submit handler
   const handleSubmit = (values: PaymentToCustomerFormValues) => {
-    // 1. Filtrar allocations con monto > 0
-    const allocationsWithValue = values.allocations.filter((a) => a.allocatedAmount > 0)
+    // 1. Filtrar allocations con dinero o crédito > 0
+    const allocationsWithValue = values.allocations.filter(
+      (a) => a.allocatedAmount > 0 || (a.creditApplied || 0) > 0
+    )
 
     // 2. Validar que hay al menos una allocation con valor
     if (allocationsWithValue.length === 0) {
@@ -247,6 +273,30 @@ export function PaymentToCustomerForm({
     if (Math.abs(differenceSubmit) >= FINANCIAL.TOLERANCE) {
       form.setError('allocations', {
         message: 'La suma de allocations debe ser igual al monto total',
+      })
+      return
+    }
+
+    const totalCreditSubmit = allocationsWithValue.reduce(
+      (sum, a) => sum + (a.creditApplied || 0),
+      0
+    )
+    if (totalCreditSubmit - customerCreditBalance >= FINANCIAL.TOLERANCE) {
+      form.setError('allocations', {
+        message: 'El crédito aplicado excede el crédito disponible del cliente',
+      })
+      return
+    }
+
+    const hasInvalidCredit = allocationsWithValue.some((allocation) => {
+      const project = customerProjects.find((p) => p.id === allocation.projectId)
+      if (!project) return true
+      const balanceAfterCash = Math.max(0, project.balance - allocation.allocatedAmount)
+      return (allocation.creditApplied || 0) - balanceAfterCash >= FINANCIAL.TOLERANCE
+    })
+    if (hasInvalidCredit) {
+      form.setError('allocations', {
+        message: 'El crédito aplicado no puede superar el balance restante de cada proyecto',
       })
       return
     }
@@ -295,6 +345,34 @@ export function PaymentToCustomerForm({
                       <span className="text-sm text-center text-muted-foreground">Asignado:</span>
                       <span className="text-center font-semibold text-primary">
                         {formatCurrency(totalAllocated, 'CLP')}
+                      </span>
+                    </CardContent>
+                  </Card>
+                  <Card className="p-2">
+                    <CardContent className="flex flex-col">
+                      <span className="text-sm text-center text-muted-foreground">Crédito:</span>
+                      <span
+                        className={cn(
+                          'text-center font-semibold',
+                          isValidCredit ? 'text-orange-600' : 'text-red-600'
+                        )}
+                      >
+                        {formatCurrency(totalCreditApplied, 'CLP')}
+                      </span>
+                    </CardContent>
+                  </Card>
+                  <Card className="p-2">
+                    <CardContent className="flex flex-col">
+                      <span className="text-sm text-center text-muted-foreground">Disponible:</span>
+                      <span
+                        className={cn(
+                          'text-center font-semibold',
+                          remainingCredit >= -FINANCIAL.TOLERANCE
+                            ? 'text-muted-foreground'
+                            : 'text-red-600'
+                        )}
+                      >
+                        {formatCurrency(Math.max(0, remainingCredit), 'CLP')}
                       </span>
                     </CardContent>
                   </Card>
@@ -374,7 +452,8 @@ export function PaymentToCustomerForm({
                     !selectedCustomerId ||
                     customerProjects.length === 0 ||
                     fields.length === 0 ||
-                    !isValidSum
+                    !isValidSum ||
+                    !isValidCredit
                   }
                 >
                   {isSubmitting ? 'Registrando...' : 'Registrar Pago'}
@@ -407,6 +486,12 @@ export function PaymentToCustomerForm({
                           <TableHead>Proyecto</TableHead>
                           <TableHead className="text-right">Balance</TableHead>
                           <TableHead className="text-right">Monto Asignado</TableHead>
+                          <TableHead className="text-right">
+                            <span className="inline-flex items-center justify-end gap-1">
+                              <CreditCard className="h-4 w-4" />
+                              Crédito
+                            </span>
+                          </TableHead>
                           <TableHead className="w-[50px]"></TableHead>
                         </TableRow>
                       </TableHeader>
@@ -443,6 +528,37 @@ export function PaymentToCustomerForm({
                                       className="text-right max-w-[150px] ml-auto"
                                     />
                                   )}
+                                />
+                              </TableCell>
+                              <TableCell className="text-right">
+                                <FormField
+                                  control={form.control}
+                                  name={`allocations.${index}.creditApplied`}
+                                  render={({ field: inputField }) => {
+                                    const balanceAfterCash = Math.max(
+                                      0,
+                                      project.balance -
+                                        (watchedAllocations?.[index]?.allocatedAmount || 0)
+                                    )
+                                    const maxCreditForProject = Math.min(
+                                      Math.max(0, remainingCredit + (inputField.value || 0)),
+                                      balanceAfterCash
+                                    )
+
+                                    return (
+                                      <CurrencyInput
+                                        value={inputField.value || 0}
+                                        onChange={(value) =>
+                                          inputField.onChange(
+                                            Math.min(value || 0, maxCreditForProject)
+                                          )
+                                        }
+                                        currency={project.currency}
+                                        disabled={customerCreditBalance <= 0}
+                                        className="text-right max-w-[150px] ml-auto"
+                                      />
+                                    )
+                                  }}
                                 />
                               </TableCell>
                               <TableCell>

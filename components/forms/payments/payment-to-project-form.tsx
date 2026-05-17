@@ -126,10 +126,13 @@ export function PaymentToProjectForm({
       return
     }
 
-    // Validar monto <= balance
-    if (values.amount > selectedProject.balance) {
+    const creditApplied = values.creditApplied ?? 0
+    const totalApplied = values.amount + creditApplied
+
+    // Validar total aplicado <= balance
+    if (totalApplied > selectedProject.balance) {
       form.setError('amount', {
-        message: `El monto no puede ser mayor al balance pendiente (${formatCurrency(selectedProject.balance, selectedProject.currency)})`,
+        message: `El dinero recibido más el crédito aplicado no puede superar el balance pendiente (${formatCurrency(selectedProject.balance, selectedProject.currency)})`,
       })
       return
     }
@@ -168,6 +171,7 @@ export function PaymentToProjectForm({
             customerCredit={customerCreditBalance}
             projectBalance={selectedProject.balance}
             customerName={selectedProject.customer.name}
+            currency={selectedProject.currency}
           />
         )}
 

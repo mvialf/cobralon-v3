@@ -12,40 +12,58 @@ export { calculateFIFO } from '../business-logic/payment-fifo'
  * que dependen de DB (customer exists, same currency, etc.) siguen
  * validándose después del parse.
  */
-export const createPaymentApiSchema = z.object({
-  type: z.enum(['Project', 'Customer'], {
-    required_error: 'El tipo de pago es requerido',
-    invalid_type_error: 'El tipo de pago debe ser "Project" o "Customer"',
-  }),
-  customerId: z
-    .string({ required_error: 'El cliente es requerido' })
-    .min(1, 'El cliente es requerido'),
-  amount: z.coerce
-    .number({
-      required_error: 'El monto es requerido',
-      invalid_type_error: 'El monto debe ser un número',
-    })
-    .positive('El monto debe ser mayor a 0'),
-  currency: z
-    .string({ required_error: 'La moneda es requerida' })
-    .length(3, 'La moneda debe ser un código de 3 letras'),
-  date: z.string({ required_error: 'La fecha es requerida' }).min(1, 'La fecha es requerida'),
-  paymentMethodId: z
-    .string({ required_error: 'El método de pago es requerido' })
-    .min(1, 'El método de pago es requerido'),
-  reference: z.string().nullable().optional(),
-  notes: z.string().nullable().optional(),
-  selectedInstallments: z.number().int().min(1).nullable().optional(),
-  creditApplied: z.number().min(0).optional().default(0),
-  allocations: z
-    .array(
-      z.object({
-        projectId: z.string().min(1),
-        allocatedAmount: z.number().positive(),
+export const createPaymentApiSchema = z
+  .object({
+    type: z.enum(['Project', 'Customer'], {
+      required_error: 'El tipo de pago es requerido',
+      invalid_type_error: 'El tipo de pago debe ser "Project" o "Customer"',
+    }),
+    customerId: z
+      .string({ required_error: 'El cliente es requerido' })
+      .min(1, 'El cliente es requerido'),
+    amount: z.coerce
+      .number({
+        required_error: 'El monto es requerido',
+        invalid_type_error: 'El monto debe ser un número',
       })
-    )
-    .min(1, 'Debe asignar el pago a al menos un proyecto'),
-})
+      .positive('El monto debe ser mayor a 0'),
+    currency: z
+      .string({ required_error: 'La moneda es requerida' })
+      .length(3, 'La moneda debe ser un código de 3 letras'),
+    date: z.string({ required_error: 'La fecha es requerida' }).min(1, 'La fecha es requerida'),
+    paymentMethodId: z
+      .string({ required_error: 'El método de pago es requerido' })
+      .min(1, 'El método de pago es requerido'),
+    reference: z.string().nullable().optional(),
+    notes: z.string().nullable().optional(),
+    selectedInstallments: z.number().int().min(1).nullable().optional(),
+    creditApplied: z.coerce.number().min(0).optional().default(0),
+    allocations: z
+      .array(
+        z.object({
+          projectId: z.string().min(1),
+          allocatedAmount: z.coerce.number().min(0),
+          creditApplied: z.coerce.number().min(0).optional().default(0),
+        })
+      )
+      .min(1, 'Debe asignar el pago a al menos un proyecto'),
+  })
+  .superRefine((data, ctx) => {
+    data.allocations.forEach((allocation, index) => {
+      const legacyCreditApplied =
+        data.type === 'Project' && index === 0 && allocation.creditApplied === 0
+          ? data.creditApplied
+          : 0
+
+      if (allocation.allocatedAmount <= 0 && allocation.creditApplied + legacyCreditApplied <= 0) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['allocations', index, 'allocatedAmount'],
+          message: 'Debe asignar dinero recibido o crédito al proyecto',
+        })
+      }
+    })
+  })
 
 export type CreatePaymentApiBody = z.infer<typeof createPaymentApiSchema>
 
@@ -130,6 +148,7 @@ export type CreatePaymentPayload = {
   type: 'Project' | 'Customer' // Tipo de pago
   customerId: string
   amount: number
+  creditApplied?: number
   currency: string
   date: Date
   paymentMethodId: string
@@ -139,6 +158,7 @@ export type CreatePaymentPayload = {
   allocations: Array<{
     projectId: string
     allocatedAmount: number
+    creditApplied?: number
   }>
 }
 
@@ -307,10 +327,12 @@ export function paymentToProjectToPayload(
     reference: null,
     notes: values.notes || null,
     selectedInstallments: values.selectedInstallments || null,
+    creditApplied: values.creditApplied || 0,
     allocations: [
       {
         projectId: values.projectId,
-        allocatedAmount: values.amount, // ← 100% del monto (1:1)
+        allocatedAmount: values.amount,
+        creditApplied: values.creditApplied || 0,
       },
     ],
   }
@@ -387,6 +409,12 @@ export const paymentToCustomerSchema = z
             .number()
             .min(0, 'El monto no puede ser negativo')
             .multipleOf(FINANCIAL.DECIMAL_PRECISION, 'El monto debe tener máximo 2 decimales'),
+          creditApplied: z.coerce
+            .number()
+            .min(0, 'El crédito aplicado no puede ser negativo')
+            .multipleOf(FINANCIAL.DECIMAL_PRECISION, 'El monto debe tener máximo 2 decimales')
+            .optional()
+            .default(0),
         })
       )
       .refine(
