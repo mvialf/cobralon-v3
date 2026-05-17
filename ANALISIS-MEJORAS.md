@@ -98,7 +98,7 @@ Caracteres especiales de LIKE (`%` y `_`) se escapan con `replace(/([%_])/g, '\\
 
 ## 2. Flujo de Proyectos (Projects, Balances, Adjustments)
 
-### 2.1 🔴 Campo `balance` Persistido — Riesgo de Desincronización Crónica
+### 2.1 ✅ Campo `balance` Persistido — Riesgo de Desincronización Crónica
 
 **Contexto:**
 `Project.balance` es un campo calculado que se almacena en la DB (schema Prisma línea 171). Su fórmula es:
@@ -119,35 +119,38 @@ El balance queda desincronizado. **La existencia del cron `reconcile-balances` e
 - Un proyecto puede mostrar deuda cuando ya está pagado.
 - Decisiones de negocio basadas en balance incorrecto (ej: no enviar a cobranza).
 
-**Solución Propuesta (ya planificada en `plans/derive-customer-credit-balance.md`):**
-Eliminar `Project.balance` como campo persistido y calcularlo en tiempo real:
+**Estado:** Resuelto parcialmente en implementación actual.
+
+**Solución aplicada:**
+El runtime dejó de depender de `Project.balance` y ahora lee el balance desde la view derivada `ProjectFinancials`:
 
 ```sql
-SELECT p.*,
-  (COALESCE(p."totalAmount", 0)
-   - COALESCE((SELECT SUM(pa."allocatedAmount") FROM "PaymentAllocation" pa WHERE pa."projectId" = p.id), 0)
-   - COALESCE((SELECT SUM(a.amount) FROM "project_adjustments" a WHERE a."projectId" = p.id), 0)
-  ) as balance
+CREATE OR REPLACE VIEW "ProjectFinancials" AS
+SELECT
+  p.id AS "projectId",
+  COALESCE(pa."allocatedTotal", 0)::numeric(12, 2) AS "allocatedTotal",
+  COALESCE(adj."adjustmentTotal", 0)::numeric(12, 2) AS "adjustmentTotal",
+  (...)::numeric(12, 2) AS "rawBalance",
+  GREATEST(0, (...))::numeric(12, 2) AS balance,
+  GREATEST(0, -(...))::numeric(12, 2) AS overpayment
 FROM "Project" p
 ```
 
-**Nota:** Este cambio requiere modificar ~20 archivos que leen `project.balance`. Ver plan completo en `plans/unify-project-total-fields.md` y `plans/fix-n-plus-1-and-redundant-queries.md`.
+La columna legacy `Project.balance` permanece en el schema por compatibilidad de DB, pero los endpoints principales ya no la escriben ni la usan como fuente de verdad.
 
-**Archivos Afectados:**
-- `prisma/schema.prisma`
-- `lib/business-logic/update-project-balance.ts`
-- `lib/business-logic/project-balance.ts`
-- `app/api/payments/route.ts`
-- `app/api/payments/[id]/route.ts`
-- `app/api/cron/reconcile-balances/route.ts`
-- `app/api/projects/route.ts`
-- `app/projects/columns.tsx`
+**Archivos modificados:**
+- `prisma/migrations/20260517120000_create_project_financials_view/migration.sql`
+- `lib/business-logic/project-financials.ts`
+- `app/api/payments/*`
+- `app/api/projects/*`
+- `app/api/customers/*`
 - `app/projects/page.tsx`
-- Y ~15 archivos más (ver plan `unify-project-total-fields.md`)
+- `app/page.tsx`
+- `lib/queries/project-list.ts`
 
 ---
 
-### 2.2 🟡 `updateMultipleProjectBalances` — N+1 Queries Secuenciales
+### 2.2 ✅ `updateMultipleProjectBalances` — N+1 Queries Secuenciales
 
 **Contexto:**
 Después de crear/eliminar un pago, se actualizan los balances de todos los proyectos afectados.
@@ -173,20 +176,10 @@ export async function updateMultipleProjectBalances(
 - Mayor latencia en el endpoint POST de pagos.
 - A escala (100+ proyectos por pago), esto sería insostenible.
 
-**Solución Propuesta (ya planificada en `plans/fix-n-plus-1-and-redundant-queries.md`):**
-Reemplazar el loop por una query SQL batch:
+**Estado:** Resuelto eliminando el patrón.
 
-```sql
-UPDATE "Project" p
-SET balance = COALESCE(p."totalAmount", 0)
-  - COALESCE((SELECT SUM(pa."allocatedAmount") FROM "PaymentAllocation" pa WHERE pa."projectId" = p.id), 0)
-  - COALESCE((SELECT SUM(a.amount) FROM "project_adjustments" a WHERE a."projectId" = p.id), 0)
-WHERE p.id = ANY($1::uuid[])
-```
-
-**Archivos Afectados:**
-- `lib/business-logic/update-project-balance.ts`
-- `app/api/cron/reconcile-balances/route.ts` (Fase 2 del cron)
+**Solución aplicada:**
+`lib/business-logic/update-project-balance.ts` y su suite antigua fueron eliminados. Los endpoints de pagos y ajustes ya no recalculan ni escriben `Project.balance`; validan y responden con balance derivado desde `ProjectFinancials`.
 
 ---
 
@@ -195,12 +188,8 @@ WHERE p.id = ANY($1::uuid[])
 **Contexto:**
 La función pura `calculateProjectBalance` (línea 81 de `lib/business-logic/project-balance.ts`) calcula el balance como `totalAmount - totalPaid`. Pero `_updateBalanceInternal` (línea 73 del mismo archivo) resta también los ajustes.
 
-**Problema:**
-Hay **dos fórmulas diferentes** para calcular el balance:
-1. `calculateProjectBalance()` = totalAmount - allocations (sin ajustes)
-2. `_updateBalanceInternal()` = totalAmount - allocations - adjustments
-
-Si un componente del frontend usa `calculateProjectBalance()` directamente (en vez de leer `project.balance` de la DB), mostrará un balance incorrecto (mayor al real).
+**Problema actualizado:**
+La fórmula persistida/manual fue eliminada de los endpoints principales, pero la función pura `calculateProjectBalance()` sigue existiendo para tests/utilidades legacy y calcula `totalAmount - allocations` sin ajustes. No debe usarse como fuente de verdad para vistas financieras con ajustes; la fuente correcta es `ProjectFinancials`.
 
 **Código:**
 ```typescript
@@ -211,12 +200,10 @@ export function calculateProjectBalance(project: ProjectWithAllocations): Projec
   // ...
 }
 
-// _updateBalanceInternal (línea 73)
-const finalBalance = baseBalance - totalAdjustments  // ← Con ajustes
 ```
 
 **Solución Propuesta:**
-Agregar un parámetro opcional `adjustments` a `calculateProjectBalance` para que pueda calcular el balance real:
+Si se mantiene esta utilidad, renombrarla para dejar explícito que ignora ajustes o extenderla con un parámetro opcional `adjustments`:
 
 ```typescript
 export function calculateProjectBalance(
@@ -1037,7 +1024,7 @@ Este endpoint POST permite crear usuarios directamente.
 
 ---
 
-### 11.3 🔴 `/api/cron/reconcile-balances` — Sin Protección CRON_SECRET
+### 11.3 ✅ `/api/cron/reconcile-balances` — Sin Protección CRON_SECRET
 
 **Archivo:** `middleware.ts:32` + `app/api/cron/reconcile-balances/route.ts`
 
@@ -1056,22 +1043,15 @@ Cualquier persona puede ejecutar el cron manualmente enviando un POST a `/api/cr
 - Ocultar actividad maliciosa entre ejecuciones legítimas.
 - Ser usado como vector de DoS si se llama repetidamente.
 
-**Solución Propuesta:**
-Agregar verificación de CRON_SECRET en el endpoint:
-```typescript
-export async function POST(request: NextRequest) {
-  const cronSecret = request.headers.get('x-cron-secret')
-  if (cronSecret !== process.env.CRON_SECRET) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
-  // ... lógica de reconciliación
-}
-```
+**Estado:** Resuelto eliminando el endpoint.
+
+**Solución aplicada:**
+El cron `reconcile-balances` fue eliminado porque el balance de proyecto ahora es derivado desde `ProjectFinancials`. También se quitó la excepción pública `pathname.startsWith('/api/cron/')` del middleware y se removió `CRON_SECRET` de `.env.example`.
 
 **Archivos Afectados:**
 - `app/api/cron/reconcile-balances/route.ts`
-- `app/api/cron/*/route.ts` (todos los cron endpoints)
-- `.env.example` (agregar CRON_SECRET)
+- `middleware.ts`
+- `.env.example`
 
 ---
 
@@ -1131,7 +1111,7 @@ Opción B — Streaming para archivos grandes:
 
 ---
 
-### 12.2 🟡 `/api/payments/import` — Sin Recálculo de Balance Post-Import
+### 12.2 ✅ `/api/payments/import` — Sin Recálculo de Balance Post-Import
 
 **Archivo:** `app/api/payments/import/route.ts:123-142`
 
@@ -1154,19 +1134,14 @@ const payment = await prisma.$transaction(async (tx) => {
 - Si el cron falla, los balances quedan incorrectos indefinidamente.
 - Usuarios ven balances erróneos inmediatamente después de importar.
 
-**Solución Propuesta:**
-Agregar `updateProjectBalance(projectId, tx)` dentro de la transacción de cada payment:
-```typescript
-const payment = await prisma.$transaction(async (tx) => {
-  const createdPayment = await tx.payment.create({ ... })
-  await tx.paymentAllocation.create({ ... })
-  await updateProjectBalance(projectId, tx)  // ← Agregar
-  return createdPayment
-})
-```
+**Estado:** Resuelto por eliminación de balance persistido.
+
+**Solución aplicada:**
+Ya no es necesario recalcular `Project.balance` después de imports. Los balances se derivan desde `PaymentAllocation` + `ProjectAdjustment` vía `ProjectFinancials`, por lo que un import que crea allocations queda reflejado al consultar la view.
 
 **Archivos Afectados:**
 - `app/api/payments/import/route.ts`
+- `prisma/migrations/20260517120000_create_project_financials_view/migration.sql`
 
 ---
 
@@ -1617,7 +1592,7 @@ Varias queries filtran por combinaciones de columnas que no tienen índices comp
 
 ---
 
-### 16.3 🔴 `updateMultipleProjectBalances` — N+1 Queries Secuenciales (ALTO IMPACTO)
+### 16.3 ✅ `updateMultipleProjectBalances` — N+1 Queries Secuenciales (ALTO IMPACTO)
 
 **Archivo:** `lib/business-logic/update-project-balance.ts:103-109`
 
@@ -1645,48 +1620,16 @@ Para un pago FIFO con 5 proyectos = **10 queries secuenciales** dentro de la mis
 - Mayor latencia en el endpoint POST de pagos.
 - A escala (100+ proyectos por pago), insostenible.
 
-**Solución Propuesta:**
-```typescript
-// OPTIMIZADO: 2 queries batch
-export async function updateMultipleProjectBalances(
-  projectIds: string[],
-  tx?: PrismaTransaction
-): Promise<number> {
-  const db = tx || prisma
+**Estado:** Resuelto eliminando el recálculo manual.
 
-  // 1 query: leer todos los projects con sus allocations
-  const projects = await db.project.findMany({
-    where: { id: { in: projectIds } },
-    select: {
-      id: true,
-      totalAmount: true,
-      paymentAllocations: { select: { allocatedAmount: true } },
-    },
-  })
-
-  // Calcular balances en memoria
-  const updates = projects.map((project) => {
-    const totalPaid = project.paymentAllocations.reduce(
-      (sum, a) => sum + Number(a.allocatedAmount), 0
-    )
-    const balance = Number(project.totalAmount) - totalPaid
-    return db.project.update({
-      where: { id: project.id },
-      data: { balance: new Decimal(balance) },
-    })
-  })
-
-  // 1 query: actualizar todos en paralelo
-  await Promise.all(updates)
-  return projects.length
-}
-```
-
-**Resultado esperado:** De 2N queries secuenciales → 2 queries paralelas. En un pago con 5 proyectos: de ~200ms a ~30ms.
+**Solución aplicada:**
+La función `updateMultipleProjectBalances` fue eliminada junto con `updateProjectBalance`. La transacción crítica de pagos ya no ejecuta el loop N+1 ni escribe `Project.balance`; usa `ProjectFinancials` para validar crédito/sobrepago con datos derivados.
 
 **Archivos Afectados:**
 - `lib/business-logic/update-project-balance.ts`
-- `app/api/cron/reconcile-balances/route.ts` (puede usar la misma optimización)
+- `app/api/payments/route.ts`
+- `app/api/payments/[id]/route.ts`
+- `app/api/projects/[id]/adjustments/route.ts`
 
 ---
 
@@ -1697,21 +1640,19 @@ export async function updateMultipleProjectBalances(
 **Contexto:**
 La transacción de creación de pagos es la más compleja del sistema. Maneja allocations, installments, comisiones, créditos y sobrepagos.
 
-**Problema:**
-La transacción tiene **~15+ queries secuenciales**:
+**Problema actualizado:**
+La transacción sigue siendo compleja, aunque el recálculo manual de balance ya fue eliminado:
 1. Crear payment + allocations + installments
 2. Promise.all con N updates de installments (distribución de neto)
-3. Leer credit balance + project (Promise.all)
+3. Leer credit balance + balance derivado desde `ProjectFinancials` (Promise.all)
 4. Crear credit transaction (si aplica crédito)
-5. `updateMultipleProjectBalances` (2N queries secuenciales)
-6. Leer proyectos actualizados (findMany)
-7. Loop: para cada proyecto con sobrepago → update + create
+5. Leer proyectos afectados (findMany)
+6. Loop: para cada proyecto con sobrepago → create de crédito
 
 El loop de sobrepagos es particularmente problemático:
 ```typescript
 for (const project of updatedProjects) {
-  if (Number(project.balance) < 0) {
-    await tx.project.update({ where: { id: project.id }, data: { balance: new Decimal(0) } })
+  if (overpaymentAmount > 0) {
     await tx.creditTransaction.create({ data: { ... } })
   }
 }
@@ -1723,34 +1664,20 @@ for (const project of updatedProjects) {
 - Timeout de transacción si hay muchos proyectos.
 
 **Solución Propuesta:**
-Usar `createMany` y `updateMany` para sobrepagos:
+Usar `createMany` para sobrepagos:
 ```typescript
-const overpaidProjects = updatedProjects.filter(
-  p => Number(p.balance) < -FINANCIAL.TOLERANCE
-)
-if (overpaidProjects.length > 0) {
-  await tx.project.updateMany({
-    where: { id: { in: overpaidProjects.map(p => p.id) } },
-    data: { balance: new Decimal(0) },
-  })
+const overpayments = updatedProjects
+  .map((project) => buildOverpayment(project))
+  .filter(Boolean)
+
+if (overpayments.length > 0) {
   await tx.creditTransaction.createMany({
-    data: overpaidProjects.map(p => ({
-      customerId,
-      amount: new Prisma.Decimal(Math.abs(Number(p.balance))),
-      type: CreditTransactionType.OVERPAYMENT,
-      projectId: p.id,
-      paymentId: newPayment.id,
-      metadata: {
-        paymentAmount: amount,
-        projectBalance: Number(p.balance),
-        paymentDate: paymentDate.toISOString(),
-      },
-    })),
+    data: overpayments,
   })
 }
 ```
 
-Combinado con la optimización de `updateMultipleProjectBalances` (issue 16.3), la transacción pasa de ~15+ queries a ~6-8.
+**Resultado esperado:** Reducir writes secuenciales de sobrepago dentro de la transacción.
 
 **Archivos Afectados:**
 - `app/api/payments/route.ts`
@@ -2101,7 +2028,7 @@ WHERE normalize_text(p."projectNumber") LIKE normalize_text(${`%${search}%`})
 
 ---
 
-### 16.11 🟡 Cron Reconcile — Batch Update Ineficiente
+### 16.11 ✅ Cron Reconcile — Batch Update Ineficiente
 
 **Archivo:** `app/api/cron/reconcile-balances/route.ts:112-119`
 
@@ -2120,23 +2047,10 @@ await prisma.$transaction(
 
 Si hay 500 proyectos inconsistentes, crea 500 operaciones individuales en la transacción.
 
-**Solución Propuesta:**
-Raw SQL batch con CASE:
-```typescript
-if (inconsistent.length > 0) {
-  const caseClauses = inconsistent
-    .map(r => `WHEN '${r.id}' THEN ${r.calculatedBalance}`)
-    .join(' ')
-  const ids = inconsistent.map(r => `'${r.id}'`).join(',')
-  await prisma.$executeRawUnsafe(`
-    UPDATE "Project"
-    SET balance = CASE id ${caseClauses} END
-    WHERE id IN (${ids})
-  `)
-}
-```
+**Estado:** Resuelto eliminando el cron.
 
-**Resultado:** De N operaciones → 1 query SQL.
+**Solución aplicada:**
+El endpoint `app/api/cron/reconcile-balances/route.ts` fue eliminado. La reconciliación de balances dejó de ser necesaria porque el balance se deriva desde la view `ProjectFinancials`.
 
 **Archivos Afectados:**
 - `app/api/cron/reconcile-balances/route.ts`
@@ -2246,7 +2160,6 @@ Ocupa espacio en cada fila de Project (~20 bytes + overhead). Si ya no se usa en
 - `app/api/calendar-events/route.ts` — Sin tests
 - `app/api/calendar-events/reorder/route.ts` — Sin tests
 - `app/api/project-events/[id]/route.ts` — Sin tests
-- `app/api/cron/reconcile-balances/route.ts` — Sin tests
 - `app/api/test/cleanup/route.ts` — Sin tests
 - `app/api/health/warmup/route.ts` — Sin tests
 - Todos los endpoints de export — Sin tests
@@ -2304,7 +2217,6 @@ Variables que deberían validarse:
 - `DIRECT_URL` (requerida)
 - `BETTER_AUTH_SECRET` (requerida)
 - `BETTER_AUTH_URL` (requerida)
-- `CRON_SECRET` (requerida para cron endpoints)
 - `NODE_ENV` (opcional, pero útil validar)
 
 **Solución Propuesta:**
@@ -2317,7 +2229,6 @@ const envSchema = z.object({
   DIRECT_URL: z.string().url(),
   BETTER_AUTH_SECRET: z.string().min(32),
   BETTER_AUTH_URL: z.string().url(),
-  CRON_SECRET: z.string().min(16),
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
 })
 
@@ -2726,7 +2637,7 @@ if (project.projectStatus?.isFinal) {
 - [ ] 🔴 Migrar de `db:push` a `prisma migrate dev` / `prisma migrate deploy`
 - [ ] 🔴 Arreglar PUT de pagos para recalcular comisiones
 - [ ] 🔴 Documentar/estandarizar si `Payment.amount` incluye o no `creditApplied`
-- [ ] 🔴 Optimizar `updateMultipleProjectBalances` a batch queries (issue 16.3)
+- [x] ✅ Eliminar `updateMultipleProjectBalances` y derivar balance con `ProjectFinancials` (issues 2.1, 2.2, 16.3)
 - [ ] 🔴 Optimizar transacción POST pagos con createMany/updateMany (issue 16.4)
 - [ ] 🟡 Agregar validación Zod para `Aftersale.tasks`
 - [ ] 🟡 Agregar validación de formato HH:mm para `Visit.scheduledTime`

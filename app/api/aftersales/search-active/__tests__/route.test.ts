@@ -29,6 +29,7 @@ vi.mock('@/lib/logger-middleware', () => ({
 
 vi.mock('@/lib/db', () => ({
   prisma: {
+    $queryRaw: vi.fn(),
     aftersale: {
       findMany: vi.fn(),
     },
@@ -57,6 +58,7 @@ describe('GET /api/aftersales/search-active', () => {
   })
 
   it('debe retornar aftersales activos', async () => {
+    vi.mocked(prisma.$queryRaw).mockResolvedValue([{ id: 'af-1' }])
     vi.mocked(prisma.aftersale.findMany).mockResolvedValue([
       {
         id: 'af-1',

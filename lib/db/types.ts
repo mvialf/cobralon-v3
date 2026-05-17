@@ -9,7 +9,7 @@ import { PrismaClient } from '@prisma/client'
  * @example
  * ```ts
  * await prisma.$transaction(async (tx: PrismaTransaction) => {
- *   await updateProjectBalance(projectId, tx)
+ *   await tx.payment.create({ data })
  * })
  * ```
  */

@@ -1,11 +1,10 @@
 import { NextResponse } from 'next/server'
+import { Prisma } from '@prisma/client'
 import { prisma } from '@/lib/db'
-import { ProjectWhereInput } from '@/types/api'
-import { matchesProjectState, ProjectStateFilter } from '@/lib/business-logic/project-state'
 import { generateProjectsExcelBuffer } from '@/lib/excel/project-exporter'
 import { logger } from '@/lib/logger'
-import { anyFieldMatchesSearch } from '@/lib/utils/normalize'
 import { projectStateValues } from '@/lib/validations/project-validations'
+import { FINANCIAL } from '@/lib/constants/financial-constants'
 
 const projectStateSchema = projectStateValues.default('all')
 
@@ -48,70 +47,81 @@ export async function GET(request: Request) {
   )
 
   try {
-    // Construir filtro de búsqueda base (solo filtros de DB)
-    const where: ProjectWhereInput = {}
-
-    if (customerId) {
-      where.customerId = customerId
-    }
-
-    // NOTA: La búsqueda se aplica en memoria con normalización (ignora acentos/tildes)
-
-    // Pre-filtro server-side por projectStatus.isFinal (solo para "Finalizado")
-    if (projectState === 'Finalizado') {
-      where.projectStatus = { isFinal: true }
-    }
-
-    // Obtener TODOS los proyectos (sin paginación)
-    const allProjects = await prisma.project.findMany({
-      relationLoadStrategy: 'join',
-      where,
-      orderBy: { createdAt: 'desc' },
-      include: {
-        customer: {
-          select: {
-            name: true,
-          },
-        },
-        projectStatus: {
-          select: {
-            name: true,
-            isFinal: true,
-          },
-        },
-      },
-    })
-
-    // Aplicar filtros: búsqueda normalizada + projectState
-    const filteredProjects = allProjects.filter((project) => {
-      // Filtro por projectState
-      const matchesState = matchesProjectState(
-        Number(project.balance),
-        project.projectStatus?.isFinal,
-        projectState as ProjectStateFilter
-      )
-
-      if (!matchesState) return false
-
-      // Filtro de búsqueda normalizada (ignora acentos/tildes)
-      // "jose" encontrará "José", "nunoa" encontrará "Ñuñoa"
-      if (search) {
-        return anyFieldMatchesSearch(
-          [
-            project.projectNumber,
-            project.projectName,
-            project.customer?.name,
-            project.projectStatus?.name,
-          ],
+    const projects = await prisma.$queryRaw<
+      Array<{
+        id: string
+        projectNumber: string
+        projectName: string | null
+        phone: string
+        street: string | null
+        apartment: string | null
+        comuna: string
+        region: string
+        date: Date
+        subtotal: unknown
+        taxRate: unknown
+        totalAmount: unknown
+        balance: unknown
+        windowsCount: number
+        squareMeters: unknown
+        description: string | null
+        customerName: string
+        statusName: string | null
+      }>
+    >`
+      SELECT
+        p.id,
+        p."projectNumber",
+        p."projectName",
+        p.phone,
+        p.street,
+        p.apartment,
+        p.comuna,
+        p.region,
+        p.date,
+        p.subtotal,
+        p."taxRate",
+        p."totalAmount",
+        pf.balance,
+        p."windowsCount",
+        p."squareMeters",
+        p.description,
+        c.name AS "customerName",
+        ps.name AS "statusName"
+      FROM "Project" p
+      JOIN "ProjectFinancials" pf ON pf."projectId" = p.id
+      JOIN "Customer" c ON c.id = p."customerId"
+      LEFT JOIN "ProjectStatus" ps ON ps.id = p."projectStatusId"
+      WHERE 1=1
+        ${customerId ? Prisma.sql`AND p."customerId" = ${customerId}` : Prisma.empty}
+        ${projectState === 'Finalizado' ? Prisma.sql`AND (pf.balance <= ${FINANCIAL.BALANCE_TOLERANCE} AND ps."isFinal" = true)` : Prisma.empty}
+        ${projectState === 'Activo' ? Prisma.sql`AND (pf.balance > ${FINANCIAL.BALANCE_TOLERANCE} OR ps."isFinal" IS NOT TRUE)` : Prisma.empty}
+        ${
           search
-        )
-      }
+            ? Prisma.sql`AND (
+                normalize_text(p."projectNumber") LIKE normalize_text(${`%${search}%`})
+                OR normalize_text(COALESCE(p."projectName", '')) LIKE normalize_text(${`%${search}%`})
+                OR normalize_text(c.name) LIKE normalize_text(${`%${search}%`})
+                OR normalize_text(COALESCE(ps.name, '')) LIKE normalize_text(${`%${search}%`})
+              )`
+            : Prisma.empty
+        }
+      ORDER BY p."createdAt" DESC
+    `
 
-      return true
-    })
+    const filteredProjects = projects.map((project) => ({
+      ...project,
+      subtotal: Number(project.subtotal),
+      taxRate: Number(project.taxRate),
+      totalAmount: Number(project.totalAmount),
+      balance: Number(project.balance),
+      squareMeters: Number(project.squareMeters),
+      customer: { name: project.customerName },
+      projectStatus: project.statusName ? { name: project.statusName } : null,
+    }))
 
     logger.info(
-      { totalFetched: allProjects.length, totalFiltered: filteredProjects.length },
+      { totalFetched: filteredProjects.length, totalFiltered: filteredProjects.length },
       'Projects fetched for export'
     )
 

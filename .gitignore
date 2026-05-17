@@ -23,6 +23,8 @@ yarn-error.log*
 # database
 prisma/migrations/*
 !prisma/migrations/.gitkeep
+!prisma/migrations/20260517120000_create_project_financials_view/
+!prisma/migrations/20260517120000_create_project_financials_view/migration.sql
 
 # vercel
 .vercel

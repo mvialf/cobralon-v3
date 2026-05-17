@@ -44,11 +44,6 @@ vi.mock('@/lib/db', () => ({
   },
 }))
 
-// Mock de business logic
-vi.mock('@/lib/business-logic/update-project-balance', () => ({
-  updateProjectBalanceWithAdjustments: vi.fn(),
-}))
-
 import { prisma } from '@/lib/db'
 import { GET as _GET, POST as _POST } from '../route'
 
@@ -185,6 +180,16 @@ describe('POST /api/projects/[id]/adjustments', () => {
 
     vi.mocked(prisma.$transaction).mockImplementation(async (fn) => {
       const mockTx = {
+        $queryRaw: vi.fn().mockResolvedValue([
+          {
+            projectId: validProjectId,
+            allocatedTotal: new Decimal(0),
+            adjustmentTotal: new Decimal(0),
+            rawBalance: new Decimal(100000),
+            balance: new Decimal(100000),
+            overpayment: new Decimal(0),
+          },
+        ]),
         projectAdjustment: {
           create: vi.fn().mockResolvedValue({
             id: 'adj-1',
@@ -227,11 +232,22 @@ describe('POST /api/projects/[id]/adjustments', () => {
   })
 
   it('debe rechazar ajuste que haría balance negativo', async () => {
-    vi.mocked(prisma.project.findUnique).mockResolvedValue({
-      id: validProjectId,
-      balance: new Decimal(50000),
-      totalAmount: new Decimal(1190000),
-    } as never)
+    vi.mocked(prisma.$transaction).mockImplementation(async (fn) => {
+      const mockTx = {
+        $queryRaw: vi.fn().mockResolvedValue([
+          {
+            projectId: validProjectId,
+            allocatedTotal: new Decimal(0),
+            adjustmentTotal: new Decimal(0),
+            rawBalance: new Decimal(50000),
+            balance: new Decimal(50000),
+            overpayment: new Decimal(0),
+          },
+        ]),
+        projectAdjustment: { create: vi.fn() },
+      }
+      return fn(mockTx as never)
+    })
 
     const request = createPostRequest({ amount: 100000, reason: 'DISCOUNT' })
     const response = await callPOST(request, validProjectId)
@@ -243,11 +259,28 @@ describe('POST /api/projects/[id]/adjustments', () => {
   })
 
   it('debe permitir ajuste que deja balance en 0', async () => {
-    vi.mocked(prisma.project.findUnique).mockResolvedValue({
-      id: validProjectId,
-      balance: new Decimal(50000),
-      totalAmount: new Decimal(1190000),
-    } as never)
+    vi.mocked(prisma.$transaction).mockImplementation(async (fn) => {
+      const mockTx = {
+        $queryRaw: vi.fn().mockResolvedValue([
+          {
+            projectId: validProjectId,
+            allocatedTotal: new Decimal(0),
+            adjustmentTotal: new Decimal(0),
+            rawBalance: new Decimal(50000),
+            balance: new Decimal(50000),
+            overpayment: new Decimal(0),
+          },
+        ]),
+        projectAdjustment: {
+          create: vi.fn().mockResolvedValue({
+            id: 'adj-1',
+            amount: new Decimal(50000),
+            reason: 'DISCOUNT',
+          }),
+        },
+      }
+      return fn(mockTx as never)
+    })
 
     const request = createPostRequest({ amount: 50000, reason: 'DISCOUNT' })
     const response = await callPOST(request, validProjectId)
@@ -255,17 +288,28 @@ describe('POST /api/projects/[id]/adjustments', () => {
     expect(response.status).toBe(201)
   })
 
-  it('debe permitir ajuste cuando balance ya es negativo (sobrepago)', async () => {
-    vi.mocked(prisma.project.findUnique).mockResolvedValue({
-      id: validProjectId,
-      balance: new Decimal(-10000),
-      totalAmount: new Decimal(1190000),
-    } as never)
+  it('debe rechazar ajuste cuando el balance derivado ya está cerrado', async () => {
+    vi.mocked(prisma.$transaction).mockImplementation(async (fn) => {
+      const mockTx = {
+        $queryRaw: vi.fn().mockResolvedValue([
+          {
+            projectId: validProjectId,
+            allocatedTotal: new Decimal(0),
+            adjustmentTotal: new Decimal(0),
+            rawBalance: new Decimal(-10000),
+            balance: new Decimal(0),
+            overpayment: new Decimal(10000),
+          },
+        ]),
+        projectAdjustment: { create: vi.fn() },
+      }
+      return fn(mockTx as never)
+    })
 
     const request = createPostRequest({ amount: 50000, reason: 'DISCOUNT' })
     const response = await callPOST(request, validProjectId)
 
-    expect(response.status).toBe(201)
+    expect(response.status).toBe(400)
   })
 
   it('debe crear ajuste y retornar con amount convertido', async () => {

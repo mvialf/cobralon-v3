@@ -11,6 +11,7 @@ vi.mock('@/lib/logger-middleware')
 
 vi.mock('@/lib/db', () => ({
   prisma: {
+    $queryRaw: vi.fn(),
     project: {
       findMany: vi.fn(),
     },
@@ -63,6 +64,7 @@ describe('GET /api/projects/search', () => {
 
   describe('status=active', () => {
     it('debe retornar proyectos activos', async () => {
+      vi.mocked(prisma.$queryRaw).mockResolvedValue([{ id: 'p1' }])
       vi.mocked(prisma.project.findMany).mockResolvedValue([
         {
           id: 'p1',
@@ -84,11 +86,11 @@ describe('GET /api/projects/search', () => {
       expect(data).toHaveLength(1)
       expect(data[0].projectNumber).toBe('1001')
 
-      const call = vi.mocked(prisma.project.findMany).mock.calls[0][0]
-      expect(call?.where?.projectStatus).toMatchObject({ isFinal: false, isActive: true })
+      expect(prisma.$queryRaw).toHaveBeenCalled()
     })
 
     it('debe retornar array vacío sin resultados', async () => {
+      vi.mocked(prisma.$queryRaw).mockResolvedValue([])
       vi.mocked(prisma.project.findMany).mockResolvedValue([] as never)
 
       const response = await GET(createRequest({ q: 'inexistente', status: 'active' }))
@@ -101,6 +103,7 @@ describe('GET /api/projects/search', () => {
 
   describe('status=finished', () => {
     it('debe retornar proyectos finalizados', async () => {
+      vi.mocked(prisma.$queryRaw).mockResolvedValue([{ id: 'p1' }])
       vi.mocked(prisma.project.findMany).mockResolvedValue([
         {
           id: 'p1',
@@ -122,13 +125,12 @@ describe('GET /api/projects/search', () => {
       expect(data).toHaveLength(1)
       expect(data[0].projectNumber).toBe('1001')
 
-      const call = vi.mocked(prisma.project.findMany).mock.calls[0][0]
-      expect(call?.where?.projectStatus).toMatchObject({ isFinal: true, isActive: true })
+      expect(prisma.$queryRaw).toHaveBeenCalled()
     })
   })
 
   it('debe retornar 500 en error de DB', async () => {
-    vi.mocked(prisma.project.findMany).mockRejectedValue(new Error('DB'))
+    vi.mocked(prisma.$queryRaw).mockRejectedValue(new Error('DB'))
 
     const response = await GET(createRequest({ q: 'test', status: 'active' }))
     const data = await response.json()

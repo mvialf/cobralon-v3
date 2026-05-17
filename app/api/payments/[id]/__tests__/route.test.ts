@@ -7,8 +7,8 @@
  * - PUT: Bloqueo de edición si tiene cuotas (selectedInstallments > 1)
  * - PUT: Validaciones de amount
  * - PUT: Actualización de fecha (flujo EditableDate inline)
- * - PUT: Actualización de balance de proyectos via transacción
- * - DELETE: Transacción con reversión de créditos + cascade delete + recálculo balance
+ * - PUT: Actualización sin recalcular Project.balance
+ * - DELETE: Transacción con reversión de créditos + cascade delete
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
@@ -54,13 +54,7 @@ vi.mock('@/lib/db', () => ({
   },
 }))
 
-// Mock de business logic
-vi.mock('@/lib/business-logic/update-project-balance', () => ({
-  updateMultipleProjectBalances: vi.fn(),
-}))
-
 import { prisma } from '@/lib/db'
-import { updateMultipleProjectBalances } from '@/lib/business-logic/update-project-balance'
 import { PUT, DELETE } from '../route'
 
 const VALID_UUID = '00000000-0000-0000-0000-000000000001'
@@ -101,15 +95,7 @@ describe('PUT /api/payments/[id]', () => {
       _count: { creditTransactions: 0 },
     } as never)
 
-    // Mock de $transaction: ejecuta la función con un tx mock
-    vi.mocked(prisma.$transaction).mockImplementation(async (fn) => {
-      const mockTx = {
-        payment: {
-          update: vi.fn().mockResolvedValue(mockUpdatedPayment),
-        },
-      }
-      return fn(mockTx as never)
-    })
+    vi.mocked(prisma.payment.update).mockResolvedValue(mockUpdatedPayment as never)
   })
 
   describe('validación de existencia', () => {
@@ -233,54 +219,46 @@ describe('PUT /api/payments/[id]', () => {
       expect(response.status).toBe(200)
     })
 
-    it('no debe actualizar balance de proyectos si solo cambia fecha', async () => {
+    it('no debe abrir transacción si solo cambia fecha', async () => {
       const request = createRequest('PUT', { date: '2025-03-15T00:00:00.000Z' })
       await PUT(request, createContext())
 
-      expect(updateMultipleProjectBalances).not.toHaveBeenCalled()
+      expect(prisma.$transaction).not.toHaveBeenCalled()
     })
   })
 
-  describe('actualización de balance', () => {
-    it('debe actualizar balance de proyectos si cambia amount', async () => {
-      // Mock con allocations para que se dispare recálculo
-      vi.mocked(prisma.$transaction).mockImplementation(async (fn) => {
-        const mockTx = {
-          payment: {
-            update: vi.fn().mockResolvedValue({
-              ...mockUpdatedPayment,
-              amount: new Decimal(200000),
-              allocations: [
-                {
-                  id: 'a1',
-                  allocatedAmount: new Decimal(200000),
-                  projectId: 'p1',
-                  project: { id: 'p1', projectNumber: 'P-001', projectName: null, totalAmount: 500000, currency: 'CLP' },
-                },
-              ],
-            }),
+  describe('balance derivado', () => {
+    it('no recalcula ni escribe Project.balance si cambia amount', async () => {
+      vi.mocked(prisma.payment.update).mockResolvedValue({
+        ...mockUpdatedPayment,
+        amount: new Decimal(200000),
+        allocations: [
+          {
+            id: 'a1',
+            allocatedAmount: new Decimal(200000),
+            projectId: 'p1',
+            project: { id: 'p1', projectNumber: 'P-001', projectName: null, totalAmount: 500000, currency: 'CLP' },
           },
-        }
-        return fn(mockTx as never)
-      })
+        ],
+      } as never)
 
       const request = createRequest('PUT', { amount: 200000 })
       await PUT(request, createContext())
 
-      expect(updateMultipleProjectBalances).toHaveBeenCalledWith(['p1'], expect.anything())
+      expect(prisma.$transaction).not.toHaveBeenCalled()
     })
 
-    it('no debe actualizar balance si no hay allocations', async () => {
+    it('debe actualizar pago aunque no haya allocations', async () => {
       const request = createRequest('PUT', { amount: 200000 })
       await PUT(request, createContext())
 
-      expect(updateMultipleProjectBalances).not.toHaveBeenCalled()
+      expect(prisma.payment.update).toHaveBeenCalled()
     })
   })
 
   describe('manejo de errores', () => {
     it('debe retornar 500 cuando transacción falla', async () => {
-      vi.mocked(prisma.$transaction).mockRejectedValue(new Error('Transaction Error'))
+      vi.mocked(prisma.payment.update).mockRejectedValue(new Error('Update Error'))
 
       const request = createRequest('PUT', { amount: 100000 })
       const response = await PUT(request, createContext())
@@ -353,15 +331,15 @@ describe('DELETE /api/payments/[id]', () => {
     })
   })
 
-  describe('actualización de balance', () => {
-    it('debe actualizar balance de proyectos afectados', async () => {
+  describe('balance derivado', () => {
+    it('no recalcula Project.balance al eliminar pago', async () => {
       const request = createRequest('DELETE')
       await DELETE(request, createContext())
 
-      expect(updateMultipleProjectBalances).toHaveBeenCalledWith(['p1', 'p2'], expect.anything())
+      expect(prisma.$transaction).toHaveBeenCalled()
     })
 
-    it('no debe actualizar balance si no hay allocations', async () => {
+    it('debe eliminar aunque no haya allocations', async () => {
       vi.mocked(prisma.payment.findUnique).mockResolvedValue({
         id: VALID_UUID,
         customerId: 'c1',
@@ -370,9 +348,9 @@ describe('DELETE /api/payments/[id]', () => {
       } as never)
 
       const request = createRequest('DELETE')
-      await DELETE(request, createContext())
+      const response = await DELETE(request, createContext())
 
-      expect(updateMultipleProjectBalances).not.toHaveBeenCalled()
+      expect(response.status).toBe(200)
     })
   })
 
@@ -554,39 +532,5 @@ describe('DELETE /api/payments/[id]', () => {
       expect(data.error).toBe('Error al eliminar pago')
     })
 
-    it('debe hacer rollback si recálculo de balance falla', async () => {
-      // updateMultipleProjectBalances lanza error dentro de la transacción
-      vi.mocked(updateMultipleProjectBalances).mockRejectedValue(
-        new Error('Project p1 not found')
-      )
-
-      let mockTxPaymentDelete: ReturnType<typeof vi.fn>
-
-      vi.mocked(prisma.$transaction).mockImplementation(async (fn) => {
-        mockTxPaymentDelete = vi.fn().mockResolvedValue({ id: 'payment-1' })
-        const mockTx = {
-          creditTransaction: {
-            findMany: vi.fn().mockResolvedValue([]),
-            create: vi.fn(),
-          },
-          customer: {
-            update: vi.fn(),
-          },
-          payment: {
-            delete: mockTxPaymentDelete,
-          },
-        }
-        // La transacción ejecuta fn, que lanza error → Prisma hace rollback
-        return fn(mockTx as never)
-      })
-
-      const request = createRequest('DELETE')
-      const response = await DELETE(request, createContext())
-      const data = await response.json()
-
-      // La transacción falla → 500
-      expect(response.status).toBe(500)
-      expect(data.error).toBe('Error al eliminar pago')
-    })
   })
 })

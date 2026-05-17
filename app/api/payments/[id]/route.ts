@@ -3,8 +3,6 @@ import { prisma } from '@/lib/db'
 import { Decimal } from '@prisma/client/runtime/library'
 import { CreditTransactionType } from '@prisma/client'
 import { withApiHandler, BusinessError } from '@/lib/api-handler'
-import { updateMultipleProjectBalances } from '@/lib/business-logic/update-project-balance'
-import type { PrismaTransaction } from '@/lib/db/types'
 import {
   updatePaymentApiSchema,
   type UpdatePaymentApiBody,
@@ -51,58 +49,47 @@ export const PUT = withApiHandler<UpdatePaymentApiBody>(
       )
     }
 
-    // Transacción atómica: actualizar pago + recalcular balances
-    const payment = await prisma.$transaction(async (tx: PrismaTransaction) => {
-      const updated = await tx.payment.update({
-        relationLoadStrategy: 'join',
-        where: { id },
-        data: {
-          ...(body.amount !== undefined && { amount: body.amount }),
-          ...(body.date !== undefined && { date: body.date }),
-          ...(body.paymentMethodId !== undefined && { paymentMethodId: body.paymentMethodId }),
-          ...(body.notes !== undefined && { notes: body.notes?.trim() || null }),
+    const payment = await prisma.payment.update({
+      relationLoadStrategy: 'join',
+      where: { id },
+      data: {
+        ...(body.amount !== undefined && { amount: body.amount }),
+        ...(body.date !== undefined && { date: body.date }),
+        ...(body.paymentMethodId !== undefined && { paymentMethodId: body.paymentMethodId }),
+        ...(body.notes !== undefined && { notes: body.notes?.trim() || null }),
+      },
+      include: {
+        customer: {
+          select: {
+            id: true,
+            name: true,
+            phone: true,
+          },
         },
-        include: {
-          customer: {
-            select: {
-              id: true,
-              name: true,
-              phone: true,
-            },
+        paymentMethod: {
+          select: {
+            id: true,
+            name: true,
+            icon: true,
           },
-          paymentMethod: {
-            select: {
-              id: true,
-              name: true,
-              icon: true,
-            },
-          },
-          allocations: {
-            select: {
-              id: true,
-              allocatedAmount: true,
-              projectId: true,
-              project: {
-                select: {
-                  id: true,
-                  projectNumber: true,
-                  projectName: true,
-                  totalAmount: true,
-                  currency: true,
-                },
+        },
+        allocations: {
+          select: {
+            id: true,
+            allocatedAmount: true,
+            projectId: true,
+            project: {
+              select: {
+                id: true,
+                projectNumber: true,
+                projectName: true,
+                totalAmount: true,
+                currency: true,
               },
             },
           },
         },
-      })
-
-      // Recalcular balances dentro de la transacción
-      if (body.amount !== undefined && updated.allocations.length > 0) {
-        const projectIds = updated.allocations.map((alloc) => alloc.projectId)
-        await updateMultipleProjectBalances(projectIds, tx)
-      }
-
-      return updated
+      },
     })
 
     return NextResponse.json(payment)
@@ -128,7 +115,7 @@ export const DELETE = withApiHandler(
     const { id } = params
     const deleteLogger = logger.child({ operation: 'delete-payment', paymentId: id })
 
-    // Verificar que el pago existe y obtener datos necesarios antes de la transacción
+    // Verificar que el pago existe antes de la transacción
     const existingPayment = await prisma.payment.findUnique({
       where: { id },
       select: {
@@ -149,8 +136,8 @@ export const DELETE = withApiHandler(
 
     const projectIds = existingPayment.allocations.map((alloc) => alloc.projectId)
 
-    // Transacción atómica: revertir créditos + eliminar pago + recalcular balances
-    await prisma.$transaction(async (tx: PrismaTransaction) => {
+    // Transacción atómica: revertir créditos + eliminar pago
+    await prisma.$transaction(async (tx) => {
       // 1. Buscar CreditTransactions asociadas al pago
       const creditTransactions = await tx.creditTransaction.findMany({
         where: { paymentId: id },
@@ -171,9 +158,7 @@ export const DELETE = withApiHandler(
           // - OVERPAYMENT: monto positivo → reversión negativa (resta crédito)
           // - APPLIED: monto negativo → reversión positiva (devuelve crédito)
           const reversalAmount =
-            ct.type === 'OVERPAYMENT'
-              ? -Math.abs(ctAmount)
-              : Math.abs(ctAmount)
+            ct.type === 'OVERPAYMENT' ? -Math.abs(ctAmount) : Math.abs(ctAmount)
 
           deleteLogger.info(
             { transactionId: ct.id, type: ct.type, amount: ctAmount, reversalAmount },
@@ -201,15 +186,9 @@ export const DELETE = withApiHandler(
       await tx.payment.delete({
         where: { id },
       })
-
-      // 4. Recalcular balances de proyectos afectados
-      if (projectIds.length > 0) {
-        await updateMultipleProjectBalances(projectIds, tx)
-      }
-
     })
 
-    deleteLogger.info({ projectsRecalculated: projectIds.length }, 'Payment deleted successfully')
+    deleteLogger.info({ affectedProjects: projectIds.length }, 'Payment deleted successfully')
 
     return NextResponse.json(
       {

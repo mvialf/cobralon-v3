@@ -9,7 +9,10 @@ import { withApiHandler, BusinessError } from '@/lib/api-handler'
 import { parsePaginationParams, buildPaginationResponse } from '@/lib/utils/pagination'
 import { canApplyCredit } from '@/lib/business-logic/credit-management'
 import { generatePrismaInstallmentsCreate } from '@/lib/business-logic/installments'
-import { computePaymentCommission, distributeNetToInstallments } from '@/lib/business-logic/commission'
+import {
+  computePaymentCommission,
+  distributeNetToInstallments,
+} from '@/lib/business-logic/commission'
 import {
   validatePaymentType,
   validateAllocationsSum,
@@ -21,9 +24,9 @@ import {
   createPaymentApiSchema,
   type CreatePaymentApiBody,
 } from '@/lib/validations/payment-validations'
-import { updateMultipleProjectBalances } from '@/lib/business-logic/update-project-balance'
 import type { PrismaTransaction } from '@/lib/db/types'
 import { getCustomerCreditBalance } from '@/lib/business-logic/credit-management'
+import { getProjectsFinancials } from '@/lib/business-logic/project-financials'
 
 /**
  * GET /api/payments
@@ -450,6 +453,12 @@ export const POST = withApiHandler<CreatePaymentApiBody>(
     // CRÉDITO A APLICAR (se valida dentro de la transacción con datos frescos)
     // ========================================================================
     const creditToApply = creditApplied || 0
+    if (creditToApply > 0 && type !== 'Project') {
+      return NextResponse.json(
+        { error: 'El crédito solo puede aplicarse a pagos de proyecto' },
+        { status: 400 }
+      )
+    }
 
     // Crear el pago con sus allocations en una transacción
     const paymentDate = new Date(date)
@@ -476,15 +485,16 @@ export const POST = withApiHandler<CreatePaymentApiBody>(
     )
 
     // ========================================================================
-    // TRANSACCIÓN ATÓMICA: Crear payment + actualizar balances + sobrepagos
+    // TRANSACCIÓN ATÓMICA: Crear payment + aplicar créditos + sobrepagos
     // ========================================================================
     // TODO EL PROCESO ocurre en UNA SOLA transacción para garantizar consistencia:
     // 1. Crear payment con allocations e installments
     // 2. Aplicar crédito si corresponde (creditApplied > 0)
-    // 3. Actualizar balances de todos los proyectos afectados
-    // 4. Detectar sobrepagos y generar créditos automáticamente
+    // 3. Detectar sobrepagos con balance derivado y generar créditos automáticamente
 
     const payment = await prisma.$transaction(async (tx: PrismaTransaction) => {
+      const initialFinancials = await getProjectsFinancials(projectIds, tx)
+
       // ====================================================================
       // PASO 1: Crear el payment con allocations e installments
       // ====================================================================
@@ -499,7 +509,9 @@ export const POST = withApiHandler<CreatePaymentApiBody>(
           reference: reference?.trim() || null,
           notes: notes?.trim() || null,
           selectedInstallments: selectedInstallments || null,
-          commissionAmount: commissionResult ? new Decimal(commissionResult.commissionAmount) : null,
+          commissionAmount: commissionResult
+            ? new Decimal(commissionResult.commissionAmount)
+            : null,
           netAmount: commissionResult ? new Decimal(commissionResult.netAmount) : null,
           commissionRate: commissionResult ? new Decimal(commissionResult.percentageFee) : null,
           commissionFixed: commissionResult ? new Decimal(commissionResult.fixedFee) : null,
@@ -581,22 +593,14 @@ export const POST = withApiHandler<CreatePaymentApiBody>(
       // ====================================================================
       if (creditToApply > 0) {
         // Leer datos DENTRO de la transacción (snapshot consistente)
-        const [customerCreditBalance, creditProject] = await Promise.all([
+        const [customerCreditBalance, projectBalance] = await Promise.all([
           getCustomerCreditBalance(customerId, tx),
-          tx.project.findUnique({
-            where: { id: allocations[0].projectId },
-            select: { balance: true },
-          }),
+          Promise.resolve(initialFinancials.get(allocations[0].projectId)?.balance),
         ])
 
-        if (!creditProject) {
-          throw new BusinessError(
-            'Proyecto no encontrado durante validación de crédito',
-            404
-          )
+        if (projectBalance === undefined) {
+          throw new BusinessError('Proyecto no encontrado durante validación de crédito', 404)
         }
-
-        const projectBalance = Number(creditProject.balance)
 
         // Validar con datos frescos de la transacción
         const creditValidation = canApplyCredit(
@@ -636,57 +640,48 @@ export const POST = withApiHandler<CreatePaymentApiBody>(
       }
 
       // ====================================================================
-      // PASO 3: Actualizar balances de todos los proyectos (en la transacción)
-      // ====================================================================
-      paymentLogger.debug({ projectIds }, 'Updating project balances in transaction')
-
-      await updateMultipleProjectBalances(projectIds, tx)
-
-      paymentLogger.debug('Project balances updated successfully in transaction')
-
-      // ====================================================================
-      // PASO 4: Detectar sobrepagos y generar créditos automáticamente
+      // PASO 3: Detectar sobrepagos y generar créditos automáticamente
       // ====================================================================
       // Si el pago causó que algún proyecto tenga balance negativo (sobrepago),
       // el excedente se convierte automáticamente en crédito del cliente
 
       paymentLogger.debug({ projectIds }, 'Checking for overpayments in transaction')
 
-      // Obtener proyectos actualizados para verificar si hay sobrepago
       const updatedProjects = await tx.project.findMany({
         where: { id: { in: projectIds } },
         select: {
           id: true,
           projectNumber: true,
-          balance: true,
           customerId: true,
         },
       })
+      const allocationByProject = new Map(
+        allocations.map((allocation) => [allocation.projectId, allocation.allocatedAmount])
+      )
 
       for (const project of updatedProjects) {
-        const balance = Number(project.balance)
+        const startingFinancials = initialFinancials.get(project.id)
+        if (!startingFinancials) {
+          throw new BusinessError('Proyecto no encontrado durante validación de sobrepago', 404)
+        }
 
-        // Si el balance es negativo, hay sobrepago
-        if (balance < 0) {
-          const overpaymentAmount = Math.abs(balance)
+        const allocatedAmount = allocationByProject.get(project.id) ?? 0
+        const overpaymentAmount = Math.max(0, allocatedAmount - startingFinancials.balance)
+
+        if (overpaymentAmount > 0) {
+          const rawBalanceAfterPayment = startingFinancials.rawBalance - allocatedAmount
 
           paymentLogger.info(
             {
               projectId: project.id,
               projectNumber: project.projectNumber,
-              negativeBalance: balance,
+              previousBalance: startingFinancials.balance,
+              rawBalanceAfterPayment,
               overpaymentAmount,
             },
             'Overpayment detected - converting to customer credit'
           )
 
-          // 1. Ajustar balance del proyecto a 0 (no puede ser negativo)
-          await tx.project.update({
-            where: { id: project.id },
-            data: { balance: new Decimal(0) },
-          })
-
-          // 2. Crear registro de transacción de crédito
           await tx.creditTransaction.create({
             data: {
               customerId: project.customerId,
@@ -698,7 +693,7 @@ export const POST = withApiHandler<CreatePaymentApiBody>(
               metadata: {
                 paymentAmount: amount,
                 creditApplied: creditToApply,
-                projectBalance: balance,
+                projectBalance: rawBalanceAfterPayment,
                 overpaymentAmount,
                 paymentDate: paymentDate.toISOString(),
               },

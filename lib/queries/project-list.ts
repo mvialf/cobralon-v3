@@ -21,6 +21,11 @@ import {
   ProjectListItem,
   transformRawToProjectListItem,
 } from '@/types/project-list'
+import { FINANCIAL } from '@/lib/constants/financial-constants'
+
+const DERIVED_BALANCE = Prisma.sql`COALESCE(pf.balance, p."totalAmount")`
+const FINANCIALS_JOIN = Prisma.sql`LEFT JOIN "ProjectFinancials" pf ON pf."projectId" = p.id`
+const BALANCE_TOLERANCE = FINANCIAL.BALANCE_TOLERANCE
 
 /**
  * Whitelist de columnas permitidas para ORDER BY.
@@ -32,8 +37,8 @@ const SORT_COLUMN_MAP: Record<string, Prisma.Sql> = {
   date: Prisma.sql`p.date`,
   total: Prisma.sql`p."totalAmount"`,
   totalAmount: Prisma.sql`p."totalAmount"`,
-  totalPaid: Prisma.sql`(p."totalAmount" - p.balance)`,
-  balance: Prisma.sql`p.balance`,
+  totalPaid: Prisma.sql`COALESCE(pf."allocatedTotal", 0)`,
+  balance: DERIVED_BALANCE,
   projectNumber: Prisma.sql`p."projectNumber"`,
   projectStatus: Prisma.sql`ps.name`,
 }
@@ -60,7 +65,12 @@ export async function queryProjectList(filters: ProjectListFilters): Promise<Pro
       p.date,
       p.subtotal,
       p."taxRate",
-      p.balance,
+      p.id as "projectId",
+      COALESCE(pf."allocatedTotal", 0) as "allocatedTotal",
+      COALESCE(pf."adjustmentTotal", 0) as "adjustmentTotal",
+      COALESCE(pf."rawBalance", p."totalAmount") as "rawBalance",
+      ${DERIVED_BALANCE} as balance,
+      COALESCE(pf.overpayment, 0) as overpayment,
       p."windowsCount",
       p."squareMeters",
       p.description,
@@ -79,13 +89,14 @@ export async function queryProjectList(filters: ProjectListFilters): Promise<Pro
     INNER JOIN "Customer" c ON p."customerId" = c.id
     LEFT JOIN "ProjectStatus" ps ON p."projectStatusId" = ps.id
     LEFT JOIN "BadgeColor" bc ON ps."colorId" = bc.id
+    ${FINANCIALS_JOIN}
     WHERE 1=1
       ${filters.customerId ? Prisma.sql`AND p."customerId" = ${filters.customerId}` : Prisma.empty}
       ${filters.actualStatusIds.length > 0 && !filters.filterByNullStatus ? Prisma.sql`AND p."projectStatusId"::text = ANY(${filters.actualStatusIds})` : Prisma.empty}
       ${filters.filterByNullStatus && filters.actualStatusIds.length === 0 ? Prisma.sql`AND p."projectStatusId" IS NULL` : Prisma.empty}
       ${filters.filterByNullStatus && filters.actualStatusIds.length > 0 ? Prisma.sql`AND (p."projectStatusId" IS NULL OR p."projectStatusId"::text = ANY(${filters.actualStatusIds}))` : Prisma.empty}
-      ${filters.projectState === 'Finalizado' ? Prisma.sql`AND (p.balance = 0 AND ps."isFinal" = true)` : Prisma.empty}
-      ${filters.projectState === 'Activo' ? Prisma.sql`AND (p.balance > 0 OR ps."isFinal" IS NOT TRUE)` : Prisma.empty}
+      ${filters.projectState === 'Finalizado' ? Prisma.sql`AND (${DERIVED_BALANCE} <= ${BALANCE_TOLERANCE} AND ps."isFinal" = true)` : Prisma.empty}
+      ${filters.projectState === 'Activo' ? Prisma.sql`AND (${DERIVED_BALANCE} > ${BALANCE_TOLERANCE} OR ps."isFinal" IS NOT TRUE)` : Prisma.empty}
       ${
         filters.search
           ? Prisma.sql`AND (
@@ -117,13 +128,14 @@ export async function countProjects(filters: ProjectListFilters): Promise<number
     FROM "Project" p
     INNER JOIN "Customer" c ON p."customerId" = c.id
     LEFT JOIN "ProjectStatus" ps ON p."projectStatusId" = ps.id
+    ${FINANCIALS_JOIN}
     WHERE 1=1
       ${filters.customerId ? Prisma.sql`AND p."customerId" = ${filters.customerId}` : Prisma.empty}
       ${filters.actualStatusIds.length > 0 && !filters.filterByNullStatus ? Prisma.sql`AND p."projectStatusId"::text = ANY(${filters.actualStatusIds})` : Prisma.empty}
       ${filters.filterByNullStatus && filters.actualStatusIds.length === 0 ? Prisma.sql`AND p."projectStatusId" IS NULL` : Prisma.empty}
       ${filters.filterByNullStatus && filters.actualStatusIds.length > 0 ? Prisma.sql`AND (p."projectStatusId" IS NULL OR p."projectStatusId"::text = ANY(${filters.actualStatusIds}))` : Prisma.empty}
-      ${filters.projectState === 'Finalizado' ? Prisma.sql`AND (p.balance = 0 AND ps."isFinal" = true)` : Prisma.empty}
-      ${filters.projectState === 'Activo' ? Prisma.sql`AND (p.balance > 0 OR ps."isFinal" IS NOT TRUE)` : Prisma.empty}
+      ${filters.projectState === 'Finalizado' ? Prisma.sql`AND (${DERIVED_BALANCE} <= ${BALANCE_TOLERANCE} AND ps."isFinal" = true)` : Prisma.empty}
+      ${filters.projectState === 'Activo' ? Prisma.sql`AND (${DERIVED_BALANCE} > ${BALANCE_TOLERANCE} OR ps."isFinal" IS NOT TRUE)` : Prisma.empty}
       ${
         filters.search
           ? Prisma.sql`AND (
@@ -156,10 +168,11 @@ export async function getStatusFacets(
     FROM "Project" p
     INNER JOIN "Customer" c ON p."customerId" = c.id
     LEFT JOIN "ProjectStatus" ps ON p."projectStatusId" = ps.id
+    ${FINANCIALS_JOIN}
     WHERE 1=1
       ${filters.customerId ? Prisma.sql`AND p."customerId" = ${filters.customerId}` : Prisma.empty}
-      ${filters.projectState === 'Finalizado' ? Prisma.sql`AND (p.balance = 0 AND ps."isFinal" = true)` : Prisma.empty}
-      ${filters.projectState === 'Activo' ? Prisma.sql`AND (p.balance > 0 OR ps."isFinal" IS NOT TRUE)` : Prisma.empty}
+      ${filters.projectState === 'Finalizado' ? Prisma.sql`AND (${DERIVED_BALANCE} <= ${BALANCE_TOLERANCE} AND ps."isFinal" = true)` : Prisma.empty}
+      ${filters.projectState === 'Activo' ? Prisma.sql`AND (${DERIVED_BALANCE} > ${BALANCE_TOLERANCE} OR ps."isFinal" IS NOT TRUE)` : Prisma.empty}
       ${
         filters.search
           ? Prisma.sql`AND (
@@ -190,13 +203,14 @@ export async function getStateFacets(
   const rows = await prisma.$queryRaw<ProjectFacetRow[]>`
     SELECT
       CASE
-        WHEN p.balance = 0 AND ps."isFinal" = true THEN 'Finalizado'
+        WHEN ${DERIVED_BALANCE} <= ${BALANCE_TOLERANCE} AND ps."isFinal" = true THEN 'Finalizado'
         ELSE 'Activo'
       END as value,
       COUNT(*)::bigint as count
     FROM "Project" p
     INNER JOIN "Customer" c ON p."customerId" = c.id
     LEFT JOIN "ProjectStatus" ps ON p."projectStatusId" = ps.id
+    ${FINANCIALS_JOIN}
     WHERE 1=1
       ${filters.customerId ? Prisma.sql`AND p."customerId" = ${filters.customerId}` : Prisma.empty}
       ${filters.actualStatusIds.length > 0 && !filters.filterByNullStatus ? Prisma.sql`AND p."projectStatusId"::text = ANY(${filters.actualStatusIds})` : Prisma.empty}
@@ -214,7 +228,7 @@ export async function getStateFacets(
       }
     GROUP BY
       CASE
-        WHEN p.balance = 0 AND ps."isFinal" = true THEN 'Finalizado'
+        WHEN ${DERIVED_BALANCE} <= ${BALANCE_TOLERANCE} AND ps."isFinal" = true THEN 'Finalizado'
         ELSE 'Activo'
       END
     ORDER BY count DESC

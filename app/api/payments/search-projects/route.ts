@@ -1,6 +1,19 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { withLogging } from '@/lib/logger-middleware'
+import { FINANCIAL } from '@/lib/constants/financial-constants'
+
+interface ProjectSearchRow {
+  id: string
+  projectNumber: string
+  projectName: string | null
+  totalAmount: unknown
+  currency: string
+  balance: unknown
+  createdAt: Date
+  customerId: string
+  customerName: string
+}
 
 /**
  * GET /api/payments/search-projects
@@ -31,39 +44,31 @@ export const GET = withLogging(async (request, logger) => {
       )
     }
 
-    // Búsqueda normalizada (sin acentos, case-insensitive) via normalize_text() de PostgreSQL
-    const matchingIds = await prisma.$queryRaw<Array<{ id: string }>>`
-      SELECT p.id
+    const projects = await prisma.$queryRaw<ProjectSearchRow[]>`
+      SELECT
+        p.id,
+        p."projectNumber",
+        p."projectName",
+        p."totalAmount",
+        p.currency,
+        p."createdAt",
+        pf.balance,
+        c.id as "customerId",
+        c.name as "customerName"
       FROM "Project" p
+      JOIN "ProjectFinancials" pf ON pf."projectId" = p.id
       JOIN "Customer" c ON c.id = p."customerId"
       WHERE p."totalAmount" > 0
-        AND p.balance > 1
+        AND pf.balance > ${FINANCIAL.BALANCE_TOLERANCE}
         AND (
           normalize_text(p."projectNumber") LIKE normalize_text(${`%${q}%`})
           OR normalize_text(COALESCE(p."projectName", '')) LIKE normalize_text(${`%${q}%`})
           OR normalize_text(c.name) LIKE normalize_text(${`%${q}%`})
         )
+      ORDER BY p."createdAt" DESC
       LIMIT ${limit}
     `
 
-    const projects = matchingIds.length > 0
-      ? await prisma.project.findMany({
-          where: { id: { in: matchingIds.map((r) => r.id) } },
-          include: {
-            customer: {
-              select: {
-                id: true,
-                name: true,
-              },
-            },
-          },
-          orderBy: {
-            createdAt: 'desc',
-          },
-        })
-      : []
-
-    // Mapear respuesta (balance ya filtrado en DB)
     const projectsWithBalance = projects.map((project) => ({
       id: project.id,
       projectNumber: project.projectNumber,
@@ -71,10 +76,10 @@ export const GET = withLogging(async (request, logger) => {
       totalAmount: Number(project.totalAmount),
       currency: project.currency,
       balance: Number(project.balance),
-      createdAt: project.createdAt, // Para FIFO (si se necesita)
+      createdAt: project.createdAt,
       customer: {
-        id: project.customer.id,
-        name: project.customer.name,
+        id: project.customerId,
+        name: project.customerName,
       },
     }))
 

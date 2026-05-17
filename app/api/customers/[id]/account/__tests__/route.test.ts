@@ -37,6 +37,7 @@ vi.mock('@/lib/db', () => ({
     customer: {
       findUnique: vi.fn(),
     },
+    $queryRaw: vi.fn(),
   },
 }))
 
@@ -74,8 +75,8 @@ describe('GET /api/customers/[id]/account', () => {
     vi.mocked(prisma.customer.findUnique).mockResolvedValue({
       id: 'customer-1',
       name: 'Juan Pérez',
-      projects: [],
     } as never)
+    vi.mocked(prisma.$queryRaw).mockResolvedValue([])
 
     const response = await GET(createRequest(), createParams('customer-1'))
     const data = await response.json()
@@ -90,12 +91,14 @@ describe('GET /api/customers/[id]/account', () => {
     vi.mocked(prisma.customer.findUnique).mockResolvedValue({
       id: 'customer-1',
       name: 'Test Customer',
-      projects: [
+    } as never)
+    vi.mocked(prisma.$queryRaw).mockResolvedValue([
         {
           id: 'project-1',
           projectNumber: 'P-001',
           projectName: 'Mi Proyecto',
           totalAmount: new Decimal(1190000),
+          allocatedTotal: new Decimal(500000),
           balance: new Decimal(690000),
           currency: 'CLP',
         },
@@ -104,11 +107,11 @@ describe('GET /api/customers/[id]/account', () => {
           projectNumber: 'P-002',
           projectName: null,
           totalAmount: new Decimal(500000),
+          allocatedTotal: new Decimal(0),
           balance: new Decimal(500000),
           currency: 'CLP',
         },
-      ],
-    } as never)
+      ])
 
     const response = await GET(createRequest(), createParams('customer-1'))
     const data = await response.json()
@@ -125,17 +128,18 @@ describe('GET /api/customers/[id]/account', () => {
     vi.mocked(prisma.customer.findUnique).mockResolvedValue({
       id: 'customer-1',
       name: 'Test',
-      projects: [
+    } as never)
+    vi.mocked(prisma.$queryRaw).mockResolvedValue([
         {
           id: 'project-1',
           projectNumber: 'P-001',
           projectName: 'Test',
           totalAmount: new Decimal(1000000),
+          allocatedTotal: new Decimal(300000),
           balance: new Decimal(700000),
           currency: 'CLP',
         },
-      ],
-    } as never)
+      ])
 
     const response = await GET(createRequest(), createParams('customer-1'))
     const data = await response.json()
@@ -147,17 +151,18 @@ describe('GET /api/customers/[id]/account', () => {
     vi.mocked(prisma.customer.findUnique).mockResolvedValue({
       id: 'customer-1',
       name: 'Test',
-      projects: [
+    } as never)
+    vi.mocked(prisma.$queryRaw).mockResolvedValue([
         {
           id: 'project-1',
           projectNumber: 'P-001',
           projectName: null,
           totalAmount: new Decimal(1000000),
+          allocatedTotal: new Decimal(0),
           balance: new Decimal(1000000),
           currency: 'CLP',
         },
-      ],
-    } as never)
+      ])
 
     const response = await GET(createRequest(), createParams('customer-1'))
     const data = await response.json()

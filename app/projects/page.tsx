@@ -3,8 +3,9 @@ export const dynamic = 'force-dynamic'
 import { dehydrate, HydrationBoundary, QueryClient } from '@tanstack/react-query'
 import { prisma } from '@/lib/db'
 import { serialize } from '@/lib/utils/serialize'
-import { getActiveProjectsWhere } from '@/lib/business-logic/project-state'
-import { derivePaymentProgress } from '@/lib/business-logic/project-balance'
+import { buildPaginationResponse } from '@/lib/utils/pagination'
+import { countProjects, queryProjectList } from '@/lib/queries/project-list'
+import type { ProjectListFilters } from '@/types/project-list'
 import { ProjectsPageClient } from './page-client'
 
 /**
@@ -18,65 +19,22 @@ async function getInitialProjects() {
   const limit = 50
   const page = 1
 
-  // Filtrar proyectos activos usando función centralizada (lib/business-logic/project-state.ts)
-  // Definición canónica: isFinal=false OR projectStatus=null OR balance>0
-  const activeWhere = getActiveProjectsWhere()
+  const filters: ProjectListFilters = {
+    page,
+    limit,
+    search: '',
+    customerId: '',
+    statusIds: [],
+    filterByNullStatus: false,
+    actualStatusIds: [],
+    projectState: 'Activo',
+  }
 
-  const [rawProjects, total] = await Promise.all([
-    prisma.project.findMany({
-      take: limit,
-      skip: 0,
-      orderBy: { createdAt: 'desc' },
-      where: activeWhere,
-      include: {
-        customer: {
-          select: {
-            id: true,
-            name: true,
-            phone: true,
-          },
-        },
-        projectStatus: {
-          select: {
-            id: true,
-            name: true,
-            isFinal: true,
-            color: {
-              select: {
-                id: true,
-                bgClass: true,
-              },
-            },
-          },
-        },
-      },
-    }),
-    prisma.project.count({
-      where: activeWhere,
-    }),
-  ])
-
-  // Agregar campos calculados (igual que transformRawToProjectListItem)
-  const projects = rawProjects.map((p) => {
-    const { totalPaid, percentPaid } = derivePaymentProgress(
-      Number(p.totalAmount),
-      Number(p.balance)
-    )
-    return {
-      ...p,
-      totalPaid,
-      percentPaid,
-    }
-  })
+  const [projects, total] = await Promise.all([queryProjectList(filters), countProjects(filters)])
 
   return serialize({
     projects,
-    pagination: {
-      page,
-      limit,
-      total,
-      totalPages: Math.ceil(total / limit),
-    },
+    pagination: buildPaginationResponse(page, limit, total),
   })
 }
 

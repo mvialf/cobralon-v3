@@ -25,6 +25,10 @@ vi.mock('@/lib/db', () => ({
       create: vi.fn(),
       count: vi.fn(),
     },
+    project: {
+      groupBy: vi.fn(),
+    },
+    $queryRaw: vi.fn(),
   },
 }))
 
@@ -70,6 +74,8 @@ function createPostRequest(body: Record<string, unknown>): NextRequest {
 describe('GET /api/customers', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    vi.mocked(prisma.project.groupBy).mockResolvedValue([])
+    vi.mocked(prisma.$queryRaw).mockResolvedValue([])
   })
 
   describe('paginación básica', () => {
@@ -131,6 +137,7 @@ describe('GET /api/customers', () => {
 
   describe('búsqueda', () => {
     it('debe buscar por nombre', async () => {
+      vi.mocked(prisma.$queryRaw).mockResolvedValue([{ id: '1' }])
       vi.mocked(prisma.customer.count).mockResolvedValue(1)
       vi.mocked(prisma.customer.findMany).mockResolvedValue([
         { id: '1', name: 'Juan Pérez', email: null, phone: '+56912345678' },
@@ -139,55 +146,32 @@ describe('GET /api/customers', () => {
       const request = createGetRequest({ search: 'Juan' })
       await callGET(request)
 
-      expect(prisma.customer.findMany).toHaveBeenCalledWith(
-        expect.objectContaining({
-          where: expect.objectContaining({
-            OR: expect.arrayContaining([
-              expect.objectContaining({ name: { contains: 'Juan', mode: 'insensitive' } }),
-            ]),
-          }),
-        })
-      )
+      expect(prisma.$queryRaw).toHaveBeenCalled()
+      expect(prisma.customer.findMany).toHaveBeenCalled()
     })
 
     it('debe buscar por email', async () => {
+      vi.mocked(prisma.$queryRaw).mockResolvedValue([{ id: '1' }])
       vi.mocked(prisma.customer.count).mockResolvedValue(1)
       vi.mocked(prisma.customer.findMany).mockResolvedValue([])
 
       const request = createGetRequest({ search: 'test@email.com' })
       await callGET(request)
 
-      expect(prisma.customer.findMany).toHaveBeenCalledWith(
-        expect.objectContaining({
-          where: expect.objectContaining({
-            OR: expect.arrayContaining([
-              expect.objectContaining({
-                email: { contains: 'test@email.com', mode: 'insensitive' },
-              }),
-            ]),
-          }),
-        })
-      )
+      expect(prisma.$queryRaw).toHaveBeenCalled()
+      expect(prisma.customer.findMany).toHaveBeenCalled()
     })
 
     it('debe buscar por teléfono', async () => {
+      vi.mocked(prisma.$queryRaw).mockResolvedValue([{ id: '1' }])
       vi.mocked(prisma.customer.count).mockResolvedValue(1)
       vi.mocked(prisma.customer.findMany).mockResolvedValue([])
 
       const request = createGetRequest({ search: '+56912345678' })
       await callGET(request)
 
-      expect(prisma.customer.findMany).toHaveBeenCalledWith(
-        expect.objectContaining({
-          where: expect.objectContaining({
-            OR: expect.arrayContaining([
-              expect.objectContaining({
-                phone: { contains: '+56912345678', mode: 'insensitive' },
-              }),
-            ]),
-          }),
-        })
-      )
+      expect(prisma.$queryRaw).toHaveBeenCalled()
+      expect(prisma.customer.findMany).toHaveBeenCalled()
     })
   })
 

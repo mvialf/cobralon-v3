@@ -34,8 +34,8 @@ const projectStateSchema = projectStateValues.default('Activo')
  *   - customerId: filtrar por cliente específico
  *   - statusIds: IDs de status separados por coma (o "null" para sin estado)
  *   - projectState: "Activo" (default), "Finalizado", "all"
- *       - "Activo": Proyectos no finalizados (status.isFinal = false OR balance > 0)
- *       - "Finalizado": Proyectos finalizados (status.isFinal = true AND balance = 0)
+ *       - "Activo": Proyectos no finalizados (status.isFinal = false OR balance derivado > tolerancia)
+ *       - "Finalizado": Proyectos finalizados (status.isFinal = true AND balance derivado <= tolerancia)
  *       - "all": Todos los proyectos
  *
  * Response incluye:
@@ -264,7 +264,6 @@ export const POST = withApiHandler<CreateProjectApiBody>(
           subtotal: new Decimal(subtotal),
           taxRate: new Decimal(finalTaxRate),
           totalAmount: new Decimal(finalTotalAmount),
-          balance: new Decimal(finalTotalAmount),
           currency: currency || 'CLP',
           windowsCount: windowsCount || 0,
           squareMeters: new Decimal(squareMeters || 0),

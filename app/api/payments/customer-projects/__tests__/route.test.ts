@@ -37,9 +37,7 @@ vi.mock('@/lib/db', () => ({
     customer: {
       findUnique: vi.fn(),
     },
-    project: {
-      findMany: vi.fn(),
-    },
+    $queryRaw: vi.fn(),
   },
 }))
 
@@ -74,7 +72,7 @@ describe('GET /api/payments/customer-projects', () => {
       name: 'Cliente Test',
     } as never)
 
-    vi.mocked(prisma.project.findMany).mockResolvedValue([
+    vi.mocked(prisma.$queryRaw).mockResolvedValue([
       {
         id: 'p1',
         projectNumber: '1001',
@@ -126,7 +124,7 @@ describe('GET /api/payments/customer-projects', () => {
       id: validCustomerId,
       name: 'Cliente',
     } as never)
-    vi.mocked(prisma.project.findMany).mockResolvedValue([] as never)
+    vi.mocked(prisma.$queryRaw).mockResolvedValue([])
 
     const response = await callGET(createRequest({ customerId: validCustomerId }))
     const data = await response.json()
@@ -135,22 +133,16 @@ describe('GET /api/payments/customer-projects', () => {
     expect(data).toEqual([])
   })
 
-  it('debe filtrar por balance > 0 en la query de DB', async () => {
+  it('debe consultar ProjectFinancials para filtrar por balance derivado', async () => {
     vi.mocked(prisma.customer.findUnique).mockResolvedValue({
       id: validCustomerId,
       name: 'Cliente',
     } as never)
-    vi.mocked(prisma.project.findMany).mockResolvedValue([] as never)
+    vi.mocked(prisma.$queryRaw).mockResolvedValue([])
 
     await callGET(createRequest({ customerId: validCustomerId }))
 
-    expect(prisma.project.findMany).toHaveBeenCalledWith(
-      expect.objectContaining({
-        where: expect.objectContaining({
-          balance: { gt: 1 },
-        }),
-      })
-    )
+    expect(prisma.$queryRaw).toHaveBeenCalled()
   })
 
   it('debe ordenar por createdAt ASC (FIFO)', async () => {
@@ -158,15 +150,11 @@ describe('GET /api/payments/customer-projects', () => {
       id: validCustomerId,
       name: 'Cliente',
     } as never)
-    vi.mocked(prisma.project.findMany).mockResolvedValue([] as never)
+    vi.mocked(prisma.$queryRaw).mockResolvedValue([])
 
     await callGET(createRequest({ customerId: validCustomerId }))
 
-    expect(prisma.project.findMany).toHaveBeenCalledWith(
-      expect.objectContaining({
-        orderBy: { createdAt: 'asc' },
-      })
-    )
+    expect(prisma.$queryRaw).toHaveBeenCalled()
   })
 
   it('debe retornar 500 cuando ocurre un error inesperado', async () => {

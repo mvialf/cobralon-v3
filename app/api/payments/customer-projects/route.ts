@@ -5,6 +5,18 @@ import { FINANCIAL } from '@/lib/constants/financial-constants'
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
+interface CustomerProjectRow {
+  id: string
+  projectNumber: string
+  projectName: string | null
+  totalAmount: unknown
+  currency: string
+  balance: unknown
+  createdAt: Date
+  customerId: string
+  customerName: string
+}
+
 /**
  * GET /api/payments/customer-projects
  *
@@ -33,17 +45,25 @@ export const GET = withApiHandler(
       throw new BusinessError('Cliente no encontrado', 404)
     }
 
-    const projects = await prisma.project.findMany({
-      where: {
-        customerId,
-        totalAmount: { gt: 0 },
-        balance: { gt: FINANCIAL.BALANCE_TOLERANCE },
-      },
-      include: {
-        customer: { select: { id: true, name: true } },
-      },
-      orderBy: { createdAt: 'asc' },
-    })
+    const projects = await prisma.$queryRaw<CustomerProjectRow[]>`
+      SELECT
+        p.id,
+        p."projectNumber",
+        p."projectName",
+        p."totalAmount",
+        p.currency,
+        p."createdAt",
+        pf.balance,
+        c.id as "customerId",
+        c.name as "customerName"
+      FROM "Project" p
+      JOIN "ProjectFinancials" pf ON pf."projectId" = p.id
+      JOIN "Customer" c ON c.id = p."customerId"
+      WHERE p."customerId" = ${customerId}
+        AND p."totalAmount" > 0
+        AND pf.balance > ${FINANCIAL.BALANCE_TOLERANCE}
+      ORDER BY p."createdAt" ASC
+    `
 
     const projectsWithBalance = projects.map((project) => ({
       id: project.id,
@@ -54,8 +74,8 @@ export const GET = withApiHandler(
       balance: Number(project.balance),
       createdAt: project.createdAt,
       customer: {
-        id: project.customer.id,
-        name: project.customer.name,
+        id: project.customerId,
+        name: project.customerName,
       },
     }))
 

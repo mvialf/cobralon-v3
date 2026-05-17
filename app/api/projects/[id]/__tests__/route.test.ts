@@ -2,8 +2,8 @@
  * Tests para app/api/projects/[id]/route.ts (GET/PUT/DELETE endpoints)
  *
  * Valida:
- * - GET: Obtención con balance calculado, UUID validation
- * - PUT: Validaciones Zod, recálculo de total/balance, seguridad totalAmount
+ * - GET: Obtención con balance derivado, UUID validation
+ * - PUT: Validaciones Zod, recálculo de total, seguridad totalAmount
  * - DELETE: Eliminación exitosa, UUID validation
  */
 
@@ -45,21 +45,13 @@ vi.mock('@/lib/db', () => ({
     paymentAllocation: {
       aggregate: vi.fn(),
     },
+    $queryRaw: vi.fn(),
     projectUninstallTag: {
       deleteMany: vi.fn(),
       createMany: vi.fn(),
     },
     $transaction: vi.fn(),
   },
-}))
-
-// Mock de business logic (derivePaymentProgress se usa en GET)
-vi.mock('@/lib/business-logic/project-balance', () => ({
-  derivePaymentProgress: vi.fn().mockReturnValue({
-    totalPaid: 500000,
-    percentPaid: 42,
-    isFullyPaid: false,
-  }),
 }))
 
 vi.mock('@/lib/business-logic/totals', () => ({
@@ -69,7 +61,6 @@ vi.mock('@/lib/business-logic/totals', () => ({
 }))
 
 import { prisma } from '@/lib/db'
-import { derivePaymentProgress } from '@/lib/business-logic/project-balance'
 import { calculateProjectTotal } from '@/lib/business-logic/totals'
 import { GET, PUT, DELETE } from '../route'
 
@@ -117,9 +108,19 @@ const mockProject = {
   uninstallTags: [],
 }
 
+const mockFinancialsRow = {
+  projectId: VALID_UUID,
+  allocatedTotal: new Decimal(500000),
+  adjustmentTotal: new Decimal(0),
+  rawBalance: new Decimal(690000),
+  balance: new Decimal(690000),
+  overpayment: new Decimal(0),
+}
+
 describe('GET /api/projects/[id]', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    vi.mocked(prisma.$queryRaw).mockResolvedValue([mockFinancialsRow])
   })
 
   it('debe retornar 400 para UUID inválido', async () => {
@@ -142,7 +143,7 @@ describe('GET /api/projects/[id]', () => {
     expect(data.error).toBe('Proyecto no encontrado')
   })
 
-  it('debe retornar proyecto con balance calculado', async () => {
+  it('debe retornar proyecto con balance derivado', async () => {
     vi.mocked(prisma.project.findUnique).mockResolvedValue(mockProject as never)
 
     const request = createRequest('GET')
@@ -155,13 +156,13 @@ describe('GET /api/projects/[id]', () => {
     expect(data.percentPaid).toBeDefined()
   })
 
-  it('debe llamar a derivePaymentProgress', async () => {
+  it('debe consultar ProjectFinancials', async () => {
     vi.mocked(prisma.project.findUnique).mockResolvedValue(mockProject as never)
 
     const request = createRequest('GET')
     await GET(request, createParams(VALID_UUID))
 
-    expect(derivePaymentProgress).toHaveBeenCalled()
+    expect(prisma.$queryRaw).toHaveBeenCalled()
   })
 
   it('debe convertir Decimal a number en respuesta', async () => {
@@ -199,6 +200,7 @@ describe('PUT /api/projects/[id]', () => {
       const mockTx = {
         project: {
           update: vi.fn().mockResolvedValue({ id: 'project-1' }),
+          $queryRaw: vi.fn().mockResolvedValue([mockFinancialsRow]),
           findUnique: vi.fn().mockResolvedValue({
             ...mockProject,
             customer: mockProject.customer,
@@ -282,8 +284,8 @@ describe('PUT /api/projects/[id]', () => {
     })
   })
 
-  describe('recálculo de balance', () => {
-    it('debe recalcular balance cuando cambia totalAmount', async () => {
+  describe('balance derivado', () => {
+    it('no debe escribir balance cuando cambia totalAmount', async () => {
       let updateData: Record<string, unknown> | null = null
       vi.mocked(prisma.$transaction).mockImplementation(async (fn) => {
         const mockTx = {
@@ -294,6 +296,7 @@ describe('PUT /api/projects/[id]', () => {
             }),
             findUnique: vi.fn().mockResolvedValue(mockProject),
           },
+          $queryRaw: vi.fn().mockResolvedValue([mockFinancialsRow]),
           projectUninstallTag: {
             deleteMany: vi.fn().mockResolvedValue({ count: 0 }),
             createMany: vi.fn().mockResolvedValue({ count: 0 }),
@@ -305,10 +308,10 @@ describe('PUT /api/projects/[id]', () => {
       const request = createRequest('PUT', { subtotal: 2000000 })
       await PUT(request, createParams(VALID_UUID))
 
-      expect(updateData?.['balance']).toBeDefined()
+      expect(updateData?.['balance']).toBeUndefined()
     })
 
-    it('debe usar allocations existentes para calcular balance', async () => {
+    it('debe leer ProjectFinancials para responder con balance derivado', async () => {
       vi.mocked(prisma.paymentAllocation.aggregate).mockResolvedValue({
         _sum: { allocatedAmount: new Decimal(500000) },
       } as never)
@@ -316,12 +319,7 @@ describe('PUT /api/projects/[id]', () => {
       const request = createRequest('PUT', { subtotal: 2000000 })
       await PUT(request, createParams(VALID_UUID))
 
-      expect(prisma.paymentAllocation.aggregate).toHaveBeenCalledWith(
-        expect.objectContaining({
-          where: { projectId: VALID_UUID },
-          _sum: { allocatedAmount: true },
-        })
-      )
+      expect(prisma.$queryRaw).toHaveBeenCalled()
     })
   })
 
@@ -385,6 +383,7 @@ describe('PUT /api/projects/[id]', () => {
             update: vi.fn().mockResolvedValue({ id: 'project-1' }),
             findUnique: vi.fn().mockResolvedValue(mockProject),
           },
+          $queryRaw: vi.fn().mockResolvedValue([mockFinancialsRow]),
           projectUninstallTag: {
             deleteMany: vi.fn().mockImplementation(() => {
               deletedTags = true
@@ -419,6 +418,7 @@ describe('PUT /api/projects/[id]', () => {
             update: vi.fn().mockResolvedValue({ id: 'project-1' }),
             findUnique: vi.fn().mockResolvedValue(mockProject),
           },
+          $queryRaw: vi.fn().mockResolvedValue([mockFinancialsRow]),
           projectUninstallTag: {
             deleteMany: vi.fn().mockImplementation(() => {
               deletedTags = true

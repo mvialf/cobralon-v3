@@ -1,7 +1,16 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
-import { derivePaymentProgress } from '@/lib/business-logic/project-balance'
 import { withLogging } from '@/lib/logger-middleware'
+
+interface CustomerAccountProjectRow {
+  id: string
+  projectNumber: string
+  projectName: string | null
+  totalAmount: unknown
+  currency: string
+  allocatedTotal: unknown
+  balance: unknown
+}
 
 /**
  * GET /api/customers/[id]/account
@@ -25,20 +34,11 @@ export const GET = withLogging(async (_request, logger, context) => {
   try {
     const { id } = await context.params
 
-    // Obtener cliente con sus proyectos
     const customer = await prisma.customer.findUnique({
       where: { id },
       select: {
         id: true,
         name: true,
-        projects: {
-          where: {
-            totalAmount: { gt: 0 }, // Solo proyectos con monto definido
-          },
-          orderBy: {
-            createdAt: 'asc', // Más antiguos primero
-          },
-        },
       },
     })
 
@@ -46,23 +46,31 @@ export const GET = withLogging(async (_request, logger, context) => {
       return NextResponse.json({ error: 'Cliente no encontrado' }, { status: 404 })
     }
 
-    // Derivar campos de display desde balance persistido
-    const projectsWithBalance = customer.projects.map((project) => {
-      const { totalPaid } = derivePaymentProgress(
-        Number(project.totalAmount),
-        Number(project.balance)
-      )
+    const projects = await prisma.$queryRaw<CustomerAccountProjectRow[]>`
+      SELECT
+        p.id,
+        p."projectNumber",
+        p."projectName",
+        p."totalAmount",
+        p.currency,
+        pf."allocatedTotal",
+        pf.balance
+      FROM "Project" p
+      JOIN "ProjectFinancials" pf ON pf."projectId" = p.id
+      WHERE p."customerId" = ${id}
+        AND p."totalAmount" > 0
+      ORDER BY p."createdAt" ASC
+    `
 
-      return {
-        id: project.id,
-        projectNumber: project.projectNumber,
-        projectName: project.projectName,
-        totalAmount: Number(project.totalAmount),
-        totalPaid,
-        balance: Number(project.balance),
-        currency: project.currency,
-      }
-    })
+    const projectsWithBalance = projects.map((project) => ({
+      id: project.id,
+      projectNumber: project.projectNumber,
+      projectName: project.projectName,
+      totalAmount: Number(project.totalAmount),
+      totalPaid: Number(project.allocatedTotal),
+      balance: Number(project.balance),
+      currency: project.currency,
+    }))
 
     return NextResponse.json({
       customer: {

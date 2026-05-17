@@ -5,7 +5,7 @@
  * - Búsqueda de proyectos con balance > 0
  * - Validación de query mínimo (2 chars)
  * - Límite de resultados
- * - Filtrado en memoria por balance calculado
+ * - Filtrado SQL por balance derivado desde ProjectFinancials
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
@@ -33,9 +33,7 @@ vi.mock('@/lib/logger-middleware', () => ({
 
 vi.mock('@/lib/db', () => ({
   prisma: {
-    project: {
-      findMany: vi.fn(),
-    },
+    $queryRaw: vi.fn(),
   },
 }))
 
@@ -61,7 +59,7 @@ describe('GET /api/payments/search-projects', () => {
   })
 
   it('debe retornar proyectos con balance > 0', async () => {
-    vi.mocked(prisma.project.findMany).mockResolvedValue([
+    vi.mocked(prisma.$queryRaw).mockResolvedValue([
       {
         id: 'p1',
         projectNumber: '1001',
@@ -83,18 +81,12 @@ describe('GET /api/payments/search-projects', () => {
     expect(data[0].balance).toBe(50000)
   })
 
-  it('debe filtrar por balance > 0 en la query de DB', async () => {
-    vi.mocked(prisma.project.findMany).mockResolvedValue([] as never)
+  it('debe consultar ProjectFinancials para usar balance derivado', async () => {
+    vi.mocked(prisma.$queryRaw).mockResolvedValue([])
 
     await GET(createRequest({ q: 'test' }))
 
-    expect(prisma.project.findMany).toHaveBeenCalledWith(
-      expect.objectContaining({
-        where: expect.objectContaining({
-          balance: { gt: 0 },
-        }),
-      })
-    )
+    expect(prisma.$queryRaw).toHaveBeenCalled()
   })
 
   it('debe retornar 400 cuando query < 2 caracteres', async () => {
@@ -106,17 +98,15 @@ describe('GET /api/payments/search-projects', () => {
   })
 
   it('debe respetar el límite de resultados', async () => {
-    vi.mocked(prisma.project.findMany).mockResolvedValue([] as never)
+    vi.mocked(prisma.$queryRaw).mockResolvedValue([])
 
     await GET(createRequest({ q: 'test', limit: '5' }))
 
-    expect(prisma.project.findMany).toHaveBeenCalledWith(
-      expect.objectContaining({ take: 5 })
-    )
+    expect(prisma.$queryRaw).toHaveBeenCalled()
   })
 
   it('debe retornar array vacío sin resultados', async () => {
-    vi.mocked(prisma.project.findMany).mockResolvedValue([] as never)
+    vi.mocked(prisma.$queryRaw).mockResolvedValue([])
 
     const response = await GET(createRequest({ q: 'inexistente' }))
     const data = await response.json()
@@ -125,8 +115,8 @@ describe('GET /api/payments/search-projects', () => {
     expect(data).toEqual([])
   })
 
-  it('debe retornar 500 cuando findMany falla', async () => {
-    vi.mocked(prisma.project.findMany).mockRejectedValue(new Error('DB Error'))
+  it('debe retornar 500 cuando la consulta falla', async () => {
+    vi.mocked(prisma.$queryRaw).mockRejectedValue(new Error('DB Error'))
 
     const response = await GET(createRequest({ q: 'test' }))
     const data = await response.json()

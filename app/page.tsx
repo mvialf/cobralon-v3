@@ -6,7 +6,6 @@ import { Badge } from '@/components/ui/badge'
 import { prisma } from '@/lib/db'
 import { formatCurrency, formatDate } from '@/lib/format'
 import { getInstallmentStatus } from '@/lib/business-logic/installments'
-import { derivePaymentProgress } from '@/lib/business-logic/project-balance'
 import { ProjectNameSummary } from '@/components/summarys/project-name-summary'
 import { DashboardList } from '@/components/summarys/dashboard-list'
 
@@ -71,30 +70,41 @@ async function getUpcomingInstallments() {
 }
 
 async function getRecentProjects() {
-  const projects = await prisma.project.findMany({
-    orderBy: { date: 'desc' },
-    take: 15,
-    select: {
-      id: true,
-      projectNumber: true,
-      projectName: true,
-      totalAmount: true,
-      balance: true,
-      currency: true,
-      customer: { select: { name: true } },
-    },
-  })
+  const projects = await prisma.$queryRaw<
+    Array<{
+      id: string
+      projectNumber: string
+      projectName: string | null
+      totalAmount: unknown
+      allocatedTotal: unknown
+      currency: string
+      customerName: string
+    }>
+  >`
+    SELECT
+      p.id,
+      p."projectNumber",
+      p."projectName",
+      p."totalAmount",
+      pf."allocatedTotal",
+      p.currency,
+      c.name AS "customerName"
+    FROM "Project" p
+    JOIN "ProjectFinancials" pf ON pf."projectId" = p.id
+    JOIN "Customer" c ON c.id = p."customerId"
+    ORDER BY p.date DESC
+    LIMIT 15
+  `
 
   return projects.map((p) => {
     const total = Number(p.totalAmount)
-    const { totalPaid } = derivePaymentProgress(total, Number(p.balance))
     return {
       id: p.id,
       projectNumber: p.projectNumber,
       projectName: p.projectName,
-      customerName: p.customer.name,
+      customerName: p.customerName,
       total,
-      totalPaid,
+      totalPaid: Number(p.allocatedTotal),
       currency: p.currency,
     }
   })

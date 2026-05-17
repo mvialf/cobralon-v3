@@ -5,7 +5,7 @@
  */
 
 import { Decimal } from '@prisma/client/runtime/library'
-import { derivePaymentProgress } from '@/lib/business-logic/project-balance'
+import { mapProjectFinancials } from '@/lib/business-logic/project-financials'
 
 /**
  * Resultado raw de la query SQL para listado de proyectos
@@ -27,6 +27,11 @@ export interface ProjectListRawRow {
   subtotal: Decimal
   taxRate: Decimal
   balance: Decimal
+  projectId: string
+  allocatedTotal: Decimal
+  adjustmentTotal: Decimal
+  rawBalance: Decimal
+  overpayment: Decimal
   windowsCount: number
   squareMeters: Decimal
   description: string | null
@@ -125,9 +130,8 @@ export interface ProjectListFilters {
  * Transforma una fila raw a ProjectListItem
  */
 export function transformRawToProjectListItem(row: ProjectListRawRow): ProjectListItem {
+  const financials = mapProjectFinancials(row)
   const totalAmount = Number(row.totalAmount)
-  const balance = Number(row.balance)
-  const { totalPaid, percentPaid } = derivePaymentProgress(totalAmount, balance)
 
   return {
     id: row.id,
@@ -143,9 +147,9 @@ export function transformRawToProjectListItem(row: ProjectListRawRow): ProjectLi
     date: row.date,
     subtotal: Number(row.subtotal),
     taxRate: Number(row.taxRate),
-    balance,
-    totalPaid,
-    percentPaid,
+    balance: financials.balance,
+    totalPaid: financials.totalPaid,
+    percentPaid: financials.percentPaid,
     windowsCount: row.windowsCount,
     squareMeters: Number(row.squareMeters),
     description: row.description,

@@ -29,6 +29,7 @@ vi.mock('@/lib/logger-middleware', () => ({
 
 vi.mock('@/lib/db', () => ({
   prisma: {
+    $queryRaw: vi.fn(),
     visit: {
       findMany: vi.fn(),
     },
@@ -57,6 +58,7 @@ describe('GET /api/visits/search-active', () => {
   })
 
   it('debe retornar visitas activas', async () => {
+    vi.mocked(prisma.$queryRaw).mockResolvedValue([{ id: 'v-1' }])
     vi.mocked(prisma.visit.findMany).mockResolvedValue([
       {
         id: 'v-1',

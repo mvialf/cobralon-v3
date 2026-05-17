@@ -6,7 +6,7 @@ import {
   createProjectAdjustmentSchema,
   type CreateProjectAdjustmentInput,
 } from '@/lib/validations/project-adjustment-validations'
-import { updateProjectBalanceWithAdjustments } from '@/lib/business-logic/update-project-balance'
+import { getProjectFinancials } from '@/lib/business-logic/project-financials'
 
 /**
  * GET /api/projects/[id]/adjustments
@@ -54,7 +54,6 @@ export const GET = withApiHandler(
  * POST /api/projects/[id]/adjustments
  *
  * Crea un nuevo ajuste para el proyecto
- * Recalcula automáticamente el balance del proyecto
  */
 export const POST = withApiHandler<CreateProjectAdjustmentInput>(
   async (_request, _logger, { params, body }) => {
@@ -65,8 +64,6 @@ export const POST = withApiHandler<CreateProjectAdjustmentInput>(
       where: { id: params.id },
       select: {
         id: true,
-        balance: true,
-        totalAmount: true,
       },
     })
 
@@ -74,22 +71,20 @@ export const POST = withApiHandler<CreateProjectAdjustmentInput>(
       throw new BusinessError('Proyecto no encontrado', 404)
     }
 
-    // Validar que el ajuste no haga el balance negativo
-    // (a menos que ya sea negativo por sobrepago)
-    const currentBalance = Number(project.balance)
-    const newBalance = currentBalance - amount
-
-    if (newBalance < -0.01 && currentBalance > 0) {
-      throw new BusinessError(
-        `El ajuste excede el balance. Máximo ajuste permitido: ${currentBalance.toFixed(2)}`,
-        400
-      )
-    }
-
-    // Crear el ajuste y actualizar el balance en una transacción
     const adjustment = await prisma.$transaction(async (tx) => {
-      // 1. Crear el ajuste
-      const newAdjustment = await tx.projectAdjustment.create({
+      const financials = await getProjectFinancials(params.id, tx)
+      if (!financials) {
+        throw new BusinessError('Proyecto no encontrado', 404)
+      }
+
+      if (amount - financials.balance > 0.01) {
+        throw new BusinessError(
+          `El ajuste excede el balance. Máximo ajuste permitido: ${financials.balance.toFixed(2)}`,
+          400
+        )
+      }
+
+      return tx.projectAdjustment.create({
         data: {
           projectId: params.id,
           amount: new Decimal(amount),
@@ -99,11 +94,6 @@ export const POST = withApiHandler<CreateProjectAdjustmentInput>(
           appliedAt: appliedAt || new Date(),
         },
       })
-
-      // 2. Actualizar el balance del proyecto
-      await updateProjectBalanceWithAdjustments(params.id, tx)
-
-      return newAdjustment
     })
 
     return NextResponse.json(

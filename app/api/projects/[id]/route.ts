@@ -2,10 +2,10 @@ import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { Decimal } from '@prisma/client/runtime/library'
 import { ProjectUpdateInput } from '@/types/api'
-import { derivePaymentProgress } from '@/lib/business-logic/project-balance'
 import { calculateProjectTotal } from '@/lib/business-logic/totals'
 import { FINANCIAL } from '@/lib/constants/financial-constants'
 import { withApiHandler, BusinessError } from '@/lib/api-handler'
+import { getProjectFinancials } from '@/lib/business-logic/project-financials'
 import {
   updateProjectApiSchema,
   type UpdateProjectApiBody,
@@ -44,19 +44,17 @@ export const GET = withApiHandler(
       throw new BusinessError('Proyecto no encontrado', 404)
     }
 
-    const { totalPaid, percentPaid } = derivePaymentProgress(
-      Number(project.totalAmount),
-      Number(project.balance)
-    )
+    const financials = await getProjectFinancials(id)
+    if (!financials) {
+      throw new BusinessError('Datos financieros del proyecto no encontrados', 404)
+    }
 
     logger.info({ projectId: id }, 'Project fetched successfully')
 
     return NextResponse.json({
       ...project,
       totalAmount: Number(project.totalAmount),
-      balance: Number(project.balance),
-      totalPaid,
-      percentPaid,
+      ...financials,
     })
   },
   {
@@ -93,8 +91,6 @@ export const PUT = withApiHandler<UpdateProjectApiBody>(
 
     // SEGURIDAD: Siempre recalcular total en el servidor cuando cambian subtotal/taxRate
     let updatedTotalAmount: Decimal | undefined
-    let updatedBalance: Decimal | undefined
-
     if (body.subtotal !== undefined || body.taxRate !== undefined) {
       const subtotal = body.subtotal ?? existingProject.subtotal.toNumber()
       const taxRate = body.taxRate ?? existingProject.taxRate.toNumber()
@@ -118,19 +114,6 @@ export const PUT = withApiHandler<UpdateProjectApiBody>(
       }
     }
 
-    // Si cambia el totalAmount, recalcular el balance
-    const finalTotalAmount = updatedTotalAmount ?? existingProject.totalAmount
-
-    if (updatedTotalAmount !== undefined) {
-      const allocationsSum = await prisma.paymentAllocation.aggregate({
-        where: { projectId: id },
-        _sum: { allocatedAmount: true },
-      })
-      const totalPaid = allocationsSum._sum.allocatedAmount?.toNumber() || 0
-      const newTotalAmount = finalTotalAmount.toNumber()
-      updatedBalance = new Decimal(newTotalAmount - totalPaid)
-    }
-
     // Preparar datos para actualizar
     const updateData: ProjectUpdateInput = {}
 
@@ -151,7 +134,6 @@ export const PUT = withApiHandler<UpdateProjectApiBody>(
     if (body.subtotal !== undefined) updateData.subtotal = new Decimal(body.subtotal)
     if (body.taxRate !== undefined) updateData.taxRate = new Decimal(body.taxRate)
     if (updatedTotalAmount !== undefined) updateData.totalAmount = updatedTotalAmount
-    if (updatedBalance !== undefined) updateData.balance = updatedBalance
     if (body.currency !== undefined) updateData.currency = body.currency
     if (body.windowsCount !== undefined) updateData.windowsCount = body.windowsCount
     if (body.squareMeters !== undefined) updateData.squareMeters = new Decimal(body.squareMeters)
@@ -188,7 +170,13 @@ export const PUT = withApiHandler<UpdateProjectApiBody>(
 
     logger.info({ projectId: id }, 'Project updated successfully')
 
-    return NextResponse.json(project)
+    const financials = await getProjectFinancials(id)
+
+    return NextResponse.json({
+      ...project,
+      ...(project && { totalAmount: Number(project.totalAmount) }),
+      ...(financials ?? {}),
+    })
   },
   {
     bodySchema: updateProjectApiSchema,

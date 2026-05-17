@@ -72,10 +72,11 @@ export const updateVisitEventSchema = z.object({
 export const createProjectEventWithProjectUpdateSchema = z.object({
   // Datos del evento
   projectId: z.string().uuid('ID de proyecto inválido'),
-  scheduledDate: z.coerce.date({
-    required_error: 'La fecha es requerida',
-    invalid_type_error: 'Fecha inválida',
-  }),
+  scheduledDate: z
+    .string()
+    .min(1, 'La fecha es requerida')
+    .or(z.date())
+    .pipe(z.coerce.date({ invalid_type_error: 'Fecha inválida' })),
   tasks: todoListOptionalSchema.optional(),
 
   // Datos del proyecto (validación consistente con project-validations.ts)

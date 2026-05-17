@@ -7,7 +7,7 @@ import { parsePaginationParams, buildPaginationResponse } from '@/lib/utils/pagi
 import { withApiHandler, BusinessError } from '@/lib/api-handler'
 import { customerSchema, type CustomerFormData } from '@/lib/validations/customer-validations'
 import { getCustomerCreditBalances } from '@/lib/business-logic/credit-management'
-import { getActiveProjectsWhere } from '@/lib/business-logic/project-state'
+import { FINANCIAL } from '@/lib/constants/financial-constants'
 
 /**
  * GET /api/customers
@@ -76,18 +76,23 @@ export const GET = withLogging(async (request, logger) => {
         where: { customerId: { in: customerIds } },
         _count: true,
       }),
-      prisma.project.groupBy({
-        by: ['customerId'],
-        where: {
-          customerId: { in: customerIds },
-          ...getActiveProjectsWhere(),
-        },
-        _count: true,
-      }),
+      customerIds.length > 0
+        ? prisma.$queryRaw<Array<{ customerId: string; count: bigint }>>`
+            SELECT p."customerId", COUNT(*)::bigint AS count
+            FROM "Project" p
+            JOIN "ProjectFinancials" pf ON pf."projectId" = p.id
+            LEFT JOIN "ProjectStatus" ps ON ps.id = p."projectStatusId"
+            WHERE p."customerId"::text = ANY(${customerIds})
+              AND (pf.balance > ${FINANCIAL.BALANCE_TOLERANCE} OR ps."isFinal" IS NOT TRUE)
+            GROUP BY p."customerId"
+          `
+        : Promise.resolve([]),
     ])
 
     const totalProjectsMap = new Map(projectCounts.map((r) => [r.customerId, r._count]))
-    const activeProjectsMap = new Map(activeProjectCounts.map((r) => [r.customerId, r._count]))
+    const activeProjectsMap = new Map(
+      activeProjectCounts.map((r) => [r.customerId, Number(r.count)])
+    )
 
     const customersWithCredit = customers.map((c) => ({
       ...c,
