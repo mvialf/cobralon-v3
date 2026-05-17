@@ -25,9 +25,14 @@ prisma/migrations/*
 !prisma/migrations/.gitkeep
 !prisma/migrations/20260517120000_create_project_financials_view/
 !prisma/migrations/20260517120000_create_project_financials_view/migration.sql
+!prisma/migrations/20260517123000_add_project_applications/
+!prisma/migrations/20260517123000_add_project_applications/migration.sql
 
 # vercel
 .vercel
+
+# codex local config
+.codex/config.toml
 
 # typescript
 *.tsbuildinfo

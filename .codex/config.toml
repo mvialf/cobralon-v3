@@ -1,5 +1,6 @@
 [mcp_servers.neon]
 url = "https://mcp.neon.tech/mcp"
+bearer_token_env_var = "NEON_API_KEY"
 
 [mcp_servers.vercel]
 url = "https://mcp.vercel.com/mvialf-7000s-projects/cobralon"
