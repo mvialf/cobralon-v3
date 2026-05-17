@@ -4,10 +4,8 @@ import { AppLayout } from '@/components/layout/app-layout'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { prisma } from '@/lib/db'
-import { formatCurrency, formatDate } from '@/lib/format'
-import { getInstallmentStatus } from '@/lib/business-logic/installments'
-import { ProjectNameSummary } from '@/components/summarys/project-name-summary'
-import { DashboardList } from '@/components/summarys/dashboard-list'
+import { formatCurrency } from '@/lib/format'
+import { DashboardActivityList } from '@/components/summarys/dashboard-activity-list'
 
 async function getMonthlySales() {
   const now = new Date()
@@ -60,8 +58,7 @@ async function getUpcomingInstallments() {
     id: inst.id,
     installmentNumber: inst.installmentNumber,
     amount: Number(inst.amount),
-    dueDate: inst.dueDate,
-    status: getInstallmentStatus(inst.dueDate),
+    dueDate: inst.dueDate.toISOString(),
     customerName: inst.payment.customer.name,
     project: inst.payment.allocations[0]?.project ?? null,
     currency: inst.payment.currency,
@@ -120,7 +117,6 @@ async function getRecentPayments() {
       currency: true,
       date: true,
       customer: { select: { name: true } },
-      paymentMethod: { select: { name: true } },
       allocations: {
         take: 1,
         select: {
@@ -136,9 +132,8 @@ async function getRecentPayments() {
     id: p.id,
     amount: Number(p.amount),
     currency: p.currency,
-    date: p.date,
+    date: p.date.toISOString(),
     customerName: p.customer.name,
-    paymentMethod: p.paymentMethod.name,
     project: p.allocations[0]?.project ?? null,
   }))
 }
@@ -160,13 +155,13 @@ export default async function HomePage() {
           gridTemplateRows: 'repeat(8, 1fr)',
           gridTemplateAreas: `
             "a a a a c c d d d"
-            "f f f g g g d d d"
-            "f f f g g g d d d"
-            "f f f g g g d d d"
-            "f f f g g g d d d"
-            "f f f g g g d d d"
-            "f f f g g g d d d"
-            "f f f g g g d d d"
+            ". . . . . . d d d"
+            ". . . . . . d d d"
+            ". . . . . . d d d"
+            ". . . . . . d d d"
+            ". . . . . . d d d"
+            ". . . . . . d d d"
+            ". . . . . . d d d"
           `,
         }}
       >
@@ -199,121 +194,11 @@ export default async function HomePage() {
           </CardContent>
         </Card>
 
-        {/* Proximas cuotas */}
-        <DashboardList
-          title="Proximas Cuotas"
-          headerRight={(() => {
-            const now = new Date()
-            const total = installments
-              .filter((inst) => {
-                const d = new Date(inst.dueDate)
-                return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear()
-              })
-              .reduce((sum, inst) => sum + inst.amount, 0)
-            return total > 0 ? (
-              <span className="text-sm font-medium">{formatCurrency(total)}</span>
-            ) : null
-          })()}
+        <DashboardActivityList
           gridArea="d"
-          linkHref="/payments/installments"
-          linkLabel="Ver todas las cuotas"
-          emptyMessage="Sin cuotas pendientes"
-          items={installments.map((inst, idx) => ({
-            id: `${inst.id}-${idx}`,
-            left: inst.project ? (
-              <ProjectNameSummary
-                projectId={inst.project.id}
-                projectNumber={inst.project.projectNumber}
-                customerName={inst.customerName}
-                projectName={inst.project.projectName}
-                size="xs"
-                variant="dashboard"
-              />
-            ) : (
-              <span>{inst.customerName}</span>
-            ),
-            right: (
-              <div className="flex items-end">
-                <div className="flex items-center justify-end px-0 text-lg">
-                  {inst.installmentNumber}/{inst.selectedInstallments || '?'}
-                </div>
-                <div className="flex flex-col items-center justify-end">
-                  <div className="px-1 font-bold text-sm">
-                    {formatCurrency(inst.amount, inst.currency)}
-                  </div>
-                  <div className="px-1 text-xs text-muted-foreground">
-                    {formatDate(inst.dueDate, 'short')}
-                  </div>
-                </div>
-              </div>
-            ),
-          }))}
-        />
-
-        {/* Nuevos proyectos */}
-        <DashboardList
-          title="Nuevos Proyectos"
-          gridArea="f"
-          linkHref="/projects"
-          linkLabel="Ver todos los proyectos"
-          emptyMessage="Sin proyectos recientes"
-          items={recentProjects.map((proj) => ({
-            id: proj.id,
-            left: (
-              <ProjectNameSummary
-                projectId={proj.id}
-                projectNumber={proj.projectNumber}
-                customerName={proj.customerName}
-                projectName={proj.projectName}
-                size="xs"
-                variant="dashboard"
-              />
-            ),
-            right: (
-              <div className="flex flex-col items-end justify-center">
-                <div className="px-1 font-bold text-sm">
-                  {formatCurrency(proj.total, proj.currency)}
-                </div>
-                <div className="px-1 text-xs text-muted-foreground">
-                  {formatCurrency(proj.totalPaid, proj.currency)}
-                </div>
-              </div>
-            ),
-          }))}
-        />
-
-        {/* Ultimos pagos */}
-        <DashboardList
-          title="Ultimos Pagos"
-          gridArea="g"
-          linkHref="/payments"
-          linkLabel="Ver todos los pagos"
-          emptyMessage="Sin pagos recientes"
-          items={recentPayments.map((pay) => ({
-            id: pay.id,
-            left: pay.project ? (
-              <ProjectNameSummary
-                projectId={pay.project.id}
-                projectNumber={pay.project.projectNumber}
-                customerName={pay.customerName}
-                projectName={pay.project.projectName}
-                size="xs"
-                variant="dashboard"
-              />
-            ) : (
-              <span className="text-xs">{pay.customerName}</span>
-            ),
-            right: (
-              <div className="flex flex-col items-end justify-center">
-                <div className="px-1 font-bold text-sm">
-                  {formatCurrency(pay.amount, pay.currency)}
-                </div>
-                <div className="px-1 text-xs text-muted-foreground">
-                  {formatDate(pay.date, 'short')}
-                </div>
-              </div>
-            ),
-          }))}
+          installments={installments}
+          recentProjects={recentProjects}
+          recentPayments={recentPayments}
         />
       </div>
     </AppLayout>
