@@ -4,6 +4,7 @@ import { withLogging } from '@/lib/logger-middleware'
 import { type ParsedPaymentRow } from '@/lib/excel/payment-parser'
 import { Decimal } from '@prisma/client/runtime/library'
 import { getProjectFinancials } from '@/lib/business-logic/project-financials'
+import { IMPORT_EXPORT_LIMITS } from '@/lib/constants/import-export-limits'
 
 /**
  * POST /api/payments/import
@@ -24,6 +25,17 @@ export const POST = withLogging(async (request, logger) => {
     if (!Array.isArray(payments) || payments.length === 0) {
       logger.warn('Invalid or empty payments array')
       return NextResponse.json({ error: 'Debe proporcionar un array de pagos' }, { status: 400 })
+    }
+
+    if (payments.length > IMPORT_EXPORT_LIMITS.MAX_IMPORT_ROWS) {
+      logger.warn({ count: payments.length }, 'Payment import row limit exceeded')
+      return NextResponse.json(
+        {
+          error: `No se pueden importar más de ${IMPORT_EXPORT_LIMITS.MAX_IMPORT_ROWS} pagos por archivo`,
+          limit: IMPORT_EXPORT_LIMITS.MAX_IMPORT_ROWS,
+        },
+        { status: 413 }
+      )
     }
 
     logger.debug({ count: payments.length }, 'Processing payments')
@@ -152,7 +164,9 @@ export const POST = withLogging(async (request, logger) => {
         const payment = await prisma.$transaction(async (tx) => {
           const financials = await getProjectFinancials(project.id, tx)
           if (!financials) {
-            throw new Error(`No se pudo calcular balance del proyecto "${paymentData.projectNumber}"`)
+            throw new Error(
+              `No se pudo calcular balance del proyecto "${paymentData.projectNumber}"`
+            )
           }
 
           // Crear Payment
@@ -263,7 +277,9 @@ export const POST = withLogging(async (request, logger) => {
     )
 
     if (failureCount > 0) {
-      const failures = results.filter((r) => !r.success)
+      const failures = results
+        .filter((r) => !r.success)
+        .slice(0, IMPORT_EXPORT_LIMITS.MAX_ERROR_DETAILS)
 
       return NextResponse.json(
         {
@@ -271,6 +287,7 @@ export const POST = withLogging(async (request, logger) => {
           imported: successCount,
           failed: failureCount,
           errors: failures,
+          totalErrors: failureCount,
           message: `Se importaron ${successCount} pagos, pero ${failureCount} fallaron.`,
         },
         { status: 207 } // Multi-status

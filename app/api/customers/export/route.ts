@@ -4,6 +4,7 @@ import { generateCustomersExcelBuffer } from '@/lib/excel/customer-exporter'
 import { logger } from '@/lib/logger'
 import { anyFieldMatchesSearch } from '@/lib/utils/normalize'
 import { getCustomerCreditBalances } from '@/lib/business-logic/credit-management'
+import { IMPORT_EXPORT_LIMITS } from '@/lib/constants/import-export-limits'
 
 /**
  * GET /api/customers/export
@@ -22,9 +23,48 @@ export async function GET(request: Request) {
   logger.info({ search: search || undefined }, 'Customer export requested')
 
   try {
+    let filteredCustomerIds: string[] | null = null
+    let totalCustomers: number
+
+    if (search) {
+      const countRows = await prisma.$queryRaw<Array<{ count: bigint }>>`
+        SELECT COUNT(*)::bigint AS count
+        FROM "Customer" c
+        WHERE normalize_text(c.name) LIKE normalize_text(${`%${search}%`})
+           OR normalize_text(COALESCE(c.email, '')) LIKE normalize_text(${`%${search}%`})
+           OR normalize_text(c.phone) LIKE normalize_text(${`%${search}%`})
+      `
+      totalCustomers = Number(countRows[0]?.count ?? 0)
+      const idRows = await prisma.$queryRaw<Array<{ id: string }>>`
+        SELECT c.id
+        FROM "Customer" c
+        WHERE normalize_text(c.name) LIKE normalize_text(${`%${search}%`})
+           OR normalize_text(COALESCE(c.email, '')) LIKE normalize_text(${`%${search}%`})
+           OR normalize_text(c.phone) LIKE normalize_text(${`%${search}%`})
+        ORDER BY c."createdAt" DESC
+        LIMIT ${IMPORT_EXPORT_LIMITS.MAX_EXPORT_ROWS}
+      `
+      filteredCustomerIds = idRows.map((row) => row.id)
+    } else {
+      totalCustomers = await prisma.customer.count()
+    }
+
+    if (totalCustomers > IMPORT_EXPORT_LIMITS.MAX_EXPORT_ROWS) {
+      return NextResponse.json(
+        {
+          error: `La exportación excede el límite de ${IMPORT_EXPORT_LIMITS.MAX_EXPORT_ROWS} clientes. Use filtros o solicite una exportación segmentada.`,
+          limit: IMPORT_EXPORT_LIMITS.MAX_EXPORT_ROWS,
+          total: totalCustomers,
+        },
+        { status: 413 }
+      )
+    }
+
     // Obtener TODOS los clientes con conteo de proyectos
     const allCustomers = await prisma.customer.findMany({
+      where: filteredCustomerIds ? { id: { in: filteredCustomerIds } } : undefined,
       orderBy: { createdAt: 'desc' },
+      take: IMPORT_EXPORT_LIMITS.MAX_EXPORT_ROWS,
       include: {
         _count: {
           select: { projects: true },
@@ -32,13 +72,14 @@ export async function GET(request: Request) {
       },
     })
 
-    // Filtrar con búsqueda normalizada (ignora acentos/tildes)
-    // "jose" encontrará "José", "garcia" encontrará "García"
-    const customers = search
-      ? allCustomers.filter((customer) =>
-          anyFieldMatchesSearch([customer.name, customer.email, customer.phone], search)
-        )
-      : allCustomers
+    // Fallback para entornos de test sin normalize_text mockeado en $queryRaw.
+    const customers = filteredCustomerIds
+      ? allCustomers
+      : search
+        ? allCustomers.filter((customer) =>
+            anyFieldMatchesSearch([customer.name, customer.email, customer.phone], search)
+          )
+        : allCustomers
 
     logger.info({ count: customers.length }, 'Customers fetched for export')
 

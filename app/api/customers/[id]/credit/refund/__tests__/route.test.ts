@@ -52,11 +52,18 @@ vi.mock('@/lib/db', () => ({
 // Mock de business logic
 vi.mock('@/lib/business-logic/credit-management', () => ({
   canRefundCredit: vi.fn(),
-  getCustomerCreditBalance: vi.fn().mockResolvedValue(50000),
+  getCustomerCreditBalanceDetails: vi
+    .fn()
+    .mockResolvedValue({ rawBalance: 50000, availableBalance: 50000 }),
+  lockCustomerCreditBalance: vi.fn().mockResolvedValue(true),
 }))
 
 import { prisma } from '@/lib/db'
-import { canRefundCredit } from '@/lib/business-logic/credit-management'
+import {
+  canRefundCredit,
+  getCustomerCreditBalanceDetails,
+  lockCustomerCreditBalance,
+} from '@/lib/business-logic/credit-management'
 import { POST } from '../route'
 
 const VALID_UUID = '00000000-0000-0000-0000-000000000001'
@@ -93,9 +100,14 @@ describe('POST /api/customers/[id]/credit/refund', () => {
     } as never)
 
     vi.mocked(canRefundCredit).mockReturnValue({ valid: true })
+    vi
+      .mocked(getCustomerCreditBalanceDetails)
+      .mockResolvedValue({ rawBalance: 50000, availableBalance: 50000 })
+    vi.mocked(lockCustomerCreditBalance).mockResolvedValue(true)
 
     vi.mocked(prisma.$transaction).mockImplementation(async (fn) => {
       const mockTx = {
+        $queryRaw: vi.fn(),
         customer: {
           findUnique: vi.fn().mockResolvedValue({
             id: VALID_UUID,
@@ -242,9 +254,11 @@ describe('POST /api/customers/[id]/credit/refund', () => {
   describe('transacción atómica', () => {
     it('debe recalcular creditBalance desde ledger en transacción', async () => {
       let transactionFnCalled = false
+      let txUsedForBalance: unknown = null
       vi.mocked(prisma.$transaction).mockImplementation(async (fn) => {
         transactionFnCalled = true
         const mockTx = {
+          $queryRaw: vi.fn(),
           customer: {
             findUnique: vi.fn().mockResolvedValue({
               id: VALID_UUID,
@@ -256,6 +270,10 @@ describe('POST /api/customers/[id]/credit/refund', () => {
             aggregate: vi.fn().mockResolvedValue({ _sum: { amount: new Prisma.Decimal(50000) } }),
           },
         }
+        vi.mocked(getCustomerCreditBalanceDetails).mockImplementation(async (_customerId, db) => {
+          txUsedForBalance = db
+          return { rawBalance: 50000, availableBalance: 50000 }
+        })
         return fn(mockTx as never)
       })
 
@@ -263,13 +281,85 @@ describe('POST /api/customers/[id]/credit/refund', () => {
       await POST(request, createParams())
 
       expect(transactionFnCalled).toBe(true)
-      // creditBalance se calcula en tiempo real desde ledger
+      expect(txUsedForBalance).toBeDefined()
+      expect(lockCustomerCreditBalance).toHaveBeenCalled()
+    })
+
+    it('debe validar el saldo dentro de la transacción antes de crear el retiro', async () => {
+      let insideTransaction = false
+      let canRefundCalledInsideTransaction = false
+      const createMock = vi.fn()
+
+      vi.mocked(getCustomerCreditBalanceDetails).mockResolvedValue({
+        rawBalance: 40000,
+        availableBalance: 40000,
+      })
+      vi.mocked(canRefundCredit).mockImplementation(() => {
+        canRefundCalledInsideTransaction = insideTransaction
+        return {
+          valid: false,
+          error: 'El monto excede el crédito disponible ($40.000)',
+        }
+      })
+      vi.mocked(prisma.$transaction).mockImplementation(async (fn) => {
+        const mockTx = {
+          $queryRaw: vi.fn(),
+          customer: {
+            findUnique: vi.fn(),
+          },
+          creditTransaction: {
+            create: createMock,
+          },
+        }
+        insideTransaction = true
+        try {
+          return await fn(mockTx as never)
+        } finally {
+          insideTransaction = false
+        }
+      })
+
+      const request = createRequest({ ...validPayload, amount: 50000 })
+      const response = await POST(request, createParams())
+      const data = await response.json()
+
+      expect(response.status).toBe(400)
+      expect(data.error).toContain('excede el crédito disponible')
+      expect(canRefundCalledInsideTransaction).toBe(true)
+      expect(createMock).not.toHaveBeenCalled()
+    })
+
+    it('debe rechazar si no puede bloquear el cliente dentro de la transacción', async () => {
+      const createMock = vi.fn()
+      vi.mocked(lockCustomerCreditBalance).mockResolvedValue(false)
+      vi.mocked(prisma.$transaction).mockImplementation(async (fn) => {
+        const mockTx = {
+          $queryRaw: vi.fn(),
+          customer: {
+            findUnique: vi.fn(),
+          },
+          creditTransaction: {
+            create: createMock,
+          },
+        }
+        return fn(mockTx as never)
+      })
+
+      const request = createRequest(validPayload)
+      const response = await POST(request, createParams())
+      const data = await response.json()
+
+      expect(response.status).toBe(404)
+      expect(data.error).toBe('Cliente no encontrado')
+      expect(getCustomerCreditBalanceDetails).not.toHaveBeenCalled()
+      expect(createMock).not.toHaveBeenCalled()
     })
 
     it('debe crear CreditTransaction con tipo WITHDRAWAL', async () => {
       let createdTransaction: Record<string, unknown> | null = null
       vi.mocked(prisma.$transaction).mockImplementation(async (fn) => {
         const mockTx = {
+          $queryRaw: vi.fn(),
           customer: {
             findUnique: vi.fn().mockResolvedValue({
               id: VALID_UUID,
@@ -299,6 +389,7 @@ describe('POST /api/customers/[id]/credit/refund', () => {
       let createdTransaction: Record<string, unknown> | null = null
       vi.mocked(prisma.$transaction).mockImplementation(async (fn) => {
         const mockTx = {
+          $queryRaw: vi.fn(),
           customer: {
             findUnique: vi.fn().mockResolvedValue({
               id: VALID_UUID,
@@ -326,6 +417,10 @@ describe('POST /api/customers/[id]/credit/refund', () => {
 
   describe('respuesta exitosa', () => {
     it('debe retornar customer actualizado y transaction', async () => {
+      vi.mocked(getCustomerCreditBalanceDetails)
+        .mockResolvedValueOnce({ rawBalance: 100000, availableBalance: 100000 })
+        .mockResolvedValueOnce({ rawBalance: 50000, availableBalance: 50000 })
+
       const request = createRequest(validPayload)
       const response = await POST(request, createParams())
       const data = await response.json()
@@ -333,6 +428,9 @@ describe('POST /api/customers/[id]/credit/refund', () => {
       expect(response.status).toBe(200)
       expect(data.success).toBe(true)
       expect(data.customer).toBeDefined()
+      expect(data.customer.rawBalance).toBe(50000)
+      expect(data.customer.availableBalance).toBe(50000)
+      expect(data.customer.creditBalance).toBe(50000)
       expect(data.transaction).toBeDefined()
     })
 

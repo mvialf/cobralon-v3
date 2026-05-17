@@ -13,7 +13,10 @@ import type { NextRequest } from 'next/server'
 import { NextResponse } from 'next/server'
 import type pino from 'pino'
 import { ZodError, type ZodType, type ZodTypeDef } from 'zod'
+import { auth } from './auth'
 import { withLogging } from './logger-middleware'
+
+const MAX_ZOD_ISSUES = 5
 
 /**
  * Error de negocio con status HTTP específico.
@@ -78,8 +81,12 @@ export function handleApiError(
 
   // ZodError → 400 con detalles de validación
   if (error instanceof ZodError) {
-    logger.warn({ zodErrors: error.errors }, 'Validation failed')
-    return NextResponse.json({ error: 'Datos inválidos', details: error.errors }, { status: 400 })
+    const details = error.errors.slice(0, MAX_ZOD_ISSUES)
+    logger.warn({ zodErrors: details, totalZodErrors: error.errors.length }, 'Validation failed')
+    return NextResponse.json(
+      { error: 'Datos inválidos', details, totalErrors: error.errors.length },
+      { status: 400 }
+    )
   }
 
   // Prisma known errors
@@ -121,13 +128,25 @@ interface ApiHandlerOptions<TBody> {
   bodySchema?: ZodType<TBody, ZodTypeDef, unknown>
   /** Nombres de params de URL a validar como UUID */
   validateUuidParams?: string[]
+  /** Rol requerido para ejecutar el handler */
+  requiredRole?: string
+  /** Roles permitidos para ejecutar el handler */
+  requiredRoles?: string[]
   /** Mensaje genérico para errores 500 */
   fallbackError?: string
+}
+
+type ApiSession = NonNullable<Awaited<ReturnType<typeof auth.api.getSession>>>
+type SessionWithRole = ApiSession & {
+  user: ApiSession['user'] & {
+    role?: string | null
+  }
 }
 
 interface HandlerContext<TBody> {
   params: Record<string, string>
   body: TBody
+  session?: SessionWithRole
 }
 
 type ApiHandler<TBody> = (
@@ -164,14 +183,39 @@ export function withApiHandler<TBody = unknown>(
   handler: ApiHandler<TBody>,
   options: ApiHandlerOptions<TBody> = {}
 ) {
-  const { bodySchema, validateUuidParams, fallbackError = 'Error interno del servidor' } = options
+  const {
+    bodySchema,
+    validateUuidParams,
+    requiredRole,
+    requiredRoles,
+    fallbackError = 'Error interno del servidor',
+  } = options
+  const allowedRoles = [...(requiredRole ? [requiredRole] : []), ...(requiredRoles ?? [])]
 
   return withLogging(async (request, logger, context) => {
     try {
       // 1. Resolver params
       const params = await context.params
 
-      // 2. Validar UUID params
+      // 2. Verificar sesión/rol si el endpoint lo requiere
+      let session: SessionWithRole | undefined
+      if (allowedRoles.length > 0) {
+        const authSession = await auth.api.getSession({
+          headers: request.headers,
+        })
+
+        if (!authSession) {
+          return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
+        }
+
+        session = authSession as SessionWithRole
+        const role = typeof session.user.role === 'string' ? session.user.role : undefined
+        if (!role || !allowedRoles.includes(role)) {
+          return NextResponse.json({ error: 'Permisos insuficientes' }, { status: 403 })
+        }
+      }
+
+      // 3. Validar UUID params
       if (validateUuidParams) {
         for (const paramName of validateUuidParams) {
           const value = params[paramName]
@@ -184,15 +228,25 @@ export function withApiHandler<TBody = unknown>(
         }
       }
 
-      // 3. Parsear body con Zod si hay schema
+      // 4. Parsear body con Zod si hay schema
       let body = {} as TBody
       if (bodySchema) {
-        const rawBody = await request.json()
-        body = bodySchema.parse(rawBody)
+        let rawBody: unknown
+        try {
+          rawBody = await request.json()
+        } catch {
+          return NextResponse.json({ error: 'JSON inválido' }, { status: 400 })
+        }
+
+        const parseResult = bodySchema.safeParse(rawBody)
+        if (!parseResult.success) {
+          return handleApiError(parseResult.error, logger, fallbackError)
+        }
+        body = parseResult.data
       }
 
-      // 4. Ejecutar handler
-      return await handler(request, logger, { params, body })
+      // 5. Ejecutar handler
+      return await handler(request, logger, { params, body, session })
     } catch (error) {
       return handleApiError(error, logger, fallbackError)
     }

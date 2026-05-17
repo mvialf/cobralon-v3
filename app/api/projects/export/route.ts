@@ -5,6 +5,7 @@ import { generateProjectsExcelBuffer } from '@/lib/excel/project-exporter'
 import { logger } from '@/lib/logger'
 import { projectStateValues } from '@/lib/validations/project-validations'
 import { FINANCIAL } from '@/lib/constants/financial-constants'
+import { IMPORT_EXPORT_LIMITS } from '@/lib/constants/import-export-limits'
 
 const projectStateSchema = projectStateValues.default('all')
 
@@ -47,6 +48,39 @@ export async function GET(request: Request) {
   )
 
   try {
+    const countRows = await prisma.$queryRaw<Array<{ count: bigint }>>`
+      SELECT COUNT(*)::bigint AS count
+      FROM "Project" p
+      JOIN "ProjectFinancials" pf ON pf."projectId" = p.id
+      JOIN "Customer" c ON c.id = p."customerId"
+      LEFT JOIN "ProjectStatus" ps ON ps.id = p."projectStatusId"
+      WHERE 1=1
+        ${customerId ? Prisma.sql`AND p."customerId" = ${customerId}` : Prisma.empty}
+        ${projectState === 'Finalizado' ? Prisma.sql`AND (pf.balance <= ${FINANCIAL.BALANCE_TOLERANCE} AND ps."isFinal" = true)` : Prisma.empty}
+        ${projectState === 'Activo' ? Prisma.sql`AND (pf.balance > ${FINANCIAL.BALANCE_TOLERANCE} OR ps."isFinal" IS NOT TRUE)` : Prisma.empty}
+        ${
+          search
+            ? Prisma.sql`AND (
+                normalize_text(p."projectNumber") LIKE normalize_text(${`%${search}%`})
+                OR normalize_text(COALESCE(p."projectName", '')) LIKE normalize_text(${`%${search}%`})
+                OR normalize_text(c.name) LIKE normalize_text(${`%${search}%`})
+                OR normalize_text(COALESCE(ps.name, '')) LIKE normalize_text(${`%${search}%`})
+              )`
+            : Prisma.empty
+        }
+    `
+    const totalProjects = Number(countRows[0]?.count ?? 0)
+    if (totalProjects > IMPORT_EXPORT_LIMITS.MAX_EXPORT_ROWS) {
+      return NextResponse.json(
+        {
+          error: `La exportación excede el límite de ${IMPORT_EXPORT_LIMITS.MAX_EXPORT_ROWS} proyectos. Use filtros para acotar el resultado.`,
+          limit: IMPORT_EXPORT_LIMITS.MAX_EXPORT_ROWS,
+          total: totalProjects,
+        },
+        { status: 413 }
+      )
+    }
+
     const projects = await prisma.$queryRaw<
       Array<{
         id: string
@@ -107,6 +141,7 @@ export async function GET(request: Request) {
             : Prisma.empty
         }
       ORDER BY p."createdAt" DESC
+      LIMIT ${IMPORT_EXPORT_LIMITS.MAX_EXPORT_ROWS}
     `
 
     const filteredProjects = projects.map((project) => ({

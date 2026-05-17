@@ -48,6 +48,10 @@ export async function middleware(request: NextRequest) {
 
     // Si no hay sesion, redirigir a login
     if (!session) {
+      if (pathname.startsWith('/api/')) {
+        return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
+      }
+
       const loginUrl = new URL('/login', request.url)
       // Guardar la URL original para redirigir despues del login
       loginUrl.searchParams.set('callbackUrl', pathname)
@@ -59,6 +63,10 @@ export async function middleware(request: NextRequest) {
   } catch (error) {
     // Error al verificar sesion, redirigir a login
     console.error('Error en middleware de auth:', error)
+    if (pathname.startsWith('/api/')) {
+      return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
+    }
+
     return NextResponse.redirect(new URL('/login', request.url))
   }
 }

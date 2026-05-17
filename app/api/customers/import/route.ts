@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { withLogging } from '@/lib/logger-middleware'
 import { customerSchema, type CustomerFormData } from '@/lib/validations/customer-validations'
+import { IMPORT_EXPORT_LIMITS } from '@/lib/constants/import-export-limits'
 
 /**
  * POST /api/customers/import
@@ -22,6 +23,17 @@ export const POST = withLogging(async (request, logger) => {
     if (!Array.isArray(customers) || customers.length === 0) {
       logger.warn('Invalid or empty customers array')
       return NextResponse.json({ error: 'Debe proporcionar un array de clientes' }, { status: 400 })
+    }
+
+    if (customers.length > IMPORT_EXPORT_LIMITS.MAX_IMPORT_ROWS) {
+      logger.warn({ count: customers.length }, 'Customer import row limit exceeded')
+      return NextResponse.json(
+        {
+          error: `No se pueden importar más de ${IMPORT_EXPORT_LIMITS.MAX_IMPORT_ROWS} clientes por archivo`,
+          limit: IMPORT_EXPORT_LIMITS.MAX_IMPORT_ROWS,
+        },
+        { status: 413 }
+      )
     }
 
     logger.debug({ count: customers.length }, 'Validating customers')
@@ -47,7 +59,8 @@ export const POST = withLogging(async (request, logger) => {
       return NextResponse.json(
         {
           error: 'Algunos clientes tienen errores de validación',
-          errors,
+          errors: errors.slice(0, IMPORT_EXPORT_LIMITS.MAX_ERROR_DETAILS),
+          totalErrors: errors.length,
         },
         { status: 400 }
       )

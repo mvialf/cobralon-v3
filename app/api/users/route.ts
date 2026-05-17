@@ -1,25 +1,51 @@
+import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
-import { NextRequest, NextResponse } from 'next/server'
+import { withApiHandler } from '@/lib/api-handler'
+import { createUserSchema, type CreateUserBody } from '@/lib/validations/user-validations'
+
+const DEFAULT_LIMIT = 10
+const MAX_LIMIT = 100
+
+function parsePositiveInteger(value: string | null, fallback: number) {
+  if (!value) return fallback
+
+  const parsed = Number(value)
+  if (!Number.isInteger(parsed) || parsed < 0) return fallback
+
+  return parsed
+}
+
+function getPaginationParams(url: string) {
+  const { searchParams } = new URL(url)
+  const requestedLimit = parsePositiveInteger(searchParams.get('limit'), DEFAULT_LIMIT)
+
+  return {
+    take: Math.min(requestedLimit, MAX_LIMIT),
+    skip: parsePositiveInteger(searchParams.get('offset'), 0),
+  }
+}
+
+const userSelect = {
+  id: true,
+  name: true,
+  email: true,
+  role: true,
+  createdAt: true,
+  updatedAt: true,
+} as const
 
 /**
  * GET /api/users
  *
- * Fetch all users with pagination support
- *
- * Query params:
- * - limit: Number of users to return (default: 10)
- * - offset: Number of users to skip (default: 0)
- *
- * Example: GET /api/users?limit=20&offset=10
+ * Fetch users with safe local pagination.
  */
-export async function GET(request: NextRequest) {
-  try {
-    const { searchParams } = new URL(request.url)
-    const take = Number(searchParams.get('limit')) || 10
-    const skip = Number(searchParams.get('offset')) || 0
+export const GET = withApiHandler(
+  async (request) => {
+    const { take, skip } = getPaginationParams(request.url)
 
     const [users, total] = await Promise.all([
       prisma.user.findMany({
+        select: userSelect,
         orderBy: { createdAt: 'desc' },
         take,
         skip,
@@ -36,60 +62,34 @@ export async function GET(request: NextRequest) {
         hasMore: skip + take < total,
       },
     })
-  } catch (error) {
-    console.error('Database error:', error)
-    return NextResponse.json({ error: 'Failed to fetch users' }, { status: 500 })
+  },
+  {
+    requiredRole: 'admin',
+    fallbackError: 'Failed to fetch users',
   }
-}
+)
 
 /**
  * POST /api/users
  *
- * Create a new user
- *
- * Body (JSON):
- * {
- *   "email": "user@example.com",
- *   "name": "User Name" // optional
- * }
- *
- * Example:
- * POST /api/users
- * Content-Type: application/json
- *
- * {
- *   "email": "john@example.com",
- *   "name": "John Doe"
- * }
+ * Create a user.
  */
-export async function POST(request: NextRequest) {
-  try {
-    const body = await request.json()
-
-    // TODO: Add validation with Zod for production use
-    // Example:
-    // const userSchema = z.object({
-    //   email: z.string().email(),
-    //   name: z.string().optional()
-    // })
-    // const validatedData = userSchema.parse(body)
-
+export const POST = withApiHandler<CreateUserBody>(
+  async (_request, _logger, { body }) => {
     const user = await prisma.user.create({
       data: {
         email: body.email,
-        name: body.name || null,
+        name: body.name,
+        role: body.role,
       },
+      select: userSelect,
     })
 
     return NextResponse.json(user, { status: 201 })
-  } catch (error) {
-    console.error('Database error:', error)
-
-    // Handle unique constraint violation (duplicate email)
-    if (error instanceof Error && 'code' in error && error.code === 'P2002') {
-      return NextResponse.json({ error: 'Email already exists' }, { status: 409 })
-    }
-
-    return NextResponse.json({ error: 'Failed to create user' }, { status: 500 })
+  },
+  {
+    bodySchema: createUserSchema,
+    requiredRole: 'admin',
+    fallbackError: 'Failed to create user',
   }
-}
+)

@@ -4,6 +4,7 @@ import { PaymentWhereInput } from '@/types/api'
 import { generatePaymentsExcelBuffer } from '@/lib/excel/payment-exporter'
 import { logger } from '@/lib/logger'
 import { z } from 'zod'
+import { IMPORT_EXPORT_LIMITS } from '@/lib/constants/import-export-limits'
 
 /**
  * Zod schema for type validation
@@ -84,10 +85,23 @@ export async function GET(request: Request) {
       }
     }
 
-    // Obtener TODOS los pagos (sin paginación)
+    const totalPayments = await prisma.payment.count({ where })
+    if (totalPayments > IMPORT_EXPORT_LIMITS.MAX_EXPORT_ROWS) {
+      return NextResponse.json(
+        {
+          error: `La exportación excede el límite de ${IMPORT_EXPORT_LIMITS.MAX_EXPORT_ROWS} pagos. Use filtros para acotar el resultado.`,
+          limit: IMPORT_EXPORT_LIMITS.MAX_EXPORT_ROWS,
+          total: totalPayments,
+        },
+        { status: 413 }
+      )
+    }
+
+    // Obtener pagos dentro del límite máximo permitido
     const allPayments = await prisma.payment.findMany({
       relationLoadStrategy: 'join',
       where,
+      take: IMPORT_EXPORT_LIMITS.MAX_EXPORT_ROWS,
       orderBy: { date: 'desc' },
       include: {
         customer: {

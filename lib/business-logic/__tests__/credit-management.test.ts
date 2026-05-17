@@ -1,10 +1,112 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
+
+vi.mock('@/lib/logger', () => ({
+  logger: {
+    warn: vi.fn(),
+  },
+}))
+
 import {
   calculatePaymentDistribution,
   calculateMaxCreditApplication,
   canApplyCredit,
   canRefundCredit,
+  getCustomerCreditBalance,
+  getCustomerCreditBalanceDetails,
+  getCustomerCreditBalances,
+  lockCustomerCreditBalance,
 } from '../credit-management'
+import { logger } from '@/lib/logger'
+
+const mockedLogger = vi.mocked(logger)
+
+beforeEach(() => {
+  vi.clearAllMocks()
+})
+
+describe('getCustomerCreditBalanceDetails', () => {
+  it('debe exponer rawBalance y availableBalance para saldo positivo', async () => {
+    const db = {
+      creditTransaction: {
+        aggregate: vi.fn().mockResolvedValue({ _sum: { amount: 75000 } }),
+      },
+    }
+
+    const result = await getCustomerCreditBalanceDetails('customer-1', db as never)
+
+    expect(result).toEqual({ rawBalance: 75000, availableBalance: 75000 })
+    expect(mockedLogger.warn).not.toHaveBeenCalled()
+  })
+
+  it('debe loggear y clamppear availableBalance cuando rawBalance es negativo', async () => {
+    const db = {
+      creditTransaction: {
+        aggregate: vi.fn().mockResolvedValue({ _sum: { amount: -25000 } }),
+      },
+    }
+
+    const result = await getCustomerCreditBalanceDetails('customer-1', db as never)
+
+    expect(result).toEqual({ rawBalance: -25000, availableBalance: 0 })
+    expect(mockedLogger.warn).toHaveBeenCalledWith(
+      { customerId: 'customer-1', rawBalance: -25000, availableBalance: 0 },
+      'Customer credit ledger has negative balance'
+    )
+  })
+})
+
+describe('getCustomerCreditBalance', () => {
+  it('debe retornar solo availableBalance para mantener compatibilidad', async () => {
+    const db = {
+      creditTransaction: {
+        aggregate: vi.fn().mockResolvedValue({ _sum: { amount: -10000 } }),
+      },
+    }
+
+    await expect(getCustomerCreditBalance('customer-1', db as never)).resolves.toBe(0)
+  })
+})
+
+describe('getCustomerCreditBalances', () => {
+  it('debe retornar saldos disponibles y loggear saldos negativos en batch', async () => {
+    const db = {
+      creditTransaction: {
+        groupBy: vi.fn().mockResolvedValue([
+          { customerId: 'customer-1', _sum: { amount: 50000 } },
+          { customerId: 'customer-2', _sum: { amount: -15000 } },
+        ]),
+      },
+    }
+
+    const result = await getCustomerCreditBalances(['customer-1', 'customer-2'], db as never)
+
+    expect(result.get('customer-1')).toBe(50000)
+    expect(result.get('customer-2')).toBe(0)
+    expect(mockedLogger.warn).toHaveBeenCalledWith(
+      { customerId: 'customer-2', rawBalance: -15000, availableBalance: 0 },
+      'Customer credit ledger has negative balance'
+    )
+  })
+})
+
+describe('lockCustomerCreditBalance', () => {
+  it('debe bloquear la fila del cliente y retornar true si existe', async () => {
+    const db = {
+      $queryRaw: vi.fn().mockResolvedValue([{ id: 'customer-1' }]),
+    }
+
+    await expect(lockCustomerCreditBalance('customer-1', db as never)).resolves.toBe(true)
+    expect(db.$queryRaw).toHaveBeenCalledOnce()
+  })
+
+  it('debe retornar false si no encuentra la fila para bloquear', async () => {
+    const db = {
+      $queryRaw: vi.fn().mockResolvedValue([]),
+    }
+
+    await expect(lockCustomerCreditBalance('customer-1', db as never)).resolves.toBe(false)
+  })
+})
 
 describe('calculatePaymentDistribution', () => {
   describe('pago exacto (payment = balance)', () => {

@@ -7,7 +7,11 @@ import { PaymentWhereInput } from '@/types/api'
 import { withLogging } from '@/lib/logger-middleware'
 import { withApiHandler, BusinessError } from '@/lib/api-handler'
 import { parsePaginationParams, buildPaginationResponse } from '@/lib/utils/pagination'
-import { canApplyCredit } from '@/lib/business-logic/credit-management'
+import {
+  canApplyCredit,
+  getCustomerCreditBalance,
+  lockCustomerCreditBalance,
+} from '@/lib/business-logic/credit-management'
 import { generatePrismaInstallmentsCreate } from '@/lib/business-logic/installments'
 import {
   computePaymentCommission,
@@ -25,7 +29,6 @@ import {
   type CreatePaymentApiBody,
 } from '@/lib/validations/payment-validations'
 import type { PrismaTransaction } from '@/lib/db/types'
-import { getCustomerCreditBalance } from '@/lib/business-logic/credit-management'
 import { getProjectsFinancials } from '@/lib/business-logic/project-financials'
 
 type ProjectApplicationWriter = PrismaTransaction & {
@@ -644,6 +647,11 @@ export const POST = withApiHandler<CreatePaymentApiBody>(
       const appliedCreditTransactionByProject = new Map<string, string>()
 
       if (totalCreditToApply > 0) {
+        const locked = await lockCustomerCreditBalance(customerId, tx)
+        if (!locked) {
+          throw new BusinessError('Cliente no encontrado durante validación de crédito', 404)
+        }
+
         // Leer datos DENTRO de la transacción (snapshot consistente)
         const customerCreditBalance = await getCustomerCreditBalance(customerId, tx)
 

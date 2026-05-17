@@ -16,7 +16,26 @@
 
 import { prisma } from '@/lib/db'
 import type { PrismaTransaction } from '@/lib/db/types'
+import { logger } from '@/lib/logger'
 import type { PrismaClient } from '@prisma/client'
+
+export interface CustomerCreditBalance {
+  rawBalance: number
+  availableBalance: number
+}
+
+function normalizeCreditBalance(customerId: string, rawBalance: number): CustomerCreditBalance {
+  const availableBalance = Math.max(0, rawBalance)
+
+  if (rawBalance < 0) {
+    logger.warn(
+      { customerId, rawBalance, availableBalance },
+      'Customer credit ledger has negative balance'
+    )
+  }
+
+  return { rawBalance, availableBalance }
+}
 
 /**
  * Calcula el creditBalance de un cliente desde el ledger CreditTransaction.
@@ -30,11 +49,41 @@ export async function getCustomerCreditBalance(
   customerId: string,
   db: PrismaClient | PrismaTransaction = prisma
 ): Promise<number> {
+  const balance = await getCustomerCreditBalanceDetails(customerId, db)
+  return balance.availableBalance
+}
+
+/**
+ * Calcula el saldo raw y el saldo disponible de crédito desde el ledger.
+ *
+ * rawBalance expone el total real del ledger, incluso si es negativo.
+ * availableBalance es el saldo usable por la aplicación y nunca baja de 0.
+ */
+export async function getCustomerCreditBalanceDetails(
+  customerId: string,
+  db: PrismaClient | PrismaTransaction = prisma
+): Promise<CustomerCreditBalance> {
   const result = await db.creditTransaction.aggregate({
     where: { customerId },
     _sum: { amount: true },
   })
-  return Math.max(0, Number(result._sum.amount ?? 0))
+
+  return normalizeCreditBalance(customerId, Number(result._sum.amount ?? 0))
+}
+
+/**
+ * Bloquea la fila del cliente dentro de una transacción antes de leer/modificar crédito.
+ * Esto serializa refunds concurrentes del mismo cliente en PostgreSQL.
+ */
+export async function lockCustomerCreditBalance(
+  customerId: string,
+  db: PrismaTransaction
+): Promise<boolean> {
+  const rows = await db.$queryRaw<Array<{ id: string }>>`
+    SELECT id FROM "Customer" WHERE id = ${customerId} FOR UPDATE
+  `
+
+  return rows.length > 0
 }
 
 /**
@@ -58,7 +107,8 @@ export async function getCustomerCreditBalances(
 
   const map = new Map<string, number>()
   for (const r of results) {
-    map.set(r.customerId, Math.max(0, Number(r._sum.amount ?? 0)))
+    const balance = normalizeCreditBalance(r.customerId, Number(r._sum.amount ?? 0))
+    map.set(r.customerId, balance.availableBalance)
   }
   return map
 }

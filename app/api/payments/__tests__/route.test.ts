@@ -52,6 +52,7 @@ vi.mock('@/lib/db', () => ({
 vi.mock('@/lib/business-logic/credit-management', () => ({
   canApplyCredit: vi.fn().mockReturnValue({ valid: true }),
   getCustomerCreditBalance: vi.fn().mockResolvedValue(100000),
+  lockCustomerCreditBalance: vi.fn().mockResolvedValue(true),
 }))
 
 import { prisma } from '@/lib/db'

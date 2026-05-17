@@ -3,6 +3,7 @@ import { prisma } from '@/lib/db'
 import { withLogging } from '@/lib/logger-middleware'
 import { type ParsedProjectRow } from '@/lib/excel/project-parser'
 import { Decimal } from '@prisma/client/runtime/library'
+import { IMPORT_EXPORT_LIMITS } from '@/lib/constants/import-export-limits'
 
 /**
  * POST /api/projects/import
@@ -25,6 +26,17 @@ export const POST = withLogging(async (request, logger) => {
       return NextResponse.json(
         { error: 'Debe proporcionar un array de proyectos' },
         { status: 400 }
+      )
+    }
+
+    if (projects.length > IMPORT_EXPORT_LIMITS.MAX_IMPORT_ROWS) {
+      logger.warn({ count: projects.length }, 'Project import row limit exceeded')
+      return NextResponse.json(
+        {
+          error: `No se pueden importar más de ${IMPORT_EXPORT_LIMITS.MAX_IMPORT_ROWS} proyectos por archivo`,
+          limit: IMPORT_EXPORT_LIMITS.MAX_IMPORT_ROWS,
+        },
+        { status: 413 }
       )
     }
 
@@ -181,7 +193,9 @@ export const POST = withLogging(async (request, logger) => {
     )
 
     if (failureCount > 0) {
-      const failures = results.filter((r) => !r.success)
+      const failures = results
+        .filter((r) => !r.success)
+        .slice(0, IMPORT_EXPORT_LIMITS.MAX_ERROR_DETAILS)
 
       return NextResponse.json(
         {
@@ -189,6 +203,7 @@ export const POST = withLogging(async (request, logger) => {
           imported: successCount,
           failed: failureCount,
           errors: failures,
+          totalErrors: failureCount,
           message: `Se importaron ${successCount} proyectos, pero ${failureCount} fallaron.`,
         },
         { status: 207 } // Multi-status

@@ -108,12 +108,17 @@ export function ImportSheet<TParseResult extends BaseParseResult>({
         body: JSON.stringify({ [config.requestBodyKey]: validItems }),
       })
 
-      if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.error || `Error al importar ${config.entityLabel}`)
+      const result = await response.json()
+
+      if (!response.ok || result.success === false) {
+        const partialMessage =
+          result.message ||
+          (result.imported !== undefined && result.failed !== undefined
+            ? `Se importaron ${result.imported}, pero ${result.failed} fallaron.`
+            : undefined)
+        throw new Error(result.error || partialMessage || `Error al importar ${config.entityLabel}`)
       }
 
-      const result = await response.json()
       setImportedCount(result.imported)
       setImportProgress(100)
       setStep('complete')
