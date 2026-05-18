@@ -122,109 +122,37 @@ curl http://localhost:3000/api/health/warmup
 
 ---
 
-### 4. React Hook: `useDatabaseKeepalive` (✅ Implementado)
+### 4. Keepalive desde cliente (obsoleto)
 
-**Ubicación**: `hooks/use-database-keepalive.ts`
-
-Mantiene la base de datos activa durante sesiones de usuario en el cliente.
-
-```typescript
-'use client'
-import { useDatabaseKeepalive } from '@/hooks/use-database-keepalive'
-
-function Dashboard() {
-  useDatabaseKeepalive({
-    enabled: true, // Habilitar keepalive
-    intervalMs: 4 * 60 * 1000, // 4 minutos
-    onSuccess: (data) => {
-      console.log('Database ping successful:', data.latency)
-    },
-    onError: (error) => {
-      console.error('Database ping failed:', error)
-    },
-  })
-
-  return <div>Dashboard activo</div>
-}
-```
-
-**Características**:
-
-- Hace ping a `/api/health/warmup` cada 4 minutos
-- Funciona solo en client components
-- Cleanup automático al desmontar
+El hook `useDatabaseKeepalive` y el provider `DatabaseKeepaliveProvider` fueron eliminados porque no estaban conectados al layout ni a flujos activos. Para mantener Neon despierto, usa el endpoint `GET /api/health/warmup` desde monitoreo externo o desde un flujo explícito antes de operaciones críticas.
 
 **Uso recomendado**:
 
-- Dashboards con sesiones largas
-- Admin panels
-- Apps SaaS con usuarios activos
-
----
-
-### 5. Provider Global: `DatabaseKeepaliveProvider` (✅ Implementado)
-
-**Ubicación**: `components/providers/database-keepalive-provider.tsx`
-
-Provider que envuelve tu app y mantiene la DB activa automáticamente.
-
-#### Opción A: Auto-enable
-
-```tsx
-// app/layout.tsx
-import { DatabaseKeepaliveProvider } from '@/components/providers/database-keepalive-provider'
-
-export default function RootLayout({ children }) {
-  return (
-    <html>
-      <body>
-        <DatabaseKeepaliveProvider autoEnable={true}>{children}</DatabaseKeepaliveProvider>
-      </body>
-    </html>
-  )
-}
-```
-
-#### Opción B: On user activity (Recomendado)
-
-```tsx
-// app/layout.tsx
-<DatabaseKeepaliveProvider autoEnable={false}>{children}</DatabaseKeepaliveProvider>
-```
-
-Se activa automáticamente cuando el usuario interactúa con la app (click, scroll, tecleo).
-
-**Ventaja**: No consume recursos si el usuario está inactivo (idle tab).
-
-**Uso recomendado**:
-
-- Habilitar en layout principal si tienes usuarios activos frecuentemente
-- Desactivar en producción si prefieres control manual
-- Usar `autoEnable={false}` para activación lazy
+- Monitoreo externo con intervalos controlados
+- Warmup explícito al entrar a flujos críticos
+- Debugging manual de latencia
 
 ---
 
 ## 🎯 Estrategias de Uso
 
-### Estrategia 1: Keepalive Global (Apps con alta actividad)
+### Estrategia 1: Monitoreo externo
 
-```tsx
-// app/layout.tsx
-<DatabaseKeepaliveProvider autoEnable={true}>{children}</DatabaseKeepaliveProvider>
+```bash
+curl https://tu-dominio.com/api/health/warmup
 ```
 
 **Pros**:
 
-- ✅ DB siempre activa durante sesiones de usuario
-- ✅ Cero cold starts para usuarios activos
-- ✅ Implementación simple (solo envolver layout)
+- ✅ No acopla keepalive al bundle cliente
+- ✅ Frecuencia controlada fuera de la app
+- ✅ Sirve como health check
 
 **Cons**:
 
-- ⚠️ Consume recursos incluso si usuario está idle
-- ⚠️ Aumenta requests al server
+- ⚠️ Requiere configurar una herramienta externa
 
-**Recomendado para**: Admin panels, dashboards SaaS, apps internas con usuarios activos.
+**Recomendado para**: Operación productiva con monitoreo explícito.
 
 ---
 

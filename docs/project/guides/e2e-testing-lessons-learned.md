@@ -36,11 +36,7 @@ test.beforeAll(async () => {
 })
 ```
 
-**Recomendación:** Implementar sistema de keep-alive para Neon en free tier:
-
-- Hook `useEffect` que hace ping cada 4 minutos
-- Provider que mantiene conexión activa
-- Ver: `hooks/use-database-keepalive.ts`
+**Recomendación:** usar `GET /api/health/warmup` antes de flujos críticos cuando el cold start de Neon afecte E2E.
 
 ---
 
@@ -299,33 +295,13 @@ export async function GET() {
 }
 ```
 
-### 2. Database Keep-Alive Provider
+### 2. Database Warmup
 
-Ver implementación completa en:
+Usar `GET /api/health/warmup` cuando un flujo E2E necesite despertar la base de datos antes de acciones críticas. El provider client-side fue eliminado porque no estaba conectado a la app.
 
-- `hooks/use-database-keepalive.ts`
-- `components/providers/database-keepalive-provider.tsx`
+### 3. Shared Test Utilities
 
-### 3. Custom Playwright Matchers
-
-```typescript
-// tests/fixtures/custom-matchers.ts
-export const customMatchers = {
-  async toBeVisibleWithLoading(locator: Locator) {
-    await expect(locator).toBeVisible({ timeout: 15000 })
-  },
-}
-```
-
-### 4. Shared Test Utilities
-
-```typescript
-// tests/e2e/helpers/wait-for-table.ts
-export async function waitForTableReady(page: Page) {
-  await page.waitForLoadState('networkidle')
-  await expect(page.locator('table')).toBeVisible({ timeout: 15000 })
-}
-```
+Preferir helpers en los page objects (`BasePage.waitForTable`) antes de agregar utilidades sueltas.
 
 ---
 

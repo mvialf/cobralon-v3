@@ -15,8 +15,6 @@ Porcentaje (ejemplo doc);PercentageInput;19.0;components/ui/percentage-input.tsx
 Porcentaje;input;{placeholder} (prop dinamica);components/ui/percentage-input.tsx;117;;
 Monto moneda;input;{placeholder || ''} (prop dinamica);components/ui/currency-input.tsx;160;;
 Telefono;input;{placeholder} (prop dinamica);components/ui/phone-input.tsx;108;;
-RUT (ejemplo doc 1);RutInput;12.345.678-9;components/ui/rut-input.tsx;55;eliminar;
-RUT (ejemplo doc 2);RutInput;Ingresa tu RUT;components/ui/rut-input.tsx;87;eliminar;
 Busqueda en combobox;CommandInput;{searchPlaceholder} (prop dinamica);components/ui/combobox.tsx;252;;
 Busqueda en tabla;Input;{searchPlaceholder} (prop dinamica);components/data-table/data-table-toolbar.tsx;104;;
 Filtro facetado;CommandInput;{title} (prop dinamica);components/data-table/data-table-faceted-filter.tsx;144;;

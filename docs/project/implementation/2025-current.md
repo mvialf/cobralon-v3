@@ -47,11 +47,11 @@ Registrar **implementaciones significativas** de este proyecto con:
   - **Convención Vitest:** Usa `__mocks__/` (auto-discovery), no requiere config extra
 - **Implementación:**
   - Crear `lib/__mocks__/logger-middleware.ts` con mock de `withLogging`
-  - Crear `lib/test-utils/api-test-helpers.ts` con helpers `createRequest` y `callHandler`
+  - Crear helpers compartidos para tests de API cuando haya reutilización real
   - Migrar 15 test files del patrón verbose al auto-mock
 - **Archivos creados:**
   - `lib/__mocks__/logger-middleware.ts` - Mock automático de withLogging
-  - `lib/test-utils/api-test-helpers.ts` - Helpers compartidos para tests de API
+  - Helpers compartidos de API: obsoletos, luego eliminados por falta de uso
 - **Archivos modificados (15 tests):**
   - `app/api/{aftersale-events,aftersales,customers,installments,payment-methods,payments,projects,uninstall-tags,visit-events,visits}/__tests__/route.test.ts`
   - `app/api/{aftersale-status,project-status,visit-status}/__tests__/route.test.ts`
@@ -1579,7 +1579,7 @@ Registrar **implementaciones significativas** de este proyecto con:
 | 35  | React Query Migration - Phase 5: Testing Strategy                       | ✅ Complete | 2025-11-12 | High   |
 | 36  | React Query Migration - Phases 2-4: Optimistic + Invalidaciones + Hooks | ✅ Complete | 2025-11-12 | High   |
 | 37  | React Query Migration - Phase 6: Error Handling                         | ✅ Complete | 2025-11-12 | High   |
-| 38  | Aumento de Cobertura de Tests: 55% → ~75%                              | ✅ Complete | 2026-02-01 | High   |
+| 38  | Aumento de Cobertura de Tests: 55% → ~75%                               | ✅ Complete | 2026-02-01 | High   |
 
 ---
 

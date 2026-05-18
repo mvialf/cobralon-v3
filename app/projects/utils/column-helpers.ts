@@ -27,19 +27,6 @@ export function transformStatusToOption(
 }
 
 /**
- * Función de sorting para columna de projectStatus por nombre
- *
- * @param rowA - Primera fila
- * @param rowB - Segunda fila
- * @returns Número negativo, 0, o positivo para sorting
- */
-export function sortByStatusName(rowA: Row<Project>, rowB: Row<Project>): number {
-  const statusA = rowA.original.projectStatus?.name || ''
-  const statusB = rowB.original.projectStatus?.name || ''
-  return statusA.localeCompare(statusB, 'es-CL')
-}
-
-/**
  * Función de filtro para columna de projectStatus
  *
  * Soporta filtrado por:
