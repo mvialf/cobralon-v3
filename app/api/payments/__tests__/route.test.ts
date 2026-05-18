@@ -736,10 +736,11 @@ describe('POST /api/payments', () => {
       expect(txPaymentCreate).toHaveBeenCalledWith(
         expect.objectContaining({
           data: expect.objectContaining({
-            amount: new Decimal(90000),
+            amount: expect.objectContaining({ toString: expect.any(Function) }),
           }),
         })
       )
+      expect(txPaymentCreate.mock.calls[0][0].data.amount.toString()).toBe('90000')
       const projectApplicationData = txProjectApplication.createMany.mock.calls[0][0].data
       expect(projectApplicationData).toHaveLength(2)
       expect(projectApplicationData[0]).toMatchObject({

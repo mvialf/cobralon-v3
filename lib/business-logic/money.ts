@@ -1,8 +1,8 @@
-import { Decimal } from '@prisma/client/runtime/library'
+import Decimal from 'decimal.js'
 
 import { FINANCIAL, getCurrencyConfig } from '@/lib/constants/financial-constants'
 
-export type MoneyInput = number | string | Decimal
+export type MoneyInput = number | string | Decimal | { toString(): string }
 
 function assertFiniteDecimal(value: Decimal) {
   if (!value.isFinite()) {
@@ -15,7 +15,12 @@ export function money(value: MoneyInput): Decimal {
     throw new Error('El monto debe ser un número finito')
   }
 
-  const decimal = value instanceof Decimal ? value : new Decimal(value)
+  const decimal =
+    value instanceof Decimal
+      ? value
+      : new Decimal(
+          typeof value === 'string' || typeof value === 'number' ? value : value.toString()
+        )
   assertFiniteDecimal(decimal)
   return decimal
 }
