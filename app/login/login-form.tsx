@@ -49,12 +49,8 @@ export function LoginForm() {
   return (
     <div className="space-y-6">
       <div className="space-y-1">
-        <h2 className="text-2xl font-semibold tracking-tight text-foreground">
-          Iniciar sesion
-        </h2>
-        <p className="text-sm text-muted-foreground">
-          Ingresa tus credenciales para continuar
-        </p>
+        <h2 className="text-2xl font-semibold tracking-tight text-foreground">Iniciar sesion</h2>
+        <p className="text-sm text-muted-foreground">Ingresa tus credenciales para continuar</p>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-4">

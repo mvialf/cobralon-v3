@@ -1,7 +1,10 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { withApiHandler } from '@/lib/api-handler'
-import { reorderEventsSchema, type ReorderEventsInput } from '@/lib/validations/calendar-validations'
+import {
+  reorderEventsSchema,
+  type ReorderEventsInput,
+} from '@/lib/validations/calendar-validations'
 
 /**
  * PATCH /api/calendar-events/reorder

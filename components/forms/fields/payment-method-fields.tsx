@@ -198,8 +198,9 @@ export function PaymentMethodFields({
         <div className="rounded-md bg-muted/50 px-3 py-2 text-xs text-muted-foreground">
           <span>
             Comisión: {commissionPreview.percentageFee}%
-            {commissionPreview.fixedFee > 0 && ` + ${formatCurrency(commissionPreview.fixedFee, currency)}`}
-            {' '}({formatCurrency(commissionPreview.commissionAmount, currency)})
+            {commissionPreview.fixedFee > 0 &&
+              ` + ${formatCurrency(commissionPreview.fixedFee, currency)}`}{' '}
+            ({formatCurrency(commissionPreview.commissionAmount, currency)})
           </span>
           <span className="mx-2">|</span>
           <span className="font-medium text-foreground">

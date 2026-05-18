@@ -211,10 +211,7 @@ export function RefundCreditDialog({
                 <FormItem>
                   <FormLabel>Comentarios (opcional)</FormLabel>
                   <FormControl>
-                    <Textarea
-                      className="resize-none"
-                      {...field}
-                    />
+                    <Textarea className="resize-none" {...field} />
                   </FormControl>
                   <FormDescription>Información adicional sobre la devolución</FormDescription>
                   <FormMessage />

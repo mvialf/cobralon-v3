@@ -53,25 +53,26 @@ export const GET = withLogging(async (request, logger) => {
       LIMIT ${limit}
     `
 
-    const projects = matchingIds.length > 0
-      ? await prisma.project.findMany({
-      where: { id: { in: matchingIds.map((r) => r.id) } },
-      include: {
-        customer: {
-          select: { id: true, name: true },
-        },
-        projectStatus: {
-          select: {
-            id: true,
-            name: true,
-            color: { select: { bgClass: true, textClass: true } },
-          },
-        },
-      },
-      take: limit,
-      orderBy: { createdAt: 'desc' },
-    })
-      : []
+    const projects =
+      matchingIds.length > 0
+        ? await prisma.project.findMany({
+            where: { id: { in: matchingIds.map((r) => r.id) } },
+            include: {
+              customer: {
+                select: { id: true, name: true },
+              },
+              projectStatus: {
+                select: {
+                  id: true,
+                  name: true,
+                  color: { select: { bgClass: true, textClass: true } },
+                },
+              },
+            },
+            take: limit,
+            orderBy: { createdAt: 'desc' },
+          })
+        : []
 
     const projectsSimplified = projects.map((project) => ({
       id: project.id,

@@ -33,7 +33,10 @@ export const PATCH = withApiHandler<PatchEventDateInput>(
       },
     })
 
-    logger.info({ eventId: params.id, newDate: body.scheduledDate }, 'Project event date updated successfully')
+    logger.info(
+      { eventId: params.id, newDate: body.scheduledDate },
+      'Project event date updated successfully'
+    )
 
     // Retornar solo lo esencial - React Query invalida el cache automáticamente
     return NextResponse.json({

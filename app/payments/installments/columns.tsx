@@ -2,7 +2,11 @@
 
 import { type ColumnDef } from '@tanstack/react-table'
 import { DataTableDropdown } from '@/components/data-table'
-import { DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator } from '@/components/ui/dropdown-menu'
+import {
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+} from '@/components/ui/dropdown-menu'
 import { Badge } from '@/components/ui/badge'
 import { DataTableColumnHeader } from '@/components/data-table'
 import { formatDate, formatCurrency } from '@/lib/format'

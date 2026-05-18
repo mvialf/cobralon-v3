@@ -79,10 +79,7 @@ export const GET = withLogging(async (request, logger) => {
         where,
         skip,
         take: limit,
-        orderBy: [
-          { dueDate: 'asc' },
-          { installmentNumber: 'asc' },
-        ],
+        orderBy: [{ dueDate: 'asc' }, { installmentNumber: 'asc' }],
         include: {
           payment: {
             select: {

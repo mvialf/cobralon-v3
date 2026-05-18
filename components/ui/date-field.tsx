@@ -79,28 +79,28 @@ export function DateField({ field, className, disabled }: DateFieldProps) {
         >
           {/* El div captura keydown antes de que react-aria procese las flechas */}
           <div onKeyDownCapture={handleKeyDownCapture}>
-          <AriaDateInput
-            className={cn(
-              'flex h-9 w-full items-center rounded-md border border-input bg-transparent px-3 py-1 text-base shadow-sm transition-colors focus-within:ring-1 focus-within:ring-ring md:text-sm',
-              'aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive',
-              'pr-9',
-              disabled && 'cursor-not-allowed opacity-50',
-              className
-            )}
-          >
-            {(segment) => (
-              <AriaDateSegment
-                segment={segment}
-                className={cn(
-                  'inline rounded-sm px-0.5 tabular-nums caret-transparent outline-none',
-                  'data-[placeholder]:text-muted-foreground',
-                  'focus:bg-accent focus:text-accent-foreground',
-                  'data-[type=literal]:px-0 data-[type=literal]:text-muted-foreground',
-                  'data-[disabled]:opacity-50'
-                )}
-              />
-            )}
-          </AriaDateInput>
+            <AriaDateInput
+              className={cn(
+                'flex h-9 w-full items-center rounded-md border border-input bg-transparent px-3 py-1 text-base shadow-sm transition-colors focus-within:ring-1 focus-within:ring-ring md:text-sm',
+                'aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive',
+                'pr-9',
+                disabled && 'cursor-not-allowed opacity-50',
+                className
+              )}
+            >
+              {(segment) => (
+                <AriaDateSegment
+                  segment={segment}
+                  className={cn(
+                    'inline rounded-sm px-0.5 tabular-nums caret-transparent outline-none',
+                    'data-[placeholder]:text-muted-foreground',
+                    'focus:bg-accent focus:text-accent-foreground',
+                    'data-[type=literal]:px-0 data-[type=literal]:text-muted-foreground',
+                    'data-[disabled]:opacity-50'
+                  )}
+                />
+              )}
+            </AriaDateInput>
           </div>
         </AriaDateField>
         <Popover open={isOpen} onOpenChange={setIsOpen}>

@@ -103,11 +103,7 @@ export function PaymentToCustomerDialog({
         />
 
         <DialogFooter>
-          <Button
-            type="submit"
-            form="payment-to-customer-form"
-            disabled={isSubmitting}
-          >
+          <Button type="submit" form="payment-to-customer-form" disabled={isSubmitting}>
             {isSubmitting ? 'Registrando...' : 'Registrar Pago'}
           </Button>
         </DialogFooter>

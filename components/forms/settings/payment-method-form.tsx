@@ -368,9 +368,7 @@ export const PaymentMethodForm = React.forwardRef<PaymentMethodFormHandle, Payme
                                 {...field}
                                 value={field.value || ''}
                                 onChange={(e) =>
-                                  field.onChange(
-                                    e.target.value === '' ? 0 : Number(e.target.value)
-                                  )
+                                  field.onChange(e.target.value === '' ? 0 : Number(e.target.value))
                                 }
                               />
                             </FormControl>
@@ -383,7 +381,9 @@ export const PaymentMethodForm = React.forwardRef<PaymentMethodFormHandle, Payme
                         name={`commissionTiers.${tierIndex}.fixedFee`}
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel className="text-xs text-muted-foreground">Fijo ($)</FormLabel>
+                            <FormLabel className="text-xs text-muted-foreground">
+                              Fijo ($)
+                            </FormLabel>
                             <FormControl>
                               <Input
                                 type="number"
@@ -393,9 +393,7 @@ export const PaymentMethodForm = React.forwardRef<PaymentMethodFormHandle, Payme
                                 {...field}
                                 value={field.value || ''}
                                 onChange={(e) =>
-                                  field.onChange(
-                                    e.target.value === '' ? 0 : Number(e.target.value)
-                                  )
+                                  field.onChange(e.target.value === '' ? 0 : Number(e.target.value))
                                 }
                               />
                             </FormControl>

@@ -3,10 +3,7 @@ import { prisma } from '@/lib/db'
 import { withLogging } from '@/lib/logger-middleware'
 import { parsePaginationParams, buildPaginationResponse } from '@/lib/utils/pagination'
 import { withApiHandler } from '@/lib/api-handler'
-import {
-  createVisitApiSchema,
-  type CreateVisitApiBody,
-} from '@/lib/validations/visit-validations'
+import { createVisitApiSchema, type CreateVisitApiBody } from '@/lib/validations/visit-validations'
 import { queryVisitList, countVisits, getVisitStatusFacets } from '@/lib/queries/visit-list'
 import { parseDateAsLocal } from '@/lib/timezone'
 

@@ -145,9 +145,9 @@ export const paymentMethodSchema = z
           const a = rangedTiers[i]
           const b = rangedTiers[j]
           if (
-          a.minInstallments! <= b.maxInstallments! &&
-          b.minInstallments! <= a.maxInstallments!
-        ) {
+            a.minInstallments! <= b.maxInstallments! &&
+            b.minInstallments! <= a.maxInstallments!
+          ) {
             return false
           }
         }

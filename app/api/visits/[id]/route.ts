@@ -1,10 +1,7 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { withApiHandler, BusinessError } from '@/lib/api-handler'
-import {
-  updateVisitApiSchema,
-  type UpdateVisitApiBody,
-} from '@/lib/validations/visit-validations'
+import { updateVisitApiSchema, type UpdateVisitApiBody } from '@/lib/validations/visit-validations'
 import { Prisma } from '@prisma/client'
 
 /**

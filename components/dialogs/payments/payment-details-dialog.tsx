@@ -74,9 +74,7 @@ export function PaymentDetailsDialog({ payment, open, onOpenChange }: PaymentDet
           {payment.commissionAmount != null && payment.commissionAmount > 0 && (
             <div className="rounded-md border bg-muted/50 p-3 space-y-1">
               <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">
-                  Comisión ({payment.commissionRate}%)
-                </span>
+                <span className="text-muted-foreground">Comisión ({payment.commissionRate}%)</span>
                 <span className="text-destructive">
                   -{formatCurrency(payment.commissionAmount, payment.currency)}
                 </span>

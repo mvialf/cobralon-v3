@@ -29,7 +29,8 @@ export function ProjectNameSummary({
   return (
     <div className={cn('flex flex-col space-y-1', className)}>
       <div className={cn('text-inherit', size === 'xs' ? 'text-xs' : 'text-sm')}>
-        P - {projectNumber}{isDefault ? ` - ${customerName}` : projectName ? ` - ${projectName}` : ''}
+        P - {projectNumber}
+        {isDefault ? ` - ${customerName}` : projectName ? ` - ${projectName}` : ''}
       </div>
       <div className="text-xs font-medium text-inherit">
         {isDefault ? projectName && ` ${projectName}` : customerName}

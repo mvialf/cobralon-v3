@@ -86,9 +86,7 @@ export const POST = withApiHandler<CreateAftersaleApiBody>(
 
     // Validación: verificar que el proyecto esté finalizado
     if (!project.projectStatus?.isFinal) {
-      throw new BusinessError(
-        'Solo se pueden crear casos de postventa para proyectos finalizados'
-      )
+      throw new BusinessError('Solo se pueden crear casos de postventa para proyectos finalizados')
     }
 
     if (!status) {

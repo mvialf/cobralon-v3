@@ -13,7 +13,8 @@ import { useConfiguration } from '@/hooks/use-configuration'
 function getMonthLabel(offset: number): string {
   const date = new Date()
   date.setMonth(date.getMonth() + offset)
-  return date.toLocaleDateString('es-CL', { month: 'long', year: 'numeric' })
+  return date
+    .toLocaleDateString('es-CL', { month: 'long', year: 'numeric' })
     .replace(/^\w/, (c) => c.toUpperCase())
 }
 
@@ -51,10 +52,7 @@ export function InstallmentsPageClient() {
       page: pagination.pageIndex + 1,
       limit: pagination.pageSize,
       // Si hay 1 filtro seleccionado, pasarlo al server; si hay 0 o 2, no filtrar
-      status:
-        statusFilter.length === 1
-          ? (statusFilter[0] as 'upcoming' | 'due')
-          : undefined,
+      status: statusFilter.length === 1 ? (statusFilter[0] as 'upcoming' | 'due') : undefined,
       startDate: monthRange.startDate,
       endDate: monthRange.endDate,
     }),
