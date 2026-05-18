@@ -1,12 +1,18 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
-import { Decimal } from '@prisma/client/runtime/library'
 import { withApiHandler, BusinessError } from '@/lib/api-handler'
 import {
   createProjectAdjustmentSchema,
   type CreateProjectAdjustmentInput,
 } from '@/lib/validations/project-adjustment-validations'
 import { getProjectFinancials } from '@/lib/business-logic/project-financials'
+import {
+  greaterThanMoneyWithTolerance,
+  money,
+  moneyToFixed,
+  moneyToNumber,
+  subtractMoney,
+} from '@/lib/business-logic/money'
 
 /**
  * GET /api/projects/[id]/adjustments
@@ -39,7 +45,7 @@ export const GET = withApiHandler(
     // Convertir Decimal a number para la respuesta JSON
     const formattedAdjustments = adjustments.map((adjustment) => ({
       ...adjustment,
-      amount: Number(adjustment.amount),
+      amount: moneyToNumber(adjustment.amount),
     }))
 
     return NextResponse.json(formattedAdjustments)
@@ -78,9 +84,9 @@ export const POST = withApiHandler<CreateProjectAdjustmentInput>(
         throw new BusinessError('Proyecto no encontrado', 404)
       }
 
-      if (amount - financials.balance > 0.01) {
+      if (greaterThanMoneyWithTolerance(subtractMoney(amount, financials.balance), 0)) {
         throw new BusinessError(
-          `El ajuste excede el balance. Máximo ajuste permitido: ${financials.balance.toFixed(2)}`,
+          `El ajuste excede el balance. Máximo ajuste permitido: ${moneyToFixed(financials.balance)}`,
           400
         )
       }
@@ -88,7 +94,7 @@ export const POST = withApiHandler<CreateProjectAdjustmentInput>(
       const adjustment = await tx.projectAdjustment.create({
         data: {
           projectId: params.id,
-          amount: new Decimal(amount),
+          amount: money(amount),
           reason,
           reasonId: reasonId || null,
           description: description || null,
@@ -100,7 +106,7 @@ export const POST = withApiHandler<CreateProjectAdjustmentInput>(
         data: {
           projectId: params.id,
           customerId: project.customerId,
-          amount: new Decimal(amount),
+          amount: money(amount),
           sourceType: 'ADJUSTMENT',
           projectAdjustmentId: adjustment.id,
           createdAt: adjustment.createdAt,
@@ -113,7 +119,7 @@ export const POST = withApiHandler<CreateProjectAdjustmentInput>(
     return NextResponse.json(
       {
         ...adjustment,
-        amount: Number(adjustment.amount),
+        amount: moneyToNumber(adjustment.amount),
       },
       { status: 201 }
     )

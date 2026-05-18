@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
-import { Decimal } from '@prisma/client/runtime/library'
 import { withLogging } from '@/lib/logger-middleware'
 import { z } from 'zod'
 import {
@@ -10,7 +9,6 @@ import {
   getStateFacets,
 } from '@/lib/queries/project-list'
 import { calculateProjectTotal } from '@/lib/business-logic/totals'
-import { FINANCIAL } from '@/lib/constants/financial-constants'
 import type { ProjectListFilters } from '@/types/project-list'
 import { parsePaginationParams, buildPaginationResponse } from '@/lib/utils/pagination'
 import { withApiHandler, BusinessError } from '@/lib/api-handler'
@@ -19,6 +17,13 @@ import {
   projectStateValues,
   type CreateProjectApiBody,
 } from '@/lib/validations/project-validations'
+import {
+  absMoney,
+  greaterThanMoneyWithTolerance,
+  money,
+  moneyToNumber,
+  subtractMoney,
+} from '@/lib/business-logic/money'
 
 const projectStateSchema = projectStateValues.default('Activo')
 
@@ -233,13 +238,13 @@ export const POST = withApiHandler<CreateProjectApiBody>(
     // Auditoría: Loggear si el cliente envió un totalAmount diferente
     if (
       clientTotalAmount !== undefined &&
-      Math.abs(clientTotalAmount - calculatedTotal) > FINANCIAL.TOLERANCE
+      greaterThanMoneyWithTolerance(absMoney(subtractMoney(clientTotalAmount, calculatedTotal)), 0)
     ) {
       projectLogger.warn(
         {
           clientTotalAmount,
           serverCalculatedTotal: calculatedTotal,
-          difference: clientTotalAmount - calculatedTotal,
+          difference: moneyToNumber(subtractMoney(clientTotalAmount, calculatedTotal)),
         },
         'Client sent different totalAmount than server calculated - using server value'
       )
@@ -261,12 +266,12 @@ export const POST = withApiHandler<CreateProjectApiBody>(
           region,
           projectStatusId: projectStatusId || null,
           date: date ?? new Date(),
-          subtotal: new Decimal(subtotal),
-          taxRate: new Decimal(finalTaxRate),
-          totalAmount: new Decimal(finalTotalAmount),
+          subtotal: money(subtotal),
+          taxRate: money(finalTaxRate),
+          totalAmount: money(finalTotalAmount),
           currency: currency || 'CLP',
           windowsCount: windowsCount || 0,
-          squareMeters: new Decimal(squareMeters || 0),
+          squareMeters: money(squareMeters || 0),
           description: description || null,
         },
       })

@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { withApiHandler, BusinessError } from '@/lib/api-handler'
-import { Prisma } from '@prisma/client'
 import {
   canRefundCredit,
   getCustomerCreditBalanceDetails,
@@ -9,6 +8,7 @@ import {
 } from '@/lib/business-logic/credit-management'
 import type { PrismaTransaction } from '@/lib/db/types'
 import { refundCreditSchema, type RefundCreditFormData } from '@/lib/validations/credit-validations'
+import { negateMoney } from '@/lib/business-logic/money'
 
 /**
  * POST /api/customers/[id]/credit/refund
@@ -50,7 +50,7 @@ export const POST = withApiHandler<RefundCreditFormData>(
       const transaction = await tx.creditTransaction.create({
         data: {
           customerId,
-          amount: new Prisma.Decimal(-body.amount),
+          amount: negateMoney(body.amount),
           type: 'WITHDRAWAL',
           description: body.comments || `Devolución vía ${body.refundMethod.toLowerCase()}`,
           metadata: {

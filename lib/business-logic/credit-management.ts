@@ -18,6 +18,7 @@ import { prisma } from '@/lib/db'
 import type { PrismaTransaction } from '@/lib/db/types'
 import { logger } from '@/lib/logger'
 import type { PrismaClient } from '@prisma/client'
+import { addMoney, greaterThanMoney, minMoney, money, moneyToNumber, subtractMoney } from './money'
 
 export interface CustomerCreditBalance {
   rawBalance: number
@@ -25,9 +26,10 @@ export interface CustomerCreditBalance {
 }
 
 function normalizeCreditBalance(customerId: string, rawBalance: number): CustomerCreditBalance {
-  const availableBalance = Math.max(0, rawBalance)
+  const rawBalanceMoney = money(rawBalance)
+  const availableBalance = moneyToNumber(greaterThanMoney(rawBalanceMoney, 0) ? rawBalanceMoney : 0)
 
-  if (rawBalance < 0) {
+  if (greaterThanMoney(0, rawBalanceMoney)) {
     logger.warn(
       { customerId, rawBalance, availableBalance },
       'Customer credit ledger has negative balance'
@@ -68,7 +70,7 @@ export async function getCustomerCreditBalanceDetails(
     _sum: { amount: true },
   })
 
-  return normalizeCreditBalance(customerId, Number(result._sum.amount ?? 0))
+  return normalizeCreditBalance(customerId, moneyToNumber(result._sum.amount ?? 0))
 }
 
 /**
@@ -107,7 +109,7 @@ export async function getCustomerCreditBalances(
 
   const map = new Map<string, number>()
   for (const r of results) {
-    const balance = normalizeCreditBalance(r.customerId, Number(r._sum.amount ?? 0))
+    const balance = normalizeCreditBalance(r.customerId, moneyToNumber(r._sum.amount ?? 0))
     map.set(r.customerId, balance.availableBalance)
   }
   return map
@@ -158,24 +160,29 @@ export function calculatePaymentDistribution(
   paymentAmount: number,
   customerCreditApplied: number = 0
 ): ProcessPaymentWithCreditResult {
+  const projectBalanceMoney = money(projectBalance)
+  const customerCreditAppliedMoney = money(customerCreditApplied)
+
   // Total disponible para aplicar al proyecto
-  const totalPayment = paymentAmount + customerCreditApplied
+  const totalPayment = addMoney(paymentAmount, customerCreditAppliedMoney)
 
   // ¿Cuánto se aplica al proyecto? (máximo: balance actual)
-  const appliedToProject = Math.min(totalPayment, projectBalance)
+  const appliedToProject = minMoney(totalPayment, projectBalanceMoney)
 
   // ¿Cuánto sobra? (se convierte en crédito)
-  const generatedCredit = Math.max(0, totalPayment - projectBalance)
+  const generatedCredit = greaterThanMoney(totalPayment, projectBalanceMoney)
+    ? subtractMoney(totalPayment, projectBalanceMoney)
+    : money(0)
 
   // Nuevos valores
-  const newProjectBalance = projectBalance - appliedToProject
-  const newCustomerCredit = generatedCredit - customerCreditApplied
+  const newProjectBalance = subtractMoney(projectBalanceMoney, appliedToProject)
+  const newCustomerCredit = subtractMoney(generatedCredit, customerCreditAppliedMoney)
 
   return {
-    appliedToProject,
-    generatedCredit,
-    newProjectBalance,
-    newCustomerCredit,
+    appliedToProject: moneyToNumber(appliedToProject),
+    generatedCredit: moneyToNumber(generatedCredit),
+    newProjectBalance: moneyToNumber(newProjectBalance),
+    newCustomerCredit: moneyToNumber(newCustomerCredit),
   }
 }
 
@@ -195,7 +202,7 @@ export function calculateMaxCreditApplication(
   customerCredit: number,
   projectBalance: number
 ): number {
-  return Math.min(customerCredit, projectBalance)
+  return moneyToNumber(minMoney(customerCredit, projectBalance))
 }
 
 export interface CreditApplicationValidation {
@@ -217,22 +224,22 @@ export function canApplyCredit(
   customerCredit: number,
   projectBalance: number
 ): CreditApplicationValidation {
-  if (requestedAmount < 0) {
+  if (greaterThanMoney(0, requestedAmount)) {
     return { valid: false, error: 'El monto debe ser positivo' }
   }
 
-  if (requestedAmount === 0) {
+  if (money(requestedAmount).equals(0)) {
     return { valid: false, error: 'El monto debe ser mayor a 0' }
   }
 
-  if (requestedAmount > customerCredit) {
+  if (greaterThanMoney(requestedAmount, customerCredit)) {
     return {
       valid: false,
       error: `Crédito insuficiente. Disponible: $${customerCredit.toLocaleString('es-CL')}`,
     }
   }
 
-  if (requestedAmount > projectBalance) {
+  if (greaterThanMoney(requestedAmount, projectBalance)) {
     return {
       valid: false,
       error: `El monto excede el balance del proyecto ($${projectBalance.toLocaleString('es-CL')})`,
@@ -254,11 +261,11 @@ export function canRefundCredit(
   requestedAmount: number,
   customerCredit: number
 ): CreditApplicationValidation {
-  if (requestedAmount <= 0) {
+  if (!greaterThanMoney(requestedAmount, 0)) {
     return { valid: false, error: 'El monto debe ser mayor a 0' }
   }
 
-  if (requestedAmount > customerCredit) {
+  if (greaterThanMoney(requestedAmount, customerCredit)) {
     return {
       valid: false,
       error: `El monto excede el crédito disponible ($${customerCredit.toLocaleString('es-CL')})`,

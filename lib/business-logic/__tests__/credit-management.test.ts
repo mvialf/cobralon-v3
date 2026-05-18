@@ -313,6 +313,17 @@ describe('calculatePaymentDistribution', () => {
       expect(result.newProjectBalance).toBe(25)
       expect(result.newCustomerCredit).toBe(-25.25)
     })
+
+    it('debe evitar ruido binario al sumar pago y crédito decimal', () => {
+      const result = calculatePaymentDistribution(0.3, 0.1, 0.2)
+
+      expect(result).toEqual({
+        appliedToProject: 0.3,
+        generatedCredit: 0,
+        newProjectBalance: 0,
+        newCustomerCredit: -0.2,
+      })
+    })
   })
 
   describe('invariantes del sistema', () => {
@@ -551,6 +562,11 @@ describe('calculateMaxCreditApplication', () => {
       const result = calculateMaxCreditApplication(100.5, 50.25)
       expect(result).toBe(50.25)
     })
+
+    it('debe comparar decimales sin ruido binario', () => {
+      const result = calculateMaxCreditApplication(0.1 + 0.2, 0.3)
+      expect(result).toBe(0.3)
+    })
   })
 
   describe('casos de negocio', () => {
@@ -596,6 +612,12 @@ describe('canApplyCredit', () => {
 
     it('debe permitir aplicar crédito exacto a ambos límites', () => {
       const result = canApplyCredit(100000, 100000, 100000)
+
+      expect(result.valid).toBe(true)
+    })
+
+    it('debe permitir montos decimales equivalentes aunque number tenga ruido binario', () => {
+      const result = canApplyCredit(0.3, 0.1 + 0.2, 0.3)
 
       expect(result.valid).toBe(true)
     })
@@ -719,6 +741,12 @@ describe('canRefundCredit', () => {
 
     it('debe permitir devolver crédito decimal', () => {
       const result = canRefundCredit(50.5, 100.75)
+
+      expect(result.valid).toBe(true)
+    })
+
+    it('debe permitir devolver decimales equivalentes aunque number tenga ruido binario', () => {
+      const result = canRefundCredit(0.3, 0.1 + 0.2)
 
       expect(result.valid).toBe(true)
     })

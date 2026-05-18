@@ -1,15 +1,20 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
-import { Decimal } from '@prisma/client/runtime/library'
 import { ProjectUpdateInput } from '@/types/api'
-import { calculateProjectTotal } from '@/lib/business-logic/totals'
-import { FINANCIAL } from '@/lib/constants/financial-constants'
+import { calculateProjectTotalMoney } from '@/lib/business-logic/totals'
 import { withApiHandler, BusinessError } from '@/lib/api-handler'
 import { getProjectFinancials } from '@/lib/business-logic/project-financials'
 import {
   updateProjectApiSchema,
   type UpdateProjectApiBody,
 } from '@/lib/validations/project-validations'
+import {
+  absMoney,
+  greaterThanMoneyWithTolerance,
+  money,
+  moneyToNumber,
+  subtractMoney,
+} from '@/lib/business-logic/money'
 
 /**
  * GET /api/projects/[id]
@@ -53,7 +58,7 @@ export const GET = withApiHandler(
 
     return NextResponse.json({
       ...project,
-      totalAmount: Number(project.totalAmount),
+      totalAmount: moneyToNumber(project.totalAmount),
       ...financials,
     })
   },
@@ -90,18 +95,21 @@ export const PUT = withApiHandler<UpdateProjectApiBody>(
     }
 
     // SEGURIDAD: Siempre recalcular total en el servidor cuando cambian subtotal/taxRate
-    let updatedTotalAmount: Decimal | undefined
+    let updatedTotalAmount: ReturnType<typeof money> | undefined
     if (body.subtotal !== undefined || body.taxRate !== undefined) {
-      const subtotal = body.subtotal ?? existingProject.subtotal.toNumber()
-      const taxRate = body.taxRate ?? existingProject.taxRate.toNumber()
+      const subtotal = body.subtotal ?? existingProject.subtotal
+      const taxRate = body.taxRate ?? existingProject.taxRate
 
       const projectCurrency = body.currency ?? existingProject.currency
-      const calculatedTotal = calculateProjectTotal(subtotal, taxRate, projectCurrency)
-      updatedTotalAmount = new Decimal(calculatedTotal)
+      updatedTotalAmount = calculateProjectTotalMoney(subtotal, taxRate, projectCurrency)
+      const calculatedTotal = moneyToNumber(updatedTotalAmount)
 
       if (
         body.totalAmount !== undefined &&
-        Math.abs(body.totalAmount - calculatedTotal) > FINANCIAL.TOLERANCE
+        greaterThanMoneyWithTolerance(
+          absMoney(subtractMoney(body.totalAmount, updatedTotalAmount)),
+          0
+        )
       ) {
         logger.warn(
           {
@@ -131,12 +139,12 @@ export const PUT = withApiHandler<UpdateProjectApiBody>(
         : { disconnect: true }
     }
     if (body.date !== undefined) updateData.date = body.date
-    if (body.subtotal !== undefined) updateData.subtotal = new Decimal(body.subtotal)
-    if (body.taxRate !== undefined) updateData.taxRate = new Decimal(body.taxRate)
+    if (body.subtotal !== undefined) updateData.subtotal = money(body.subtotal)
+    if (body.taxRate !== undefined) updateData.taxRate = money(body.taxRate)
     if (updatedTotalAmount !== undefined) updateData.totalAmount = updatedTotalAmount
     if (body.currency !== undefined) updateData.currency = body.currency
     if (body.windowsCount !== undefined) updateData.windowsCount = body.windowsCount
-    if (body.squareMeters !== undefined) updateData.squareMeters = new Decimal(body.squareMeters)
+    if (body.squareMeters !== undefined) updateData.squareMeters = money(body.squareMeters)
     if (body.description !== undefined) updateData.description = body.description || null
 
     const project = await prisma.$transaction(async (tx) => {
@@ -174,7 +182,7 @@ export const PUT = withApiHandler<UpdateProjectApiBody>(
 
     return NextResponse.json({
       ...project,
-      ...(project && { totalAmount: Number(project.totalAmount) }),
+      ...(project && { totalAmount: moneyToNumber(project.totalAmount) }),
       ...(financials ?? {}),
     })
   },

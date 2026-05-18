@@ -31,6 +31,16 @@ import {
 } from '@/lib/validations/payment-validations'
 import type { PrismaTransaction } from '@/lib/db/types'
 import { getProjectsFinancials } from '@/lib/business-logic/project-financials'
+import {
+  greaterThanMoney,
+  greaterThanMoneyWithTolerance,
+  maxMoney,
+  money,
+  moneyToNumber,
+  negateMoney,
+  subtractMoney,
+  sumMoney,
+} from '@/lib/business-logic/money'
 
 type ProjectApplicationWriter = PrismaTransaction & {
   creditTransaction: {
@@ -379,9 +389,8 @@ export const POST = withApiHandler<CreatePaymentApiBody>(
       selectedInstallments,
       creditApplied: legacyCreditApplied,
     } = body
-    const parsedAllocationCreditTotal = rawAllocations.reduce(
-      (sum, allocation) => sum + (allocation.creditApplied ?? 0),
-      0
+    const parsedAllocationCreditTotal = moneyToNumber(
+      sumMoney(rawAllocations.map((allocation) => allocation.creditApplied ?? 0))
     )
     const allocations: NormalizedAllocation[] = rawAllocations.map((allocation, index) => ({
       ...allocation,
@@ -393,7 +402,9 @@ export const POST = withApiHandler<CreatePaymentApiBody>(
           ? legacyCreditApplied
           : (allocation.creditApplied ?? 0),
     }))
-    const totalCreditToApply = allocations.reduce((sum, a) => sum + a.creditApplied, 0)
+    const totalCreditToApply = moneyToNumber(
+      sumMoney(allocations.map((allocation) => allocation.creditApplied))
+    )
 
     // Child logger con contexto de negocio
     const paymentLogger = logger.child({
@@ -564,25 +575,23 @@ export const POST = withApiHandler<CreatePaymentApiBody>(
         data: {
           type,
           customerId,
-          amount: new Decimal(amount),
+          amount: money(amount),
           currency,
           date: paymentDate,
           paymentMethodId,
           reference: reference?.trim() || null,
           notes: notes?.trim() || null,
           selectedInstallments: selectedInstallments || null,
-          commissionAmount: commissionResult
-            ? new Decimal(commissionResult.commissionAmount)
-            : null,
-          netAmount: commissionResult ? new Decimal(commissionResult.netAmount) : null,
-          commissionRate: commissionResult ? new Decimal(commissionResult.percentageFee) : null,
-          commissionFixed: commissionResult ? new Decimal(commissionResult.fixedFee) : null,
+          commissionAmount: commissionResult ? money(commissionResult.commissionAmount) : null,
+          netAmount: commissionResult ? money(commissionResult.netAmount) : null,
+          commissionRate: commissionResult ? money(commissionResult.percentageFee) : null,
+          commissionFixed: commissionResult ? money(commissionResult.fixedFee) : null,
           allocations: {
             create: allocations
-              .filter((a) => a.allocatedAmount > 0)
+              .filter((a) => greaterThanMoney(a.allocatedAmount, 0))
               .map((a) => ({
                 projectId: a.projectId,
-                allocatedAmount: new Decimal(a.allocatedAmount),
+                allocatedAmount: money(a.allocatedAmount),
               })),
           },
           installments: generatePrismaInstallmentsCreate(
@@ -630,7 +639,7 @@ export const POST = withApiHandler<CreatePaymentApiBody>(
       // PASO 1b: Distribuir neto entre installments (si hay comisión y cuotas)
       // ====================================================================
       if (commissionResult && newPayment.installments.length > 1) {
-        const installmentAmounts = newPayment.installments.map((inst) => Number(inst.amount))
+        const installmentAmounts = newPayment.installments.map((inst) => moneyToNumber(inst.amount))
         const netAmounts = distributeNetToInstallments(
           installmentAmounts,
           commissionResult.netAmount
@@ -640,7 +649,7 @@ export const POST = withApiHandler<CreatePaymentApiBody>(
           newPayment.installments.map((inst, idx) =>
             tx.installment.update({
               where: { id: inst.id },
-              data: { netAmount: new Decimal(netAmounts[idx]) },
+              data: { netAmount: money(netAmounts[idx]) },
             })
           )
         )
@@ -658,12 +667,12 @@ export const POST = withApiHandler<CreatePaymentApiBody>(
       // ====================================================================
       const creditByProject = new Map<string, number>(
         allocations
-          .filter((allocation) => allocation.creditApplied > 0)
+          .filter((allocation) => greaterThanMoney(allocation.creditApplied, 0))
           .map((allocation) => [allocation.projectId, allocation.creditApplied])
       )
       const appliedCreditTransactionByProject = new Map<string, string>()
 
-      if (totalCreditToApply > 0) {
+      if (greaterThanMoney(totalCreditToApply, 0)) {
         const locked = await lockCustomerCreditBalance(customerId, tx)
         if (!locked) {
           throw new BusinessError('Cliente no encontrado durante validación de crédito', 404)
@@ -672,7 +681,7 @@ export const POST = withApiHandler<CreatePaymentApiBody>(
         // Leer datos DENTRO de la transacción (snapshot consistente)
         const customerCreditBalance = await getCustomerCreditBalance(customerId, tx)
 
-        if (totalCreditToApply > customerCreditBalance) {
+        if (greaterThanMoneyWithTolerance(totalCreditToApply, customerCreditBalance)) {
           throw new BusinessError(
             `Crédito insuficiente. Disponible: $${customerCreditBalance.toLocaleString('es-CL')}`,
             400
@@ -681,16 +690,15 @@ export const POST = withApiHandler<CreatePaymentApiBody>(
 
         for (const allocation of allocations) {
           const creditAmount = allocation.creditApplied
-          if (creditAmount <= 0) continue
+          if (!greaterThanMoney(creditAmount, 0)) continue
 
           const projectFinancials = initialFinancials.get(allocation.projectId)
           if (!projectFinancials) {
             throw new BusinessError('Proyecto no encontrado durante validación de crédito', 404)
           }
 
-          const balanceAfterCash = Math.max(
-            0,
-            projectFinancials.balance - allocation.allocatedAmount
+          const balanceAfterCash = moneyToNumber(
+            maxMoney(0, subtractMoney(projectFinancials.balance, allocation.allocatedAmount))
           )
           const creditValidation = canApplyCredit(
             creditAmount,
@@ -703,7 +711,7 @@ export const POST = withApiHandler<CreatePaymentApiBody>(
         }
 
         const appliedCreditRows = allocations
-          .filter((allocation) => allocation.creditApplied > 0)
+          .filter((allocation) => greaterThanMoney(allocation.creditApplied, 0))
           .map((allocation) => {
             const creditTransactionId = randomUUID()
             appliedCreditTransactionByProject.set(allocation.projectId, creditTransactionId)
@@ -711,7 +719,7 @@ export const POST = withApiHandler<CreatePaymentApiBody>(
             return {
               id: creditTransactionId,
               customerId,
-              amount: new Prisma.Decimal(-allocation.creditApplied), // Negativo = salida de crédito
+              amount: negateMoney(allocation.creditApplied), // Negativo = salida de crédito
               type: 'APPLIED' as const,
               description: `Crédito aplicado al pago ${newPayment.id.slice(0, 8)}`,
               paymentId: newPayment.id,
@@ -745,7 +753,7 @@ export const POST = withApiHandler<CreatePaymentApiBody>(
       const paymentAllocationByProject = new Map(
         newPayment.allocations.map((allocation) => [
           allocation.project.id,
-          { id: allocation.id, amount: Number(allocation.allocatedAmount) },
+          { id: allocation.id, amount: allocation.allocatedAmount },
         ])
       )
       for (const project of projects) {
@@ -759,18 +767,18 @@ export const POST = withApiHandler<CreatePaymentApiBody>(
         const creditAmount = creditByProject.get(project.id) ?? 0
         const cashApplicationAmount = cashAmount
 
-        if (allocation && cashApplicationAmount > 0) {
+        if (allocation && greaterThanMoney(cashApplicationAmount, 0)) {
           projectApplicationRows.push({
             projectId: project.id,
             customerId: project.customerId,
             paymentId: newPayment.id,
             paymentAllocationId: allocation.id,
-            amount: new Prisma.Decimal(cashApplicationAmount),
+            amount: money(cashApplicationAmount),
             sourceType: 'CASH',
           })
         }
 
-        if (creditAmount > 0) {
+        if (greaterThanMoney(creditAmount, 0)) {
           const appliedCreditTransactionId = appliedCreditTransactionByProject.get(project.id)
           if (!appliedCreditTransactionId) {
             throw new BusinessError('No se pudo registrar la aplicación de crédito', 500)
@@ -781,7 +789,7 @@ export const POST = withApiHandler<CreatePaymentApiBody>(
             customerId: project.customerId,
             paymentId: newPayment.id,
             creditTransactionId: appliedCreditTransactionId,
-            amount: new Prisma.Decimal(creditAmount),
+            amount: money(creditAmount),
             sourceType: 'CUSTOMER_CREDIT',
           })
         }
@@ -814,23 +822,30 @@ export const POST = withApiHandler<CreatePaymentApiBody>(
 
         const allocatedAmount = allocationByProject.get(project.id) ?? 0
         const creditAppliedToProject = creditByProject.get(project.id) ?? 0
-        const cashCapacityAfterCredit = Math.max(
+        const cashCapacityAfterCredit = maxMoney(
           0,
-          startingFinancials.balance - creditAppliedToProject
+          subtractMoney(startingFinancials.balance, creditAppliedToProject)
         )
-        const overpaymentAmount = Math.max(0, allocatedAmount - cashCapacityAfterCredit)
+        const overpaymentAmount = maxMoney(
+          0,
+          subtractMoney(allocatedAmount, cashCapacityAfterCredit)
+        )
 
-        if (overpaymentAmount > 0) {
-          const rawBalanceAfterPayment =
-            startingFinancials.rawBalance - allocatedAmount - creditAppliedToProject
+        if (greaterThanMoney(overpaymentAmount, 0)) {
+          const rawBalanceAfterPayment = subtractMoney(
+            subtractMoney(startingFinancials.rawBalance, allocatedAmount),
+            creditAppliedToProject
+          )
+          const rawBalanceAfterPaymentNumber = moneyToNumber(rawBalanceAfterPayment)
+          const overpaymentAmountNumber = moneyToNumber(overpaymentAmount)
 
           paymentLogger.info(
             {
               projectId: project.id,
               projectNumber: project.projectNumber,
               previousBalance: startingFinancials.balance,
-              rawBalanceAfterPayment,
-              overpaymentAmount,
+              rawBalanceAfterPayment: rawBalanceAfterPaymentNumber,
+              overpaymentAmount: overpaymentAmountNumber,
             },
             'Overpayment detected - converting to customer credit'
           )
@@ -838,7 +853,7 @@ export const POST = withApiHandler<CreatePaymentApiBody>(
           overpaymentRows.push({
             id: randomUUID(),
             customerId: project.customerId,
-            amount: new Prisma.Decimal(overpaymentAmount), // Positivo = entrada de crédito
+            amount: money(overpaymentAmount), // Positivo = entrada de crédito
             type: 'OVERPAYMENT',
             description: `Sobrepago generado en proyecto P-${project.projectNumber}`,
             paymentId: newPayment.id,
@@ -846,8 +861,8 @@ export const POST = withApiHandler<CreatePaymentApiBody>(
             metadata: {
               paymentAmount: amount,
               creditApplied: creditAppliedToProject,
-              projectBalance: rawBalanceAfterPayment,
-              overpaymentAmount,
+              projectBalance: rawBalanceAfterPaymentNumber,
+              overpaymentAmount: overpaymentAmountNumber,
               paymentDate: paymentDate.toISOString(),
             },
           })
@@ -856,7 +871,7 @@ export const POST = withApiHandler<CreatePaymentApiBody>(
             {
               projectId: project.id,
               projectNumber: project.projectNumber,
-              creditGenerated: overpaymentAmount,
+              creditGenerated: overpaymentAmountNumber,
             },
             'Overpayment credit generated successfully in transaction'
           )

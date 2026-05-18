@@ -1,21 +1,18 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
-import { Decimal } from '@prisma/client/runtime/library'
 import { CreditTransactionType } from '@prisma/client'
 import { withApiHandler, BusinessError } from '@/lib/api-handler'
 import {
   updatePaymentApiSchema,
   type UpdatePaymentApiBody,
 } from '@/lib/validations/payment-validations'
+import { absMoney, money, moneyToNumber, negateMoney } from '@/lib/business-logic/money'
 
 /**
  * PUT /api/payments/[id]
  *
- * Actualiza un pago existente
- *
- * IMPORTANTE:
- * - Bloquea la edición si el pago tiene cuotas configuradas (selectedInstallments > 1)
- * - Bloquea la edición si el pago tiene crédito asociado
+ * Actualiza solo campos no financieros de un pago existente.
+ * El monto y método de pago son inmutables para preservar consistencia financiera.
  */
 export const PUT = withApiHandler<UpdatePaymentApiBody>(
   async (_request, _logger, { params, body }) => {
@@ -26,8 +23,6 @@ export const PUT = withApiHandler<UpdatePaymentApiBody>(
       where: { id },
       select: {
         id: true,
-        selectedInstallments: true,
-        _count: { select: { creditTransactions: true } },
       },
     })
 
@@ -35,27 +30,12 @@ export const PUT = withApiHandler<UpdatePaymentApiBody>(
       throw new BusinessError('Pago no encontrado', 404)
     }
 
-    // IMPORTANTE: Bloquear edición si el pago tiene cuotas
-    if (existingPayment.selectedInstallments && existingPayment.selectedInstallments > 1) {
-      throw new BusinessError(
-        'No se puede editar un pago con cuotas. Para modificar, debe cancelar el pago y crear uno nuevo.'
-      )
-    }
-
-    // IMPORTANTE: Bloquear edición si el pago tiene crédito asociado
-    if (existingPayment._count.creditTransactions > 0) {
-      throw new BusinessError(
-        'No se puede editar un pago con crédito asociado. Elimine y cree uno nuevo.'
-      )
-    }
-
     const payment = await prisma.payment.update({
       relationLoadStrategy: 'join',
       where: { id },
       data: {
-        ...(body.amount !== undefined && { amount: body.amount }),
         ...(body.date !== undefined && { date: body.date }),
-        ...(body.paymentMethodId !== undefined && { paymentMethodId: body.paymentMethodId }),
+        ...(body.reference !== undefined && { reference: body.reference?.trim() || null }),
         ...(body.notes !== undefined && { notes: body.notes?.trim() || null }),
       },
       include: {
@@ -152,21 +132,26 @@ export const DELETE = withApiHandler(
       // 2. Crear entradas de ADJUSTMENT para auditoría (reversión en batch)
       if (creditTransactions.length > 0) {
         const reversals = creditTransactions.map((ct) => {
-          const ctAmount = Number(ct.amount)
-
           // Reversión explícita según tipo:
           // - OVERPAYMENT: monto positivo → reversión negativa (resta crédito)
           // - APPLIED: monto negativo → reversión positiva (devuelve crédito)
           const reversalAmount =
-            ct.type === 'OVERPAYMENT' ? -Math.abs(ctAmount) : Math.abs(ctAmount)
+            ct.type === 'OVERPAYMENT' ? negateMoney(absMoney(ct.amount)) : absMoney(ct.amount)
+          const ctAmount = moneyToNumber(ct.amount)
+          const reversalAmountNumber = moneyToNumber(reversalAmount)
 
           deleteLogger.info(
-            { transactionId: ct.id, type: ct.type, amount: ctAmount, reversalAmount },
+            {
+              transactionId: ct.id,
+              type: ct.type,
+              amount: ctAmount,
+              reversalAmount: reversalAmountNumber,
+            },
             'Credit transaction reversed'
           )
           return {
             customerId: ct.customerId,
-            amount: new Decimal(reversalAmount),
+            amount: money(reversalAmount),
             type: CreditTransactionType.ADJUSTMENT,
             description: `Reversión por eliminación de pago ${id.slice(0, 8)}`,
             paymentId: null,

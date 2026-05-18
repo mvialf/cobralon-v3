@@ -3,6 +3,7 @@ import { Prisma } from '@prisma/client'
 import { FINANCIAL } from '@/lib/constants/financial-constants'
 import { prisma } from '@/lib/db'
 import type { PrismaTransaction } from '@/lib/db/types'
+import { addMoney, greaterThanMoneyWithTolerance, moneyToNumber } from './money'
 
 type PrismaDb = typeof prisma | PrismaTransaction
 
@@ -48,27 +49,30 @@ export const PROJECT_FINANCIALS_SELECT = Prisma.sql`
 `
 
 export function mapProjectFinancials(row: ProjectFinancialsRawRow): ProjectFinancials {
-  const allocatedTotal = Number(row.allocatedTotal)
-  const appliedCashTotal = Number(row.appliedCashTotal ?? row.allocatedTotal)
-  const appliedCreditTotal = Number(row.appliedCreditTotal ?? 0)
-  const adjustmentTotal = Number(row.adjustmentTotal)
-  const settledTotal = Number(row.settledTotal ?? allocatedTotal + adjustmentTotal)
-  const balance = Number(row.balance)
-  const totalAmount = settledTotal + Number(row.rawBalance)
+  const allocatedTotalMoney = row.allocatedTotal
+  const appliedCashTotalMoney = row.appliedCashTotal ?? row.allocatedTotal
+  const appliedCreditTotalMoney = row.appliedCreditTotal ?? 0
+  const adjustmentTotalMoney = row.adjustmentTotal
+  const settledTotalMoney = row.settledTotal ?? addMoney(allocatedTotalMoney, adjustmentTotalMoney)
+  const rawBalanceMoney = row.rawBalance
+  const balanceMoney = row.balance
+  const totalAmount = addMoney(settledTotalMoney, rawBalanceMoney)
 
   return {
     projectId: row.projectId,
-    allocatedTotal,
-    appliedCashTotal,
-    appliedCreditTotal,
-    adjustmentTotal,
-    settledTotal,
-    rawBalance: Number(row.rawBalance),
-    balance,
-    overpayment: Number(row.overpayment),
-    totalPaid: settledTotal,
-    percentPaid: totalAmount > 0 ? (settledTotal / totalAmount) * 100 : 0,
-    hasDebt: balance > FINANCIAL.BALANCE_TOLERANCE,
+    allocatedTotal: moneyToNumber(allocatedTotalMoney),
+    appliedCashTotal: moneyToNumber(appliedCashTotalMoney),
+    appliedCreditTotal: moneyToNumber(appliedCreditTotalMoney),
+    adjustmentTotal: moneyToNumber(adjustmentTotalMoney),
+    settledTotal: moneyToNumber(settledTotalMoney),
+    rawBalance: moneyToNumber(rawBalanceMoney),
+    balance: moneyToNumber(balanceMoney),
+    overpayment: moneyToNumber(row.overpayment),
+    totalPaid: moneyToNumber(settledTotalMoney),
+    percentPaid: greaterThanMoneyWithTolerance(totalAmount, 0, 0)
+      ? moneyToNumber(settledTotalMoney.dividedBy(totalAmount).times(100))
+      : 0,
+    hasDebt: greaterThanMoneyWithTolerance(balanceMoney, 0, FINANCIAL.BALANCE_TOLERANCE),
   }
 }
 

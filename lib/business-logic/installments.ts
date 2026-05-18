@@ -12,6 +12,16 @@
 import { FINANCIAL } from '../constants/financial-constants'
 import { addMonths } from 'date-fns'
 import { isPastOrToday, isFuture } from '@/lib/timezone'
+import {
+  absMoney,
+  compareMoney,
+  money,
+  moneyToFixed,
+  moneyToNumber,
+  splitMoneyRemainder,
+  subtractMoney,
+  sumMoney,
+} from './money'
 
 /**
  * Type para una cuota calculada
@@ -98,30 +108,16 @@ export function calculateInstallments(
     )
   }
 
-  if (amount <= 0) {
+  if (compareMoney(money(amount), money(0)) <= 0) {
     throw new Error('El monto debe ser mayor a 0')
   }
 
-  // PASO 1: Calcular cuota base redondeada a 2 decimales
-  // Math.floor asegura que redondeamos hacia abajo para evitar sobrepaso
-  const baseInstallmentAmount = Math.floor((amount / installments) * 100) / 100
-
-  // PASO 2: Calcular total de cuotas base (N-1 cuotas)
-  const totalBase = baseInstallmentAmount * (installments - 1)
-
-  // PASO 3: Última cuota absorbe los centavos restantes
-  // Esto GARANTIZA que la suma sea exacta
-  const lastInstallmentAmount = amount - totalBase
+  const installmentAmounts = splitMoneyRemainder(money(amount), installments)
 
   // PASO 4: Generar array de cuotas
   const result: CalculatedInstallment[] = []
 
   for (let i = 1; i <= installments; i++) {
-    const isLastInstallment = i === installments
-
-    // Determinar monto de esta cuota
-    const installmentAmount = isLastInstallment ? lastInstallmentAmount : baseInstallmentAmount
-
     // Calcular fecha de vencimiento usando meses calendarios
     // Cuota 1: mes 0 (fecha del pago)
     // Cuota 2: mes +1
@@ -130,7 +126,7 @@ export function calculateInstallments(
 
     result.push({
       installmentNumber: i,
-      amount: installmentAmount,
+      amount: moneyToNumber(installmentAmounts[i - 1]),
       dueDate,
     })
   }
@@ -158,8 +154,9 @@ export function validateInstallmentsSum(
   installments: CalculatedInstallment[],
   expectedTotal: number
 ): boolean {
-  const sum = installments.reduce((acc, inst) => acc + inst.amount, 0)
-  return Math.abs(sum - expectedTotal) < FINANCIAL.TOLERANCE
+  const sum = sumMoney(installments.map((inst) => money(inst.amount)))
+  const difference = absMoney(subtractMoney(sum, money(expectedTotal)))
+  return compareMoney(difference, money(FINANCIAL.TOLERANCE)) < 0
 }
 
 /**
@@ -198,9 +195,11 @@ export function getInstallmentStatus(dueDate: Date): 'due' | 'upcoming' {
 export function getTotalPendingInstallments(
   installments: Array<{ amount: number; dueDate: Date }>
 ): number {
-  return installments
-    .filter((inst) => isFuture(inst.dueDate))
-    .reduce((sum, inst) => sum + inst.amount, 0)
+  return moneyToNumber(
+    sumMoney(
+      installments.filter((inst) => isFuture(inst.dueDate)).map((inst) => money(inst.amount))
+    )
+  )
 }
 
 /**
@@ -263,7 +262,7 @@ export function generatePrismaInstallmentsCreate<T extends new (value: number | 
   return {
     create: installments.map((inst) => ({
       installmentNumber: inst.installmentNumber,
-      amount: new DecimalClass(inst.amount) as InstanceType<T>,
+      amount: new DecimalClass(moneyToFixed(money(inst.amount), 2)) as InstanceType<T>,
       dueDate: inst.dueDate,
     })),
   }

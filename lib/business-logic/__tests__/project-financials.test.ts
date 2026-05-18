@@ -24,4 +24,22 @@ describe('mapProjectFinancials', () => {
     expect(financials.percentPaid).toBe(100)
     expect(financials.balance).toBe(0)
   })
+
+  it('calcula percentPaid y deuda con Decimal internamente', () => {
+    const financials = mapProjectFinancials({
+      projectId: 'project-2',
+      allocatedTotal: new Decimal(0.1),
+      appliedCashTotal: new Decimal(0.1),
+      appliedCreditTotal: new Decimal(0.2),
+      adjustmentTotal: new Decimal(0),
+      settledTotal: new Decimal(0.3),
+      rawBalance: new Decimal(0.1),
+      balance: new Decimal(1.01),
+      overpayment: new Decimal(0),
+    })
+
+    expect(financials.settledTotal).toBe(0.3)
+    expect(financials.percentPaid).toBe(75)
+    expect(financials.hasDebt).toBe(true)
+  })
 })

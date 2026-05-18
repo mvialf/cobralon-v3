@@ -1,5 +1,20 @@
 import { z } from 'zod'
 import { FINANCIAL } from '../constants/financial-constants'
+import {
+  absMoney,
+  addMoney,
+  compareMoney,
+  greaterThanMoney,
+  roundMoney,
+  subtractMoney,
+  sumMoney,
+} from '../business-logic/money'
+
+function hasMaxTwoDecimalPlaces(value: number): boolean {
+  return compareMoney(roundMoney(value, 2), value) === 0
+}
+
+const maxTwoDecimalsMessage = 'El monto debe tener máximo 2 decimales'
 
 /**
  * Schema Zod para el body del POST /api/payments
@@ -22,7 +37,8 @@ export const createPaymentApiSchema = z
         required_error: 'El monto es requerido',
         invalid_type_error: 'El monto debe ser un número',
       })
-      .positive('El monto debe ser mayor a 0'),
+      .positive('El monto debe ser mayor a 0')
+      .refine(hasMaxTwoDecimalPlaces, maxTwoDecimalsMessage),
     currency: z
       .string({ required_error: 'La moneda es requerida' })
       .length(3, 'La moneda debe ser un código de 3 letras'),
@@ -33,13 +49,26 @@ export const createPaymentApiSchema = z
     reference: z.string().nullable().optional(),
     notes: z.string().nullable().optional(),
     selectedInstallments: z.number().int().min(1).nullable().optional(),
-    creditApplied: z.coerce.number().min(0).optional().default(0),
+    creditApplied: z.coerce
+      .number()
+      .min(0)
+      .refine(hasMaxTwoDecimalPlaces, maxTwoDecimalsMessage)
+      .optional()
+      .default(0),
     allocations: z
       .array(
         z.object({
           projectId: z.string().min(1),
-          allocatedAmount: z.coerce.number().min(0),
-          creditApplied: z.coerce.number().min(0).optional().default(0),
+          allocatedAmount: z.coerce
+            .number()
+            .min(0)
+            .refine(hasMaxTwoDecimalPlaces, maxTwoDecimalsMessage),
+          creditApplied: z.coerce
+            .number()
+            .min(0)
+            .refine(hasMaxTwoDecimalPlaces, maxTwoDecimalsMessage)
+            .optional()
+            .default(0),
         })
       )
       .min(1, 'Debe asignar el pago a al menos un proyecto'),
@@ -51,7 +80,10 @@ export const createPaymentApiSchema = z
           ? data.creditApplied
           : 0
 
-      if (allocation.allocatedAmount <= 0 && allocation.creditApplied + legacyCreditApplied <= 0) {
+      const hasReceivedMoney = greaterThanMoney(allocation.allocatedAmount, 0)
+      const creditToApply = addMoney(allocation.creditApplied, legacyCreditApplied)
+
+      if (!hasReceivedMoney && !greaterThanMoney(creditToApply, 0)) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
           path: ['allocations', index, 'allocatedAmount'],
@@ -134,7 +166,7 @@ export const paymentAllocationSchema = z.object({
   allocatedAmount: z.coerce
     .number()
     .positive('El monto debe ser mayor a 0')
-    .multipleOf(FINANCIAL.DECIMAL_PRECISION, 'El monto debe tener máximo 2 decimales'),
+    .refine(hasMaxTwoDecimalPlaces, maxTwoDecimalsMessage),
 })
 
 /**
@@ -159,17 +191,27 @@ export type CreatePaymentPayload = {
 }
 
 /**
- * Schema API para actualizar pago (server-side, todos opcionales)
- * Solo campos editables: amount, date, paymentMethodId, notes
+ * Schema API para actualizar pago (server-side, todos opcionales).
+ * Los campos monetarios son inmutables: corregir dinero requiere eliminar y recrear el pago.
  */
 export const updatePaymentApiSchema = z.object({
-  amount: z.coerce
-    .number()
-    .positive('El monto debe ser mayor a 0')
-    .multipleOf(FINANCIAL.DECIMAL_PRECISION, 'El monto debe tener máximo 2 decimales')
+  amount: z
+    .never({
+      invalid_type_error: 'El monto de un pago no se puede editar. Elimine y cree un pago nuevo.',
+    })
     .optional(),
   date: z.coerce.date({ invalid_type_error: 'Fecha inválida' }).optional(),
-  paymentMethodId: z.string().uuid('ID de método de pago inválido').optional(),
+  paymentMethodId: z
+    .never({
+      invalid_type_error: 'El método de pago no se puede editar. Elimine y cree un pago nuevo.',
+    })
+    .optional(),
+  reference: z
+    .string()
+    .max(100, 'La referencia no puede exceder 100 caracteres')
+    .trim()
+    .nullable()
+    .optional(),
   notes: z
     .string()
     .max(500, 'Las notas no pueden exceder 500 caracteres')
@@ -207,7 +249,7 @@ export const paymentToProjectSchema = z.object({
       invalid_type_error: 'El monto debe ser un número',
     })
     .positive('El monto debe ser mayor a 0')
-    .multipleOf(FINANCIAL.DECIMAL_PRECISION, 'El monto debe tener máximo 2 decimales'),
+    .refine(hasMaxTwoDecimalPlaces, maxTwoDecimalsMessage),
 
   // Fecha del pago
   date: z.date({
@@ -234,6 +276,7 @@ export const paymentToProjectSchema = z.object({
   creditApplied: z.coerce
     .number()
     .min(0, 'El crédito aplicado no puede ser negativo')
+    .refine(hasMaxTwoDecimalPlaces, maxTwoDecimalsMessage)
     .optional()
     .default(0),
 
@@ -363,7 +406,7 @@ export const paymentToCustomerSchema = z
         invalid_type_error: 'El monto debe ser un número',
       })
       .positive('El monto debe ser mayor a 0')
-      .multipleOf(FINANCIAL.DECIMAL_PRECISION, 'El monto debe tener máximo 2 decimales'),
+      .refine(hasMaxTwoDecimalPlaces, maxTwoDecimalsMessage),
 
     // Fecha del pago
     date: z.date({
@@ -404,11 +447,11 @@ export const paymentToCustomerSchema = z
           allocatedAmount: z.coerce
             .number()
             .min(0, 'El monto no puede ser negativo')
-            .multipleOf(FINANCIAL.DECIMAL_PRECISION, 'El monto debe tener máximo 2 decimales'),
+            .refine(hasMaxTwoDecimalPlaces, maxTwoDecimalsMessage),
           creditApplied: z.coerce
             .number()
             .min(0, 'El crédito aplicado no puede ser negativo')
-            .multipleOf(FINANCIAL.DECIMAL_PRECISION, 'El monto debe tener máximo 2 decimales')
+            .refine(hasMaxTwoDecimalPlaces, maxTwoDecimalsMessage)
             .optional()
             .default(0),
         })
@@ -425,7 +468,9 @@ export const paymentToCustomerSchema = z
   .refine(
     (data) => {
       // Debe haber al menos una allocation con monto > 0
-      const allocationsWithValue = data.allocations.filter((a) => a.allocatedAmount > 0)
+      const allocationsWithValue = data.allocations.filter((a) =>
+        greaterThanMoney(a.allocatedAmount, 0)
+      )
       return allocationsWithValue.length >= 1
     },
     {
@@ -436,10 +481,13 @@ export const paymentToCustomerSchema = z
   .refine(
     (data) => {
       // Suma de allocations (solo las con valor > 0) debe ser igual al monto total
-      const totalAllocated = data.allocations
-        .filter((a) => a.allocatedAmount > 0)
-        .reduce((sum, a) => sum + a.allocatedAmount, 0)
-      return Math.abs(totalAllocated - data.amount) < FINANCIAL.TOLERANCE
+      const totalAllocated = sumMoney(
+        data.allocations
+          .filter((a) => greaterThanMoney(a.allocatedAmount, 0))
+          .map((a) => a.allocatedAmount)
+      )
+      const difference = absMoney(subtractMoney(totalAllocated, data.amount))
+      return compareMoney(difference, FINANCIAL.TOLERANCE) < 0
     },
     {
       message: 'La suma de los montos asignados debe ser igual al monto total del pago',

@@ -77,6 +77,10 @@ describe('calculateProjectState', () => {
       expect(calculateProjectState(1, true)).toBe('Finalizado')
     })
 
+    it('debe comparar contra tolerancia sin ruido binario', () => {
+      expect(calculateProjectState(0.1 + 0.2, true)).toBe('Finalizado')
+    })
+
     it('debe considerar balances mayores a tolerancia como "Activo"', () => {
       expect(calculateProjectState(1.01, true)).toBe('Activo')
       expect(calculateProjectState(2, true)).toBe('Activo')

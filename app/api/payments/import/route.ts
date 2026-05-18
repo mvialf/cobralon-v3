@@ -2,9 +2,16 @@ import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { withLogging } from '@/lib/logger-middleware'
 import { type ParsedPaymentRow } from '@/lib/excel/payment-parser'
-import { Decimal } from '@prisma/client/runtime/library'
 import { getProjectFinancials } from '@/lib/business-logic/project-financials'
 import { IMPORT_EXPORT_LIMITS } from '@/lib/constants/import-export-limits'
+import {
+  greaterThanMoney,
+  maxMoney,
+  money,
+  moneyToFixed,
+  moneyToNumber,
+  subtractMoney,
+} from '@/lib/business-logic/money'
 
 /**
  * POST /api/payments/import
@@ -159,7 +166,7 @@ export const POST = withLogging(async (request, logger) => {
         }
 
         // 4. Crear pago con transacción (Payment + PaymentAllocation + ProjectApplication)
-        const amount = new Decimal(paymentData.amount)
+        const amount = money(paymentData.amount)
 
         const payment = await prisma.$transaction(async (tx) => {
           const financials = await getProjectFinancials(project.id, tx)
@@ -193,7 +200,7 @@ export const POST = withLogging(async (request, logger) => {
             },
           })
 
-          if (paymentData.amount > 0) {
+          if (greaterThanMoney(paymentData.amount, 0)) {
             await tx.projectApplication.create({
               data: {
                 projectId: project.id,
@@ -207,20 +214,28 @@ export const POST = withLogging(async (request, logger) => {
             })
           }
 
-          const overpaymentAmount = Math.max(0, paymentData.amount - financials.balance)
-          if (overpaymentAmount > 0) {
+          const overpaymentAmount = maxMoney(
+            0,
+            subtractMoney(paymentData.amount, financials.balance)
+          )
+          if (greaterThanMoney(overpaymentAmount, 0)) {
+            const overpaymentAmountNumber = moneyToNumber(overpaymentAmount)
+            const projectBalance = moneyToNumber(
+              subtractMoney(financials.balance, paymentData.amount)
+            )
+
             await tx.creditTransaction.create({
               data: {
                 customerId: project.customerId,
-                amount: new Decimal(overpaymentAmount),
+                amount: overpaymentAmount,
                 type: 'OVERPAYMENT',
                 description: `Sobrepago generado en importación - Proyecto P-${project.projectNumber}`,
                 paymentId: newPayment.id,
                 projectId: project.id,
                 metadata: {
                   paymentAmount: paymentData.amount,
-                  projectBalance: financials.balance - paymentData.amount,
-                  overpaymentAmount,
+                  projectBalance,
+                  overpaymentAmount: overpaymentAmountNumber,
                   imported: true,
                   paymentDate: paymentData.date.toISOString(),
                 },
@@ -235,7 +250,7 @@ export const POST = withLogging(async (request, logger) => {
           {
             paymentId: payment.id,
             projectId: project.id,
-            amount: amount.toFixed(2),
+            amount: moneyToFixed(amount),
           },
           'Payment created successfully'
         )

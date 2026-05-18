@@ -14,10 +14,7 @@ import { Decimal } from '@prisma/client/runtime/library'
 // Mock de logger-middleware (usado internamente por withApiHandler)
 vi.mock('@/lib/logger-middleware', () => ({
   withLogging: (handler: Function) => {
-    return async (
-      request: NextRequest,
-      context?: { params: Promise<Record<string, string>> }
-    ) => {
+    return async (request: NextRequest, context?: { params: Promise<Record<string, string>> }) => {
       const mockLogger = {
         debug: vi.fn(),
         info: vi.fn(),
@@ -58,10 +55,15 @@ vi.mock('@/lib/business-logic/totals', () => ({
   calculateProjectTotal: vi.fn((subtotal: number, taxRate: number, _currency?: string) => {
     return subtotal * (1 + taxRate / 100)
   }),
+  calculateProjectTotalMoney: vi.fn((subtotal: number | Decimal, taxRate: number | Decimal) => {
+    const subtotalNumber = Number(subtotal)
+    const taxRateNumber = Number(taxRate)
+    return new Decimal(subtotalNumber * (1 + taxRateNumber / 100))
+  }),
 }))
 
 import { prisma } from '@/lib/db'
-import { calculateProjectTotal } from '@/lib/business-logic/totals'
+import { calculateProjectTotalMoney } from '@/lib/business-logic/totals'
 import { GET, PUT, DELETE } from '../route'
 
 // Helper para crear params
@@ -255,21 +257,21 @@ describe('PUT /api/projects/[id]', () => {
       const request = createRequest('PUT', { subtotal: 2000000 })
       await PUT(request, createParams(VALID_UUID))
 
-      expect(calculateProjectTotal).toHaveBeenCalledWith(2000000, 19, 'CLP')
+      expect(calculateProjectTotalMoney).toHaveBeenCalledWith(2000000, mockProject.taxRate, 'CLP')
     })
 
     it('debe recalcular total cuando cambia taxRate', async () => {
       const request = createRequest('PUT', { taxRate: 21 })
       await PUT(request, createParams(VALID_UUID))
 
-      expect(calculateProjectTotal).toHaveBeenCalledWith(1000000, 21, 'CLP')
+      expect(calculateProjectTotalMoney).toHaveBeenCalledWith(mockProject.subtotal, 21, 'CLP')
     })
 
     it('debe recalcular cuando cambian ambos', async () => {
       const request = createRequest('PUT', { subtotal: 2000000, taxRate: 21 })
       await PUT(request, createParams(VALID_UUID))
 
-      expect(calculateProjectTotal).toHaveBeenCalledWith(2000000, 21, 'CLP')
+      expect(calculateProjectTotalMoney).toHaveBeenCalledWith(2000000, 21, 'CLP')
     })
 
     it('debe IGNORAR totalAmount enviado por cliente', async () => {
@@ -280,7 +282,7 @@ describe('PUT /api/projects/[id]', () => {
       })
       await PUT(request, createParams(VALID_UUID))
 
-      expect(calculateProjectTotal).toHaveBeenCalledWith(2000000, 19, 'CLP')
+      expect(calculateProjectTotalMoney).toHaveBeenCalledWith(2000000, 19, 'CLP')
     })
   })
 
@@ -329,7 +331,7 @@ describe('PUT /api/projects/[id]', () => {
       const response = await PUT(request, createParams(VALID_UUID))
 
       expect(response.status).toBe(200)
-      expect(calculateProjectTotal).not.toHaveBeenCalled()
+      expect(calculateProjectTotalMoney).not.toHaveBeenCalled()
     })
 
     it('debe actualizar projectName', async () => {

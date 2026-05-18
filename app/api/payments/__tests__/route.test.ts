@@ -399,7 +399,7 @@ describe('POST /api/payments', () => {
       const request = createRequest({
         ...validPayload,
         amount: 100000,
-        allocations: [{ projectId: 'project-1', allocatedAmount: 100000.005 }],
+        allocations: [{ projectId: 'project-1', allocatedAmount: 100000.01 }],
       })
       const response = await callPOST(request)
 
@@ -891,16 +891,14 @@ describe('POST /api/payments', () => {
             }),
           },
           project: {
-            findMany: vi
-              .fn()
-              .mockResolvedValue([
-                {
-                  id: 'project-1',
-                  projectNumber: '1001',
-                  balance: -30000,
-                  customerId: 'customer-1',
-                },
-              ]),
+            findMany: vi.fn().mockResolvedValue([
+              {
+                id: 'project-1',
+                projectNumber: '1001',
+                balance: -30000,
+                customerId: 'customer-1',
+              },
+            ]),
             update: vi.fn(),
           },
           customer: { update: vi.fn() },

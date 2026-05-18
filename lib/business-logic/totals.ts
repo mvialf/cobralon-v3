@@ -9,20 +9,48 @@
  * @module business-logic/totals
  */
 
-import { FINANCIAL, getCurrencyConfig } from '../constants/financial-constants'
+import { FINANCIAL } from '../constants/financial-constants'
+import {
+  absMoney,
+  addMoney,
+  compareMoney,
+  money,
+  type MoneyInput,
+  moneyToNumber,
+  roundMoneyForCurrency,
+  subtractMoney,
+} from './money'
 
-function validateNonNegativeAmount(amount: number, fieldName: string) {
-  if (amount < 0) {
+function validateNonNegativeAmount(amount: MoneyInput, fieldName: string) {
+  if (compareMoney(money(amount), 0) < 0) {
     throw new Error(`El ${fieldName} no puede ser negativo`)
   }
 }
 
-function validateTaxRate(taxRate: number) {
-  if (taxRate < FINANCIAL.MIN_TAX_RATE || taxRate > FINANCIAL.MAX_TAX_RATE) {
+function validateTaxRate(taxRate: MoneyInput) {
+  if (
+    compareMoney(money(taxRate), FINANCIAL.MIN_TAX_RATE) < 0 ||
+    compareMoney(money(taxRate), FINANCIAL.MAX_TAX_RATE) > 0
+  ) {
     throw new Error(
       `La tasa de impuesto debe estar entre ${FINANCIAL.MIN_TAX_RATE}% y ${FINANCIAL.MAX_TAX_RATE}%`
     )
   }
+}
+
+export function calculateProjectTotalMoney(
+  subtotal: MoneyInput,
+  taxRate: MoneyInput = FINANCIAL.DEFAULT_TAX_RATE,
+  currency?: string
+) {
+  validateNonNegativeAmount(subtotal, 'subtotal')
+  validateTaxRate(taxRate)
+
+  const subtotalMoney = money(subtotal)
+  const tax = subtotalMoney.mul(money(taxRate)).div(100)
+  const total = addMoney(subtotalMoney, tax)
+
+  return currency ? roundMoneyForCurrency(total, currency) : total
 }
 
 /**
@@ -66,13 +94,7 @@ export function calculateProjectTotal(
   taxRate: number = FINANCIAL.DEFAULT_TAX_RATE,
   currency?: string
 ): number {
-  validateNonNegativeAmount(subtotal, 'subtotal')
-  validateTaxRate(taxRate)
-
-  const tax = subtotal * (taxRate / 100)
-  const total = subtotal + tax
-
-  return currency ? roundForCurrency(total, currency) : total
+  return moneyToNumber(calculateProjectTotalMoney(subtotal, taxRate, currency))
 }
 
 /**
@@ -91,9 +113,7 @@ export function calculateProjectTotal(
  * ```
  */
 export function roundForCurrency(amount: number, currency: string = 'CLP'): number {
-  const { decimals } = getCurrencyConfig(currency)
-  const factor = Math.pow(10, decimals)
-  return Math.round(amount * factor) / factor
+  return moneyToNumber(roundMoneyForCurrency(money(amount), currency))
 }
 
 /**
@@ -116,7 +136,7 @@ export function calculateTax(
   validateNonNegativeAmount(subtotal, 'subtotal')
   validateTaxRate(taxRate)
 
-  return subtotal * (taxRate / 100)
+  return moneyToNumber(money(subtotal).mul(money(taxRate)).div(100))
 }
 
 /**
@@ -147,7 +167,8 @@ export function validateProjectTotal(
   receivedTotal: number
 ): boolean {
   const expectedTotal = calculateProjectTotal(subtotal, taxRate)
-  return Math.abs(expectedTotal - receivedTotal) < FINANCIAL.TOLERANCE
+  const difference = absMoney(subtractMoney(money(expectedTotal), money(receivedTotal)))
+  return compareMoney(difference, money(FINANCIAL.TOLERANCE)) < 0
 }
 
 /**
@@ -178,5 +199,6 @@ export function calculateSubtotalFromTotal(
   validateNonNegativeAmount(total, 'total')
   validateTaxRate(taxRate)
 
-  return total / (1 + taxRate / 100)
+  const divisor = addMoney(money(1), money(taxRate).div(100))
+  return moneyToNumber(money(total).div(divisor))
 }

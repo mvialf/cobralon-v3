@@ -12,6 +12,15 @@
  * @module business-logic/commission
  */
 
+import {
+  addMoney,
+  distributeMoneyProportionally,
+  money,
+  moneyToNumber,
+  roundMoney,
+  subtractMoney,
+} from './money'
+
 /**
  * Tier de comisión (desde DB)
  */
@@ -108,12 +117,14 @@ export function calculateCommission(
     }
   }
 
-  const commissionAmount = Math.round(tier.fixedFee + (amount * tier.percentageFee) / 100)
-  const netAmount = amount - commissionAmount
+  const grossAmount = money(amount)
+  const percentageFee = grossAmount.mul(money(tier.percentageFee)).div(100)
+  const commissionAmount = roundMoney(addMoney(money(tier.fixedFee), percentageFee), 0)
+  const netAmount = subtractMoney(grossAmount, commissionAmount)
 
   return {
-    commissionAmount,
-    netAmount,
+    commissionAmount: moneyToNumber(commissionAmount),
+    netAmount: moneyToNumber(netAmount),
     percentageFee: tier.percentageFee,
     fixedFee: tier.fixedFee,
   }
@@ -166,26 +177,10 @@ export function distributeNetToInstallments(
   if (count === 0) return []
   if (count === 1) return [totalNetAmount]
 
-  const totalBruto = installmentAmounts.reduce((sum, a) => sum + a, 0)
-  if (totalBruto === 0) return installmentAmounts.map(() => 0)
+  const distributedNet = distributeMoneyProportionally(
+    installmentAmounts.map((amount) => money(amount)),
+    money(totalNetAmount)
+  )
 
-  // Calcular neto proporcional por cuota (floor para evitar sobrepaso)
-  const netAmounts: number[] = []
-  let assignedNet = 0
-
-  for (let i = 0; i < count; i++) {
-    const isLast = i === count - 1
-
-    if (isLast) {
-      // Última cuota absorbe residuo
-      netAmounts.push(totalNetAmount - assignedNet)
-    } else {
-      const proportion = installmentAmounts[i] / totalBruto
-      const netForThis = Math.floor(totalNetAmount * proportion)
-      netAmounts.push(netForThis)
-      assignedNet += netForThis
-    }
-  }
-
-  return netAmounts
+  return distributedNet.map((amount) => moneyToNumber(amount))
 }

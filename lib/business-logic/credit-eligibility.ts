@@ -5,6 +5,8 @@
  * based on business rules and data state.
  */
 
+import { greaterThanMoney, minMoney, moneyToNumber } from './money'
+
 export interface CreditEligibilityCheck {
   eligible: boolean
   reason?: string
@@ -43,7 +45,7 @@ export function checkCreditEligibility(
   projectCustomerId: string
 ): CreditEligibilityCheck {
   // Validación 1: Cliente debe tener crédito
-  if (customerCredit <= 0) {
+  if (!greaterThanMoney(customerCredit, 0)) {
     return {
       eligible: false,
       reason: 'Cliente no tiene crédito disponible',
@@ -52,7 +54,7 @@ export function checkCreditEligibility(
   }
 
   // Validación 2: Proyecto debe tener balance pendiente
-  if (projectBalance <= 0) {
+  if (!greaterThanMoney(projectBalance, 0)) {
     return {
       eligible: false,
       reason: 'Proyecto no tiene balance pendiente',
@@ -72,7 +74,7 @@ export function checkCreditEligibility(
   // ✅ Todas las validaciones pasaron
   return {
     eligible: true,
-    maxApplicable: Math.min(customerCredit, projectBalance),
+    maxApplicable: moneyToNumber(minMoney(customerCredit, projectBalance)),
   }
 }
 
@@ -92,7 +94,11 @@ export function shouldShowCreditOption(
   paymentCustomerId: string,
   projectCustomerId: string
 ): boolean {
-  return customerCredit > 0 && projectBalance > 0 && paymentCustomerId === projectCustomerId
+  return (
+    greaterThanMoney(customerCredit, 0) &&
+    greaterThanMoney(projectBalance, 0) &&
+    paymentCustomerId === projectCustomerId
+  )
 }
 
 /**
@@ -103,7 +109,7 @@ export function shouldShowCreditOption(
  * @returns true if refund option should be shown
  */
 export function shouldShowRefundOption(creditBalance: number): boolean {
-  return creditBalance > 0
+  return greaterThanMoney(creditBalance, 0)
 }
 
 /**

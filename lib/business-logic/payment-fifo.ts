@@ -7,6 +7,16 @@
  * @module business-logic/payment-fifo
  */
 
+import {
+  absMoney,
+  compareMoney,
+  greaterThanMoney,
+  minMoney,
+  money,
+  moneyToNumber,
+  subtractMoney,
+  sumMoney,
+} from './money'
 import { FINANCIAL } from '../constants/financial-constants'
 
 /**
@@ -92,28 +102,29 @@ export function calculateFIFO(
   const sorted = [...projects].sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime())
 
   const allocations: FIFOAllocation[] = []
-  let remaining = totalAmount
+  let remaining = money(totalAmount)
 
   // 2. Iterar proyectos ordenados
   for (const project of sorted) {
-    if (remaining <= 0) break
+    if (!greaterThanMoney(remaining, 0)) break
 
     // 3. Si el proyecto ya está pagado completamente, skip
-    if (project.balance <= 0) continue
+    if (!greaterThanMoney(project.balance, 0)) continue
 
     // 4. Asignar el menor entre lo que queda y el balance del proyecto
-    const allocated = Math.min(project.balance, remaining)
+    const projectBalance = money(project.balance)
+    const allocated = minMoney(projectBalance, remaining)
 
     allocations.push({
       projectId: project.id,
       projectNumber: project.projectNumber,
       projectName: project.projectName,
       balance: project.balance,
-      allocatedAmount: allocated,
-      isFullyPaid: allocated >= project.balance,
+      allocatedAmount: moneyToNumber(allocated),
+      isFullyPaid: compareMoney(allocated, projectBalance) >= 0,
     })
 
-    remaining -= allocated
+    remaining = subtractMoney(remaining, allocated)
   }
 
   return allocations
@@ -159,8 +170,9 @@ export function validateAllocationsSum(
   totalAmount: number,
   allocations: Array<{ allocatedAmount: number }>
 ): boolean {
-  const sum = allocations.reduce((acc, a) => acc + a.allocatedAmount, 0)
-  return Math.abs(sum - totalAmount) < FINANCIAL.TOLERANCE
+  const sum = sumMoney(allocations.map((a) => a.allocatedAmount))
+  const difference = absMoney(subtractMoney(sum, totalAmount))
+  return compareMoney(difference, FINANCIAL.TOLERANCE) < 0
 }
 
 /**
@@ -184,5 +196,5 @@ export function validateAllocationsSum(
  * ```
  */
 export function filterProjectsWithBalance(projects: ProjectWithBalance[]): ProjectWithBalance[] {
-  return projects.filter((project) => project.balance > 0)
+  return projects.filter((project) => greaterThanMoney(project.balance, 0))
 }

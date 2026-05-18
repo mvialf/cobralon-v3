@@ -48,6 +48,13 @@ describe('checkCreditEligibility', () => {
       expect(result.eligible).toBe(true)
       expect(result.maxApplicable).toBe(100.5)
     })
+
+    it('debe calcular maxApplicable con decimales sin ruido binario', () => {
+      const result = checkCreditEligibility(0.1 + 0.2, 0.3, CUSTOMER_ID_1, CUSTOMER_ID_1)
+
+      expect(result.eligible).toBe(true)
+      expect(result.maxApplicable).toBe(0.3)
+    })
   })
 
   describe('validación 1: cliente sin crédito', () => {
@@ -263,6 +270,11 @@ describe('shouldShowCreditOption', () => {
 
     it('crédito y balance muy bajos pero > 0', () => {
       const result = shouldShowCreditOption(0.01, 0.01, CUSTOMER_ID_1, CUSTOMER_ID_1)
+      expect(result).toBe(true)
+    })
+
+    it('crédito decimal con ruido binario', () => {
+      const result = shouldShowCreditOption(0.1 + 0.2, 0.3, CUSTOMER_ID_1, CUSTOMER_ID_1)
       expect(result).toBe(true)
     })
   })

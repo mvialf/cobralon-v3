@@ -93,6 +93,15 @@ describe('validateAllocationsSum', () => {
     ])
     expect(result.valid).toBe(true)
   })
+
+  it('debe sumar decimales sin artefactos binarios', () => {
+    const result = validateAllocationsSum(0.3, [
+      { projectId: 'a', allocatedAmount: 0.1 },
+      { projectId: 'b', allocatedAmount: 0.2 },
+    ])
+
+    expect(result.valid).toBe(true)
+  })
 })
 
 describe('validateNoDuplicateProjects', () => {

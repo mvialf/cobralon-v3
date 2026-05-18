@@ -2,8 +2,9 @@ import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { withLogging } from '@/lib/logger-middleware'
 import { type ParsedProjectRow } from '@/lib/excel/project-parser'
-import { Decimal } from '@prisma/client/runtime/library'
 import { IMPORT_EXPORT_LIMITS } from '@/lib/constants/import-export-limits'
+import { calculateProjectTotalMoney } from '@/lib/business-logic/totals'
+import { money } from '@/lib/business-logic/money'
 
 /**
  * POST /api/projects/import
@@ -109,11 +110,9 @@ export const POST = withLogging(async (request, logger) => {
         }
 
         // 3. Calcular totalAmount
-        const subtotal = new Decimal(projectData.subtotal)
-        const taxRate = new Decimal(projectData.taxRate)
-        const taxMultiplier = taxRate.dividedBy(100).plus(1)
-        // Redondear según moneda (importación siempre CLP = 0 decimales)
-        const totalAmount = subtotal.times(taxMultiplier).toDecimalPlaces(0, Decimal.ROUND_HALF_UP)
+        const subtotal = money(projectData.subtotal)
+        const taxRate = money(projectData.taxRate)
+        const totalAmount = calculateProjectTotalMoney(subtotal, taxRate, 'CLP')
 
         // 4. Mini-transacción: crear customer (si falta) + crear proyecto
         const project = await prisma.$transaction(async (tx) => {
@@ -149,7 +148,7 @@ export const POST = withLogging(async (request, logger) => {
               totalAmount,
               currency: 'CLP',
               windowsCount: projectData.windowsCount,
-              squareMeters: new Decimal(projectData.squareMeters),
+              squareMeters: money(projectData.squareMeters),
               description: projectData.description || null,
             },
           })

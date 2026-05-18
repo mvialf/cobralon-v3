@@ -309,6 +309,32 @@ describe('calculateFIFO', () => {
     expect(allocations[0].allocatedAmount).toBe(222222)
     expect(allocations[0].isFullyPaid).toBe(true)
   })
+
+  it('debe distribuir decimales sin arrastrar artefactos de punto flotante', () => {
+    const projects: ProjectWithBalance[] = [
+      {
+        id: 'P1',
+        projectNumber: '2024-001',
+        projectName: null,
+        balance: 0.1,
+        createdAt: new Date('2024-01-01'),
+      },
+      {
+        id: 'P2',
+        projectNumber: '2024-002',
+        projectName: null,
+        balance: 0.2,
+        createdAt: new Date('2024-02-01'),
+      },
+    ]
+
+    const allocations = calculateFIFO(0.3, projects)
+
+    expect(allocations).toHaveLength(2)
+    expect(allocations[0].allocatedAmount).toBe(0.1)
+    expect(allocations[1].allocatedAmount).toBe(0.2)
+    expect(allocations.every((a) => a.isFullyPaid)).toBe(true)
+  })
 })
 
 describe('validateAllocationsSum', () => {
@@ -389,6 +415,14 @@ describe('validateAllocationsSum', () => {
 
     // Diferencia de 0.02 > tolerancia de 0.01
     expect(isValid).toBe(false)
+  })
+
+  it('debe sumar decimales sin artefactos binarios', () => {
+    const allocations = [{ allocatedAmount: 0.1 }, { allocatedAmount: 0.2 }]
+
+    const isValid = validateAllocationsSum(0.3, allocations)
+
+    expect(isValid).toBe(true)
   })
 })
 

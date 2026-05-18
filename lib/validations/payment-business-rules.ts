@@ -13,6 +13,14 @@
  */
 
 import { FINANCIAL } from '../constants/financial-constants'
+import {
+  absMoney,
+  greaterThanMoney,
+  greaterThanMoneyWithTolerance,
+  moneyToFixed,
+  sumMoney,
+  subtractMoney,
+} from '../business-logic/money'
 
 // ============================================================================
 // TYPES
@@ -119,13 +127,13 @@ export function validateAllocationsSum(
   amount: number,
   allocations: AllocationForValidation[]
 ): ValidationResult {
-  const totalAllocated = allocations.reduce((sum, a) => sum + a.allocatedAmount, 0)
-  const difference = Math.abs(totalAllocated - amount)
+  const totalAllocated = sumMoney(allocations.map((a) => a.allocatedAmount))
+  const difference = absMoney(subtractMoney(totalAllocated, amount))
 
-  if (difference > FINANCIAL.TOLERANCE) {
+  if (greaterThanMoneyWithTolerance(difference, 0, FINANCIAL.TOLERANCE)) {
     return {
       valid: false,
-      error: `Las asignaciones ($${totalAllocated.toFixed(2)}) no suman el monto total ($${amount.toFixed(2)})`,
+      error: `Las asignaciones ($${moneyToFixed(totalAllocated, 2)}) no suman el monto total ($${moneyToFixed(amount, 2)})`,
     }
   }
 
@@ -202,7 +210,7 @@ export function validateNoDuplicateProjects(
 export function validatePositiveAllocations(
   allocations: AllocationForValidation[]
 ): ValidationResult {
-  const hasInvalidAmount = allocations.some((a) => a.allocatedAmount <= 0)
+  const hasInvalidAmount = allocations.some((a) => !greaterThanMoney(a.allocatedAmount, 0))
 
   if (hasInvalidAmount) {
     return {

@@ -399,6 +399,18 @@ describe('paymentToProjectSchema (flujo 1:1)', () => {
         expect(result.data.creditApplied).toBe(25000)
       }
     })
+
+    it('debe rechazar crédito con más de 2 decimales', () => {
+      const result = paymentToProjectSchema.safeParse({
+        ...validPayment,
+        creditApplied: 100.123,
+      })
+
+      expect(result.success).toBe(false)
+      if (!result.success) {
+        expect(result.error.issues[0].message).toContain('máximo 2 decimales')
+      }
+    })
   })
 
   describe('validación de notes', () => {
@@ -683,6 +695,19 @@ describe('paymentToCustomerSchema (flujo 1:N)', () => {
         allocations: [
           { projectId: '550e8400-e29b-41d4-a716-446655440002', allocatedAmount: 600.25 },
           { projectId: '550e8400-e29b-41d4-a716-446655440003', allocatedAmount: 400.25 },
+        ],
+      })
+
+      expect(result.success).toBe(true)
+    })
+
+    it('debe sumar decimales sin artefactos binarios', () => {
+      const result = paymentToCustomerSchema.safeParse({
+        ...validPayment,
+        amount: 0.3,
+        allocations: [
+          { projectId: '550e8400-e29b-41d4-a716-446655440002', allocatedAmount: 0.1 },
+          { projectId: '550e8400-e29b-41d4-a716-446655440003', allocatedAmount: 0.2 },
         ],
       })
 

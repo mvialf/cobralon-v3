@@ -542,18 +542,24 @@ Test de monto pequeño con muchas cuotas rechaza o distribuye sin cuotas cero.
 
 ### P3-04 - Mezcla de `Decimal` y `number`
 
-**Estado:** Abierto
+**Estado:** Resuelto
 **Tipo:** Arquitectura financiera
 **Impacto:** Riesgo de diferencias de redondeo en casos edge.
 
-**Acción recomendada:**
-Definir regla:
+**Regla adoptada:**
 
-- DB y cálculos financieros: `Decimal`.
-- API/display: `number` solo en serialización.
+- DB, persistencia y cálculos financieros usan `Decimal` mediante `lib/business-logic/money.ts`.
+- API, UI, Excel, gráficos y display mantienen `number` como contrato de frontera.
+- Las comparaciones, sumas, redondeos, cuotas, comisiones, crédito, ajustes y balances pasan por helpers monetarios.
+- `Payment.amount` queda inmutable: corregir dinero requiere eliminar/anular y recrear el pago.
 
-**Criterio de cierre:**
-Guía documentada y helpers financieros no mezclan sin conversión explícita.
+**Evidencia:**
+
+- Se agregó helper central de dinero y tests dedicados.
+- Se migraron cálculos de `totals`, `installments`, `commission`, FIFO, crédito, balances derivados y validaciones de pagos.
+- Se migraron rutas financieras críticas: pagos, eliminación de pagos, proyectos, ajustes, importación de proyectos/pagos y refund de crédito.
+
+**Criterio de cierre:** Cumplido. Las conversiones a `number` quedan limitadas a frontera de salida/serialización/exportación o a contratos públicos existentes.
 
 ---
 
@@ -623,6 +629,7 @@ Estos puntos no deben aparecer como pendientes en el checklist principal.
 | `P0-02` autorización por rol                                         | Riesgo aceptado  | Roles diferidos por decisión de producto mientras todos los usuarios autenticados sean equivalentes.               |
 | `P1-05` transacción larga de pagos                                   | Resuelto parcial | `CreditTransaction` usa batch writes, se eliminó lectura redundante y se loggea duración de transacción.           |
 | `P2-09` índices faltantes/redundantes                                | Resuelto parcial | Se eliminaron índices redundantes/legacy con query plans reales; no se agregaron índices nuevos.                   |
+| `P3-04` mezcla de `Decimal` y `number`                               | Resuelto         | Cálculos financieros usan helper Decimal central; `number` queda como contrato de frontera.                        |
 
 ---
 
@@ -649,7 +656,7 @@ Estos puntos no deben aparecer como pendientes en el checklist principal.
 - [ ] Resolver regla de negocio de múltiples eventos por día.
 - [ ] Validar conflictos de equipo en calendario.
 - [x] Revisar índices con query plans.
-- [ ] Estandarizar Decimal vs number.
+- [x] Estandarizar Decimal vs number.
 - [ ] Limpiar dependencias/archivos huérfanos solo después de validar reporte Knip.
 
 ---

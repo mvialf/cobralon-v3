@@ -7,6 +7,7 @@
  */
 
 import { FINANCIAL } from '../constants/financial-constants'
+import { greaterThanMoneyWithTolerance } from './money'
 
 export type ProjectState = 'Activo' | 'Finalizado'
 
@@ -40,7 +41,7 @@ export function calculateProjectState(
   balance: number,
   isFinal: boolean | undefined | null
 ): ProjectState {
-  const isFullyPaid = balance <= FINANCIAL.BALANCE_TOLERANCE
+  const isFullyPaid = !greaterThanMoneyWithTolerance(balance, 0, FINANCIAL.BALANCE_TOLERANCE)
   const hasFinalStatus = isFinal ?? false
 
   return isFullyPaid && hasFinalStatus ? 'Finalizado' : 'Activo'
