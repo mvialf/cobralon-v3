@@ -38,8 +38,7 @@ Los riesgos vigentes más importantes son:
 1. **Exports/imports masivos:** varios endpoints cargan todo en memoria o procesan batches sin límite explícito.
 2. **Reglas de calendario:** conflictos de equipo y múltiples eventos por día requieren decisión de negocio, pero sus datos actuales no son críticos.
 3. **Autorización por rol:** diferida por decisión de producto; no se prioriza mientras todos los usuarios autenticados sean equivalentes operacionalmente.
-4. **Performance DB:** índices faltantes o redundantes deben validarse con query plans antes de tocar producción.
-5. **Normalización Decimal vs number:** sigue como deuda de consistencia técnica.
+4. **Performance DB:** mantener revisión con query plans cuando cambien volumen o patrones reales de búsqueda.
 
 Validación Neon del 2026-05-18:
 
@@ -243,7 +242,7 @@ Imports rechazan o chunkear datasets grandes y tienen tests para límites.
 
 ### P1-05 - Transacción de Creación de Pagos Sigue Siendo Larga
 
-**Estado:** Resuelto parcial
+**Estado:** Resuelto
 **Tipo:** Performance / Concurrencia
 **Impacto:** Mayor latencia y riesgo de deadlocks bajo carga.
 
@@ -259,7 +258,7 @@ Imports rechazan o chunkear datasets grandes y tienen tests para límites.
 4. Se agregó `transactionDurationMs` al log de creación exitosa.
 
 **Criterio de cierre:**
-Resuelto parcialmente: ya no hay writes secuenciales innecesarios de `CreditTransaction` ni lectura redundante de proyectos. Queda como mejora futura medir con tráfico real si conviene extraer más trabajo de la transacción.
+Resuelto: la transacción se mantiene deliberadamente como límite de integridad financiera. Las validaciones que dependen de saldo fresco siguen dentro de la transacción, el lock de cliente solo se toma cuando hay crédito aplicado, los writes de `CreditTransaction` usan batch y la duración queda observable con `transactionDurationMs`. Mover más trabajo fuera no es recomendable sin evidencia de latencia real porque aumentaría el riesgo de inconsistencias financieras.
 
 ---
 
@@ -650,7 +649,7 @@ Estos puntos no deben aparecer como pendientes en el checklist principal.
 | `P2-08` CHECK financiero faltante                                    | Resuelto         | Neon tiene constraints para `project_applications.amount > 0` y `project_adjustments.amount > 0`.                  |
 | `P2-10` helper ambiguo de balance                                    | Resuelto         | Se eliminó el helper que calculaba balance desde allocations sin ajustes ni crédito aplicado.                      |
 | `P0-02` autorización por rol                                         | Riesgo aceptado  | Roles diferidos por decisión de producto mientras todos los usuarios autenticados sean equivalentes.               |
-| `P1-05` transacción larga de pagos                                   | Resuelto parcial | `CreditTransaction` usa batch writes, se eliminó lectura redundante y se loggea duración de transacción.           |
+| `P1-05` transacción larga de pagos                                   | Resuelto         | Se mantiene como límite de integridad financiera; usa batch writes y loggea `transactionDurationMs`.               |
 | `P2-09` índices faltantes/redundantes                                | Resuelto parcial | Se eliminaron índices redundantes/legacy con query plans reales; no se agregaron índices nuevos.                   |
 | `P3-01` formato de moneda en mensajes                                | Resuelto         | Mensajes de crédito usan `formatCurrency()` y reglas puras de crédito quedan client-safe.                          |
 | `P3-04` mezcla de `Decimal` y `number`                               | Resuelto         | Cálculos financieros usan helper Decimal central; `number` queda como contrato de frontera.                        |
