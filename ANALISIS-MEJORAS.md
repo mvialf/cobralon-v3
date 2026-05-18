@@ -1,6 +1,6 @@
 # Análisis de Mejoras y Bugs Potenciales - Proyecto Cobralon
 
-> **Última validación:** 2026-05-17
+> **Última validación:** 2026-05-18
 > **Proyecto:** Cobralon
 > **Objetivo:** Backlog técnico verificable para priorizar bugs, riesgos operacionales y mejoras arquitectónicas.
 > **Estado del documento anterior:** reescrito por drift contra el código actual. La versión anterior mezclaba pendientes, resueltos, duplicados y hallazgos obsoletos.
@@ -36,10 +36,22 @@ El documento anterior no debe usarse como backlog directo. Los puntos sobre `Pro
 Los riesgos vigentes más importantes son:
 
 1. **Exports/imports masivos:** varios endpoints cargan todo en memoria o procesan batches sin límite explícito.
-2. **Integridad DB:** algunas invariantes se validan en app pero no tienen `CHECK`/constraint en base de datos.
-3. **Reglas de calendario:** conflictos de equipo y múltiples eventos por día requieren decisión de negocio.
-4. **Deuda legacy financiera:** algunas funciones antiguas pueden expresar balances con semántica distinta a `ProjectFinancials`.
-5. **Autorización por rol:** diferida por decisión de producto; no se prioriza mientras todos los usuarios autenticados sean equivalentes operacionalmente.
+2. **Reglas de calendario:** conflictos de equipo y múltiples eventos por día requieren decisión de negocio, pero sus datos actuales no son críticos.
+3. **Autorización por rol:** diferida por decisión de producto; no se prioriza mientras todos los usuarios autenticados sean equivalentes operacionalmente.
+4. **Performance DB:** índices faltantes o redundantes deben validarse con query plans antes de tocar producción.
+5. **Normalización Decimal vs number:** sigue como deuda de consistencia técnica.
+
+Validación Neon del 2026-05-18:
+
+- Migraciones aplicadas en Neon:
+  - `20260517130000_clear_non_critical_operational_data`
+  - `20260518100000_harden_financial_integrity`
+- Baseline Prisma registrado para migraciones ya reflejadas en la DB:
+  - `20260517120000_create_project_financials_view`
+  - `20260517123000_add_project_applications`
+- Auditoría `npm run audit:important-data`: `0 critical`, `0 warning`.
+- `Project.balance` legacy quedó sincronizado con `ProjectFinancials.balance`.
+- Datos no críticos limpiados: `project_events`, `aftersale_events`, `visit_events`, `Aftersale`, `visits`, `team_tags`.
 
 Hallazgos que estaban abiertos pero ya fueron cerrados en código actual:
 
@@ -414,8 +426,10 @@ Migración `20260518100000_harden_financial_integrity` agrega:
 - `project_adjustments_amount_positive_check`
 - `project_applications_amount_positive_check`
 
+La migración fue aplicada en Neon el 2026-05-18. La auditoría posterior reportó `0 critical` y `0 warning`.
+
 **Criterio de cierre:**
-Migración aplicada y test DB o integración cubre monto negativo.
+Cumplido.
 
 ---
 
@@ -455,6 +469,8 @@ Migración de índices basada en query plans o patrones confirmados.
 
 **Acción aplicada:**
 Se eliminó el nombre ambiguo `calculateProjectBalance()` del código. El helper restante declara explícitamente que no considera ajustes ni crédito aplicado y que runtime debe usar `ProjectFinancials`.
+
+La migración `20260518100000_harden_financial_integrity` sincronizó `Project.balance` legacy desde `ProjectFinancials`; la auditoría posterior confirmó `legacy-project-balance-differs-from-financials: 0`.
 
 **Criterio de cierre:**
 No hay función con nombre ambiguo que ignore ajustes sin declararlo.
@@ -579,7 +595,7 @@ Estos puntos no deben aparecer como pendientes en el checklist principal.
 | Metadata de `OVERPAYMENT` sin `creditApplied`                        | Resuelto         | Metadata ya incluye `creditApplied`.                                                                              |
 | Reversión de crédito por signo ambiguo                               | Resuelto         | DELETE de pagos revierte según tipo de transacción.                                                               |
 | LIKE sin escapar en búsqueda de pagos                                | Resuelto         | `%` y `_` se escapan en pagos.                                                                                    |
-| `Project.balance` como fuente runtime                                | Resuelto parcial | Runtime principal usa `ProjectFinancials`; columna legacy se sincroniza desde la vista en migración/script.       |
+| `Project.balance` como fuente runtime                                | Resuelto         | Runtime principal usa `ProjectFinancials`; columna legacy fue sincronizada en Neon y auditoría quedó sin warnings. |
 | `updateMultipleProjectBalances` N+1                                  | Resuelto         | La función fue eliminada.                                                                                         |
 | Cron `reconcile-balances` sin protección                             | Obsoleto         | Endpoint eliminado.                                                                                               |
 | Import de pagos sin recalcular balance                               | Obsoleto         | Balance se deriva desde `ProjectFinancials`.                                                                      |
@@ -596,6 +612,8 @@ Estos puntos no deben aparecer como pendientes en el checklist principal.
 | `P1-02` saldos negativos ocultos                                     | Resuelto         | Se expone `rawBalance`, se mantiene `availableBalance` compatible y se loggea saldo negativo.                     |
 | `P2-01` paginación puede devolver `NaN`                              | Resuelto         | `parsePositiveInteger()` normaliza con `Number.isFinite()` y tiene tests.                                         |
 | `P2-02` `withApiHandler` usa `parse()`                               | Resuelto         | Usa `safeParse()` y limita detalles Zod a 5 issues.                                                               |
+| `P2-08` CHECK financiero faltante                                    | Resuelto         | Neon tiene constraints para `project_applications.amount > 0` y `project_adjustments.amount > 0`.                 |
+| `P2-10` helper ambiguo de balance                                    | Resuelto         | El nombre ambiguo fue eliminado; queda `calculateProjectBalanceWithoutAdjustments()`.                             |
 
 ---
 
@@ -614,6 +632,7 @@ Estos puntos no deben aparecer como pendientes en el checklist principal.
 - [ ] Revisar duración de transacción de `POST /api/payments` después del cierre de `P0-01`.
 - [ ] Agregar constraints DB para JSON `tasks` cuando calendario/postventa vuelva a ser prioritario.
 - [x] Agregar CHECK DB para `ProjectAdjustment.amount > 0`.
+- [x] Sincronizar `Project.balance` legacy con `ProjectFinancials` en Neon.
 - [ ] Documentar explícitamente que los roles quedan diferidos mientras todos los usuarios autenticados tengan el mismo nivel operacional.
 
 ### Mes Actual
