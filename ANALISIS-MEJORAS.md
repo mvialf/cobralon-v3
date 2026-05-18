@@ -11,21 +11,21 @@
 
 Cada hallazgo usa un ID estable para evitar duplicados y reaperturas accidentales.
 
-| Campo | Significado |
-|-------|-------------|
-| **Estado** | `Abierto`, `Validar`, `Obsoleto`, `Resuelto` |
-| **Evidencia** | Archivo/línea o comportamiento observado en el código |
-| **Criterio de cierre** | Condición concreta para marcarlo como resuelto |
-| **Tipo** | `Bug`, `Seguridad`, `Operacional`, `Arquitectura`, `Mantenibilidad`, `Testing` |
+| Campo                  | Significado                                                                    |
+| ---------------------- | ------------------------------------------------------------------------------ |
+| **Estado**             | `Abierto`, `Validar`, `Obsoleto`, `Resuelto`                                   |
+| **Evidencia**          | Archivo/línea o comportamiento observado en el código                          |
+| **Criterio de cierre** | Condición concreta para marcarlo como resuelto                                 |
+| **Tipo**               | `Bug`, `Seguridad`, `Operacional`, `Arquitectura`, `Mantenibilidad`, `Testing` |
 
 ### Severidad
 
-| Nivel | Definición |
-|-------|------------|
+| Nivel            | Definición                                                                                               |
+| ---------------- | -------------------------------------------------------------------------------------------------------- |
 | **P0 - Crítico** | Riesgo de pérdida de dinero, escalada de privilegios, corrupción de datos o caída operacional relevante. |
-| **P1 - Alto** | Bug funcional o deuda técnica que puede afectar flujos importantes en producción. |
-| **P2 - Medio** | Inconsistencia, riesgo edge o mejora necesaria para escalar con menos fricción. |
-| **P3 - Bajo** | Limpieza, mantenibilidad o mejora de calidad sin impacto funcional inmediato. |
+| **P1 - Alto**    | Bug funcional o deuda técnica que puede afectar flujos importantes en producción.                        |
+| **P2 - Medio**   | Inconsistencia, riesgo edge o mejora necesaria para escalar con menos fricción.                          |
+| **P3 - Bajo**    | Limpieza, mantenibilidad o mejora de calidad sin impacto funcional inmediato.                            |
 
 ---
 
@@ -35,11 +35,20 @@ El documento anterior no debe usarse como backlog directo. Los puntos sobre `Pro
 
 Los riesgos vigentes más importantes son:
 
-1. **Crédito aplicado a proyecto:** el flujo UI puede no enviar `creditApplied`, y `ProjectFinancials` no descuenta transacciones `APPLIED`.
-2. **Autorización por rol:** el middleware valida sesión, pero no autorización por rol.
-3. **`/api/users`:** endpoint autenticado pero sobre-privilegiado, sin Zod ni `withApiHandler`.
-4. **Exports/imports masivos:** varios endpoints cargan todo en memoria o procesan batches sin límite.
-5. **Crédito/refund:** hay validación fuera de transacción y ocultamiento de saldos negativos.
+1. **Exports/imports masivos:** varios endpoints cargan todo en memoria o procesan batches sin límite explícito.
+2. **Integridad DB:** algunas invariantes se validan en app pero no tienen `CHECK`/constraint en base de datos.
+3. **Reglas de calendario:** conflictos de equipo y múltiples eventos por día requieren decisión de negocio.
+4. **Deuda legacy financiera:** algunas funciones antiguas pueden expresar balances con semántica distinta a `ProjectFinancials`.
+5. **Autorización por rol:** diferida por decisión de producto; no se prioriza mientras todos los usuarios autenticados sean equivalentes operacionalmente.
+
+Hallazgos que estaban abiertos pero ya fueron cerrados en código actual:
+
+- `P0-01`: crédito aplicado a proyecto.
+- `P0-03`: `/api/users` sobre-privilegiado.
+- `P1-01`: refund de crédito validado fuera de transacción.
+- `P1-02`: saldos negativos de crédito invisibles.
+- `P2-01`: `parsePaginationParams` devolviendo `NaN`.
+- `P2-02`: `withApiHandler` usando `bodySchema.parse()`.
 
 ---
 
@@ -47,95 +56,82 @@ Los riesgos vigentes más importantes son:
 
 ### P0-01 - Crédito Aplicado Puede No Reducir el Balance Derivado del Proyecto
 
-**Estado:** Abierto
+**Estado:** Resuelto
 **Tipo:** Bug financiero
 **Impacto:** Crédito del cliente puede consumirse sin reflejarse correctamente en el balance financiero del proyecto.
 
-**Evidencia:**
-- `paymentToProjectToPayload()` no incluye `creditApplied`, aunque el formulario 1:1 lo maneja.
+**Evidencia actualizada:**
+
+- `paymentToProjectToPayload()` envía `creditApplied` a nivel raíz y por allocation.
   - `lib/validations/payment-validations.ts`
-- `ProjectFinancials` calcula balance como:
-  - `totalAmount - PaymentAllocation - ProjectAdjustment`
-  - No descuenta `CreditTransaction` tipo `APPLIED`.
-  - `prisma/migrations/20260517120000_create_project_financials_view/migration.sql`
-- `POST /api/payments` sí crea `CreditTransaction` tipo `APPLIED`, pero la allocation sigue usando solo `amount`.
-  - `app/api/payments/route.ts`
+- `ProjectFinancials` descuenta `project_applications.settledTotal`, incluyendo `CUSTOMER_CREDIT`.
+  - `prisma/migrations/20260517123000_add_project_applications/migration.sql`
+- Hay tests para `paymentToProjectToPayload()` con `creditApplied`.
+  - `lib/validations/__tests__/payment-validations.test.ts`
 
-**Riesgo concreto:**
-Si un usuario aplica crédito a un pago de proyecto, puede disminuir el crédito disponible del cliente sin disminuir el balance del proyecto, dependiendo del payload real enviado.
+**Decisión aplicada:**
+`Payment.amount` representa dinero nuevo. El crédito aplicado se registra como aplicación separada al proyecto (`CUSTOMER_CREDIT`) y entra al balance derivado vía `ProjectFinancials`.
 
-**Acción recomendada:**
-1. Definir contrato financiero:
-   - Opción A: `Payment.amount` representa solo dinero nuevo y `PaymentAllocation.allocatedAmount = amount + creditApplied`.
-   - Opción B: `PaymentAllocation` representa solo dinero nuevo y `ProjectFinancials` descuenta `CreditTransaction.APPLIED`.
-2. Corregir `paymentToProjectToPayload()` para enviar `creditApplied`.
-3. Agregar tests de integración para pago 1:1 con crédito aplicado.
-
-**Criterio de cierre:**
-Un pago de proyecto con `amount = 100`, `creditApplied = 50` reduce el crédito del cliente en 50 y reduce el balance del proyecto en 150, con test automatizado.
+**Criterio de cierre:** Cumplido.
 
 ---
 
 ### P0-02 - Falta Autorización por Rol en Endpoints Sensibles
 
-**Estado:** Abierto
+**Estado:** Diferido por decisión de producto
 **Tipo:** Seguridad
-**Impacto:** Cualquier usuario autenticado puede ejecutar operaciones que deberían requerir admin o permisos específicos.
+**Impacto:** Si en el futuro existen usuarios con distintos niveles de confianza, cualquier usuario autenticado podría ejecutar operaciones que deberían requerir admin o permisos específicos.
 
-**Evidencia:**
-- `middleware.ts` valida sesión con `auth.api.getSession()`, pero no revisa `session.user.role`.
-- No se encontró patrón central tipo `requireRole`, `requireAdmin` o checks por endpoint.
-- `User.role` existe en Prisma, pero no parece aplicarse a rutas API.
+**Evidencia actualizada:**
+
+- `withApiHandler` ya soporta autorización centralizada con `requiredRole` y `requiredRoles`.
+  - `lib/api-handler.ts`
+- Hay tests unitarios para `401`, `403` y roles permitidos.
+  - `lib/__tests__/api-handler.test.ts`
+- `/api/users` ya usa `requiredRole: 'admin'`.
+  - `app/api/users/route.ts`
+- El riesgo técnico es adopción incompleta: muchos endpoints sensibles usan `withApiHandler` sin roles, o aún usan `withLogging` directamente.
+- Decisión actual: por ahora no interesa diferenciar roles de usuario, por lo que no debe bloquear trabajo de mayor impacto inmediato.
 
 **Endpoints de alto riesgo:**
+
 - Deletes de customers, projects, payments, aftersales y visits.
 - Ajustes financieros de proyecto.
 - Import masivo.
 - Devoluciones de crédito.
 - Gestión de usuarios.
 
-**Acción recomendada:**
-Crear autorización centralizada en `lib/api-handler.ts` o helper dedicado:
+**Acción recomendada si se reabre:**
+Aplicar `requiredRole`/`requiredRoles` primero a:
 
-```ts
-requireRole(['admin'])
-requireRole(['admin', 'finance'])
-```
-
-Aplicar primero a:
 1. `/api/users`
 2. Ajustes de proyecto
 3. Devolución de crédito
 4. Imports
 5. Deletes
 
+Nota: `/api/users` ya está cubierto; queda en la lista solo como referencia de patrón.
+
 **Criterio de cierre:**
-Los endpoints sensibles retornan `403` para usuarios autenticados sin rol permitido, con tests.
+Mientras no haya roles de negocio, este punto queda cerrado operacionalmente como riesgo aceptado. Si se reabre, los endpoints sensibles deben retornar `403` para usuarios autenticados sin rol permitido, con tests.
 
 ---
 
 ### P0-03 - `/api/users` Está Autenticado Pero Sobre-Privilegiado
 
-**Estado:** Abierto
+**Estado:** Resuelto
 **Tipo:** Seguridad
 **Impacto:** Cualquier usuario autenticado podría listar o crear usuarios.
 
-**Evidencia:**
-- `app/api/users/route.ts` no usa `withApiHandler`.
-- No tiene validación Zod.
-- Usa `console.error` en vez de logger estructurado.
-- `GET` retorna `prisma.user.findMany()` sin minimizar campos.
-- `POST` crea usuarios sin autorización admin explícita.
+**Evidencia actualizada:**
 
-**Corrección recomendada:**
-1. Envolver con `withApiHandler`.
-2. Agregar schema Zod estricto.
-3. Requerir rol `admin`.
-4. En `GET`, retornar solo campos necesarios: `id`, `name`, `email`, `role`, `createdAt`.
-5. Limitar paginación y validar `limit/offset`.
+- `GET` y `POST` usan `withApiHandler`.
+- Ambos requieren `requiredRole: 'admin'`.
+- `POST` valida con `createUserSchema`.
+- `GET` usa `select` de campos acotados y paginación con límite máximo.
+  - `app/api/users/route.ts`
 
-**Criterio de cierre:**
-`GET` y `POST /api/users` requieren admin, validan input y tienen tests para `401/403/400/201`.
+**Criterio de cierre:** Cumplido para implementación. Mantener o agregar tests específicos de ruta si se quiere cobertura por endpoint además de los tests de `withApiHandler`.
 
 ---
 
@@ -143,39 +139,39 @@ Los endpoints sensibles retornan `403` para usuarios autenticados sin rol permit
 
 ### P1-01 - Refund de Crédito Valida Fuera de Transacción
 
-**Estado:** Abierto
+**Estado:** Resuelto
 **Tipo:** Bug financiero / Concurrencia
 **Impacto:** Dos requests concurrentes podrían validar contra el mismo saldo y crear retiros que dejan ledger negativo.
 
-**Evidencia:**
-- `app/api/customers/[id]/credit/refund/route.ts` calcula `creditBalance` antes de la transacción.
-- Dentro de la transacción crea `WITHDRAWAL` y luego calcula el nuevo saldo, pero no revalida antes de crear.
+**Evidencia actualizada:**
 
-**Acción recomendada:**
-Mover lectura y validación de saldo dentro de la transacción antes de crear el `WITHDRAWAL`.
+- El endpoint bloquea la fila del cliente dentro de la transacción con `lockCustomerCreditBalance()`.
+- Recalcula `getCustomerCreditBalanceDetails()` dentro de la transacción antes de crear el `WITHDRAWAL`.
+- Vuelve a calcular saldo dentro de la misma transacción después del movimiento.
+  - `app/api/customers/[id]/credit/refund/route.ts`
+- Hay tests del flujo de refund con saldo recalculado.
+  - `app/api/customers/[id]/credit/refund/__tests__/route.test.ts`
 
-**Criterio de cierre:**
-El endpoint revalida saldo en la transacción y un test cubre doble refund concurrente o intento de refund mayor al saldo.
+**Criterio de cierre:** Cumplido.
 
 ---
 
 ### P1-02 - Balances Negativos de Crédito se Ocultan
 
-**Estado:** Abierto
+**Estado:** Resuelto
 **Tipo:** Integridad de datos
 **Impacto:** Bugs financieros pueden quedar invisibles porque el sistema retorna `0` en vez del saldo real negativo.
 
-**Evidencia:**
-- `getCustomerCreditBalance()` usa `Math.max(0, rawBalance)`.
-- `getCustomerCreditBalances()` aplica el mismo patrón batch.
+**Evidencia actualizada:**
 
-**Acción recomendada:**
-1. Calcular `rawBalance`.
-2. Loggear warning/error estructurado si `rawBalance < 0`.
-3. Definir si la función debe retornar saldo raw o saldo clamp.
+- `getCustomerCreditBalanceDetails()` expone `rawBalance` y `availableBalance`.
+- `normalizeCreditBalance()` registra warning estructurado cuando `rawBalance < 0`.
+- Las funciones compatibles siguen retornando `availableBalance` clamppeado, pero el saldo negativo ya no queda silencioso.
+  - `lib/business-logic/credit-management.ts`
+- Hay tests para saldo negativo individual y batch.
+  - `lib/business-logic/__tests__/credit-management.test.ts`
 
-**Criterio de cierre:**
-Un ledger negativo queda visible en logs/alertas y existe test para saldo negativo.
+**Criterio de cierre:** Cumplido.
 
 ---
 
@@ -186,17 +182,20 @@ Un ledger negativo queda visible en logs/alertas y existe test para saldo negati
 **Impacto:** Riesgo de OOM, timeout o caída de función serverless con datasets grandes.
 
 **Evidencia:**
+
 - `app/api/customers/export/route.ts` usa `findMany()` sin límite.
 - `app/api/payments/export/route.ts` usa `findMany()` sin límite.
 - `app/api/projects/export/route.ts` consulta todos los resultados filtrados sin límite.
 
 **Acción recomendada:**
 Opción inicial pragmática:
+
 1. Agregar `MAX_EXPORT_ROWS`.
 2. Aplicar filtros en DB.
 3. Retornar error o advertencia si excede el límite.
 
 Opción robusta:
+
 1. Export streaming CSV/XLSX.
 2. Job asíncrono para archivos grandes.
 
@@ -212,10 +211,12 @@ Los exports tienen límite explícito o streaming, y tests cubren límite excedi
 **Impacto:** Transacciones largas, timeouts y locks excesivos.
 
 **Evidencia:**
+
 - `app/api/customers/import/route.ts` crea una transacción con todas las filas.
 - Revisar también `payments/import` y `projects/import`.
 
 **Acción recomendada:**
+
 1. Definir `MAX_IMPORT_ROWS`.
 2. Procesar en chunks (`BATCH_SIZE`, por ejemplo 250 o 500).
 3. Retornar resumen por chunk con errores acumulados.
@@ -232,10 +233,12 @@ Imports rechazan o chunkear datasets grandes y tienen tests para límites.
 **Impacto:** Mayor latencia y riesgo de deadlocks bajo carga.
 
 **Evidencia:**
+
 - `POST /api/payments` crea payment, allocations, installments, actualiza cuotas, crea transacciones de crédito y recorre proyectos con sobrepago dentro de una sola transacción.
 
 **Acción recomendada:**
-1. Corregir primero P0-01 para no optimizar sobre un contrato financiero ambiguo.
+
+1. Mantener el contrato financiero ya definido en P0-01: `Payment.amount` es dinero nuevo y el crédito aplicado se registra como aplicación separada.
 2. Reemplazar loops de `creditTransaction.create()` por `createMany()` cuando aplique.
 3. Medir duración de transacción antes/después.
 
@@ -248,37 +251,37 @@ Hay benchmark o métrica de duración y se eliminan writes secuenciales innecesa
 
 ### P2-01 - `parsePaginationParams` Puede Devolver `NaN`
 
-**Estado:** Abierto
+**Estado:** Resuelto
 **Tipo:** Bug de validación
 **Impacto:** Queries con `skip/take` inválidos.
 
-**Evidencia:**
-- `lib/utils/pagination.ts` usa `Math.max(1, parseInt(...))`.
-- `parseInt('abc')` produce `NaN`; `Math.max(1, NaN)` sigue siendo `NaN`.
+**Evidencia actualizada:**
 
-**Acción recomendada:**
-Normalizar con `Number.isFinite()` o helper `parsePositiveInt`.
+- `parsePaginationParams()` usa `parsePositiveInteger()` con `Number.isFinite()`.
+- Inputs inválidos vuelven a defaults seguros.
+  - `lib/utils/pagination.ts`
+- Hay tests para `NaN`, strings inválidos, vacíos, cero, negativos y decimales.
+  - `lib/utils/__tests__/pagination.test.ts`
 
-**Criterio de cierre:**
-Inputs inválidos (`page=abc`, `limit=abc`, negativos, cero) devuelven defaults seguros con tests.
+**Criterio de cierre:** Cumplido.
 
 ---
 
 ### P2-02 - `withApiHandler` Usa `bodySchema.parse()`
 
-**Estado:** Abierto
+**Estado:** Resuelto
 **Tipo:** Robustez API
 **Impacto:** Errores Zod pueden ser demasiado extensos si llega un payload grande o muy inválido.
 
-**Evidencia:**
-- `lib/api-handler.ts` usa `bodySchema.parse(rawBody)`.
-- El error se captura, pero no se limita explícitamente la cantidad de issues devueltos.
+**Evidencia actualizada:**
 
-**Acción recomendada:**
-Usar `safeParse()` y limitar detalles a un máximo razonable. Evaluar límite de tamaño de body si se considera vector real.
+- `withApiHandler` usa `bodySchema.safeParse(rawBody)`.
+- `handleApiError()` limita detalles Zod con `MAX_ZOD_ISSUES = 5`.
+  - `lib/api-handler.ts`
+- Hay test que confirma máximo 5 detalles y `totalErrors`.
+  - `lib/__tests__/api-handler.test.ts`
 
-**Criterio de cierre:**
-Respuesta de validación entrega máximo N errores y test cubre payload inválido masivo.
+**Criterio de cierre:** Cumplido.
 
 ---
 
@@ -289,6 +292,7 @@ Respuesta de validación entrega máximo N errores y test cubre payload inválid
 **Impacto:** Fuerza bruta contra login si no hay protección externa.
 
 **Evidencia:**
+
 - `middleware.ts` permite `/api/auth/*` como ruta pública.
 - No se observó rate limiting local.
 
@@ -307,6 +311,7 @@ Existe rate limiting documentado y probado para login/auth.
 **Impacto:** Un mismo integrante puede quedar asignado a eventos superpuestos.
 
 **Evidencia:**
+
 - No se observó validación de conflicto por `teamTagIds`.
 - Los eventos validan payload y duplicados por entidad/fecha, pero no disponibilidad de equipo.
 
@@ -325,12 +330,14 @@ Crear/editar evento retorna `409` si un team tag queda doblemente asignado segú
 **Impacto:** No permite dos eventos del mismo proyecto/postventa/visita en una misma fecha.
 
 **Evidencia:**
+
 - `ProjectEvent`: `@@unique([projectId, scheduledDate])`
 - `AftersaleEvent`: `@@unique([aftersaleId, scheduledDate])`
 - `VisitEvent`: `@@unique([visitId, scheduledDate])`
 
 **Acción recomendada:**
 Confirmar si el negocio necesita múltiples eventos por día. Si sí:
+
 1. Eliminar unique constraint con migración.
 2. Reemplazar duplicado accidental por validación de aplicación opcional.
 
@@ -346,12 +353,14 @@ Decisión documentada y migración aplicada si corresponde.
 **Impacto:** Dos rutas para responsabilidades similares elevan el riesgo de bugs divergentes.
 
 **Evidencia:**
+
 - La lógica transaccional de creación de evento + actualización relacionada quedó centralizada en `lib/business-logic/calendar-event-creation.ts`.
 - `POST /api/project-events`, `POST /api/visit-events` y `POST /api/aftersale-events` aceptan payload simple y payload extendido.
 - Los hooks `useCreate*EventWithUpdate` ahora llaman a endpoints canónicos.
 - `app/api/*-events-with-update` queda solo como wrapper legacy liviano.
 
 **Acción aplicada:**
+
 1. Se consolidó la funcionalidad en los endpoints oficiales.
 2. Se migraron los hooks a rutas canónicas.
 3. Se reemplazó la implementación duplicada de rutas `*-with-update` por wrappers de compatibilidad.
@@ -369,6 +378,7 @@ No queda lógica duplicada ni referencias en hooks a rutas `*-with-update`; las 
 **Impacto:** Inserts directos pueden guardar JSON no-array.
 
 **Evidencia:**
+
 - `Aftersale.tasks` y `ProjectEvent.tasks` son `Json`.
 - La validación Zod de app existe para aftersales, pero DB acepta cualquier JSON válido.
 
@@ -391,6 +401,7 @@ Migración con constraints y test/seed que confirma rechazo de JSON inválido.
 **Impacto:** Inserts directos podrían crear ajustes negativos.
 
 **Evidencia:**
+
 - `ProjectAdjustment.amount` es `Decimal`, sin constraint DB.
 - La app valida, pero DB no.
 
@@ -409,11 +420,13 @@ Migración aplicada y test DB o integración cubre monto negativo.
 **Impacto:** Overhead de escritura o queries menos eficientes.
 
 **Evidencia inicial:**
+
 - `User.email` tiene `@unique` y además `@@index([email])`.
 - `CreditTransaction` no tiene índice compuesto `[customerId, type]`.
 - `CommissionTier.paymentMethodId` puede estar cubierto por unique compuesto.
 
 **Acción recomendada:**
+
 1. Revisar `EXPLAIN ANALYZE` de queries reales.
 2. Eliminar redundantes solo con migración revisada.
 3. Agregar índices faltantes solo donde haya patrón de query confirmado.
@@ -430,6 +443,7 @@ Migración de índices basada en query plans o patrones confirmados.
 **Impacto:** Callers legacy pueden calcular un balance distinto a `ProjectFinancials`.
 
 **Evidencia:**
+
 - `lib/business-logic/project-balance.ts` calcula `totalAmount - allocations`.
 - No considera `ProjectAdjustment`.
 
@@ -448,6 +462,7 @@ No hay función con nombre ambiguo que ignore ajustes sin declararlo.
 **Impacto:** Montos pequeños con muchas cuotas pueden generar cuotas `$0`.
 
 **Evidencia:**
+
 - `calculateInstallments(0.1, 12, ...)` puede generar cuotas de 0.
 - `validateInstallmentsSum()` valida suma, no monto individual positivo.
 
@@ -505,6 +520,7 @@ Test de monto pequeño con muchas cuotas rechaza o distribuye sin cuotas cero.
 
 **Acción recomendada:**
 Definir regla:
+
 - DB y cálculos financieros: `Decimal`.
 - API/display: `number` solo en serialización.
 
@@ -536,11 +552,11 @@ Dependencias realmente no usadas eliminadas; falsos positivos documentados.
 **Acción recomendada:**
 Crear matriz:
 
-| Variable | Fuente en código | Requerida | Entorno |
-|----------|------------------|-----------|---------|
-| `DATABASE_URL` | Prisma datasource | Sí | server |
-| `DIRECT_URL` | Prisma datasource | Sí | server |
-| `NEXT_PUBLIC_APP_URL` | `.env.example` | Validar | client/server |
+| Variable              | Fuente en código  | Requerida | Entorno       |
+| --------------------- | ----------------- | --------- | ------------- |
+| `DATABASE_URL`        | Prisma datasource | Sí        | server        |
+| `DIRECT_URL`          | Prisma datasource | Sí        | server        |
+| `NEXT_PUBLIC_APP_URL` | `.env.example`    | Validar   | client/server |
 
 **Criterio de cierre:**
 `lib/env.ts` valida solo variables realmente usadas o requeridas indirectamente.
@@ -551,23 +567,29 @@ Crear matriz:
 
 Estos puntos no deben aparecer como pendientes en el checklist principal.
 
-| ID anterior | Estado actual | Motivo |
-|------------|---------------|--------|
-| Validación redundante fuerte de `creditApplied` fuera de transacción | Obsoleto | La validación relevante ocurre dentro de la transacción. Solo queda una validación barata de tipo. |
-| Metadata de `OVERPAYMENT` sin `creditApplied` | Resuelto | Metadata ya incluye `creditApplied`. |
-| Reversión de crédito por signo ambiguo | Resuelto | DELETE de pagos revierte según tipo de transacción. |
-| LIKE sin escapar en búsqueda de pagos | Resuelto | `%` y `_` se escapan en pagos. |
-| `Project.balance` como fuente runtime | Resuelto parcial | Runtime principal usa `ProjectFinancials`; columna legacy sigue en schema. |
-| `updateMultipleProjectBalances` N+1 | Resuelto | La función fue eliminada. |
-| Cron `reconcile-balances` sin protección | Obsoleto | Endpoint eliminado. |
-| Import de pagos sin recalcular balance | Obsoleto | Balance se deriva desde `ProjectFinancials`. |
-| Cuotas por suma de 30 días | Resuelto | Usa `addMonths()`. |
-| Estados de cuotas `paid/pending` confusos | Resuelto | Usa `due/upcoming`. |
-| Timezone de cuotas/visitas | Resuelto | Usa helpers en `lib/timezone.ts`. |
-| `search-projects` con `balance > 1` hardcoded | Resuelto | Usa `FINANCIAL.BALANCE_TOLERANCE`. |
-| `Project.PUT` recalcula balance sin ajustes | Obsoleto | Ya no recalcula/escribe balance persistido. |
-| Testing de imports/adjustments inexistente | Obsoleto parcial | Existen tests para varios endpoints antes listados como sin cobertura. Exports endpoint siguen siendo candidatos. |
-| Endpoints `*-with-update` duplicados | Resuelto | Los hooks usan rutas canónicas y las rutas legacy son wrappers sobre lógica compartida. |
+| ID anterior                                                          | Estado actual    | Motivo                                                                                                            |
+| -------------------------------------------------------------------- | ---------------- | ----------------------------------------------------------------------------------------------------------------- |
+| Validación redundante fuerte de `creditApplied` fuera de transacción | Obsoleto         | La validación relevante ocurre dentro de la transacción. Solo queda una validación barata de tipo.                |
+| Metadata de `OVERPAYMENT` sin `creditApplied`                        | Resuelto         | Metadata ya incluye `creditApplied`.                                                                              |
+| Reversión de crédito por signo ambiguo                               | Resuelto         | DELETE de pagos revierte según tipo de transacción.                                                               |
+| LIKE sin escapar en búsqueda de pagos                                | Resuelto         | `%` y `_` se escapan en pagos.                                                                                    |
+| `Project.balance` como fuente runtime                                | Resuelto parcial | Runtime principal usa `ProjectFinancials`; columna legacy sigue en schema.                                        |
+| `updateMultipleProjectBalances` N+1                                  | Resuelto         | La función fue eliminada.                                                                                         |
+| Cron `reconcile-balances` sin protección                             | Obsoleto         | Endpoint eliminado.                                                                                               |
+| Import de pagos sin recalcular balance                               | Obsoleto         | Balance se deriva desde `ProjectFinancials`.                                                                      |
+| Cuotas por suma de 30 días                                           | Resuelto         | Usa `addMonths()`.                                                                                                |
+| Estados de cuotas `paid/pending` confusos                            | Resuelto         | Usa `due/upcoming`.                                                                                               |
+| Timezone de cuotas/visitas                                           | Resuelto         | Usa helpers en `lib/timezone.ts`.                                                                                 |
+| `search-projects` con `balance > 1` hardcoded                        | Resuelto         | Usa `FINANCIAL.BALANCE_TOLERANCE`.                                                                                |
+| `Project.PUT` recalcula balance sin ajustes                          | Obsoleto         | Ya no recalcula/escribe balance persistido.                                                                       |
+| Testing de imports/adjustments inexistente                           | Obsoleto parcial | Existen tests para varios endpoints antes listados como sin cobertura. Exports endpoint siguen siendo candidatos. |
+| Endpoints `*-with-update` duplicados                                 | Resuelto         | Los hooks usan rutas canónicas y las rutas legacy son wrappers sobre lógica compartida.                           |
+| `P0-01` crédito aplicado a proyecto                                  | Resuelto         | `creditApplied` viaja en payload y `ProjectFinancials` descuenta aplicaciones `CUSTOMER_CREDIT`.                  |
+| `P0-03` `/api/users` sobre-privilegiado                              | Resuelto         | Usa `withApiHandler`, Zod, paginación, `select` acotado y `requiredRole: 'admin'`.                                |
+| `P1-01` refund valida fuera de transacción                           | Resuelto         | Refund bloquea cliente y recalcula saldo dentro de la transacción.                                                |
+| `P1-02` saldos negativos ocultos                                     | Resuelto         | Se expone `rawBalance`, se mantiene `availableBalance` compatible y se loggea saldo negativo.                     |
+| `P2-01` paginación puede devolver `NaN`                              | Resuelto         | `parsePositiveInteger()` normaliza con `Number.isFinite()` y tiene tests.                                         |
+| `P2-02` `withApiHandler` usa `parse()`                               | Resuelto         | Usa `safeParse()` y limita detalles Zod a 5 issues.                                                               |
 
 ---
 
@@ -575,26 +597,26 @@ Estos puntos no deben aparecer como pendientes en el checklist principal.
 
 ### Semana 1
 
-- [ ] Corregir contrato de `creditApplied` en pago 1:1 y `ProjectFinancials`.
-- [ ] Agregar autorización por rol centralizada.
-- [ ] Proteger `/api/users` con admin, Zod y campos mínimos.
-- [ ] Mover validación de refund de crédito dentro de transacción.
-- [ ] Corregir `parsePaginationParams` contra `NaN`.
+- [ ] Agregar límites explícitos a exports.
+- [ ] Agregar límites explícitos o chunking a imports.
+- [ ] Migrar imports que aún usan `withLogging` directo hacia `withApiHandler` si aplica.
+- [ ] Agregar tests para límites de imports/exports.
+- [ ] Agregar rate limiting o documentar protección externa de login/auth.
 
 ### Semana 2
 
-- [ ] Agregar límites a exports e imports.
-- [ ] Alertar/loggear saldos negativos de crédito.
-- [ ] Limitar errores Zod en `withApiHandler`.
-- [ ] Agregar rate limiting o documentar protección externa de login/auth.
+- [ ] Revisar duración de transacción de `POST /api/payments` después del cierre de `P0-01`.
+- [ ] Agregar constraints DB para JSON `tasks`.
+- [ ] Agregar CHECK DB para `ProjectAdjustment.amount > 0`.
+- [ ] Documentar explícitamente que los roles quedan diferidos mientras todos los usuarios autenticados tengan el mismo nivel operacional.
 
 ### Mes Actual
 
 - [ ] Resolver regla de negocio de múltiples eventos por día.
 - [ ] Validar conflictos de equipo en calendario.
-- [ ] Agregar constraints DB para JSON `tasks` y `ProjectAdjustment.amount`.
 - [ ] Revisar índices con query plans.
 - [ ] Estandarizar Decimal vs number.
+- [ ] Limpiar dependencias/archivos huérfanos solo después de validar reporte Knip.
 
 ---
 
