@@ -7,6 +7,7 @@ import { prisma } from '@/lib/db'
 import { formatCurrency } from '@/lib/format'
 import { DashboardActivityList } from '@/components/summarys/dashboard-activity-list'
 import { MonthlySalesSelector } from '@/components/summarys/monthly-sales-selector'
+import { DashboardRevenueChart } from '@/components/summarys/dashboard-revenue-chart'
 
 interface HomePageProps {
   searchParams?: Promise<{
@@ -108,6 +109,58 @@ async function getMonthlySales(month: DashboardMonth) {
   const total = projects.reduce((sum, p) => sum + Number(p.totalAmount), 0)
 
   return { subtotal, total, count: projects.length }
+}
+
+async function getRevenueChartData() {
+  const now = new Date()
+  const start = new Date(now.getFullYear(), now.getMonth() - 11, 1)
+  const end = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999)
+  const monthFormatter = new Intl.DateTimeFormat('es-CL', { month: 'short' })
+  const buckets = new Map<
+    string,
+    { month: string; label: string; sales: number; revenue: number }
+  >()
+  const cursor = new Date(start)
+
+  while (cursor <= end) {
+    const month = getMonthValue(cursor)
+    buckets.set(month, {
+      month,
+      label: monthFormatter.format(cursor).replace('.', ''),
+      sales: 0,
+      revenue: 0,
+    })
+    cursor.setMonth(cursor.getMonth() + 1)
+  }
+
+  const [projects, payments] = await Promise.all([
+    prisma.project.findMany({
+      where: { date: { gte: start, lte: end } },
+      select: { date: true, totalAmount: true },
+    }),
+    prisma.payment.findMany({
+      where: { date: { gte: start, lte: end } },
+      select: { date: true, amount: true },
+    }),
+  ])
+
+  for (const project of projects) {
+    const bucket = buckets.get(getMonthValue(project.date))
+
+    if (bucket) {
+      bucket.sales += Number(project.totalAmount)
+    }
+  }
+
+  for (const payment of payments) {
+    const bucket = buckets.get(getMonthValue(payment.date))
+
+    if (bucket) {
+      bucket.revenue += Number(payment.amount)
+    }
+  }
+
+  return Array.from(buckets.values())
 }
 
 async function getUpcomingInstallments() {
@@ -224,13 +277,15 @@ export default async function HomePage({ searchParams }: HomePageProps) {
   const resolvedSearchParams = await searchParams
   const selectedMonth = resolveSelectedMonth(resolvedSearchParams?.month)
 
-  const [sales, availableMonths, installments, recentProjects, recentPayments] = await Promise.all([
-    getMonthlySales(selectedMonth),
-    getAvailableMonths(selectedMonth),
-    getUpcomingInstallments(),
-    getRecentProjects(),
-    getRecentPayments(),
-  ])
+  const [sales, availableMonths, revenueChartData, installments, recentProjects, recentPayments] =
+    await Promise.all([
+      getMonthlySales(selectedMonth),
+      getAvailableMonths(selectedMonth),
+      getRevenueChartData(),
+      getUpcomingInstallments(),
+      getRecentProjects(),
+      getRecentPayments(),
+    ])
 
   return (
     <AppLayout pageTitle="Panel Principal" breadcrumbs={[{ label: 'Panel Principal', href: '/' }]}>
@@ -241,8 +296,8 @@ export default async function HomePage({ searchParams }: HomePageProps) {
           gridTemplateRows: 'repeat(8, 1fr)',
           gridTemplateAreas: `
             "a a a a c c d d d"
-            ". . . . . . d d d"
-            ". . . . . . d d d"
+            "b b b b b b d d d"
+            "b b b b b b d d d"
             ". . . . . . d d d"
             ". . . . . . d d d"
             ". . . . . . d d d"
@@ -280,6 +335,8 @@ export default async function HomePage({ searchParams }: HomePageProps) {
             <p className="text-2xl font-bold">--</p>
           </CardContent>
         </Card>
+
+        <DashboardRevenueChart gridArea="b" data={revenueChartData} />
 
         <DashboardActivityList
           gridArea="d"
