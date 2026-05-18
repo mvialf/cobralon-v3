@@ -204,36 +204,34 @@ export async function getStateFacets(
   filters: Omit<ProjectListFilters, 'projectState' | 'page' | 'limit'>
 ): Promise<{ value: string; count: number }[]> {
   const rows = await prisma.$queryRaw<ProjectFacetRow[]>`
-    SELECT
-      CASE
-        WHEN ${DERIVED_BALANCE} <= ${BALANCE_TOLERANCE} AND ps."isFinal" = true THEN 'Finalizado'
-        ELSE 'Activo'
-      END as value,
-      COUNT(*)::bigint as count
-    FROM "Project" p
-    INNER JOIN "Customer" c ON p."customerId" = c.id
-    LEFT JOIN "ProjectStatus" ps ON p."projectStatusId" = ps.id
-    ${FINANCIALS_JOIN}
-    WHERE 1=1
-      ${filters.customerId ? Prisma.sql`AND p."customerId" = ${filters.customerId}` : Prisma.empty}
-      ${filters.actualStatusIds.length > 0 && !filters.filterByNullStatus ? Prisma.sql`AND p."projectStatusId"::text = ANY(${filters.actualStatusIds})` : Prisma.empty}
-      ${filters.filterByNullStatus && filters.actualStatusIds.length === 0 ? Prisma.sql`AND p."projectStatusId" IS NULL` : Prisma.empty}
-      ${filters.filterByNullStatus && filters.actualStatusIds.length > 0 ? Prisma.sql`AND (p."projectStatusId" IS NULL OR p."projectStatusId"::text = ANY(${filters.actualStatusIds}))` : Prisma.empty}
-      ${
-        filters.search
-          ? Prisma.sql`AND (
-        normalize_text(p."projectNumber") LIKE normalize_text(${`%${filters.search}%`})
-        OR normalize_text(COALESCE(p."projectName", '')) LIKE normalize_text(${`%${filters.search}%`})
-        OR normalize_text(c.name) LIKE normalize_text(${`%${filters.search}%`})
-        OR normalize_text(COALESCE(ps.name, '')) LIKE normalize_text(${`%${filters.search}%`})
-      )`
-          : Prisma.empty
-      }
-    GROUP BY
-      CASE
-        WHEN ${DERIVED_BALANCE} <= ${BALANCE_TOLERANCE} AND ps."isFinal" = true THEN 'Finalizado'
-        ELSE 'Activo'
-      END
+    SELECT value, COUNT(*)::bigint as count
+    FROM (
+      SELECT
+        CASE
+          WHEN ${DERIVED_BALANCE} <= ${BALANCE_TOLERANCE} AND ps."isFinal" = true THEN 'Finalizado'
+          ELSE 'Activo'
+        END as value
+      FROM "Project" p
+      INNER JOIN "Customer" c ON p."customerId" = c.id
+      LEFT JOIN "ProjectStatus" ps ON p."projectStatusId" = ps.id
+      ${FINANCIALS_JOIN}
+      WHERE 1=1
+        ${filters.customerId ? Prisma.sql`AND p."customerId" = ${filters.customerId}` : Prisma.empty}
+        ${filters.actualStatusIds.length > 0 && !filters.filterByNullStatus ? Prisma.sql`AND p."projectStatusId"::text = ANY(${filters.actualStatusIds})` : Prisma.empty}
+        ${filters.filterByNullStatus && filters.actualStatusIds.length === 0 ? Prisma.sql`AND p."projectStatusId" IS NULL` : Prisma.empty}
+        ${filters.filterByNullStatus && filters.actualStatusIds.length > 0 ? Prisma.sql`AND (p."projectStatusId" IS NULL OR p."projectStatusId"::text = ANY(${filters.actualStatusIds}))` : Prisma.empty}
+        ${
+          filters.search
+            ? Prisma.sql`AND (
+          normalize_text(p."projectNumber") LIKE normalize_text(${`%${filters.search}%`})
+          OR normalize_text(COALESCE(p."projectName", '')) LIKE normalize_text(${`%${filters.search}%`})
+          OR normalize_text(c.name) LIKE normalize_text(${`%${filters.search}%`})
+          OR normalize_text(COALESCE(ps.name, '')) LIKE normalize_text(${`%${filters.search}%`})
+        )`
+            : Prisma.empty
+        }
+    ) states
+    GROUP BY value
     ORDER BY count DESC
   `
 
