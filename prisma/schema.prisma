@@ -25,7 +25,6 @@ model User {
   sessions      Session[]
   accounts      Account[]
 
-  @@index([email])
   @@index([role])
   @@map("user")
 }
@@ -191,10 +190,8 @@ model Project {
   @@index([customerId])
   @@index([projectStatusId])
   @@index([date])
-  @@index([balance]) // Index para filtros eficientes por balance
   @@index([customerId, projectStatusId])
   @@index([projectStatusId, createdAt(sort: Desc)])
-  @@index([projectStatusId, balance]) // Index compuesto para filtros de estado + balance
   @@index([createdAt(sort: Asc)]) // Index para ORDER BY createdAt ASC (FIFO en allocations)
 }
 
@@ -226,7 +223,6 @@ model CommissionTier {
   paymentMethod   PaymentMethod @relation(fields: [paymentMethodId], references: [id], onDelete: Cascade)
 
   @@unique([paymentMethodId, minInstallments, maxInstallments])
-  @@index([paymentMethodId])
 }
 
 model Payment {
@@ -253,10 +249,8 @@ model Payment {
   creditTransactions   CreditTransaction[]
   projectApplications  ProjectApplication[]
 
-  @@index([customerId])
   @@index([paymentMethodId])
   @@index([date])
-  @@index([type])
   @@index([type, date(sort: Desc)])
   @@index([customerId, date(sort: Desc)]) // Pagos de cliente ordenados por fecha
 }
@@ -287,7 +281,6 @@ model PaymentAllocation {
   projectApplication ProjectApplication?
 
   @@unique([paymentId, projectId])
-  @@index([paymentId])
   @@index([projectId])
   @@index([projectId, paymentId]) // Index para facet query (JOIN por projectId primero)
 }
@@ -544,7 +537,6 @@ model ProjectApplication {
   projectAdjustment ProjectAdjustment? @relation(fields: [projectAdjustmentId], references: [id], onDelete: Cascade)
 
   @@index([projectId])
-  @@index([customerId])
   @@index([sourceType])
   @@index([paymentId])
   @@index([projectId, sourceType])

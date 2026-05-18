@@ -32,6 +32,8 @@ prisma/migrations/*
 !prisma/migrations/20260517130000_clear_non_critical_operational_data/migration.sql
 !prisma/migrations/20260518100000_harden_financial_integrity/
 !prisma/migrations/20260518100000_harden_financial_integrity/migration.sql
+!prisma/migrations/20260518113000_prune_redundant_indexes/
+!prisma/migrations/20260518113000_prune_redundant_indexes/migration.sql
 
 # vercel
 .vercel

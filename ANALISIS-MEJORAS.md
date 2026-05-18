@@ -439,24 +439,26 @@ Cumplido.
 
 ### P2-09 - Índices Faltantes/Redundantes
 
-**Estado:** Validar con query plans
+**Estado:** Resuelto parcial
 **Tipo:** Performance DB
 **Impacto:** Overhead de escritura o queries menos eficientes.
 
-**Evidencia inicial:**
+**Evidencia validada:**
 
 - `User.email` tiene `@unique` y además `@@index([email])`.
-- `CreditTransaction` no tiene índice compuesto `[customerId, type]`.
-- `CommissionTier.paymentMethodId` puede estar cubierto por unique compuesto.
+- `CommissionTier.paymentMethodId` está cubierto por el índice único compuesto.
+- Varios índices simples están cubiertos por índices compuestos con el mismo prefijo.
+- `Project.balance` es legacy; runtime usa `ProjectFinancials`.
+- `EXPLAIN ANALYZE` sobre queries reales de proyectos, pagos y cuenta de cliente mostró tiempos bajos con el volumen actual.
 
-**Acción recomendada:**
+**Acción aplicada:**
 
-1. Revisar `EXPLAIN ANALYZE` de queries reales.
-2. Eliminar redundantes solo con migración revisada.
-3. Agregar índices faltantes solo donde haya patrón de query confirmado.
+1. Se revisaron índices reales en Neon y query plans representativos.
+2. Se creó migración `20260518113000_prune_redundant_indexes`.
+3. Se eliminaron índices redundantes/legacy sin agregar índices nuevos.
 
 **Criterio de cierre:**
-Migración de índices basada en query plans o patrones confirmados.
+Resuelto parcialmente: se limpian índices redundantes con evidencia. Si el volumen crece, reevaluar búsquedas `OR + normalize_text` y considerar refactor a `UNION` antes de agregar índices nuevos.
 
 ---
 
@@ -620,6 +622,7 @@ Estos puntos no deben aparecer como pendientes en el checklist principal.
 | `P2-10` helper ambiguo de balance                                    | Resuelto         | Se eliminó el helper que calculaba balance desde allocations sin ajustes ni crédito aplicado.                      |
 | `P0-02` autorización por rol                                         | Riesgo aceptado  | Roles diferidos por decisión de producto mientras todos los usuarios autenticados sean equivalentes.               |
 | `P1-05` transacción larga de pagos                                   | Resuelto parcial | `CreditTransaction` usa batch writes, se eliminó lectura redundante y se loggea duración de transacción.           |
+| `P2-09` índices faltantes/redundantes                                | Resuelto parcial | Se eliminaron índices redundantes/legacy con query plans reales; no se agregaron índices nuevos.                   |
 
 ---
 
@@ -645,7 +648,7 @@ Estos puntos no deben aparecer como pendientes en el checklist principal.
 
 - [ ] Resolver regla de negocio de múltiples eventos por día.
 - [ ] Validar conflictos de equipo en calendario.
-- [ ] Revisar índices con query plans.
+- [x] Revisar índices con query plans.
 - [ ] Estandarizar Decimal vs number.
 - [ ] Limpiar dependencias/archivos huérfanos solo después de validar reporte Knip.
 

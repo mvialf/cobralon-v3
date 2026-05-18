@@ -1,0 +1,10 @@
+DROP INDEX IF EXISTS "user_email_idx";
+DROP INDEX IF EXISTS "CommissionTier_paymentMethodId_idx";
+DROP INDEX IF EXISTS "Payment_customerId_idx";
+DROP INDEX IF EXISTS "Payment_type_idx";
+DROP INDEX IF EXISTS "PaymentAllocation_paymentId_idx";
+DROP INDEX IF EXISTS "Project_projectStatusId_idx";
+DROP INDEX IF EXISTS "Project_balance_idx";
+DROP INDEX IF EXISTS "Project_projectStatusId_balance_idx";
+DROP INDEX IF EXISTS "project_applications_customerId_idx";
+DROP INDEX IF EXISTS "project_applications_projectId_idx";
