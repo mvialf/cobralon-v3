@@ -20,7 +20,7 @@ import { FormField, FormItem, FormLabel, FormControl, FormMessage } from '@/comp
 import { CurrencyInput } from '@/components/ui/currency-input'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { formatCurrency } from '@/lib/format'
-import { calculateMaxCreditApplication } from '@/lib/business-logic/credit-management'
+import { calculateMaxCreditApplication } from '@/lib/business-logic/credit-rules'
 
 interface CreditApplicationFieldsProps {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any

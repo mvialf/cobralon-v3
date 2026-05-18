@@ -51,13 +51,17 @@ vi.mock('@/lib/db', () => ({
 }))
 
 vi.mock('@/lib/business-logic/credit-management', () => ({
-  canApplyCredit: vi.fn().mockReturnValue({ valid: true }),
   getCustomerCreditBalance: vi.fn().mockResolvedValue(100000),
   lockCustomerCreditBalance: vi.fn().mockResolvedValue(true),
 }))
 
+vi.mock('@/lib/business-logic/credit-rules', () => ({
+  canApplyCredit: vi.fn().mockReturnValue({ valid: true }),
+}))
+
 import { prisma } from '@/lib/db'
-import { canApplyCredit, getCustomerCreditBalance } from '@/lib/business-logic/credit-management'
+import { getCustomerCreditBalance } from '@/lib/business-logic/credit-management'
+import { canApplyCredit } from '@/lib/business-logic/credit-rules'
 import { GET, POST } from '../route'
 
 // Helper para llamar al handler con context mock

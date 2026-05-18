@@ -506,13 +506,17 @@ Test de monto pequeño con muchas cuotas rechaza o distribuye sin cuotas cero.
 
 ### P3-01 - Formato de Moneda en Mensajes Usa `toLocaleString`
 
-**Estado:** Abierto
+**Estado:** Resuelto
 **Tipo:** Consistencia UX
-**Evidencia:** `canRefundCredit()` y `canApplyCredit()` formatean montos con `$${value.toLocaleString('es-CL')}`.
+**Problema anterior:** `canRefundCredit()` y `canApplyCredit()` formateaban montos con `$${value.toLocaleString('es-CL')}`.
 
-**Acción recomendada:** Usar `formatCurrency()` centralizado.
+**Resolución:**
 
-**Criterio de cierre:** Mensajes financieros usan el helper común.
+- Los mensajes financieros de crédito usan `formatCurrency()`.
+- Las reglas puras de crédito se separaron en un módulo client-safe para evitar que componentes de navegador arrastren Prisma/`lib/db.ts`.
+- `credit-management` queda para operaciones de ledger/DB y re-exporta reglas puras por compatibilidad server.
+
+**Criterio de cierre:** Cumplido. Mensajes financieros usan el helper común y `/projects` no importa `lib/db.ts` desde el componente de aplicación de crédito.
 
 ---
 
@@ -648,6 +652,7 @@ Estos puntos no deben aparecer como pendientes en el checklist principal.
 | `P0-02` autorización por rol                                         | Riesgo aceptado  | Roles diferidos por decisión de producto mientras todos los usuarios autenticados sean equivalentes.               |
 | `P1-05` transacción larga de pagos                                   | Resuelto parcial | `CreditTransaction` usa batch writes, se eliminó lectura redundante y se loggea duración de transacción.           |
 | `P2-09` índices faltantes/redundantes                                | Resuelto parcial | Se eliminaron índices redundantes/legacy con query plans reales; no se agregaron índices nuevos.                   |
+| `P3-01` formato de moneda en mensajes                                | Resuelto         | Mensajes de crédito usan `formatCurrency()` y reglas puras de crédito quedan client-safe.                          |
 | `P3-04` mezcla de `Decimal` y `number`                               | Resuelto         | Cálculos financieros usan helper Decimal central; `number` queda como contrato de frontera.                        |
 | `P3-06` variables de entorno sin matriz verificada                   | Resuelto         | `lib/env.ts` valida runtime server y `.env.example` documenta app, scripts y tests.                                |
 

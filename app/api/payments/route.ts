@@ -9,10 +9,10 @@ import { withLogging } from '@/lib/logger-middleware'
 import { withApiHandler, BusinessError } from '@/lib/api-handler'
 import { parsePaginationParams, buildPaginationResponse } from '@/lib/utils/pagination'
 import {
-  canApplyCredit,
   getCustomerCreditBalance,
   lockCustomerCreditBalance,
 } from '@/lib/business-logic/credit-management'
+import { canApplyCredit } from '@/lib/business-logic/credit-rules'
 import { generatePrismaInstallmentsCreate } from '@/lib/business-logic/installments'
 import {
   computePaymentCommission,
@@ -41,6 +41,7 @@ import {
   subtractMoney,
   sumMoney,
 } from '@/lib/business-logic/money'
+import { formatCurrency } from '@/lib/format'
 
 type ProjectApplicationWriter = PrismaTransaction & {
   creditTransaction: {
@@ -683,7 +684,7 @@ export const POST = withApiHandler<CreatePaymentApiBody>(
 
         if (greaterThanMoneyWithTolerance(totalCreditToApply, customerCreditBalance)) {
           throw new BusinessError(
-            `Crédito insuficiente. Disponible: $${customerCreditBalance.toLocaleString('es-CL')}`,
+            `Crédito insuficiente. Disponible: ${formatCurrency(customerCreditBalance, 'CLP')}`,
             400
           )
         }
