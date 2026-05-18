@@ -40,6 +40,7 @@ vi.mock('@/lib/db', () => ({
     },
     creditTransaction: {
       create: vi.fn(),
+      createMany: vi.fn(),
     },
     projectApplication: {
       createMany: vi.fn(),
@@ -165,13 +166,18 @@ describe('POST /api/payments', () => {
         $queryRaw: vi.fn().mockResolvedValue([financialRow('project-1', 100000)]),
         payment: { create: vi.fn().mockResolvedValue(defaultPaymentCreateResult) },
         project: {
-          findMany: vi.fn().mockResolvedValue([
-            { id: 'project-1', projectNumber: '1001', balance: 0, customerId: 'customer-1' },
-          ]),
+          findMany: vi
+            .fn()
+            .mockResolvedValue([
+              { id: 'project-1', projectNumber: '1001', balance: 0, customerId: 'customer-1' },
+            ]),
           update: vi.fn(),
         },
         customer: { update: vi.fn() },
-        creditTransaction: { create: vi.fn().mockResolvedValue({ id: 'credit-tx-1' }) },
+        creditTransaction: {
+          create: vi.fn().mockResolvedValue({ id: 'credit-tx-1' }),
+          createMany: vi.fn(),
+        },
         projectApplication: { createMany: vi.fn() },
       }
       return fn(mockTx as never)
@@ -298,10 +304,9 @@ describe('POST /api/payments', () => {
       ] as never)
       vi.mocked(prisma.$transaction).mockImplementation(async (fn) => {
         return fn({
-          $queryRaw: vi.fn().mockResolvedValue([
-            financialRow('p1', 50000),
-            financialRow('p2', 50000),
-          ]),
+          $queryRaw: vi
+            .fn()
+            .mockResolvedValue([financialRow('p1', 50000), financialRow('p2', 50000)]),
           payment: {
             create: vi.fn().mockResolvedValue({
               id: 'payment-1',
@@ -330,7 +335,7 @@ describe('POST /api/payments', () => {
             update: vi.fn(),
           },
           customer: { update: vi.fn() },
-          creditTransaction: { create: vi.fn() },
+          creditTransaction: { create: vi.fn(), createMany: vi.fn() },
           projectApplication: { createMany: vi.fn() },
         } as never)
       })
@@ -507,18 +512,15 @@ describe('POST /api/payments', () => {
 
       const txProjectApplication = { createMany: vi.fn() }
       const txCreditTransaction = {
-        create: vi
-          .fn()
-          .mockResolvedValueOnce({ id: 'credit-tx-p1' })
-          .mockResolvedValueOnce({ id: 'credit-tx-p2' }),
+        create: vi.fn(),
+        createMany: vi.fn(),
       }
 
       vi.mocked(prisma.$transaction).mockImplementation(async (fn) => {
         return fn({
-          $queryRaw: vi.fn().mockResolvedValue([
-            financialRow('p1', 60000),
-            financialRow('p2', 70000),
-          ]),
+          $queryRaw: vi
+            .fn()
+            .mockResolvedValue([financialRow('p1', 60000), financialRow('p2', 70000)]),
           payment: {
             create: vi.fn().mockResolvedValue({
               id: 'payment-1',
@@ -564,19 +566,25 @@ describe('POST /api/payments', () => {
       const response = await callPOST(request)
 
       expect(response.status).toBe(201)
-      expect(txCreditTransaction.create).toHaveBeenCalledTimes(2)
-      expect(txCreditTransaction.create.mock.calls[0][0].data).toMatchObject({
+      expect(txCreditTransaction.createMany).toHaveBeenCalledTimes(1)
+      const creditTransactionData = txCreditTransaction.createMany.mock.calls[0][0].data
+      expect(creditTransactionData).toHaveLength(2)
+      expect(creditTransactionData[0]).toMatchObject({
         type: 'APPLIED',
         projectId: 'p1',
       })
-      expect(Number(txCreditTransaction.create.mock.calls[0][0].data.amount)).toBe(-10000)
+      expect(Number(creditTransactionData[0].amount)).toBe(-10000)
 
       const projectApplicationData = txProjectApplication.createMany.mock.calls[0][0].data
-      expect(projectApplicationData.map((application: { sourceType: string; projectId: string; amount: Decimal }) => ({
-        sourceType: application.sourceType,
-        projectId: application.projectId,
-        amount: Number(application.amount),
-      }))).toEqual([
+      expect(
+        projectApplicationData.map(
+          (application: { sourceType: string; projectId: string; amount: Decimal }) => ({
+            sourceType: application.sourceType,
+            projectId: application.projectId,
+            amount: Number(application.amount),
+          })
+        )
+      ).toEqual([
         { sourceType: 'CASH', projectId: 'p1', amount: 50000 },
         { sourceType: 'CUSTOMER_CREDIT', projectId: 'p1', amount: 10000 },
         { sourceType: 'CASH', projectId: 'p2', amount: 50000 },
@@ -593,10 +601,9 @@ describe('POST /api/payments', () => {
 
       vi.mocked(prisma.$transaction).mockImplementation(async (fn) => {
         return fn({
-          $queryRaw: vi.fn().mockResolvedValue([
-            financialRow('p1', 60000),
-            financialRow('p2', 70000),
-          ]),
+          $queryRaw: vi
+            .fn()
+            .mockResolvedValue([financialRow('p1', 60000), financialRow('p2', 70000)]),
           payment: {
             create: vi.fn().mockResolvedValue({
               id: 'payment-1',
@@ -609,7 +616,7 @@ describe('POST /api/payments', () => {
           },
           project: { findMany: vi.fn(), update: vi.fn() },
           customer: { update: vi.fn() },
-          creditTransaction: { create: vi.fn() },
+          creditTransaction: { create: vi.fn(), createMany: vi.fn() },
           projectApplication: { createMany: vi.fn() },
         } as never)
       })
@@ -654,7 +661,7 @@ describe('POST /api/payments', () => {
           },
           project: { findMany: vi.fn(), update: vi.fn() },
           customer: { update: vi.fn() },
-          creditTransaction: { create: vi.fn() },
+          creditTransaction: { create: vi.fn(), createMany: vi.fn() },
           projectApplication: { createMany: vi.fn() },
         } as never)
       })
@@ -697,15 +704,20 @@ describe('POST /api/payments', () => {
           $queryRaw: vi.fn().mockResolvedValue([financialRow('project-1', 100000)]),
           project: {
             findUnique: vi.fn().mockResolvedValue({ id: 'project-1', balance: 100000 }),
-            findMany: vi.fn().mockResolvedValue([
-              { id: 'project-1', projectNumber: '1001', balance: 0, customerId: 'customer-1' },
-            ]),
+            findMany: vi
+              .fn()
+              .mockResolvedValue([
+                { id: 'project-1', projectNumber: '1001', balance: 0, customerId: 'customer-1' },
+              ]),
             update: vi.fn(),
           },
           customer: {
             findUnique: vi.fn().mockResolvedValue({ creditBalance: 50000 }),
           },
-          creditTransaction: { create: vi.fn().mockResolvedValue({ id: 'credit-tx-1' }) },
+          creditTransaction: {
+            create: vi.fn().mockResolvedValue({ id: 'credit-tx-1' }),
+            createMany: vi.fn(),
+          },
           projectApplication: txProjectApplication,
         }
         return fn(mockTx as never)
@@ -780,13 +792,18 @@ describe('POST /api/payments', () => {
           $queryRaw: vi.fn().mockResolvedValue([financialRow('project-1', 100000)]),
           payment: { create: vi.fn().mockResolvedValue(customPaymentResult) },
           project: {
-            findMany: vi.fn().mockResolvedValue([
-              { id: 'project-1', projectNumber: '1001', balance: 0, customerId: 'customer-1' },
-            ]),
+            findMany: vi
+              .fn()
+              .mockResolvedValue([
+                { id: 'project-1', projectNumber: '1001', balance: 0, customerId: 'customer-1' },
+              ]),
             update: vi.fn(),
           },
           customer: { update: vi.fn() },
-        creditTransaction: { create: vi.fn().mockResolvedValue({ id: 'credit-tx-1' }) },
+          creditTransaction: {
+            create: vi.fn().mockResolvedValue({ id: 'credit-tx-1' }),
+            createMany: vi.fn(),
+          },
           projectApplication: { createMany: vi.fn() },
         }
         return fn(mockTx as never)
@@ -803,14 +820,21 @@ describe('POST /api/payments', () => {
 
   describe('sobrepagos (generación de crédito)', () => {
     it('debe generar crédito cuando proyecto tiene balance negativo', async () => {
-      const txPayment = { create: vi.fn().mockResolvedValue({ id: 'p1', allocations: [], installments: [] }) }
+      const txPayment = {
+        create: vi.fn().mockResolvedValue({ id: 'p1', allocations: [], installments: [] }),
+      }
       const txProject = {
-        findMany: vi.fn().mockResolvedValue([
-          { id: 'project-1', projectNumber: '1001', balance: -5000, customerId: 'customer-1' },
-        ]),
+        findMany: vi
+          .fn()
+          .mockResolvedValue([
+            { id: 'project-1', projectNumber: '1001', balance: -5000, customerId: 'customer-1' },
+          ]),
         update: vi.fn(),
       }
-      const txCreditTransaction = { create: vi.fn().mockResolvedValue({ id: 'credit-tx-1' }) }
+      const txCreditTransaction = {
+        create: vi.fn().mockResolvedValue({ id: 'credit-tx-1' }),
+        createMany: vi.fn(),
+      }
 
       vi.mocked(prisma.$transaction).mockImplementation(async (fn) => {
         return fn({
@@ -829,19 +853,24 @@ describe('POST /api/payments', () => {
       expect(response.status).toBe(201)
       expect(txProject.update).not.toHaveBeenCalled()
       // Debe crear CreditTransaction tipo OVERPAYMENT
-      expect(txCreditTransaction.create).toHaveBeenCalledWith(
+      expect(txCreditTransaction.createMany).toHaveBeenCalledWith(
         expect.objectContaining({
-          data: expect.objectContaining({
-            type: 'OVERPAYMENT',
-            customerId: 'customer-1',
-          }),
+          data: [
+            expect.objectContaining({
+              type: 'OVERPAYMENT',
+              customerId: 'customer-1',
+            }),
+          ],
         })
       )
       // creditBalance se calcula en tiempo real desde ledger (no se recalcula manualmente)
     })
 
     it('no debe generar sobrepago cuando dinero nuevo más crédito cierran el balance', async () => {
-      const txCreditTransaction = { create: vi.fn().mockResolvedValue({ id: 'credit-tx-1' }) }
+      const txCreditTransaction = {
+        create: vi.fn().mockResolvedValue({ id: 'credit-tx-1' }),
+        createMany: vi.fn(),
+      }
       const txProjectApplication = { createMany: vi.fn() }
 
       vi.mocked(prisma.$transaction).mockImplementation(async (fn) => {
@@ -862,18 +891,20 @@ describe('POST /api/payments', () => {
             }),
           },
           project: {
-            findMany: vi.fn().mockResolvedValue([
-              { id: 'project-1', projectNumber: '1001', balance: -30000, customerId: 'customer-1' },
-            ]),
+            findMany: vi
+              .fn()
+              .mockResolvedValue([
+                {
+                  id: 'project-1',
+                  projectNumber: '1001',
+                  balance: -30000,
+                  customerId: 'customer-1',
+                },
+              ]),
             update: vi.fn(),
           },
           customer: { update: vi.fn() },
-          creditTransaction: {
-            create: vi
-              .fn()
-              .mockResolvedValueOnce({ id: 'applied-credit-1' })
-              .mockImplementation(txCreditTransaction.create),
-          },
+          creditTransaction: txCreditTransaction,
           projectApplication: txProjectApplication,
         } as never)
       })
@@ -888,17 +919,17 @@ describe('POST /api/payments', () => {
 
       expect(response.status).toBe(201)
       const projectApplicationData = txProjectApplication.createMany.mock.calls[0][0].data
-      expect(projectApplicationData.map((application: { amount: Decimal; sourceType: string }) => ({
-        amount: Number(application.amount),
-        sourceType: application.sourceType,
-      }))).toEqual([
+      expect(
+        projectApplicationData.map((application: { amount: Decimal; sourceType: string }) => ({
+          amount: Number(application.amount),
+          sourceType: application.sourceType,
+        }))
+      ).toEqual([
         { amount: 80000, sourceType: 'CASH' },
         { amount: 20000, sourceType: 'CUSTOMER_CREDIT' },
       ])
-      const overpaymentCall = txCreditTransaction.create.mock.calls.find(
-        ([args]) => args.data.type === 'OVERPAYMENT'
-      )
-      expect(overpaymentCall).toBeUndefined()
+      const createdRows = txCreditTransaction.createMany.mock.calls.flatMap(([args]) => args.data)
+      expect(createdRows.some((row) => row.type === 'OVERPAYMENT')).toBe(false)
     })
 
     it('debe generar créditos para múltiples proyectos con sobrepago', async () => {
@@ -907,7 +938,10 @@ describe('POST /api/payments', () => {
         { id: 'p2', customerId: 'customer-1', currency: 'CLP' },
       ] as never)
 
-      const txCreditTransaction = { create: vi.fn().mockResolvedValue({ id: 'credit-tx-1' }) }
+      const txCreditTransaction = {
+        create: vi.fn().mockResolvedValue({ id: 'credit-tx-1' }),
+        createMany: vi.fn(),
+      }
       const txProject = {
         findMany: vi.fn().mockResolvedValue([
           { id: 'p1', projectNumber: '1001', balance: -3000, customerId: 'customer-1' },
@@ -918,11 +952,12 @@ describe('POST /api/payments', () => {
 
       vi.mocked(prisma.$transaction).mockImplementation(async (fn) => {
         return fn({
-          $queryRaw: vi.fn().mockResolvedValue([
-            financialRow('p1', 30000),
-            financialRow('p2', 30000),
-          ]),
-          payment: { create: vi.fn().mockResolvedValue({ id: 'p1', allocations: [], installments: [] }) },
+          $queryRaw: vi
+            .fn()
+            .mockResolvedValue([financialRow('p1', 30000), financialRow('p2', 30000)]),
+          payment: {
+            create: vi.fn().mockResolvedValue({ id: 'p1', allocations: [], installments: [] }),
+          },
           project: txProject,
           customer: { update: vi.fn() },
           creditTransaction: txCreditTransaction,
@@ -941,19 +976,27 @@ describe('POST /api/payments', () => {
       const response = await callPOST(request)
 
       expect(response.status).toBe(201)
-      expect(txCreditTransaction.create).toHaveBeenCalledTimes(2)
+      expect(txCreditTransaction.createMany).toHaveBeenCalledTimes(1)
+      expect(txCreditTransaction.createMany.mock.calls[0][0].data).toHaveLength(2)
     })
 
     it('no debe generar crédito cuando balance >= 0', async () => {
-      const txCreditTransaction = { create: vi.fn().mockResolvedValue({ id: 'credit-tx-1' }) }
+      const txCreditTransaction = {
+        create: vi.fn().mockResolvedValue({ id: 'credit-tx-1' }),
+        createMany: vi.fn(),
+      }
       vi.mocked(prisma.$transaction).mockImplementation(async (fn) => {
         return fn({
           $queryRaw: vi.fn().mockResolvedValue([financialRow('project-1', 150000)]),
-          payment: { create: vi.fn().mockResolvedValue({ id: 'p1', allocations: [], installments: [] }) },
+          payment: {
+            create: vi.fn().mockResolvedValue({ id: 'p1', allocations: [], installments: [] }),
+          },
           project: {
-            findMany: vi.fn().mockResolvedValue([
-              { id: 'project-1', projectNumber: '1001', balance: 5000, customerId: 'customer-1' },
-            ]),
+            findMany: vi
+              .fn()
+              .mockResolvedValue([
+                { id: 'project-1', projectNumber: '1001', balance: 5000, customerId: 'customer-1' },
+              ]),
             update: vi.fn(),
           },
           customer: { update: vi.fn() },
@@ -966,7 +1009,7 @@ describe('POST /api/payments', () => {
       const response = await callPOST(request)
 
       expect(response.status).toBe(201)
-      expect(txCreditTransaction.create).not.toHaveBeenCalled()
+      expect(txCreditTransaction.createMany).not.toHaveBeenCalled()
     })
 
     it('debe generar crédito solo para proyectos con balance negativo', async () => {
@@ -975,14 +1018,18 @@ describe('POST /api/payments', () => {
         { id: 'p2', customerId: 'customer-1', currency: 'CLP' },
       ] as never)
 
-      const txCreditTransaction = { create: vi.fn().mockResolvedValue({ id: 'credit-tx-1' }) }
+      const txCreditTransaction = {
+        create: vi.fn().mockResolvedValue({ id: 'credit-tx-1' }),
+        createMany: vi.fn(),
+      }
       vi.mocked(prisma.$transaction).mockImplementation(async (fn) => {
         return fn({
-          $queryRaw: vi.fn().mockResolvedValue([
-            financialRow('p1', 30000),
-            financialRow('p2', 60000),
-          ]),
-          payment: { create: vi.fn().mockResolvedValue({ id: 'p1', allocations: [], installments: [] }) },
+          $queryRaw: vi
+            .fn()
+            .mockResolvedValue([financialRow('p1', 30000), financialRow('p2', 60000)]),
+          payment: {
+            create: vi.fn().mockResolvedValue({ id: 'p1', allocations: [], installments: [] }),
+          },
           project: {
             findMany: vi.fn().mockResolvedValue([
               { id: 'p1', projectNumber: '1001', balance: -3000, customerId: 'customer-1' },
@@ -1008,7 +1055,8 @@ describe('POST /api/payments', () => {
 
       expect(response.status).toBe(201)
       // Solo 1 crédito (p1 con balance negativo)
-      expect(txCreditTransaction.create).toHaveBeenCalledTimes(1)
+      expect(txCreditTransaction.createMany).toHaveBeenCalledTimes(1)
+      expect(txCreditTransaction.createMany.mock.calls[0][0].data).toHaveLength(1)
     })
   })
 
@@ -1017,10 +1065,16 @@ describe('POST /api/payments', () => {
       vi.mocked(prisma.$transaction).mockImplementation(async (fn) => {
         return fn({
           $queryRaw: vi.fn().mockResolvedValue([]),
-          payment: { create: vi.fn().mockResolvedValue({ id: 'p1', allocations: [], installments: [] }) },
-          project: { findUnique: vi.fn().mockResolvedValue(null), findMany: vi.fn(), update: vi.fn() },
+          payment: {
+            create: vi.fn().mockResolvedValue({ id: 'p1', allocations: [], installments: [] }),
+          },
+          project: {
+            findUnique: vi.fn().mockResolvedValue(null),
+            findMany: vi.fn(),
+            update: vi.fn(),
+          },
           customer: { findUnique: vi.fn().mockResolvedValue({ creditBalance: 50000 }) },
-          creditTransaction: { create: vi.fn() },
+          creditTransaction: { create: vi.fn(), createMany: vi.fn() },
           projectApplication: { createMany: vi.fn() },
         } as never)
       })
@@ -1041,12 +1095,18 @@ describe('POST /api/payments', () => {
       vi.mocked(prisma.$transaction).mockImplementation(async (fn) => {
         return fn({
           $queryRaw: vi.fn().mockResolvedValue([financialRow('project-1', 100000)]),
-          payment: { create: vi.fn().mockResolvedValue({ id: 'p1', allocations: [], installments: [] }) },
-          project: { findUnique: vi.fn().mockResolvedValue({ balance: 100000 }), findMany: vi.fn(), update: vi.fn() },
+          payment: {
+            create: vi.fn().mockResolvedValue({ id: 'p1', allocations: [], installments: [] }),
+          },
+          project: {
+            findUnique: vi.fn().mockResolvedValue({ balance: 100000 }),
+            findMany: vi.fn(),
+            update: vi.fn(),
+          },
           customer: {
             findUnique: vi.fn().mockResolvedValue({ creditBalance: 50000 }),
           },
-          creditTransaction: { create: vi.fn() },
+          creditTransaction: { create: vi.fn(), createMany: vi.fn() },
           projectApplication: { createMany: vi.fn() },
         } as never)
       })
@@ -1097,7 +1157,13 @@ describe('GET /api/payments', () => {
         {
           id: 'a1',
           allocatedAmount: 100000,
-          project: { id: 'p1', projectNumber: '1001', projectName: null, totalAmount: 200000, currency: 'CLP' },
+          project: {
+            id: 'p1',
+            projectNumber: '1001',
+            projectName: null,
+            totalAmount: 200000,
+            currency: 'CLP',
+          },
         },
       ],
     },
@@ -1272,9 +1338,7 @@ describe('GET /api/payments', () => {
 
     await callGET(createGETRequest({ limit: '200' }))
 
-    expect(prisma.payment.findMany).toHaveBeenCalledWith(
-      expect.objectContaining({ take: 100 })
-    )
+    expect(prisma.payment.findMany).toHaveBeenCalledWith(expect.objectContaining({ take: 100 }))
   })
 
   it('debe incluir facets cuando includeFacets=true', async () => {

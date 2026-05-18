@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { randomUUID } from 'node:crypto'
 import { prisma } from '@/lib/db'
 import { Decimal } from '@prisma/client/runtime/library'
 import { Prisma } from '@prisma/client'
@@ -32,6 +33,10 @@ import type { PrismaTransaction } from '@/lib/db/types'
 import { getProjectsFinancials } from '@/lib/business-logic/project-financials'
 
 type ProjectApplicationWriter = PrismaTransaction & {
+  creditTransaction: {
+    createMany: (args: { data: CreditTransactionCreateManyRow[] }) => Promise<unknown>
+    create: PrismaTransaction['creditTransaction']['create']
+  }
   projectApplication: {
     createMany: (args: { data: ProjectApplicationCreateManyRow[] }) => Promise<unknown>
   }
@@ -49,6 +54,17 @@ type ProjectApplicationCreateManyRow = {
   creditTransactionId?: string
   amount: Prisma.Decimal
   sourceType: 'CASH' | 'CUSTOMER_CREDIT'
+}
+
+type CreditTransactionCreateManyRow = {
+  id: string
+  customerId: string
+  amount: Prisma.Decimal
+  type: 'APPLIED' | 'OVERPAYMENT'
+  description: string
+  paymentId: string
+  projectId: string
+  metadata: Prisma.InputJsonValue
 }
 
 /**
@@ -402,7 +418,7 @@ export const POST = withApiHandler<CreatePaymentApiBody>(
       }),
       prisma.project.findMany({
         where: { id: { in: projectIds } },
-        select: { id: true, customerId: true, currency: true },
+        select: { id: true, customerId: true, currency: true, projectNumber: true },
       }),
     ])
 
@@ -537,6 +553,7 @@ export const POST = withApiHandler<CreatePaymentApiBody>(
     // 2. Aplicar crédito si corresponde (creditApplied > 0)
     // 3. Detectar sobrepagos con balance derivado y generar créditos automáticamente
 
+    const transactionStartedAt = Date.now()
     const payment = await prisma.$transaction(async (tx: PrismaTransaction) => {
       const initialFinancials = await getProjectsFinancials(projectIds, tx)
 
@@ -685,27 +702,32 @@ export const POST = withApiHandler<CreatePaymentApiBody>(
           }
         }
 
-        for (const allocation of allocations) {
-          const creditAmount = allocation.creditApplied
-          if (creditAmount <= 0) continue
+        const appliedCreditRows = allocations
+          .filter((allocation) => allocation.creditApplied > 0)
+          .map((allocation) => {
+            const creditTransactionId = randomUUID()
+            appliedCreditTransactionByProject.set(allocation.projectId, creditTransactionId)
 
-          const appliedCreditTransaction = await tx.creditTransaction.create({
-            data: {
+            return {
+              id: creditTransactionId,
               customerId,
-              amount: new Prisma.Decimal(-creditAmount), // Negativo = salida de crédito
-              type: 'APPLIED',
+              amount: new Prisma.Decimal(-allocation.creditApplied), // Negativo = salida de crédito
+              type: 'APPLIED' as const,
               description: `Crédito aplicado al pago ${newPayment.id.slice(0, 8)}`,
               paymentId: newPayment.id,
               projectId: allocation.projectId,
               metadata: {
                 paymentAmount: amount,
-                creditApplied: creditAmount,
+                creditApplied: allocation.creditApplied,
                 paymentDate: paymentDate.toISOString(),
               },
-            },
-            select: { id: true },
+            }
           })
-          appliedCreditTransactionByProject.set(allocation.projectId, appliedCreditTransaction.id)
+
+        if (appliedCreditRows.length > 0) {
+          await (tx as ProjectApplicationWriter).creditTransaction.createMany({
+            data: appliedCreditRows,
+          })
         }
 
         paymentLogger.info(
@@ -779,19 +801,12 @@ export const POST = withApiHandler<CreatePaymentApiBody>(
 
       paymentLogger.debug({ projectIds }, 'Checking for overpayments in transaction')
 
-      const updatedProjects = await tx.project.findMany({
-        where: { id: { in: projectIds } },
-        select: {
-          id: true,
-          projectNumber: true,
-          customerId: true,
-        },
-      })
       const allocationByProject = new Map(
         allocations.map((allocation) => [allocation.projectId, allocation.allocatedAmount])
       )
+      const overpaymentRows: CreditTransactionCreateManyRow[] = []
 
-      for (const project of updatedProjects) {
+      for (const project of projects) {
         const startingFinancials = initialFinancials.get(project.id)
         if (!startingFinancials) {
           throw new BusinessError('Proyecto no encontrado durante validación de sobrepago', 404)
@@ -820,21 +835,20 @@ export const POST = withApiHandler<CreatePaymentApiBody>(
             'Overpayment detected - converting to customer credit'
           )
 
-          await tx.creditTransaction.create({
-            data: {
-              customerId: project.customerId,
-              amount: new Prisma.Decimal(overpaymentAmount), // Positivo = entrada de crédito
-              type: 'OVERPAYMENT',
-              description: `Sobrepago generado en proyecto P-${project.projectNumber}`,
-              paymentId: newPayment.id,
-              projectId: project.id,
-              metadata: {
-                paymentAmount: amount,
-                creditApplied: creditAppliedToProject,
-                projectBalance: rawBalanceAfterPayment,
-                overpaymentAmount,
-                paymentDate: paymentDate.toISOString(),
-              },
+          overpaymentRows.push({
+            id: randomUUID(),
+            customerId: project.customerId,
+            amount: new Prisma.Decimal(overpaymentAmount), // Positivo = entrada de crédito
+            type: 'OVERPAYMENT',
+            description: `Sobrepago generado en proyecto P-${project.projectNumber}`,
+            paymentId: newPayment.id,
+            projectId: project.id,
+            metadata: {
+              paymentAmount: amount,
+              creditApplied: creditAppliedToProject,
+              projectBalance: rawBalanceAfterPayment,
+              overpaymentAmount,
+              paymentDate: paymentDate.toISOString(),
             },
           })
 
@@ -849,8 +863,15 @@ export const POST = withApiHandler<CreatePaymentApiBody>(
         }
       }
 
+      if (overpaymentRows.length > 0) {
+        await (tx as ProjectApplicationWriter).creditTransaction.createMany({
+          data: overpaymentRows,
+        })
+      }
+
       return newPayment
     })
+    const transactionDurationMs = Date.now() - transactionStartedAt
 
     paymentLogger.info(
       {
@@ -858,6 +879,7 @@ export const POST = withApiHandler<CreatePaymentApiBody>(
         allocationsCreated: payment.allocations.length,
         installmentsCreated: payment.installments.length,
         creditApplied: totalCreditToApply,
+        transactionDurationMs,
       },
       'Payment created successfully (atomic transaction completed)'
     )

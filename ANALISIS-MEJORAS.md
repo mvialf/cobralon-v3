@@ -90,7 +90,7 @@ Hallazgos que estaban abiertos pero ya fueron cerrados en código actual:
 
 ### P0-02 - Falta Autorización por Rol en Endpoints Sensibles
 
-**Estado:** Diferido por decisión de producto
+**Estado:** Resuelto como riesgo aceptado
 **Tipo:** Seguridad
 **Impacto:** Si en el futuro existen usuarios con distintos niveles de confianza, cualquier usuario autenticado podría ejecutar operaciones que deberían requerir admin o permisos específicos.
 
@@ -104,6 +104,9 @@ Hallazgos que estaban abiertos pero ya fueron cerrados en código actual:
   - `app/api/users/route.ts`
 - El riesgo técnico es adopción incompleta: muchos endpoints sensibles usan `withApiHandler` sin roles, o aún usan `withLogging` directamente.
 - Decisión actual: por ahora no interesa diferenciar roles de usuario, por lo que no debe bloquear trabajo de mayor impacto inmediato.
+
+**Decisión operacional:**
+Mientras todos los usuarios autenticados tengan el mismo nivel operacional, no se agregan restricciones por rol a endpoints sensibles. El riesgo queda aceptado y documentado para no contaminar el backlog activo.
 
 **Endpoints de alto riesgo:**
 
@@ -240,7 +243,7 @@ Imports rechazan o chunkear datasets grandes y tienen tests para límites.
 
 ### P1-05 - Transacción de Creación de Pagos Sigue Siendo Larga
 
-**Estado:** Validar
+**Estado:** Resuelto parcial
 **Tipo:** Performance / Concurrencia
 **Impacto:** Mayor latencia y riesgo de deadlocks bajo carga.
 
@@ -248,14 +251,15 @@ Imports rechazan o chunkear datasets grandes y tienen tests para límites.
 
 - `POST /api/payments` crea payment, allocations, installments, actualiza cuotas, crea transacciones de crédito y recorre proyectos con sobrepago dentro de una sola transacción.
 
-**Acción recomendada:**
+**Acción aplicada:**
 
-1. Mantener el contrato financiero ya definido en P0-01: `Payment.amount` es dinero nuevo y el crédito aplicado se registra como aplicación separada.
-2. Reemplazar loops de `creditTransaction.create()` por `createMany()` cuando aplique.
-3. Medir duración de transacción antes/después.
+1. Se mantiene el contrato financiero ya definido en P0-01.
+2. Se eliminó la lectura redundante de proyectos dentro de la transacción.
+3. Se reemplazaron writes secuenciales de `CreditTransaction` por `createMany()` para crédito aplicado y sobrepagos.
+4. Se agregó `transactionDurationMs` al log de creación exitosa.
 
 **Criterio de cierre:**
-Hay benchmark o métrica de duración y se eliminan writes secuenciales innecesarios.
+Resuelto parcialmente: ya no hay writes secuenciales innecesarios de `CreditTransaction` ni lectura redundante de proyectos. Queda como mejora futura medir con tráfico real si conviene extraer más trabajo de la transacción.
 
 ---
 
@@ -589,31 +593,33 @@ Crear matriz:
 
 Estos puntos no deben aparecer como pendientes en el checklist principal.
 
-| ID anterior                                                          | Estado actual    | Motivo                                                                                                            |
-| -------------------------------------------------------------------- | ---------------- | ----------------------------------------------------------------------------------------------------------------- |
-| Validación redundante fuerte de `creditApplied` fuera de transacción | Obsoleto         | La validación relevante ocurre dentro de la transacción. Solo queda una validación barata de tipo.                |
-| Metadata de `OVERPAYMENT` sin `creditApplied`                        | Resuelto         | Metadata ya incluye `creditApplied`.                                                                              |
-| Reversión de crédito por signo ambiguo                               | Resuelto         | DELETE de pagos revierte según tipo de transacción.                                                               |
-| LIKE sin escapar en búsqueda de pagos                                | Resuelto         | `%` y `_` se escapan en pagos.                                                                                    |
+| ID anterior                                                          | Estado actual    | Motivo                                                                                                             |
+| -------------------------------------------------------------------- | ---------------- | ------------------------------------------------------------------------------------------------------------------ |
+| Validación redundante fuerte de `creditApplied` fuera de transacción | Obsoleto         | La validación relevante ocurre dentro de la transacción. Solo queda una validación barata de tipo.                 |
+| Metadata de `OVERPAYMENT` sin `creditApplied`                        | Resuelto         | Metadata ya incluye `creditApplied`.                                                                               |
+| Reversión de crédito por signo ambiguo                               | Resuelto         | DELETE de pagos revierte según tipo de transacción.                                                                |
+| LIKE sin escapar en búsqueda de pagos                                | Resuelto         | `%` y `_` se escapan en pagos.                                                                                     |
 | `Project.balance` como fuente runtime                                | Resuelto         | Runtime principal usa `ProjectFinancials`; columna legacy fue sincronizada en Neon y auditoría quedó sin warnings. |
-| `updateMultipleProjectBalances` N+1                                  | Resuelto         | La función fue eliminada.                                                                                         |
-| Cron `reconcile-balances` sin protección                             | Obsoleto         | Endpoint eliminado.                                                                                               |
-| Import de pagos sin recalcular balance                               | Obsoleto         | Balance se deriva desde `ProjectFinancials`.                                                                      |
-| Cuotas por suma de 30 días                                           | Resuelto         | Usa `addMonths()`.                                                                                                |
-| Estados de cuotas `paid/pending` confusos                            | Resuelto         | Usa `due/upcoming`.                                                                                               |
-| Timezone de cuotas/visitas                                           | Resuelto         | Usa helpers en `lib/timezone.ts`.                                                                                 |
-| `search-projects` con `balance > 1` hardcoded                        | Resuelto         | Usa `FINANCIAL.BALANCE_TOLERANCE`.                                                                                |
-| `Project.PUT` recalcula balance sin ajustes                          | Obsoleto         | Ya no recalcula/escribe balance persistido.                                                                       |
-| Testing de imports/adjustments inexistente                           | Obsoleto parcial | Existen tests para varios endpoints antes listados como sin cobertura. Exports endpoint siguen siendo candidatos. |
-| Endpoints `*-with-update` duplicados                                 | Resuelto         | Los hooks usan rutas canónicas y las rutas duplicadas fueron eliminadas.                                          |
-| `P0-01` crédito aplicado a proyecto                                  | Resuelto         | `creditApplied` viaja en payload y `ProjectFinancials` descuenta aplicaciones `CUSTOMER_CREDIT`.                  |
-| `P0-03` `/api/users` sobre-privilegiado                              | Resuelto         | Usa `withApiHandler`, Zod, paginación, `select` acotado y `requiredRole: 'admin'`.                                |
-| `P1-01` refund valida fuera de transacción                           | Resuelto         | Refund bloquea cliente y recalcula saldo dentro de la transacción.                                                |
-| `P1-02` saldos negativos ocultos                                     | Resuelto         | Se expone `rawBalance`, se mantiene `availableBalance` compatible y se loggea saldo negativo.                     |
-| `P2-01` paginación puede devolver `NaN`                              | Resuelto         | `parsePositiveInteger()` normaliza con `Number.isFinite()` y tiene tests.                                         |
-| `P2-02` `withApiHandler` usa `parse()`                               | Resuelto         | Usa `safeParse()` y limita detalles Zod a 5 issues.                                                               |
-| `P2-08` CHECK financiero faltante                                    | Resuelto         | Neon tiene constraints para `project_applications.amount > 0` y `project_adjustments.amount > 0`.                 |
-| `P2-10` helper ambiguo de balance                                    | Resuelto         | Se eliminó el helper que calculaba balance desde allocations sin ajustes ni crédito aplicado.                     |
+| `updateMultipleProjectBalances` N+1                                  | Resuelto         | La función fue eliminada.                                                                                          |
+| Cron `reconcile-balances` sin protección                             | Obsoleto         | Endpoint eliminado.                                                                                                |
+| Import de pagos sin recalcular balance                               | Obsoleto         | Balance se deriva desde `ProjectFinancials`.                                                                       |
+| Cuotas por suma de 30 días                                           | Resuelto         | Usa `addMonths()`.                                                                                                 |
+| Estados de cuotas `paid/pending` confusos                            | Resuelto         | Usa `due/upcoming`.                                                                                                |
+| Timezone de cuotas/visitas                                           | Resuelto         | Usa helpers en `lib/timezone.ts`.                                                                                  |
+| `search-projects` con `balance > 1` hardcoded                        | Resuelto         | Usa `FINANCIAL.BALANCE_TOLERANCE`.                                                                                 |
+| `Project.PUT` recalcula balance sin ajustes                          | Obsoleto         | Ya no recalcula/escribe balance persistido.                                                                        |
+| Testing de imports/adjustments inexistente                           | Obsoleto parcial | Existen tests para varios endpoints antes listados como sin cobertura. Exports endpoint siguen siendo candidatos.  |
+| Endpoints `*-with-update` duplicados                                 | Resuelto         | Los hooks usan rutas canónicas y las rutas duplicadas fueron eliminadas.                                           |
+| `P0-01` crédito aplicado a proyecto                                  | Resuelto         | `creditApplied` viaja en payload y `ProjectFinancials` descuenta aplicaciones `CUSTOMER_CREDIT`.                   |
+| `P0-03` `/api/users` sobre-privilegiado                              | Resuelto         | Usa `withApiHandler`, Zod, paginación, `select` acotado y `requiredRole: 'admin'`.                                 |
+| `P1-01` refund valida fuera de transacción                           | Resuelto         | Refund bloquea cliente y recalcula saldo dentro de la transacción.                                                 |
+| `P1-02` saldos negativos ocultos                                     | Resuelto         | Se expone `rawBalance`, se mantiene `availableBalance` compatible y se loggea saldo negativo.                      |
+| `P2-01` paginación puede devolver `NaN`                              | Resuelto         | `parsePositiveInteger()` normaliza con `Number.isFinite()` y tiene tests.                                          |
+| `P2-02` `withApiHandler` usa `parse()`                               | Resuelto         | Usa `safeParse()` y limita detalles Zod a 5 issues.                                                                |
+| `P2-08` CHECK financiero faltante                                    | Resuelto         | Neon tiene constraints para `project_applications.amount > 0` y `project_adjustments.amount > 0`.                  |
+| `P2-10` helper ambiguo de balance                                    | Resuelto         | Se eliminó el helper que calculaba balance desde allocations sin ajustes ni crédito aplicado.                      |
+| `P0-02` autorización por rol                                         | Riesgo aceptado  | Roles diferidos por decisión de producto mientras todos los usuarios autenticados sean equivalentes.               |
+| `P1-05` transacción larga de pagos                                   | Resuelto parcial | `CreditTransaction` usa batch writes, se eliminó lectura redundante y se loggea duración de transacción.           |
 
 ---
 
@@ -629,11 +635,11 @@ Estos puntos no deben aparecer como pendientes en el checklist principal.
 
 ### Semana 2
 
-- [ ] Revisar duración de transacción de `POST /api/payments` después del cierre de `P0-01`.
+- [x] Revisar duración de transacción de `POST /api/payments` después del cierre de `P0-01`.
 - [ ] Agregar constraints DB para JSON `tasks` cuando calendario/postventa vuelva a ser prioritario.
 - [x] Agregar CHECK DB para `ProjectAdjustment.amount > 0`.
 - [x] Sincronizar `Project.balance` legacy con `ProjectFinancials` en Neon.
-- [ ] Documentar explícitamente que los roles quedan diferidos mientras todos los usuarios autenticados tengan el mismo nivel operacional.
+- [x] Documentar explícitamente que los roles quedan diferidos mientras todos los usuarios autenticados tengan el mismo nivel operacional.
 
 ### Mes Actual
 
