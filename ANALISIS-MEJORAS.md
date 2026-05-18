@@ -373,7 +373,7 @@ No queda lógica duplicada ni referencias en hooks a rutas `*-with-update`; las 
 
 ### P2-07 - JSON `tasks` Tiene Validación de App Pero No Constraint DB
 
-**Estado:** Abierto
+**Estado:** Diferido por decisión de datos
 **Tipo:** Integridad DB
 **Impacto:** Inserts directos pueden guardar JSON no-array.
 
@@ -392,11 +392,14 @@ CHECK (jsonb_typeof(tasks) = 'array')
 **Criterio de cierre:**
 Migración con constraints y test/seed que confirma rechazo de JSON inválido.
 
+**Decisión actual:**
+Los datos actuales de calendario/postventa/visitas no son importantes; se prioriza integridad financiera. El modelo se conserva y esta mejora queda fuera del siguiente corte.
+
 ---
 
 ### P2-08 - `ProjectAdjustment.amount` No Tiene CHECK DB
 
-**Estado:** Abierto
+**Estado:** Resuelto
 **Tipo:** Integridad DB
 **Impacto:** Inserts directos podrían crear ajustes negativos.
 
@@ -405,8 +408,11 @@ Migración con constraints y test/seed que confirma rechazo de JSON inválido.
 - `ProjectAdjustment.amount` es `Decimal`, sin constraint DB.
 - La app valida, pero DB no.
 
-**Acción recomendada:**
-Agregar constraint SQL `amount > 0`.
+**Acción aplicada:**
+Migración `20260518100000_harden_financial_integrity` agrega:
+
+- `project_adjustments_amount_positive_check`
+- `project_applications_amount_positive_check`
 
 **Criterio de cierre:**
 Migración aplicada y test DB o integración cubre monto negativo.
@@ -436,19 +442,19 @@ Migración de índices basada en query plans o patrones confirmados.
 
 ---
 
-### P2-10 - `calculateProjectBalance()` Sigue Ignorando Ajustes
+### P2-10 - Helper Legacy de Balance Ignora Ajustes
 
-**Estado:** Abierto
+**Estado:** Resuelto
 **Tipo:** Legacy / Mantenibilidad
 **Impacto:** Callers legacy pueden calcular un balance distinto a `ProjectFinancials`.
 
 **Evidencia:**
 
-- `lib/business-logic/project-balance.ts` calcula `totalAmount - allocations`.
-- No considera `ProjectAdjustment`.
+- La función ambigua fue reemplazada por `calculateProjectBalanceWithoutAdjustments()`.
+- El script legacy de población de balances sincroniza desde `ProjectFinancials`.
 
-**Acción recomendada:**
-Renombrar a `calculateProjectBalanceWithoutAdjustments()` o extender firma para recibir ajustes.
+**Acción aplicada:**
+Se eliminó el nombre ambiguo `calculateProjectBalance()` del código. El helper restante declara explícitamente que no considera ajustes ni crédito aplicado y que runtime debe usar `ProjectFinancials`.
 
 **Criterio de cierre:**
 No hay función con nombre ambiguo que ignore ajustes sin declararlo.
@@ -573,7 +579,7 @@ Estos puntos no deben aparecer como pendientes en el checklist principal.
 | Metadata de `OVERPAYMENT` sin `creditApplied`                        | Resuelto         | Metadata ya incluye `creditApplied`.                                                                              |
 | Reversión de crédito por signo ambiguo                               | Resuelto         | DELETE de pagos revierte según tipo de transacción.                                                               |
 | LIKE sin escapar en búsqueda de pagos                                | Resuelto         | `%` y `_` se escapan en pagos.                                                                                    |
-| `Project.balance` como fuente runtime                                | Resuelto parcial | Runtime principal usa `ProjectFinancials`; columna legacy sigue en schema.                                        |
+| `Project.balance` como fuente runtime                                | Resuelto parcial | Runtime principal usa `ProjectFinancials`; columna legacy se sincroniza desde la vista en migración/script.       |
 | `updateMultipleProjectBalances` N+1                                  | Resuelto         | La función fue eliminada.                                                                                         |
 | Cron `reconcile-balances` sin protección                             | Obsoleto         | Endpoint eliminado.                                                                                               |
 | Import de pagos sin recalcular balance                               | Obsoleto         | Balance se deriva desde `ProjectFinancials`.                                                                      |
@@ -606,8 +612,8 @@ Estos puntos no deben aparecer como pendientes en el checklist principal.
 ### Semana 2
 
 - [ ] Revisar duración de transacción de `POST /api/payments` después del cierre de `P0-01`.
-- [ ] Agregar constraints DB para JSON `tasks`.
-- [ ] Agregar CHECK DB para `ProjectAdjustment.amount > 0`.
+- [ ] Agregar constraints DB para JSON `tasks` cuando calendario/postventa vuelva a ser prioritario.
+- [x] Agregar CHECK DB para `ProjectAdjustment.amount > 0`.
 - [ ] Documentar explícitamente que los roles quedan diferidos mientras todos los usuarios autenticados tengan el mismo nivel operacional.
 
 ### Mes Actual

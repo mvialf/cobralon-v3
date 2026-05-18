@@ -2,18 +2,18 @@
  * Tests para lib/business-logic/project-balance.ts
  *
  * Valida:
- * - calculateProjectBalance()
+ * - calculateProjectBalanceWithoutAdjustments()
  * - getTotalPendingBalance()
  */
 
 import { describe, it, expect } from 'vitest'
 import {
-  calculateProjectBalance,
+  calculateProjectBalanceWithoutAdjustments,
   derivePaymentProgress,
   getTotalPendingBalance,
 } from '../project-balance'
 
-describe('calculateProjectBalance', () => {
+describe('calculateProjectBalanceWithoutAdjustments', () => {
   it('debe calcular balance correcto con allocations', () => {
     const project = {
       totalAmount: 1000000,
@@ -24,7 +24,7 @@ describe('calculateProjectBalance', () => {
       ],
     }
 
-    const result = calculateProjectBalance(project)
+    const result = calculateProjectBalanceWithoutAdjustments(project)
 
     expect(result.totalPaid).toBe(700000)
     expect(result.balance).toBe(300000)
@@ -38,7 +38,7 @@ describe('calculateProjectBalance', () => {
       allocations: undefined,
     }
 
-    const result = calculateProjectBalance(project)
+    const result = calculateProjectBalanceWithoutAdjustments(project)
 
     expect(result.totalPaid).toBe(0)
     expect(result.balance).toBe(1000000)
@@ -52,7 +52,7 @@ describe('calculateProjectBalance', () => {
       allocations: [{ allocatedAmount: 1000000 }],
     }
 
-    const result = calculateProjectBalance(project)
+    const result = calculateProjectBalanceWithoutAdjustments(project)
 
     expect(result.totalPaid).toBe(1000000)
     expect(result.balance).toBe(0)
@@ -66,7 +66,7 @@ describe('calculateProjectBalance', () => {
       allocations: [{ allocatedAmount: 1200000 }],
     }
 
-    const result = calculateProjectBalance(project)
+    const result = calculateProjectBalanceWithoutAdjustments(project)
 
     expect(result.totalPaid).toBe(1200000)
     expect(result.balance).toBe(-200000)
@@ -80,7 +80,7 @@ describe('calculateProjectBalance', () => {
       allocations: [{ allocatedAmount: 500000 }],
     }
 
-    const result = calculateProjectBalance(project)
+    const result = calculateProjectBalanceWithoutAdjustments(project)
 
     expect(result.totalPaid).toBe(500000)
     expect(result.balance).toBe(-500000)
@@ -94,7 +94,7 @@ describe('calculateProjectBalance', () => {
       allocations: [],
     }
 
-    const result = calculateProjectBalance(project)
+    const result = calculateProjectBalanceWithoutAdjustments(project)
 
     expect(result.totalPaid).toBe(0)
     expect(result.balance).toBe(0)
@@ -112,7 +112,7 @@ describe('calculateProjectBalance', () => {
       ],
     }
 
-    const result = calculateProjectBalance(project)
+    const result = calculateProjectBalanceWithoutAdjustments(project)
 
     expect(result.totalPaid).toBe(1000)
     expect(result.balance).toBeCloseTo(0, 2)
@@ -125,7 +125,7 @@ describe('calculateProjectBalance', () => {
       allocations: [{ allocatedAmount: 150000 }],
     }
 
-    const result = calculateProjectBalance(project)
+    const result = calculateProjectBalanceWithoutAdjustments(project)
 
     expect(result.percentPaid).toBe(150)
     expect(result.isFullyPaid).toBe(true)
@@ -137,7 +137,7 @@ describe('calculateProjectBalance', () => {
       allocations: [{ allocatedAmount: 100 }],
     }
 
-    const result = calculateProjectBalance(project)
+    const result = calculateProjectBalanceWithoutAdjustments(project)
 
     expect(result.totalPaid).toBe(100)
     expect(result.balance).toBe(-100)
@@ -151,7 +151,7 @@ describe('calculateProjectBalance', () => {
       allocations: Array(100).fill({ allocatedAmount: 10000 }),
     }
 
-    const result = calculateProjectBalance(project)
+    const result = calculateProjectBalanceWithoutAdjustments(project)
 
     expect(result.totalPaid).toBe(1000000)
     expect(result.balance).toBe(0)
@@ -164,7 +164,7 @@ describe('calculateProjectBalance', () => {
       allocations: [{ allocatedAmount: 500000000000 }],
     }
 
-    const result = calculateProjectBalance(project)
+    const result = calculateProjectBalanceWithoutAdjustments(project)
 
     expect(result.totalPaid).toBe(500000000000)
     expect(result.balance).toBe(499999999999)
@@ -178,7 +178,7 @@ describe('calculateProjectBalance', () => {
       allocations: [{ allocatedAmount: 0.005 }],
     }
 
-    const result = calculateProjectBalance(project)
+    const result = calculateProjectBalanceWithoutAdjustments(project)
 
     expect(result.totalPaid).toBe(0.005)
     expect(result.balance).toBeCloseTo(0.005, 5)

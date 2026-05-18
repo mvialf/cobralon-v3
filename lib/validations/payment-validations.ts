@@ -2,7 +2,7 @@ import { z } from 'zod'
 import { FINANCIAL } from '../constants/financial-constants'
 
 // Re-export business logic functions for convenience
-export { calculateProjectBalance } from '../business-logic/project-balance'
+export { calculateProjectBalanceWithoutAdjustments } from '../business-logic/project-balance'
 export { calculateFIFO } from '../business-logic/payment-fifo'
 
 /**

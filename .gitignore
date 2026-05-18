@@ -30,6 +30,8 @@ prisma/migrations/*
 !prisma/migrations/20260517123000_add_project_applications/migration.sql
 !prisma/migrations/20260517130000_clear_non_critical_operational_data/
 !prisma/migrations/20260517130000_clear_non_critical_operational_data/migration.sql
+!prisma/migrations/20260518100000_harden_financial_integrity/
+!prisma/migrations/20260518100000_harden_financial_integrity/migration.sql
 
 # vercel
 .vercel

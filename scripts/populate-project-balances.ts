@@ -1,20 +1,24 @@
 /**
- * Script de población inicial de balances
+ * Script legacy de sincronización de balances
  *
  * EJECUTAR DESPUÉS DE MIGRACIÓN:
  * npx tsx scripts/populate-project-balances.ts
  *
  * Este script:
- * 1. Lee todos los proyectos
- * 2. Calcula el balance correcto basado en paymentAllocations
- * 3. Actualiza la columna balance en la DB
+ * 1. Lee todos los proyectos desde ProjectFinancials
+ * 2. Copia el balance derivado hacia Project.balance legacy
  *
  * SAFE TO RUN: Puede ejecutarse múltiples veces sin efectos secundarios
  */
 
 import { prisma } from '../lib/db'
-import { calculateProjectBalance } from '../lib/business-logic/project-balance'
 import { Decimal } from '@prisma/client/runtime/library'
+
+interface ProjectFinancialsRow {
+  projectId: string
+  projectNumber: string
+  balance: Decimal
+}
 
 interface Stats {
   total: number
@@ -26,7 +30,7 @@ interface Stats {
 }
 
 async function populateBalances(): Promise<Stats> {
-  console.log('🚀 Iniciando población de balances...\n')
+  console.log('🚀 Iniciando sincronización de balances legacy desde ProjectFinancials...\n')
 
   const stats: Stats = {
     total: 0,
@@ -38,37 +42,29 @@ async function populateBalances(): Promise<Stats> {
   }
 
   try {
-    // Fetch todos los proyectos con sus allocations
-    console.log('📦 Cargando proyectos...')
-    const projects = await prisma.project.findMany({
-      include: {
-        paymentAllocations: {
-          select: {
-            allocatedAmount: true,
-          },
-        },
-      },
-    })
+    console.log('📦 Cargando balances derivados...')
+    const projects = await prisma.$queryRaw<ProjectFinancialsRow[]>`
+      SELECT
+        p.id AS "projectId",
+        p."projectNumber",
+        pf.balance
+      FROM "Project" p
+      JOIN "ProjectFinancials" pf ON pf."projectId" = p.id
+      ORDER BY p."projectNumber"
+    `
 
     stats.total = projects.length
     console.log(`✅ ${projects.length} proyectos encontrados\n`)
 
     // Procesar cada proyecto
-    console.log('🔄 Calculando y actualizando balances...\n')
+    console.log('🔄 Sincronizando balances legacy...\n')
 
     for (const project of projects) {
       try {
-        // Calcular balance
-        const { balance } = calculateProjectBalance({
-          totalAmount: Number(project.totalAmount),
-          allocations: project.paymentAllocations.map((alloc) => ({
-            allocatedAmount: Number(alloc.allocatedAmount),
-          })),
-        })
+        const balance = Number(project.balance)
 
-        // Actualizar en DB
         await prisma.project.update({
-          where: { id: project.id },
+          where: { id: project.projectId },
           data: {
             balance: new Decimal(balance),
           },

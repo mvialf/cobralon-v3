@@ -1,8 +1,8 @@
 /**
- * Lógica de negocio para cálculo de balance de proyectos
+ * Lógica de negocio legacy para cálculo de balance de proyectos
  *
  * Contiene funciones críticas para calcular:
- * - Balance individual de proyecto (totalPaid, balance, percentPaid)
+ * - Balance individual legacy de proyecto (totalPaid, balance, percentPaid)
  * - Balance total pendiente de múltiples proyectos
  *
  * @module business-logic/project-balance
@@ -27,10 +27,12 @@ export interface ProjectBalanceResult {
 }
 
 /**
- * Calcula el balance financiero completo de un proyecto
+ * Calcula el balance de un proyecto considerando solo allocations.
  *
- * Esta es LA FUNCIÓN MÁS IMPORTANTE del sistema de pagos.
- * Determina el estado financiero de un proyecto basándose en:
+ * No considera ajustes ni crédito aplicado desde ProjectApplication. Para
+ * balances financieros runtime usar ProjectFinancials.
+ *
+ * Determina el estado legacy de un proyecto basándose en:
  * - Monto total del proyecto (contract amount)
  * - Suma de pagos asignados (allocations)
  *
@@ -40,7 +42,7 @@ export interface ProjectBalanceResult {
  * @example
  * ```ts
  * // Proyecto de $1,000,000 con 3 pagos
- * const result = calculateProjectBalance({
+ * const result = calculateProjectBalanceWithoutAdjustments({
  *   totalAmount: 1000000,
  *   allocations: [
  *     { allocatedAmount: 300000 },
@@ -61,24 +63,26 @@ export interface ProjectBalanceResult {
  * @example Edge cases
  * ```ts
  * // Caso 1: Proyecto sin monto total
- * calculateProjectBalance({ totalAmount: null, allocations: [] })
+ * calculateProjectBalanceWithoutAdjustments({ totalAmount: null, allocations: [] })
  * // => { totalPaid: 0, balance: 0, percentPaid: 0, isFullyPaid: true }
  *
  * // Caso 2: Sobrepago
- * calculateProjectBalance({
+ * calculateProjectBalanceWithoutAdjustments({
  *   totalAmount: 1000,
  *   allocations: [{ allocatedAmount: 1200 }]
  * })
  * // => { totalPaid: 1200, balance: -200, percentPaid: 120, isFullyPaid: true }
  *
  * // Caso 3: Sin allocations
- * calculateProjectBalance({ totalAmount: 1000, allocations: undefined })
+ * calculateProjectBalanceWithoutAdjustments({ totalAmount: 1000, allocations: undefined })
  * // => { totalPaid: 0, balance: 1000, percentPaid: 0, isFullyPaid: false }
  * ```
  *
  * @see {@link docs/project/analysis/frontend-calculations.md#1} - Análisis exhaustivo
  */
-export function calculateProjectBalance(project: ProjectWithAllocations): ProjectBalanceResult {
+export function calculateProjectBalanceWithoutAdjustments(
+  project: ProjectWithAllocations
+): ProjectBalanceResult {
   const totalAmount = project.totalAmount
 
   // 1. Sumar todos los pagos asignados al proyecto
@@ -142,7 +146,7 @@ export function derivePaymentProgress(total: number, balance: number): PaymentPr
  */
 export function getTotalPendingBalance(projects: ProjectWithFullAllocations[]): number {
   return projects.reduce((sum, project) => {
-    const { balance } = calculateProjectBalance({
+    const { balance } = calculateProjectBalanceWithoutAdjustments({
       totalAmount: project.totalAmount,
       allocations: project.allocations,
     })
