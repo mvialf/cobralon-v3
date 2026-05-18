@@ -1,4 +1,9 @@
 import { PrismaClient } from '@prisma/client'
+import { getEnv } from '@/lib/env'
+
+const env = getEnv()
+void env.DATABASE_URL
+void env.DIRECT_URL
 
 const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined

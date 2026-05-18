@@ -1,6 +1,9 @@
 import { betterAuth } from 'better-auth'
 import { prismaAdapter } from 'better-auth/adapters/prisma'
 import { prisma } from '@/lib/db'
+import { getEnv } from '@/lib/env'
+
+const env = getEnv()
 
 /**
  * Better Auth Configuration
@@ -14,6 +17,8 @@ import { prisma } from '@/lib/db'
  */
 export const auth = betterAuth({
   appName: 'Cobralon',
+  baseURL: env.AUTH_BASE_URL,
+  secret: env.AUTH_SECRET_VALUE,
 
   // Database adapter (Prisma + PostgreSQL)
   database: prismaAdapter(prisma, {

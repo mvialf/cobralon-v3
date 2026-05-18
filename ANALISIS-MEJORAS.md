@@ -565,35 +565,54 @@ Test de monto pequeño con muchas cuotas rechaza o distribuye sin cuotas cero.
 
 ### P3-05 - Limpieza de Dependencias y Archivos Huérfanos
 
-**Estado:** Validar antes de eliminar
+**Estado:** Resuelto parcial / Validar periódicamente
 **Tipo:** Mantenibilidad
 **Evidencia:** Knip reporta dependencias y archivos potencialmente no usados.
 
-**Acción recomendada:**
-Ejecutar `npm run lint:deep`, revisar manualmente entrypoints, scripts one-shot y archivos usados por Playwright/config.
+**Evidencia actual:**
+
+- Se realizó una primera limpieza de archivos/exports muertos.
+- `npm run lint:deep` aún reporta dependencias, exports y tipos potencialmente no usados.
+- Parte del reporte corresponde probablemente a falsos positivos o superficie de diseño reutilizable: componentes shadcn/Radix, tooling CSS/PostCSS/ESLint y exports públicos de componentes UI.
+
+**Acción recomendada:** No eliminar en bloque. Revisar por grupo cuando se toque cada subsistema y documentar falsos positivos si se decide mantenerlos.
 
 **Criterio de cierre:**
-Dependencias realmente no usadas eliminadas; falsos positivos documentados.
+Dependencias realmente no usadas eliminadas; falsos positivos relevantes documentados.
 
 ---
 
 ### P3-06 - Variables de Entorno Sin Matriz Verificada
 
-**Estado:** Validar
+**Estado:** Resuelto
 **Tipo:** Configuración
 **Problema anterior:** El documento viejo asumía variables de Better Auth no observadas directamente en el código.
 
-**Acción recomendada:**
-Crear matriz:
+**Regla adoptada:**
 
-| Variable              | Fuente en código  | Requerida | Entorno       |
-| --------------------- | ----------------- | --------- | ------------- |
-| `DATABASE_URL`        | Prisma datasource | Sí        | server        |
-| `DIRECT_URL`          | Prisma datasource | Sí        | server        |
-| `NEXT_PUBLIC_APP_URL` | `.env.example`    | Validar   | client/server |
+- `lib/env.ts` valida solo variables usadas por runtime server o requeridas indirectamente por Prisma/Auth.
+- Variables de cliente siguen client-safe y no importan `lib/env.ts`.
+- Variables exclusivas de scripts/tests se documentan, pero no bloquean el arranque de la app.
+- `NODE_ENV=test` usa defaults locales solo en `getEnv()` para que las suites unitarias no requieran credenciales reales.
+
+**Matriz verificada:**
+
+| Variable                   | Fuente en código                       | Requerida                          | Entorno       |
+| -------------------------- | -------------------------------------- | ---------------------------------- | ------------- |
+| `DATABASE_URL`             | Prisma datasource / `lib/env.ts`       | Sí                                 | server        |
+| `DIRECT_URL`               | Prisma datasource / `lib/env.ts`       | Sí                                 | server        |
+| `NEXT_PUBLIC_APP_URL`      | `lib/auth-client.ts` / `lib/auth.ts`   | Sí en producción; fallback en dev  | client/server |
+| `BETTER_AUTH_SECRET`       | Better Auth via `lib/auth.ts`          | Sí en producción                   | server        |
+| `AUTH_SECRET`              | Fallback Better Auth via `lib/auth.ts` | Alternativa a `BETTER_AUTH_SECRET` | server        |
+| `LOG_LEVEL`                | `lib/logger.ts` / `lib/env.ts`         | No                                 | server        |
+| `AUDIT_ROW_LIMIT`          | `scripts/audit-important-data.ts`      | No                                 | script        |
+| `CI`                       | `playwright.config.ts`                 | No                                 | test/ci       |
+| `PLAYWRIGHT_TEST_BASE_URL` | tests E2E helpers                      | No                                 | test          |
+| `TEST_USER_EMAIL`          | `tests/e2e/auth.setup.ts`              | No                                 | test          |
+| `TEST_USER_PASSWORD`       | `tests/e2e/auth.setup.ts`              | No                                 | test          |
 
 **Criterio de cierre:**
-`lib/env.ts` valida solo variables realmente usadas o requeridas indirectamente.
+Cumplido. `.env.example` documenta runtime, scripts y tests; `lib/env.ts` valida runtime server sin contaminar cliente.
 
 ---
 
@@ -630,6 +649,7 @@ Estos puntos no deben aparecer como pendientes en el checklist principal.
 | `P1-05` transacción larga de pagos                                   | Resuelto parcial | `CreditTransaction` usa batch writes, se eliminó lectura redundante y se loggea duración de transacción.           |
 | `P2-09` índices faltantes/redundantes                                | Resuelto parcial | Se eliminaron índices redundantes/legacy con query plans reales; no se agregaron índices nuevos.                   |
 | `P3-04` mezcla de `Decimal` y `number`                               | Resuelto         | Cálculos financieros usan helper Decimal central; `number` queda como contrato de frontera.                        |
+| `P3-06` variables de entorno sin matriz verificada                   | Resuelto         | `lib/env.ts` valida runtime server y `.env.example` documenta app, scripts y tests.                                |
 
 ---
 
