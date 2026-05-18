@@ -12,7 +12,7 @@
 
 ### Problema
 
-Varios endpoints traen **todos los registros a memoria** y luego filtran, ordenan y paginan en JavaScript. Esto funciona con volúmenes bajos (90 proyectos) pero escala mal.
+Varios endpoints traen **todos los registros a memoria** y luego filtran, ordenan y paginan en JavaScript. Esto funciona con volúmenes bajos pero escala mal.
 
 ### Patrón de referencia
 

@@ -24,13 +24,15 @@ Ambos se escriben con el mismo valor calculado (`subtotal * (1 + taxRate/100)`).
 
 `totalAmount` se agregó durante la migración de datos importados. Los 90 proyectos legacy tenían `total` pero no `totalAmount` (era null). Post-migración se pobló `totalAmount = total` para todos.
 
+> Nota 2026-05-18: este plan es histórico. Los scripts one-shot mencionados abajo ya fueron eliminados durante la limpieza de código muerto.
+
 ### Inconsistencia activa detectada
 
 | Módulo | Campo usado | Fallback |
 |--------|------------|----------|
 | `update-project-balance.ts` (lógica core) | `totalAmount ?? total` | Sí |
 | `cron/reconcile-balances` (línea 119) | `project.total` | **NO** — ignora totalAmount |
-| `scripts/populate-project-balances.ts` (línea 63) | `project.total` | **NO** — ignora totalAmount |
+| `scripts/populate-project-balances.ts` (eliminado) | `project.total` | **OBSOLETO** — script one-shot eliminado |
 | `app/api/projects/[id]` GET (línea 48) | `project.totalAmount` | **NO** — puede retornar NaN si null |
 | `project-balance.ts` (línea 82) | `project.totalAmount || 0` | Usa `||` en vez de `??` — trata 0 como ausente |
 
@@ -73,7 +75,7 @@ Ambos se escriben con el mismo valor calculado (`subtotal * (1 + taxRate/100)`).
 | `types/project-list.ts` | 130 | `Number(row.total)` en transform | **Eliminar** |
 | `types/project-list.ts` | 148 | `total,` en objeto final | **Eliminar** |
 | `app/api/projects/[id]/route.ts` | 57 | `total: Number(project.total)` en GET JSON | **Eliminar** |
-| `app/api/projects-with-metadata/route.ts` | 96 | `Number(project.total)` para derivePaymentProgress | Cambiar a `totalAmount` |
+| `app/api/projects-with-metadata/route.ts` | 96 | `Number(project.total)` para helper de progreso eliminado | Obsoleto |
 | `app/api/cron/reconcile-balances/route.ts` | 119 | `totalAmount: Number(project.total)` | Cambiar a `Number(project.totalAmount)` |
 | `app/projects/columns.tsx` | 124 | `row.original.total` en columna de tabla | Cambiar a `totalAmount` |
 | `app/projects/page.tsx` | 59 | `Number(p.total)` para cálculo de progreso | Cambiar a `totalAmount` |
@@ -81,7 +83,7 @@ Ambos se escriben con el mismo valor calculado (`subtotal * (1 + taxRate/100)`).
 | `components/dialogs/projects/view-project-details-dialog.tsx` | 41, 208 | `total: number` prop, `project.total` render | Cambiar a `totalAmount` |
 | `lib/excel/project-exporter.ts` | 19, 49 | `total` en tipo y export Excel | Cambiar a `totalAmount` |
 | `lib/utils/serialize.ts` | 44 | `total: Number(project.total)` | **Eliminar** |
-| `scripts/populate-project-balances.ts` | 63 | `totalAmount: Number(project.total)` | Cambiar a `Number(project.totalAmount)` |
+| `scripts/populate-project-balances.ts` | 63 | `totalAmount: Number(project.total)` | Obsoleto: script eliminado |
 
 ### Patrones defensivos (totalAmount ?? total) — a eliminar
 
@@ -200,7 +202,7 @@ npm run typecheck  # Mostrará errores en ~20+ archivos
 
 ### Fase 7: Corregir tests y scripts
 
-- `scripts/populate-project-balances.ts` línea 63: cambiar a `totalAmount` (o marcar como obsoleto)
+- `scripts/populate-project-balances.ts`: obsoleto; script eliminado en limpieza posterior
 - `tests/e2e/helpers/test-data-factory.ts`: cambiar tipo y uso
 - Actualizar todos los mocks en tests unitarios y de hooks
 
@@ -221,6 +223,6 @@ grep -rn 'p\.total\b\|p\."total"' --include="*.ts" lib/ app/
 ## Riesgos
 
 - **Bajo:** Raw SQL en `project-list.ts` referencia `p.total` en SELECT y ORDER BY. Ya identificado y cubierto en Fase 3.
-- **Bajo:** `scripts/populate-project-balances.ts` usa `project.total`. Es un script one-shot — marcar como obsoleto si ya no se necesita.
+- **Bajo:** `scripts/populate-project-balances.ts` usaba `project.total`. Era un script one-shot y fue eliminado en limpieza posterior.
 - **Medio:** La respuesta GET de `/api/projects/[id]` actualmente devuelve ambos campos. Los consumers del frontend que lean `project.total` se romperán. Verificar que el frontend use `totalAmount` consistentemente después de los cambios.
 - **Bajo:** El grep `\.total[^A-Za-z]` puede tener falsos positivos (`total` como variable local, campo de paginación, etc.). Revisar manualmente.

@@ -50,7 +50,7 @@ export const AftersaleForm = React.forwardRef<AftersaleFormHandle, AftersaleForm
       defaultValues: {
         projectId: '',
         aftersaleStatusId: '',
-        contactPhone: normalizePhone(defaultValues?.contactPhone || ''), // Normalizar teléfono para datos legacy
+        contactPhone: normalizePhone(defaultValues?.contactPhone || ''),
         description: '',
         reportedAt: new Date(),
         tasks: [], // Lista de tareas vacía por defecto

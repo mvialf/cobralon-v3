@@ -75,7 +75,7 @@ Este documento contiene las mejoras identificadas durante el análisis del codeb
 - ✅ Eliminado workaround manual de lookup de tags en calendar-events
 - ✅ APIs aceptan `uninstallTagIds[]` y crean relaciones automáticamente
 
-**Nota:** El campo legacy `uninstallTagIds` se mantiene temporalmente mapeado a `uninstall_tag_ids_legacy` para compatibilidad. Puede eliminarse en una futura limpieza.
+**Nota:** El schema actual usa la relación `ProjectUninstallTag`; las APIs siguen aceptando `uninstallTagIds[]` como payload de formulario y crean relaciones automáticamente.
 
 ---
 

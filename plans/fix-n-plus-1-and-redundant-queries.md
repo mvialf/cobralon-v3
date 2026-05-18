@@ -11,7 +11,7 @@
 
 ## Contexto
 
-Hay varios patrones de queries ineficientes: loops con queries individuales (N+1), queries dobles que podrían ser una, y cálculos en JS que podrían ser SQL. El impacto real es bajo con el volumen actual (~90 proyectos, <100 clientes) pero son mejoras incrementales.
+Hay varios patrones de queries ineficientes: loops con queries individuales (N+1), queries dobles que podrían ser una, y cálculos en JS que podrían ser SQL. Al momento de redactar este plan el volumen era bajo, por lo que eran mejoras incrementales.
 
 ---
 
@@ -219,5 +219,5 @@ npx vitest run
 
 - Las optimizaciones 1 y 4 se benefician mutuamente: si se crea `batchUpdateProjectBalances`, el cron puede usarlo para el update (Fase 2) y la detección SQL (Fase 1) determina qué actualizar.
 - Si se implementa el plan `derive-customer-credit-balance`, la optimización 4 se simplifica (solo queda la parte de proyectos en el cron, eliminando Fases 3-4).
-- El volumen actual (~90 proyectos, <100 clientes) hace que ninguna de estas optimizaciones sea urgente. Son mejoras de higiene de código más que de performance.
+- Con volumen bajo, ninguna de estas optimizaciones era urgente. Son mejoras de higiene de código más que de performance.
 - **Prioridad bajada de 4 a 5** respecto al plan original, dado que el impacto real es menor que los otros refactorings.

@@ -2,13 +2,16 @@
 
 **Fecha:** 2025-11-20
 **Analista:** Claude Code (Ultrathink Mode)
-**Total Proyectos:** 90
+**Total Proyectos analizados:** 90
+
+> Nota 2026-05-18: este documento es un análisis histórico del lote importado.
+> No representa el conteo actual de la tabla `Project`.
 
 ---
 
 ## 🎯 Resumen Ejecutivo
 
-Los 90 proyectos en la base de datos **fueron originalmente importados** desde un sistema legacy, pero **han sido completamente migrados** al nuevo sistema. Sin embargo, conservan características distintivas que permiten identificar su origen como datos importados.
+Los 90 proyectos analizados **fueron originalmente importados** desde un sistema legacy, pero **han sido completamente migrados** al nuevo sistema. Sin embargo, conservan características distintivas que permiten identificar su origen como datos importados.
 
 ### Veredicto Final
 

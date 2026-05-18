@@ -1,10 +1,6 @@
 import { z } from 'zod'
 import { FINANCIAL } from '../constants/financial-constants'
 
-// Re-export business logic functions for convenience
-export { calculateProjectBalanceWithoutAdjustments } from '../business-logic/project-balance'
-export { calculateFIFO } from '../business-logic/payment-fifo'
-
 /**
  * Schema Zod para el body del POST /api/payments
  *

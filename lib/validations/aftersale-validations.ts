@@ -142,7 +142,7 @@ export function aftersaleToFormValues(aftersale: Aftersale): AftersaleFormValues
   return {
     projectId: aftersale.projectId,
     aftersaleStatusId: aftersale.aftersaleStatusId,
-    contactPhone: normalizePhone(aftersale.contactPhone), // Normalizar para manejar datos legacy
+    contactPhone: normalizePhone(aftersale.contactPhone),
     description: aftersale.description,
     reportedAt: new Date(aftersale.reportedAt),
     tasks: aftersale.tasks || [], // Incluir tareas (default vacío si no existen)

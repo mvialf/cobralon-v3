@@ -369,17 +369,17 @@ Decisión documentada y migración aplicada si corresponde.
 - La lógica transaccional de creación de evento + actualización relacionada quedó centralizada en `lib/business-logic/calendar-event-creation.ts`.
 - `POST /api/project-events`, `POST /api/visit-events` y `POST /api/aftersale-events` aceptan payload simple y payload extendido.
 - Los hooks `useCreate*EventWithUpdate` ahora llaman a endpoints canónicos.
-- `app/api/*-events-with-update` queda solo como wrapper legacy liviano.
+- Las rutas `app/api/*-events-with-update` fueron eliminadas; los endpoints canónicos aceptan payload simple y extendido.
 
 **Acción aplicada:**
 
 1. Se consolidó la funcionalidad en los endpoints oficiales.
 2. Se migraron los hooks a rutas canónicas.
-3. Se reemplazó la implementación duplicada de rutas `*-with-update` por wrappers de compatibilidad.
+3. Se eliminaron las rutas `*-with-update` tras migrar consumidores internos a endpoints canónicos.
 4. Se agregaron tests para payload simple y extendido en proyecto, visita y postventa.
 
 **Criterio de cierre:**
-No queda lógica duplicada ni referencias en hooks a rutas `*-with-update`; las rutas legacy solo delegan en la implementación compartida.
+No queda lógica duplicada ni referencias internas a rutas `*-with-update`.
 
 ---
 
@@ -464,16 +464,16 @@ Migración de índices basada en query plans o patrones confirmados.
 
 **Evidencia:**
 
-- La función ambigua fue reemplazada por `calculateProjectBalanceWithoutAdjustments()`.
-- El script legacy de población de balances sincroniza desde `ProjectFinancials`.
+- El helper que calculaba balance solo desde allocations fue eliminado.
+- El script one-shot de sincronización de balances fue eliminado.
 
 **Acción aplicada:**
-Se eliminó el nombre ambiguo `calculateProjectBalance()` del código. El helper restante declara explícitamente que no considera ajustes ni crédito aplicado y que runtime debe usar `ProjectFinancials`.
+Se eliminó el helper de balance basado solo en allocations. El runtime debe usar `ProjectFinancials`.
 
 La migración `20260518100000_harden_financial_integrity` sincronizó `Project.balance` legacy desde `ProjectFinancials`; la auditoría posterior confirmó `legacy-project-balance-differs-from-financials: 0`.
 
 **Criterio de cierre:**
-No hay función con nombre ambiguo que ignore ajustes sin declararlo.
+No hay helper runtime que calcule balance ignorando ajustes o crédito aplicado.
 
 ---
 
@@ -510,13 +510,13 @@ Test de monto pequeño con muchas cuotas rechaza o distribuye sin cuotas cero.
 
 ---
 
-### P3-02 - `derivePaymentProgress()` Tiene Edge Case con `total = 0`
+### P3-02 - Helper de Progreso con Edge Case en `total = 0`
 
-**Estado:** Abierto
+**Estado:** Obsoleto
 **Tipo:** Edge case / Display
-**Evidencia:** Retorna `percentPaid = 0` cuando `total === 0`, incluso si `balance <= 0`.
+**Evidencia:** El helper fue eliminado durante la limpieza de código muerto.
 
-**Acción recomendada:** Documentar comportamiento o retornar 100% cuando total es 0 y no hay deuda.
+**Acción recomendada:** Ninguna. El progreso debe venir de `ProjectFinancials`.
 
 **Criterio de cierre:** Tests cubren `total = 0`.
 
@@ -605,7 +605,7 @@ Estos puntos no deben aparecer como pendientes en el checklist principal.
 | `search-projects` con `balance > 1` hardcoded                        | Resuelto         | Usa `FINANCIAL.BALANCE_TOLERANCE`.                                                                                |
 | `Project.PUT` recalcula balance sin ajustes                          | Obsoleto         | Ya no recalcula/escribe balance persistido.                                                                       |
 | Testing de imports/adjustments inexistente                           | Obsoleto parcial | Existen tests para varios endpoints antes listados como sin cobertura. Exports endpoint siguen siendo candidatos. |
-| Endpoints `*-with-update` duplicados                                 | Resuelto         | Los hooks usan rutas canónicas y las rutas legacy son wrappers sobre lógica compartida.                           |
+| Endpoints `*-with-update` duplicados                                 | Resuelto         | Los hooks usan rutas canónicas y las rutas duplicadas fueron eliminadas.                                          |
 | `P0-01` crédito aplicado a proyecto                                  | Resuelto         | `creditApplied` viaja en payload y `ProjectFinancials` descuenta aplicaciones `CUSTOMER_CREDIT`.                  |
 | `P0-03` `/api/users` sobre-privilegiado                              | Resuelto         | Usa `withApiHandler`, Zod, paginación, `select` acotado y `requiredRole: 'admin'`.                                |
 | `P1-01` refund valida fuera de transacción                           | Resuelto         | Refund bloquea cliente y recalcula saldo dentro de la transacción.                                                |
@@ -613,7 +613,7 @@ Estos puntos no deben aparecer como pendientes en el checklist principal.
 | `P2-01` paginación puede devolver `NaN`                              | Resuelto         | `parsePositiveInteger()` normaliza con `Number.isFinite()` y tiene tests.                                         |
 | `P2-02` `withApiHandler` usa `parse()`                               | Resuelto         | Usa `safeParse()` y limita detalles Zod a 5 issues.                                                               |
 | `P2-08` CHECK financiero faltante                                    | Resuelto         | Neon tiene constraints para `project_applications.amount > 0` y `project_adjustments.amount > 0`.                 |
-| `P2-10` helper ambiguo de balance                                    | Resuelto         | El nombre ambiguo fue eliminado; queda `calculateProjectBalanceWithoutAdjustments()`.                             |
+| `P2-10` helper ambiguo de balance                                    | Resuelto         | Se eliminó el helper que calculaba balance desde allocations sin ajustes ni crédito aplicado.                     |
 
 ---
 

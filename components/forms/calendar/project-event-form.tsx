@@ -139,7 +139,7 @@ export const ProjectEventForm = React.forwardRef<ProjectEventFormHandle, Project
           console.log('📦 Project data received:', data)
           console.log('🎨 Project status:', data.projectStatus)
 
-          // Extraer tag IDs desde la relación M:M o usar legacy field
+          // Extraer tag IDs desde la relación M:M.
           const tagIds = data.uninstallTags
             ? data.uninstallTags.map((rel: { uninstallTagId: string }) => rel.uninstallTagId)
             : data.uninstallTagIds || []

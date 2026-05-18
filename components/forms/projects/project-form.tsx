@@ -65,7 +65,7 @@ export const ProjectForm = React.forwardRef<ProjectFormHandle, ProjectFormProps>
         customerId: '',
         projectNumber: '',
         projectName: '',
-        phone: normalizePhone(defaultValues?.phone || ''), // Normalizar teléfono para evitar errores con datos legacy
+        phone: normalizePhone(defaultValues?.phone || ''),
         street: '',
         apartment: '',
         comuna: '',
@@ -120,7 +120,7 @@ export const ProjectForm = React.forwardRef<ProjectFormHandle, ProjectFormProps>
           customerId: defaultValues.customerId || '',
           projectNumber: defaultValues.projectNumber || '',
           projectName: defaultValues.projectName || '',
-          phone: normalizePhone(defaultValues.phone || ''), // Normalizar teléfono para datos legacy
+          phone: normalizePhone(defaultValues.phone || ''),
           street: defaultValues.street || '',
           apartment: defaultValues.apartment || '',
           comuna: defaultValues.comuna || '',
@@ -157,7 +157,7 @@ export const ProjectForm = React.forwardRef<ProjectFormHandle, ProjectFormProps>
       const selectedCustomer = customers.find((c) => c.id === customerId)
       if (selectedCustomer) {
         form.setValue('customerId', selectedCustomer.id)
-        // Autocompletar phone normalizado (maneja datos legacy sin prefijo)
+        // Autocompletar phone normalizado.
         form.setValue('phone', normalizePhone(selectedCustomer.phone))
       }
     }

@@ -770,14 +770,10 @@ const payments = await prisma.payment.findMany({
        })
      }
 
-     // 4. Actualizar Customer.creditBalance
-     await tx.customer.update({
-       where: { id: customerId },
-       data: { creditBalance: { increment: newCredit } },
-     })
+     // 4. Registrar crédito en el ledger
+     await tx.creditTransaction.create({ data: creditTransactionData })
 
-     // 5. Actualizar Project.balance
-     // (se calcula automáticamente via include)
+     // 5. El saldo del proyecto se deriva desde ProjectFinancials
    })
    ```
 
@@ -1178,8 +1174,7 @@ START
   │   ├─ CREATE PaymentAllocations (N)
   │   ├─ CREATE Installments (si aplica)
   │   ├─ CREATE CreditTransaction (si sobrepago)
-  │   ├─ UPDATE Customer.creditBalance
-  │   └─ UPDATE Project.balance (indirecto)
+  │   └─ ProjectFinancials deriva saldos y sobrepagos
   │
   └─→ 4. Frontend Update
       ├─ Invalidar caches

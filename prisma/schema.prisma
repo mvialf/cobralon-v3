@@ -557,7 +557,7 @@ model ProjectAdjustment {
   id          String   @id @default(uuid())
   projectId   String
   amount      Decimal  @db.Decimal(12, 2) // Monto del ajuste (positivo = reduce balance)
-  reason      String // Nombre de la razón (redundancia para datos legacy)
+  reason      String // Nombre de la razón al momento de aplicar el ajuste
   reasonId    String? // FK a AdjustmentReason (nullable para migración gradual)
   description String?  @db.Text // Notas adicionales opcionales
   appliedAt   DateTime @default(now()) // Fecha en que se aplicó el ajuste

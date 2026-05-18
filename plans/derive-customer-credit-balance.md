@@ -40,7 +40,7 @@ SELECT COALESCE(SUM(amount), 0) FROM "CreditTransaction" WHERE "customerId" = ?
 |---------|-------|-----------|--------|
 | `lib/business-logic/update-customer-credit-balance.ts` | 52 | `updateCustomerCreditBalance()` — escritura canónica desde ledger SUM | **Eliminar archivo** |
 | `app/api/cron/reconcile-balances/route.ts` | 259-262 | Escritura directa batch `prisma.customer.update` | **Eliminar Fases 3-4** |
-| `scripts/fix-overpayment-credit.ts` | 109 | `creditBalance: { increment }` — script one-shot | **Marcar como obsoleto** |
+| `scripts/fix-overpayment-credit.ts` | 109 | `creditBalance: { increment }` — script one-shot | **Eliminado en limpieza posterior** |
 
 ### Callers de `updateCustomerCreditBalance()` (3, no 2)
 
@@ -216,7 +216,7 @@ ORDER BY "creditBalance" DESC  -- si sort=creditBalance
 **Cambios:**
 1. Eliminar archivo `lib/business-logic/update-customer-credit-balance.ts`
 2. Eliminar test `lib/business-logic/__tests__/update-customer-credit-balance.test.ts`
-3. Marcar `scripts/fix-overpayment-credit.ts` como obsoleto (usa `creditBalance: { increment }`)
+3. `scripts/fix-overpayment-credit.ts` fue eliminado en limpieza posterior (usaba `creditBalance: { increment }`)
 4. Eliminar imports huérfanos en todos los archivos
 5. Actualizar los 9 archivos de test restantes (mocks y asserts)
 
