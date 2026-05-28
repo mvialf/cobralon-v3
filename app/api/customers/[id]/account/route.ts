@@ -8,6 +8,7 @@ interface CustomerAccountProjectRow {
   projectName: string | null
   totalAmount: unknown
   currency: string
+  createdAt: Date
   settledTotal: unknown
   balance: unknown
 }
@@ -26,7 +27,7 @@ interface CustomerAccountProjectRow {
  * @returns {
  *   customer: { id, name },
  *   projects: Array<{
- *     id, projectNumber, projectName, totalAmount, balance, currency
+ *     id, projectNumber, projectName, totalAmount, totalPaid, balance, currency, createdAt
  *   }>
  * }
  */
@@ -53,6 +54,7 @@ export const GET = withLogging(async (_request, logger, context) => {
         p."projectName",
         p."totalAmount",
         p.currency,
+        p."createdAt",
         pf."settledTotal",
         pf.balance
       FROM "Project" p
@@ -70,6 +72,7 @@ export const GET = withLogging(async (_request, logger, context) => {
       totalPaid: Number(project.settledTotal),
       balance: Number(project.balance),
       currency: project.currency,
+      createdAt: project.createdAt.toISOString(),
     }))
 
     return NextResponse.json({

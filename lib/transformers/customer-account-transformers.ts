@@ -32,8 +32,10 @@ export interface SelectedProject {
   projectNumber: string
   projectName: string | null
   totalAmount: number
+  totalPaid: number
   balance: number
   currency: string
+  createdAt: string
 }
 
 /**
@@ -41,9 +43,28 @@ export interface SelectedProject {
  */
 export interface AccountSummary {
   totalProjects: number // Σ totalAmount de proyectos seleccionados
-  totalPaid: number // Σ allocatedAmount en proyectos seleccionados
-  balance: number // totalProjects - totalPaid
+  totalPaid: number // Σ settledTotal de proyectos seleccionados
+  balance: number // Σ balance derivado de ProjectFinancials
   currency: string
+}
+
+export type RequestMode = 'full' | 'percentage' | 'fixed'
+
+export interface PaymentRequestOptions {
+  mode: RequestMode
+  percentage?: number
+  fixedAmount?: number
+}
+
+export interface RequestedProject extends SelectedProject {
+  requestedAmount: number
+}
+
+export interface PaymentRequestSummary {
+  projects: RequestedProject[]
+  requestedTotal: number
+  isValid: boolean
+  error: string | null
 }
 
 /**
@@ -115,11 +136,11 @@ export function consolidateCustomerPayments(
  */
 export function calculateAccountSummary(
   projects: SelectedProject[],
-  payments: ConsolidatedPayment[]
+  _payments: ConsolidatedPayment[]
 ): AccountSummary {
   const totalProjects = projects.reduce((sum, p) => sum + p.totalAmount, 0)
-  const totalPaid = payments.reduce((sum, p) => sum + p.displayAmount, 0)
-  const balance = totalProjects - totalPaid
+  const totalPaid = projects.reduce((sum, p) => sum + p.totalPaid, 0)
+  const balance = projects.reduce((sum, p) => sum + Math.max(0, p.balance), 0)
   const currency = projects[0]?.currency || 'CLP'
 
   return {
@@ -140,4 +161,109 @@ export function calculateAccountSummary(
  */
 export function filterProjectsWithPendingBalance(projects: SelectedProject[]): SelectedProject[] {
   return projects.filter((p) => p.balance > 0)
+}
+
+/**
+ * Calcula cuánto se solicitará cobrar por cada proyecto seleccionado.
+ *
+ * La solicitud no registra pagos ni modifica saldos: es solo una capa documental
+ * sobre el balance derivado desde ProjectFinancials.
+ */
+export function calculatePaymentRequest(
+  projects: SelectedProject[],
+  options: PaymentRequestOptions
+): PaymentRequestSummary {
+  const projectsWithPendingBalance = projects.filter((project) => project.balance > 0)
+  const pendingBalance = projectsWithPendingBalance.reduce(
+    (sum, project) => sum + project.balance,
+    0
+  )
+
+  if (pendingBalance <= 0) {
+    return buildPaymentRequestResult(projects, [], 'No hay saldo pendiente para solicitar')
+  }
+
+  if (options.mode === 'full') {
+    return buildPaymentRequestResult(
+      projects,
+      projectsWithPendingBalance.map((project) => ({
+        projectId: project.id,
+        requestedAmount: project.balance,
+      }))
+    )
+  }
+
+  if (options.mode === 'percentage') {
+    const percentage = options.percentage ?? 0
+
+    if (percentage <= 0 || percentage > 100) {
+      return buildPaymentRequestResult(projects, [], 'El porcentaje debe estar entre 1 y 100')
+    }
+
+    return buildPaymentRequestResult(
+      projects,
+      projectsWithPendingBalance.map((project) => ({
+        projectId: project.id,
+        requestedAmount: Math.round((project.balance * percentage) / 100),
+      }))
+    )
+  }
+
+  const fixedAmount = options.fixedAmount ?? 0
+
+  if (fixedAmount <= 0) {
+    return buildPaymentRequestResult(projects, [], 'El monto solicitado debe ser mayor que cero')
+  }
+
+  if (fixedAmount > pendingBalance) {
+    return buildPaymentRequestResult(
+      projects,
+      [],
+      'El monto solicitado no puede superar el saldo pendiente seleccionado'
+    )
+  }
+
+  const allocations: Array<{ projectId: string; requestedAmount: number }> = []
+  let remaining = fixedAmount
+
+  const sortedProjects = [...projectsWithPendingBalance].sort(
+    (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+  )
+
+  for (const project of sortedProjects) {
+    if (remaining <= 0) break
+
+    const requestedAmount = Math.min(project.balance, remaining)
+    allocations.push({ projectId: project.id, requestedAmount })
+    remaining -= requestedAmount
+  }
+
+  return buildPaymentRequestResult(projects, allocations)
+}
+
+function buildPaymentRequestResult(
+  projects: SelectedProject[],
+  allocations: Array<{ projectId: string; requestedAmount: number }>,
+  error: string | null = null
+): PaymentRequestSummary {
+  const requestedByProject = new Map(
+    allocations.map((allocation) => [allocation.projectId, allocation.requestedAmount])
+  )
+
+  const requestedProjects = projects.map((project) => ({
+    ...project,
+    requestedAmount: requestedByProject.get(project.id) ?? 0,
+  }))
+
+  const requestedTotal = requestedProjects.reduce(
+    (sum, project) => sum + project.requestedAmount,
+    0
+  )
+
+  return {
+    projects: requestedProjects,
+    requestedTotal,
+    isValid: error === null,
+    error,
+  }
 }

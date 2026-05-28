@@ -23,6 +23,7 @@ Archivos clave:
 - FIFO distribuye pagos de cliente a proyectos con deuda.
 - Las cuotas son informativas, sin interes, y su estado se deriva desde `dueDate`.
 - Las comisiones se guardan al registrar el pago para auditoria.
+- El estado de cuenta permite solicitar saldo total, porcentaje o monto fijo sobre la deuda seleccionada. Esta solicitud es documental: no crea pagos, allocations, applications ni movimientos de credito.
 
 Documentacion:
 

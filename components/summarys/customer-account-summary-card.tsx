@@ -1,9 +1,10 @@
-import { CircleDollarSign, Wallet, FileText } from 'lucide-react'
+import { CircleDollarSign, HandCoins, Wallet, FileText } from 'lucide-react'
 
 interface CustomerAccountSummaryCardProps {
   totalProjects: number // Suma de totalAmount de proyectos seleccionados
   totalPaid: number // Suma de pagos (allocations en proyectos seleccionados)
   balance: number // totalProjects - totalPaid
+  requestedTotal: number // Monto solicitado en este estado de cuenta
   currency: string
 }
 
@@ -25,6 +26,7 @@ export function CustomerAccountSummaryCard({
   totalProjects,
   totalPaid,
   balance,
+  requestedTotal,
   currency,
 }: CustomerAccountSummaryCardProps) {
   const formatCurrency = (amount: number) =>
@@ -50,7 +52,7 @@ export function CustomerAccountSummaryCard({
         </div>
       </div>
 
-      {/* Columna derecha: Proyectos + Abonos apilados */}
+      {/* Columna derecha: Proyectos + Abonos + Solicitud apilados */}
       <div className="w-1/2 flex flex-col gap-4">
         {/* Card de Proyectos */}
         <div className="bg-capture-card shadow-capture p-4 rounded-xl">
@@ -71,6 +73,17 @@ export function CustomerAccountSummaryCard({
           </div>
           <div className="text-2xl text-right font-semibold pt-2 text-capture-foreground">
             {formatCurrency(totalPaid)}
+          </div>
+        </div>
+
+        {/* Card de Solicitud */}
+        <div className="bg-capture-card shadow-capture p-4 rounded-xl">
+          <div className="flex items-center gap-2">
+            <HandCoins className="h-5 w-5 text-primary" />
+            <p className="text-lg font-medium text-capture-foreground">Solicitar</p>
+          </div>
+          <div className="text-2xl text-right font-semibold pt-2 text-capture-foreground">
+            {formatCurrency(requestedTotal)}
           </div>
         </div>
       </div>

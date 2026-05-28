@@ -101,6 +101,7 @@ describe('GET /api/customers/[id]/account', () => {
           settledTotal: new Decimal(500000),
           balance: new Decimal(690000),
           currency: 'CLP',
+          createdAt: new Date('2025-01-01T00:00:00.000Z'),
         },
         {
           id: 'project-2',
@@ -110,6 +111,7 @@ describe('GET /api/customers/[id]/account', () => {
           settledTotal: new Decimal(0),
           balance: new Decimal(500000),
           currency: 'CLP',
+          createdAt: new Date('2025-02-01T00:00:00.000Z'),
         },
       ])
 
@@ -120,6 +122,7 @@ describe('GET /api/customers/[id]/account', () => {
     expect(data.projects).toHaveLength(2)
     expect(data.projects[0].balance).toBe(690000)
     expect(data.projects[0].totalPaid).toBe(500000)
+    expect(data.projects[0].createdAt).toBe('2025-01-01T00:00:00.000Z')
     expect(data.projects[1].balance).toBe(500000)
     expect(data.projects[1].totalPaid).toBe(0)
   })
@@ -138,6 +141,7 @@ describe('GET /api/customers/[id]/account', () => {
           settledTotal: new Decimal(300000),
           balance: new Decimal(700000),
           currency: 'CLP',
+          createdAt: new Date('2025-01-01T00:00:00.000Z'),
         },
       ])
 
@@ -161,6 +165,7 @@ describe('GET /api/customers/[id]/account', () => {
           settledTotal: new Decimal(0),
           balance: new Decimal(1000000),
           currency: 'CLP',
+          createdAt: new Date('2025-01-01T00:00:00.000Z'),
         },
       ])
 

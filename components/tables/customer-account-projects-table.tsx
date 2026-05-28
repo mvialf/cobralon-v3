@@ -4,6 +4,8 @@ interface ProjectRow {
   projectNumber: string
   projectName: string | null
   totalAmount: number
+  balance: number
+  requestedAmount: number
 }
 
 interface CustomerAccountProjectsTableProps {
@@ -14,10 +16,9 @@ interface CustomerAccountProjectsTableProps {
 /**
  * Tabla simple de proyectos seleccionados para estado de cuenta
  *
- * | Proyecto  | Valor      |
- * |-----------|------------|
- * | P-16398   | $500,000   |
- * | P-16399   | $800,000   |
+ * | Proyecto  | Valor      | Saldo      | Solicitar  |
+ * |-----------|------------|------------|------------|
+ * | P-16398   | $500,000   | $200,000   | $100,000   |
  *
  * Usa estilos CSS capture para consistencia con CaptureDialog
  */
@@ -47,6 +48,12 @@ export function CustomerAccountProjectsTable({
               <th className="w-32 py-2 px-4 text-capture-foreground bg-transparent text-right text-sm">
                 Valor
               </th>
+              <th className="w-32 py-2 px-4 text-capture-foreground bg-transparent text-right text-sm">
+                Saldo
+              </th>
+              <th className="w-32 py-2 px-4 text-capture-foreground bg-transparent text-right text-sm">
+                Solicitar
+              </th>
             </tr>
           </thead>
           <tbody className="bg-capture-card">
@@ -60,6 +67,12 @@ export function CustomerAccountProjectsTable({
                 </td>
                 <td className="py-2 px-4 font-medium text-capture-foreground text-right text-sm">
                   {formatCurrency(project.totalAmount, currency)}
+                </td>
+                <td className="py-2 px-4 font-medium text-capture-foreground text-right text-sm">
+                  {formatCurrency(project.balance, currency)}
+                </td>
+                <td className="py-2 px-4 font-semibold text-capture-foreground text-right text-sm">
+                  {formatCurrency(project.requestedAmount, currency)}
                 </td>
               </tr>
             ))}
