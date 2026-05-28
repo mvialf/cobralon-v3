@@ -1,68 +1,25 @@
-# Documentación
+# Documentacion Cobralon
 
-Esta documentación está dividida en dos secciones principales:
+Esta carpeta contiene solo documentacion vigente del proyecto Cobralon.
 
-## 📦 Template Documentation (`docs/template/`)
+## Indice
 
-Documentación del **SaaS Template Framework**. Lee esto para entender:
+- [Proyecto](project/README.md): mapa tecnico y funcional.
+- [Arquitectura](project/architecture.md): modelo de negocio, datos y flujos criticos.
+- [Autenticacion](project/auth.md): Better Auth, roles y rutas protegidas.
+- [Importacion y exportacion](project/import-export.md): Excel, endpoints y cobertura de tests.
+- [Calendario](project/features/calendar-system.md): eventos de proyectos, postventas y visitas.
+- [ADRs](project/decisions/README.md): decisiones de arquitectura del proyecto.
+- [Backlog](project/backlog.md): trabajo pendiente documentado.
+- [Rules](rules/): reglas scoped para Codex.
+- [User journeys](user-journeys/README.md): flujos UI con referencias visuales.
+- [Analisis legacy](analysis/imported-projects-analysis.md): estado de datos importados.
 
-- **QUÉ** es este template y qué incluye
-- **CÓMO** usarlo en tus proyectos
-- **POR QUÉ** se tomaron las decisiones arquitecturales
+## Criterio de mantenimiento
 
-**Audiencia:** Usuarios del template que quieren crear proyectos SaaS.
+- La documentacion debe describir el producto actual o una decision aun relevante.
+- Los planes terminados se eliminan salvo que expliquen una decision que no este capturada en un ADR.
+- No se mantiene documentacion del template SaaS original ni configuracion de otros asistentes.
+- Si una implementacion cambia contratos de negocio, actualizar la documentacion del dominio afectado en el mismo cambio.
 
-### Contenido Principal
-
-- [**README**](template/README.md) - Introducción rápida y quick start
-- [**Getting Started**](template/getting-started/) - Guías paso a paso para empezar
-- [**Architecture**](template/architecture/) - Arquitectura del template, stack tecnológico
-- [**Components**](template/components/) - Documentación de componentes (AppLayout, HeaderNav, etc.)
-- [**Methodology**](template/methodology/) - Metodología de trabajo, workflows, testing
-- [**Decisions**](template/decisions/) - ADRs del template (por qué Next.js 14, Tailwind v4, etc.)
-
----
-
-## 🚧 Project Documentation (`docs/project/`)
-
-Documentación de **ESTE proyecto específico** construido con el template.
-Es un ejemplo de cómo usar la metodología en un proyecto real.
-
-**Audiencia:** Desarrolladores trabajando en este proyecto concreto.
-
-### Contenido Principal
-
-- [**README**](project/README.md) - Descripción del proyecto
-- [**Architecture**](project/architecture.md) - Arquitectura específica del proyecto
-- [**Implementation**](project/implementation.md) - Timeline de implementaciones
-- [**Decisions**](project/decisions/) - ADRs del proyecto (decisiones propias, no del template)
-
----
-
-## Navegación Rápida
-
-| Quiero...                             | Ir a...                                                                              |
-| ------------------------------------- | ------------------------------------------------------------------------------------ |
-| Empezar a usar el template            | [template/getting-started/installation.md](template/getting-started/installation.md) |
-| Entender la arquitectura del template | [template/architecture/overview.md](template/architecture/overview.md)               |
-| Ver el stack tecnológico              | [template/architecture/stack.md](template/architecture/stack.md)                     |
-| Aprender a usar AppLayout             | [template/components/app-layout.md](template/components/app-layout.md)               |
-| Entender las decisiones del template  | [template/decisions/](template/decisions/)                                           |
-| Ver la metodología de trabajo         | [template/methodology/](template/methodology/)                                       |
-| Documentar MI proyecto                | [project/](project/)                                                                 |
-
----
-
-## Para Contribuidores
-
-Si vas a contribuir al template:
-
-1. Lee [template/architecture/overview.md](template/architecture/overview.md)
-2. Revisa [template/decisions/](template/decisions/) para entender decisiones existentes
-3. Sigue [template/methodology/documentation.md](template/methodology/documentation.md) para documentar cambios
-
----
-
-## Licencia y Créditos
-
-Este template es opensource. Ver [LICENSE](../LICENSE) para más información.
+Ver [politica documental](project/documentation-policy.md) para el criterio completo.

@@ -76,20 +76,20 @@ Los endpoints problemáticos son versiones anteriores que nunca se migraron a es
 - `hooks/queries/use-projects.ts` — Eliminar `useProjectsWithMetadata`, adaptar callers
 - Componentes que usan `useProjectsWithMetadata` — Migrar a `useProjects`
 
-### 3. Installments: Filtro Client-Side — Prioridad Media ⚠️ BLOQUEADO
+### 3. Installments: Filtro Client-Side — Prioridad Media
 
 **Archivo:** `app/payments/installments/page.tsx`
 
 **Problema actual confirmado:**
 - Línea 24: `fetch('/api/installments?limit=1000')` con comentario explícito "Fetch con límite alto para paginación client-side"
 - Líneas 57-63: `useMemo` filtra por `statusFilter` sobre el array completo en memoria
-- **El filtro de status NO se pasa a la API** aunque la API ya lo soporta como `?status=pending`
+- El filtro operativo debe derivarse por `dueDate`; `status` ya no existe en el modelo.
 
-**⚠️ BLOQUEADO por:** Plan `replace-installment-cron-with-derived-state`. Si se eliminan `status`/`paidDate` (plan P4), el filtro de API cambiará de `?status=pending` a usar `dueDate`. Implementar el plan P4 primero para evitar tocar la misma UI dos veces.
+**Estado del bloqueo anterior:** resuelto. El plan de cuotas derivadas ya fue aplicado; no hay `paidDate` ni cron vigente.
 
 **Nota importante:** El endpoint `GET /api/installments` **ya usa paginación server-side correcta** (`skip`/`take` con `parsePaginationParams`, `Promise.all([findMany, count])`, `relationLoadStrategy: 'join'`). El problema está solo en el consumer (la página) que pide `limit=1000` y filtra en cliente.
 
-**Solución (post plan P4):**
+**Solución:**
 1. Pasar filtro de fecha como query param al API (reemplaza filtro de status)
 2. Eliminar `useMemo` de filtrado client-side
 3. Usar paginación server-side real (20-50 por página) en vez de `limit=1000`

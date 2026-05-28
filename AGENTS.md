@@ -73,8 +73,10 @@ Después de **implementaciones significativas**, actualizar [docs/project/implem
 
 ### Guías de Desarrollo
 
-- [docs/template/guides/building-features/](docs/template/guides/building-features/) - Guía de features
-- [docs/template/methodology/patterns/README.md](docs/template/methodology/patterns/README.md) - Patrones de código
+- [docs/project/auth.md](docs/project/auth.md) - Better Auth, roles y sesiones
+- [docs/project/import-export.md](docs/project/import-export.md) - Import/export Excel
+- [docs/project/features/calendar-system.md](docs/project/features/calendar-system.md) - Calendario
+- [docs/project/documentation-policy.md](docs/project/documentation-policy.md) - Política documental
 
 ## Skills y Agentes
 

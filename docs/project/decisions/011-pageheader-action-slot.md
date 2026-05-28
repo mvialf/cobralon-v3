@@ -277,9 +277,8 @@ Un solo slot `action` es suficiente para 90% de casos. Propuestas de múltiples 
 
 - [PageHeader Component](../../../components/layout/page-header.tsx) - Implementación
 - [AppLayout Component](../../../components/layout/app-layout.tsx) - Pass-through
-- [ADR-004: Sistema de Layout 2 Capas](../../template/decisions/004-layout-system-dos-capas.md) - Arquitectura base
+- [README del proyecto](../README.md) - Contexto actual de layout y navegacion
 - [Implementation Log: Mejoras Layout](../implementation/2025-current.md#-mejoras-arquitecturales-del-sistema-de-layout)
-- [Layout Improvements Analysis](../analysis/layout-improvements.md) - Deep dive técnico
 
 ---
 

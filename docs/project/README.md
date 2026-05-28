@@ -1,60 +1,43 @@
-# Documentación del Proyecto: Cobralon
+# Proyecto Cobralon
 
-Bienvenido a la documentación técnica de **Cobralon**, el sistema de gestión de cobranza y proyectos.
+Cobralon es un sistema de gestion de cobranza, proyectos, pagos, cuotas, postventas, visitas y calendario operativo. Esta documentacion describe el producto actual, no el template desde el que nacio.
 
-## 🎯 Objetivo del Proyecto
+## Fuentes principales
 
-Cobralon es un sistema diseñado para administrar el ciclo de vida financiero de proyectos de construcción/inmobiliarios, con un fuerte enfoque en:
+- [architecture.md](architecture.md): arquitectura de negocio y modelo financiero.
+- [auth.md](auth.md): Better Auth, sesiones y roles.
+- [import-export.md](import-export.md): importacion/exportacion Excel.
+- [features/calendar-system.md](features/calendar-system.md): calendario unificado.
+- [payment-system.md](payment-system.md): detalles del sistema de pagos.
+- [regional-config.md](regional-config.md): configuracion regional.
+- [decisions/](decisions/): ADRs vigentes.
+- [implementation/2025-current.md](implementation/2025-current.md): resumen de implementaciones relevantes.
+- [plans/](plans/): planes activos o pendientes.
 
-1.  **Gestión de Cobranza**: Seguimiento de pagos y deudas.
-2.  **Cuenta Corriente**: Control de saldos por proyecto y cliente.
-3.  **Lógica FIFO**: Aplicación automática de pagos a deudas más antiguas.
-4.  **Sistema de Créditos**: Manejo de saldos a favor (créditos) y su aplicación a nuevas deudas.
+## Stack actual
 
-## 📚 Estructura de Documentación
+- Next.js 15 con App Router y React 19.
+- TypeScript, Tailwind CSS v4 y shadcn/ui estilo `new-york`.
+- Prisma con PostgreSQL en Neon.
+- Better Auth con email/password y adapter Prisma.
+- TanStack Query para datos client-side.
+- Vitest, React Testing Library y Playwright.
+- Pino para logging estructurado en API routes.
 
-Esta carpeta `docs/project/` contiene la documentación viva del sistema:
+## Dominios activos
 
-- [**architecture.md**](architecture.md): Arquitectura técnica y lógica de negocio (FIFO, Créditos, Estados).
-- [**implementation/**](implementation/): Registro histórico de features implementadas.
-- [**decisions/**](decisions/): Registro de Decisiones de Arquitectura (ADRs).
+- Clientes y credito calculado desde ledger.
+- Proyectos, estados, postventas y visitas.
+- Pagos 1:1 y 1:N con aplicacion FIFO.
+- Cuotas informativas sin interes.
+- Comisiones por metodo de pago.
+- Ajustes de proyecto.
+- Calendario con eventos de proyectos, postventas y visitas.
+- Importacion/exportacion Excel para clientes, proyectos y pagos.
 
----
+## Reglas de trabajo
 
-## 🏗️ Dominios de Negocio Principales
-
-El núcleo de la lógica de negocio reside en `lib/business-logic/`. Los conceptos clave son:
-
-### 1. Pagos FIFO (`payment-fifo.ts`)
-
-El sistema aplica estrictamente el principio "First-In, First-Out". Cuando ingresa un pago:
-
-1. Se ordena la deuda del cliente por antigüedad.
-2. El pago cubre primero la deuda más vieja.
-3. Si sobra dinero, se genera un crédito a favor.
-
-### 2. Gestión de Créditos (`credit-management.ts`)
-
-Los saldos a favor se manejan como "Créditos".
-
-- **Invariante**: El saldo de crédito nunca puede ser negativo.
-- **Aplicación**: Los créditos pueden usarse para pagar deudas futuras (total o parcialmente).
-
-### 3. Estados de Proyecto (`project-state.ts`)
-
-Un proyecto tiene un ciclo de vida definido por su saldo y status administrativo:
-
-- **Activo**: Proyecto en curso o con deuda pendiente.
-- **Finalizado**: Proyecto cerrado administrativamente Y con deuda cero.
-
----
-
-## 🛠️ Stack Tecnológico
-
-Ver [docs/template/architecture/stack.md](../template/architecture/stack.md) para el detalle técnico base, pero los componentes clave de este proyecto son:
-
-- **Frontend**: Next.js 15 (App Router)
-- **Styling**: Tailwind CSS v4 + shadcn/ui
-- **DB**: PostgreSQL + Prisma ORM
-- **Validación**: Zod (Business Objects & Forms)
-- **Testing**: Vitest (Unit & Integration)
+- Antes de tocar dinero, revisar [architecture.md](architecture.md), [payment-system.md](payment-system.md) y usar el skill `cobralon-financial-logic`.
+- Antes de cambiar endpoints, revisar [../rules/api-routes.md](../rules/api-routes.md).
+- Despues de cambios significativos, actualizar [implementation/2025-current.md](implementation/2025-current.md).
+- Despues de cualquier modificacion de codigo o docs, ejecutar `npm run lint` y `npm run typecheck`.

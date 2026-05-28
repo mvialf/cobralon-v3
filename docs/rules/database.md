@@ -24,8 +24,8 @@ Para operaciones que afectan múltiples tablas (pagos, créditos, allocations):
 await prisma.$transaction(async (tx) => {
   // 1. Crear Payment
   // 2. Crear PaymentAllocations
-  // 3. Actualizar Customer.creditBalance
-  // 4. Crear CreditTransaction (auditoría)
+  // 3. Crear ProjectApplications
+  // 4. Crear CreditTransactions si aplica
 })
 ```
 
@@ -34,11 +34,14 @@ await prisma.$transaction(async (tx) => {
 - Ver `lib/business-logic/payment-fifo.ts` para lógica de distribución
 - Los pagos se imputan a proyectos ordenados por `createdAt` ASC
 - El excedente va a crédito del cliente
+- Leer saldos de proyecto desde `ProjectFinancials`, no desde `Project.balance`
+- Leer crédito de cliente desde `CreditTransaction`/helpers de `credit-management`, no desde cache legacy
 
 ## Documentación
 
-- Setup: [docs/template/guides/database-setup.md](docs/template/guides/database-setup.md)
-- Arquitectura financiera: [docs/project/architecture.md](docs/project/architecture.md)
+- Arquitectura financiera: [docs/project/architecture.md](../project/architecture.md)
+- Sistema de pagos: [docs/project/payment-system.md](../project/payment-system.md)
+- Autenticación: [docs/project/auth.md](../project/auth.md)
 
 ## Testing
 

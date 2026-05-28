@@ -101,7 +101,7 @@ export const POST = withLogging(async (request, logger) => {
 - [Pino Documentation](https://getpino.io)
 - [Pino Benchmarks](https://github.com/pinojs/pino#benchmarks)
 - [Vercel Logging Best Practices](https://vercel.com/docs/observability/runtime-logs)
-- [Template ADR-007: ESLint + Code Quality](../../template/decisions/007-eslint-prettier.md)
+- [Regla de API routes](../../rules/api-routes.md)
 
 ---
 

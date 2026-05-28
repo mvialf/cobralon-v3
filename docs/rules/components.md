@@ -55,7 +55,7 @@ npx shadcn@latest add [component-name]
 - Extract When It Hurts (>10 líneas O 2+ usos)
 - Data Down, Events Up (props > hooks)
 
-**Guía completa:** [docs/template/guides/building-features/](docs/template/guides/building-features/)
+Para features CRUD completas, usar el skill `cobralon-crud-generator` y contrastar con patrones reales en `app/customer`, `app/projects`, `components/forms` y `components/dialogs`.
 
 ## Skills relacionados
 

@@ -1,83 +1,44 @@
-# ADR-006: Credit System Architecture (Wallet)
+# ADR-006: Sistema de credito por ledger
 
-## Estado
-
-**Propuesto** | **Fecha:** 2025-12-06
+**Estado:** Accepted
+**Fecha original:** 2025-12-06
+**Actualizado:** 2026-05-28
 
 ## Contexto
 
-En el dominio de cobranza inmobiliaria, es común que ocurran dos situaciones que requieren manejo de "saldos a favor":
+Los clientes pueden quedar con saldo a favor por sobrepagos, devoluciones, retiros o ajustes. Ese saldo requiere trazabilidad; un campo editable no es suficiente para explicar por que aumento o disminuyo.
 
-1.  **Sobrepago**: Un cliente paga más de lo que debe en un proyecto (ej: error de transferencia o redondeo).
-2.  **Devoluciones**: Se cancela una venta y el dinero pagado queda "a favor" del cliente para futuras compras.
+## Decision
 
-Necesitamos un mecanismo robusto para gestionar estos fondos. No basta con un campo "Saldo" editable, se requiere **trazabilidad completa** (auditoría) de por qué aumentó o disminuyó ese saldo.
+Usar `CreditTransaction` como ledger de credito. Cada movimiento de credito debe estar representado por una transaccion.
 
-## Decisión
+Tipos:
 
-Implementar un sistema de **Crédits (Wallet)** basado en un Ledger (Libro Mayor) inmutable.
+- `OVERPAYMENT`
+- `APPLIED`
+- `REFUND`
+- `WITHDRAWAL`
+- `ADJUSTMENT`
 
-### 1. Modelo de Datos (`CreditTransaction`)
+El credito disponible se calcula desde el ledger con `lib/business-logic/credit-management.ts`.
 
-En lugar de solo tener `Customer.creditBalance` como un campo mutable arbitrariamente, cada cambio en el saldo DEBE provenir de una `CreditTransaction`.
+## Reglas
 
-```prisma
-model Customer {
-  id             String @id
-  limit          Decimal // Línea de crédito (opcional)
-  creditBalance  Decimal @default(0) // Cache del saldo actual
-  // ...
-  creditTransactions CreditTransaction[]
-}
-
-model CreditTransaction {
-  id          String   @id @default(cuid())
-  customerId  String
-  amount      Decimal  // Positivo (Abono) o Negativo (Cargo)
-  description String
-  reference   String?  // Link a Payment ID o Nota de Crédito
-  createdAt   DateTime @default(now())
-
-  customer    Customer @relation(...)
-}
-```
-
-### 2. Invariantes de Negocio
-
-El módulo `lib/business-logic/credit-management.ts` enforcea las siguientes reglas:
-
-- **Invariante 1: No Números Negativos**
-  El `creditBalance` de un cliente nunca puede ser menor a 0. No somos un banco que otorga descubiertos.
-- **Invariante 2: Atomicidad**
-  Toda operación de consumo o generación de crédito debe ocurrir dentro de una `db.$transaction`.
-
-### 3. Flujos de Uso
-
-#### A. Generación (Ingreso de dinero)
-
-Cuando se procesa un pago (`Payment`), si el monto excede la deuda del proyecto asignado:
-
-1. Se paga la deuda del proyecto (hasta 0).
-2. El remanente se convierte en una `CreditTransaction` (tipo positivo).
-3. Se actualiza `Customer.creditBalance`.
-
-#### B. Consumo (Pago con billetera)
-
-Al registrar un nuevo pago, el usuario puede seleccionar "Usar Crédito Disponible":
-
-1. Se valida `amount <= customer.creditBalance`.
-2. Se crea una `CreditTransaction` (tipo negativo).
-3. Se actualiza `Customer.creditBalance`.
-4. Se crea el `PaymentAllocation` correspondiente como si fuera dinero real.
+- El credito disponible nunca puede ser negativo.
+- Toda generacion, aplicacion, devolucion o retiro debe ejecutarse dentro de una transaccion Prisma cuando toca otras tablas.
+- Las aplicaciones de credito a proyectos deben crear `ProjectApplication` tipo `CUSTOMER_CREDIT`.
+- No usar un campo cacheado de cliente como fuente de verdad.
 
 ## Consecuencias
 
-### Positivas
+- La auditoria responde de donde viene cada saldo a favor.
+- Los reportes pueden recalcular credito sin depender de estado mutable.
+- Las escrituras son mas complejas porque deben coordinar ledger, applications y saldos derivados.
 
-- **Auditoría Total**: Ante la pregunta "¿Por qué tengo $500 a favor?", existe un registro exacto (ej: "Sobrante del pago #123").
-- **Seguridad**: Previene la "aparición" mágica de dinero. Todo crédito tiene origen.
-- **Flexibilidad**: Permite usar saldos a favor para pagar cualquier proyecto del mismo cliente.
+## Implementacion
 
-### Negativas
-
-- **Complejidad de Escritura**: Requiere transacciones de base de datos para asegurar consistencia entre `Transaction` y `Customer.balance`.
+- `CreditTransaction` en Prisma.
+- `lib/business-logic/credit-management.ts`.
+- `app/api/customers/[id]/credit/route.ts`.
+- `app/api/customers/[id]/credit/refund/route.ts`.
+- Integracion con pagos en `app/api/payments/route.ts`.

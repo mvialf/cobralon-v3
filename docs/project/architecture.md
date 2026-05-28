@@ -1,78 +1,142 @@
-# Arquitectura del Proyecto Cobralon
+# Arquitectura Cobralon
 
-Este documento detalla la arquitectura específica y las reglas de negocio de Cobralon, complementando la [arquitectura base del template](../template/architecture/overview.md).
+Cobralon usa Next.js App Router como aplicacion full-stack. La UI vive en `app/` y `components/`; los contratos de entrada en `lib/validations/`; la persistencia en Prisma; y la logica financiera critica en `lib/business-logic/`.
 
-## 🧠 Núcleo de Negocio (`lib/business-logic/`)
+## Principios
 
-A diferencia de una aplicación CRUD estándar, Cobralon contiene lógica financiera crítica que está aislada en módulos puros (sin dependencias de UI ni DB directa) para facilitar el testing.
+- La logica financiera no depende de UI.
+- Las operaciones que crean pagos, creditos, aplicaciones o ajustes son transaccionales.
+- Los saldos operativos se derivan desde ledgers y vistas, no desde campos mutables arbitrarios.
+- Los endpoints usan validacion Zod y errores estandarizados via `withApiHandler` cuando aplica.
 
-### 1. Distribución de Pagos FIFO
+## Modelo financiero vigente
 
-El sistema de pagos sigue un modelo **FIFO (First-In, First-Out)** estricto para la imputación de pagos a deudas.
+### Deuda de proyecto
 
-- **Módulo**: `lib/business-logic/payment-fifo.ts`
-- **Lógica**:
-  1.  Toma un monto de pago `P`.
-  2.  Obtiene todos los proyectos del cliente con `balance > 0`.
-  3.  Ordena los proyectos por `createdAt` asc.
-  4.  Itera y asigna fondos hasta que `P = 0`.
-- **Propósito**: Garantizar que las deudas más antiguas se salden primero, simplificando la gestión de mora.
+`Project.totalAmount` representa el total facturado. La deuda visible se lee desde la vista SQL `ProjectFinancials`, definida en migraciones Prisma y consumida por `lib/business-logic/project-financials.ts`.
 
-### 2. Sistema de Créditos (Wallet)
+La vista consolida:
 
-Los clientes tienen una "billetera" de créditos (saldos a favor) que se genera cuando un pago excede la deuda total o por devoluciones.
+- `PaymentAllocation`: efectivo aplicado a proyectos.
+- `ProjectApplication`: aplicaciones de efectivo, credito y ajustes.
+- `ProjectAdjustment`: descuentos o condonaciones.
+- sobrepagos y balance derivado.
 
-- **Módulo**: `lib/business-logic/credit-management.ts`
-- **Reglas**:
-  - **Generación**: `Pago > Deuda Total` -> El excedente va a Crédito.
-  - **Consumo**: Al pagar un nuevo proyecto, se puede usar Crédito + Efectivo.
-  - **Atocimidad**: Las operaciones de crédito/débito deben ser transaccionales en la DB.
+`Project.balance` existe como campo legacy/compatibilidad, pero no debe usarse como fuente principal para nuevas consultas financieras.
 
-### 3. Máquina de Estados de Proyecto
+### Pagos
 
-El estado de un proyecto es derivado, no solo un campo en la base de datos.
+`Payment` registra el ingreso de dinero. Puede ser:
 
-- **Módulo**: `lib/business-logic/project-state.ts`
-- **Definición**:
-  - `Activo`: (Status != Finalizado) O (Balance > 0)
-  - `Finalizado`: (Status == Finalizado) Y (Balance == 0)
-- **Implicancia**: Un proyecto no puede considerarse "Cerrado" si aún tiene deuda pendiente, independientemente de lo que diga el usuario administrativo.
+- pago a un proyecto especifico;
+- pago a cliente distribuido por FIFO entre proyectos con deuda.
 
-### 4. Validación de Integridad Financiera
+`PaymentAllocation` mantiene la asignacion N:M entre pagos y proyectos. Esta tabla permite auditoria por proyecto y soporta pagos 1:N.
 
-Usamos un enfoque de "Validación de Sumas" para asegurar consistencia.
+### Aplicaciones de proyecto
 
-- **Módulo**: `lib/business-logic/totals.ts`
-- **Tolerancia**: Se usa una tolerancia financiera (`FINANCIAL.TOLERANCE`) para comparaciones de punto flotante.
-- **Regla**: `Total Pago == Suma(Allocations) + Crédito Generado`.
+`ProjectApplication` registra como se salda un proyecto:
 
-## 🗄️ Modelo de Datos (Extensión)
+- `CASH`: efectivo desde un pago y su allocation.
+- `CUSTOMER_CREDIT`: credito del cliente aplicado a deuda.
+- `ADJUSTMENT`: ajuste administrativo.
 
-El esquema de Prisma (`prisma/schema.prisma`) implementa estas entidades clave:
+Esta tabla es la base para que `ProjectFinancials` pueda separar efectivo, credito y ajustes sin inferencias ambiguas.
 
-- **Customer**: Entidad raíz. Contiene el `creditBalance` agregado.
-- **Project**: Unidad de deuda. Calcula su `balance` via `Total - Sum(Payments)`.
-- **Payment**: Registro de ingreso de dinero.
-- **PaymentAllocation**: Tabla pivote que une `Payment` con `Project` (cuánto de este pago fue a este proyecto).
-- **CreditTransaction**: Ledger inmutable de movimientos de crédito (auditoría).
+### Credito de clientes
 
-## 🔄 Flujos Críticos
+El credito disponible se calcula desde `CreditTransaction` con `lib/business-logic/credit-management.ts`.
 
-### Ingreso de Pago
+Tipos vigentes:
 
-1.  Frontend: Usuario ingresa monto.
-2.  Backend:
-    - Valida existencia de cliente.
-    - Ejecuta `calculateFIFO` (in-memory) para previsualizar distribución.
-    - Confirma transacción.
-    - **DB Config Transaction**:
-      - Crea `Payment`.
-      - Crea `PaymentAllocation`s.
-      - Actualiza `Customer.creditBalance` (si aplica).
-      - Crea `CreditTransaction` (si hubo uso/generación).
+- `OVERPAYMENT`: sobrepago generado.
+- `APPLIED`: credito aplicado a un proyecto.
+- `REFUND`: devolucion recibida.
+- `WITHDRAWAL`: retiro solicitado por cliente.
+- `ADJUSTMENT`: ajuste manual.
 
-### Reporte de Saldos
+El saldo no debe derivarse desde un campo cacheado en `Customer`; nuevas lecturas deben usar el ledger o helpers batch para evitar N+1.
 
-1.  Calcula balance por proyecto en tiempo real (o cached).
-2.  Agrega saldos para mostrar "Deuda Total Cliente".
-3.  Compara con "Línea de Crédito" (si existiera feature futura).
+### Cuotas
+
+`Installment` es informativo y no calcula interes. El estado de una cuota se deriva por `dueDate`:
+
+- vencida si `dueDate` es anterior o igual a la fecha de corte;
+- pendiente si vence en el futuro.
+
+No existe cron vigente para marcar cuotas pagadas, ni campos `status` o `paidDate` en el modelo.
+
+### Comisiones
+
+`CommissionTier` configura porcentaje y fee fijo por metodo de pago y rango de cuotas. Al registrar pagos se guardan `commissionAmount`, `netAmount`, `commissionRate` y `commissionFixed` para auditoria.
+
+## Flujos criticos
+
+### Pago 1:1
+
+1. Validar cliente, proyecto, metodo de pago y monto.
+2. Calcular comision si corresponde.
+3. Crear `Payment`.
+4. Crear `PaymentAllocation`.
+5. Crear `ProjectApplication` de efectivo.
+6. Si hay sobrepago, crear `CreditTransaction` y dejarlo reflejado por ledger.
+
+### Pago 1:N con FIFO
+
+1. Cargar proyectos con deuda del cliente ordenados por antiguedad.
+2. Distribuir el monto desde la deuda mas antigua.
+3. Crear allocations y applications en una transaccion.
+4. Registrar sobrepago como credito si el pago excede la deuda total.
+
+### Aplicacion de credito
+
+1. Calcular credito disponible desde `CreditTransaction`.
+2. Validar que el credito alcance.
+3. Crear `CreditTransaction` negativa tipo `APPLIED`.
+4. Crear `ProjectApplication` tipo `CUSTOMER_CREDIT`.
+
+### Ajuste de proyecto
+
+1. Validar proyecto y razon de ajuste.
+2. Crear `ProjectAdjustment`.
+3. Crear `ProjectApplication` tipo `ADJUSTMENT`.
+4. Leer balance actualizado desde `ProjectFinancials`.
+
+## Autenticacion y autorizacion
+
+La autenticacion vigente usa Better Auth. Ver [auth.md](auth.md).
+
+`withApiHandler` puede exigir roles con `allowedRoles`; rutas sin roles requeridos no consultan sesion. Los usuarios tienen `role = "user" | "admin"` en Prisma.
+
+## Calendario
+
+El calendario usa tres entidades separadas:
+
+- `ProjectEvent`
+- `AftersaleEvent`
+- `VisitEvent`
+
+Todas soportan `scheduledDate`, `order` por dia y `TeamTag[]`. El endpoint agregado es `GET /api/calendar-events`.
+
+Ver [features/calendar-system.md](features/calendar-system.md).
+
+## Base de datos
+
+Proveedor: Neon PostgreSQL. ORM: Prisma.
+
+Migraciones relevantes:
+
+- `20260517120000_create_project_financials_view`
+- `20260517123000_add_project_applications`
+- `20260517130000_clear_non_critical_operational_data`
+- `20260518100000_harden_financial_integrity`
+- `20260518113000_prune_redundant_indexes`
+
+## Estado de datos legacy
+
+La ultima auditoria local conocida con `npm run audit:important-data` reporto:
+
+- `0 critical`
+- `10 warning` en `legacy-project-balance-differs-from-financials`
+
+El reporte generado por el script no debe commitearse en `backups/`.

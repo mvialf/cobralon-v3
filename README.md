@@ -46,7 +46,8 @@ npm run db:studio    # Prisma Studio (GUI)
 app/
 ├── api/              # API Routes
 ├── calendar/         # Sistema de calendario
-├── customers/        # Gestión de clientes
+├── customer/         # Gestión de clientes
+├── login/            # Login Better Auth
 ├── payments/         # Sistema de pagos
 ├── projects/         # Gestión de proyectos
 └── settings/         # Configuración
@@ -69,6 +70,8 @@ docs/
 ## Documentación
 
 - **[Arquitectura](docs/project/architecture.md)** - FIFO, créditos, estados
+- **[Autenticación](docs/project/auth.md)** - Better Auth y roles
+- **[Import/Export](docs/project/import-export.md)** - Excel y tests
 - **[Backlog](docs/project/backlog.md)** - Mejoras pendientes
 - **[Sistema de Pagos](docs/project/payment-system.md)** - Análisis detallado
 
@@ -77,8 +80,9 @@ docs/
 El sistema implementa:
 
 1. **FIFO** - Distribución de pagos a deudas más antiguas primero
-2. **Créditos** - Wallet de saldos a favor por sobrepago
-3. **Estados derivados** - Proyecto activo/finalizado según balance
-4. **Multi-país** - Configuración regional (Chile/Colombia)
+2. **Créditos** - Ledger de saldos a favor por sobrepago
+3. **ProjectFinancials** - Saldos derivados desde pagos, créditos y ajustes
+4. **Better Auth** - Sesiones y roles `user`/`admin`
+5. **Multi-país** - Configuración regional (Chile/Colombia)
 
 Ver [docs/project/architecture.md](docs/project/architecture.md) para detalles.

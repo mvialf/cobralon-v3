@@ -248,7 +248,7 @@ model Payment {
    Cálculo de balance por proyecto:
 
    ```typescript
-   // lib/business-logic/project-balance.ts
+   // lib/business-logic/project-financials.ts
    export function calculateProjectBalance(
      project: { total: Decimal },
      allocations: { allocatedAmount: Decimal }[]
@@ -383,7 +383,7 @@ model Payment {
 - **Schemas Zod:** [lib/validations/payment-validations.ts:191-207](../../../lib/validations/payment-validations.ts#L191-L207) - 2 schemas especializados
 - **Business Logic:**
   - [lib/business-logic/payment-fifo.ts](../../../lib/business-logic/payment-fifo.ts) - Algoritmo FIFO de asignación automática
-  - [lib/business-logic/project-balance.ts](../../../lib/business-logic/project-balance.ts) - Cálculo de balance
+  - [lib/business-logic/project-financials.ts](../../../lib/business-logic/project-financials.ts) - Cálculo de balance derivado
 
 ### Documentación
 

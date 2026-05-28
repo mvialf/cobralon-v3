@@ -26,7 +26,7 @@ Cobralon requiere database provider para PostgreSQL con:
 - **Testing seguro de migrations** (killer requirement)
 - Sin vendor lock-in
 
-**Relación con Template:** El [Template ADR-008](../../template/decisions/008-prisma-neon.md) recomienda "Prisma + Neon". Este ADR documenta por qué efectivamente elegimos Neon para ESTE proyecto específico vs otras alternativas reales.
+**Relacion historica:** Cobralon nacio desde un template que sugeria Prisma + Neon. Este ADR documenta por que esa eleccion sigue vigente para este proyecto.
 
 ## Alternativa Principal
 
@@ -34,10 +34,10 @@ Cobralon requiere database provider para PostgreSQL con:
 
 **Por qué NO:**
 
-1. **Vendor lock-in alto** - Empuja fuertemente a usar Supabase Auth (incompatible con ADR-009 del template: no auth por defecto)
+1. **Vendor lock-in alto** - Empuja fuertemente a usar Supabase Auth, que no coincide con la implementacion actual en Better Auth
 2. **Features innecesarias** - Storage/Realtime no needed para Cobralon MVP
 3. **No database branching** - Sin testing seguro de migrations
-4. **Migrar a NextAuth** = Reescribir auth logic completo
+4. **Migrar auth/datos** = Reescribir integraciones ya existentes
 
 ## Consecuencias
 
@@ -58,7 +58,7 @@ Cobralon requiere database provider para PostgreSQL con:
 
 4. **Autoscaling compute:** Scale to zero después de 5 min inactividad. Free tier dura mucho más tiempo.
 
-5. **DX premium:** Web UI moderna, Neon CLI, Vercel integration, Neon MCP (Claude gestiona DB).
+5. **DX premium:** Web UI moderna, Neon CLI, Vercel integration y MCP Neon cuando hay credenciales disponibles.
 
 6. **Connection pooling integrado:** PgBouncer automático con `?pgbouncer=true` en connection string.
 
@@ -117,9 +117,8 @@ DATABASE_URL=$BRANCH_URL npx prisma db push
 ## Referencias
 
 - [Neon Database Branching](https://neon.tech/docs/introduction/branching)
-- [Template ADR-008: Prisma + Neon](../../template/decisions/008-prisma-neon.md)
-- [Database Setup Guide](../../template/guides/database-setup.md)
-- [Neon MCP (opcional)](../../template/guides/neon-mcp-optional.md)
+- [Arquitectura Cobralon](../architecture.md)
+- [Regla de base de datos](../../rules/database.md)
 
 ---
 
