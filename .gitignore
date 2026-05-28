@@ -41,6 +41,11 @@ prisma/migrations/*
 # codex local config
 .codex/config.toml
 
+# legacy assistant config
+CLAUDE.md
+.claude/
+.mcp.json
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts
