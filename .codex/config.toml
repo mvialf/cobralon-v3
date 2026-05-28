@@ -2,5 +2,18 @@
 url = "https://mcp.neon.tech/mcp"
 bearer_token_env_var = "NEON_API_KEY"
 
+[mcp_servers.shadcn]
+args = [
+    "-y",
+    "mcp-remote",
+    "https://www.shadcn.io/api/mcp",
+]
+command = "npx"
+
 [mcp_servers.vercel]
-url = "https://mcp.vercel.com/mvialf-7000s-projects/cobralon"
+args = [
+    "-y",
+    "mcp-remote",
+    "https://mcp.vercel.com",
+]
+command = "npx"
