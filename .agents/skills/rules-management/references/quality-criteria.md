@@ -79,7 +79,7 @@
 
 | Pts | Criterio |
 |-----|----------|
-| 15 | Instrucciones claras que Claude puede seguir directamente |
+| 15 | Instrucciones claras que Codex puede seguir directamente |
 | 10 | Instrucciones útiles pero ambiguas en algunos casos |
 | 5 | Más descriptivo que prescriptivo |
 | 0 | Información teórica sin guía práctica |
@@ -101,7 +101,7 @@
 
 - [ ] Paths no matchean archivos existentes
 - [ ] Ejemplos de código desactualizados
-- [ ] Duplica contenido de CLAUDE.md o skills
+- [ ] Duplica contenido de AGENTS.md o skills
 - [ ] Falta frontmatter YAML
 - [ ] `alwaysApply: true` sin justificación
 - [ ] Más de 150 líneas

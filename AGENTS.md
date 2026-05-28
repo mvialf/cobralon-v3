@@ -1,16 +1,24 @@
 # AGENTS.md
 
-Este archivo proporciona orientación a Codex cuando trabaja con código en este repositorio.
+Guía operativa para Codex en este repositorio.
 
-**IGNORA:** gemini.md, .gemini/
+**Ignorar:** `gemini.md`, `.gemini/`, y cualquier configuración local no versionada de otros asistentes.
 
 ## Proyecto
 
-**Cobralon** - Sistema de gestión de cobranza y proyectos construido con Next.js 15, React 19, TypeScript y Tailwind CSS v4. Utiliza shadcn/ui (estilo "new-york") y npm.
+**Cobralon** - Sistema de gestión de cobranza y proyectos construido con Next.js 15, React 19, TypeScript y Tailwind CSS v4. Utiliza shadcn/ui (estilo "new-york"), Prisma, Neon PostgreSQL y npm.
 
-**📚 Documentación:** [docs/project/](docs/project/) para arquitectura y lógica de negocio.
+**Documentación:** [docs/project/](docs/project/) para arquitectura y lógica de negocio.
 
-**⚠️ Datos legacy:** Ver [docs/analysis/imported-projects-analysis.md](docs/analysis/imported-projects-analysis.md)
+**Datos legacy:** Ver [docs/analysis/imported-projects-analysis.md](docs/analysis/imported-projects-analysis.md).
+
+## Fuentes de Verdad Codex
+
+- `AGENTS.md` - instrucciones raíz del proyecto.
+- `docs/rules/` - reglas scoped por tipo de archivo/contexto.
+- `.agents/skills/` - skills locales de dominio y workflow.
+- `.codex/agents/` - subagentes Codex del proyecto.
+- `.codex/config.toml` - MCP y configuración Codex del proyecto.
 
 ## Modo de actuar
 
@@ -24,7 +32,7 @@ Somos un equipo de dos. Yo soy el líder que propone ideas, tú me ayudas a impl
 - **Si digo "no consideres X"** → NO lo menciones
 - **"No sé" es una respuesta perfecta** - no inventes información
 
-## ⚡ Comandos Críticos
+## Comandos Críticos
 
 **OBLIGATORIO después de cualquier modificación:**
 
@@ -43,32 +51,39 @@ npm run dev         # Puerto 3000
 
 Después de **implementaciones significativas**, actualizar [docs/project/implementation/2025-current.md](docs/project/implementation/2025-current.md).
 
-## 🌐 Idioma
+## Idioma
 
 - **Respuestas y comentarios:** español
 - **Variables/funciones:** inglés
 - **Commits:** preferir español
 
-## 🔍 Consulta de Documentación
+## Consulta de Documentación
 
-- Usar `/docs` SIEMPRE antes de especular
+- Consultar `docs/` SIEMPRE antes de especular sobre arquitectura, lógica de negocio o decisiones previas
 - Para bibliotecas/APIs: usar MCP Context7
 
-## 📚 Documentación Clave
+## Documentación Clave
 
 ### Proyecto Cobralon
 
-- @docs/project/architecture.md - Arquitectura, FIFO, Créditos
-- @docs/project/implementation/ - Timeline de implementaciones
-- @docs/project/decisions/ - ADRs
-- @docs/analysis/imported-projects-analysis.md - Datos legacy
+- [docs/project/architecture.md](docs/project/architecture.md) - Arquitectura, FIFO, créditos
+- [docs/project/implementation/](docs/project/implementation/) - Timeline de implementaciones
+- [docs/project/decisions/](docs/project/decisions/) - ADRs
+- [docs/analysis/imported-projects-analysis.md](docs/analysis/imported-projects-analysis.md) - Datos legacy
 
 ### Guías de Desarrollo
 
-- @docs/template/guides/building-features/ - Guía de features
-- @docs/template/methodology/patterns/README.md - Patrones de código
+- [docs/template/guides/building-features/](docs/template/guides/building-features/) - Guía de features
+- [docs/template/methodology/patterns/README.md](docs/template/methodology/patterns/README.md) - Patrones de código
 
-## 📁 Reglas Scoped
+## Skills y Agentes
+
+- Usar skills Cobralon cuando el trabajo toque su dominio: API routes, best practices, CRUD, E2E, error handling, lógica financiera o testing.
+- Para lógica financiera, pagos, créditos, balances o `lib/business-logic/`, usar `cobralon-financial-logic`.
+- Para tests, combinar `cobralon-testing-strategy` con `cobralon-api-route-testing` o `cobralon-e2e-playwright` según corresponda.
+- Para búsquedas complejas, usar los agentes Codex `code-searcher` o `git-searcher`; para verificaciones web con URL disponible, usar `qa-playwright-verifier`.
+
+## Reglas Scoped
 
 Reglas específicas por contexto en `docs/rules/`:
 

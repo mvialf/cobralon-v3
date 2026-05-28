@@ -7,16 +7,18 @@ alwaysApply: true
 
 ## Búsquedas Simples (Herramientas Directas)
 
-Usa herramientas directamente sin invocar agentes:
+Usa comandos directos sin invocar agentes:
 
 | Tarea | Herramienta |
 |-------|-------------|
-| Buscar texto literal | `Grep` tool |
-| Encontrar archivo por nombre/patrón | `Glob` tool |
-| Leer archivo conocido | `Read` tool |
-| Ver cambios recientes | `Bash` con git |
+| Buscar texto literal | `rg "texto"` |
+| Buscar por regex | `rg -n "patrón"` |
+| Encontrar archivo por nombre/patrón | `rg --files` |
+| Leer fragmento de archivo | `sed -n '1,120p' archivo` |
+| Leer con números de línea | `nl -ba archivo` |
+| Ver cambios recientes | `git status --short`, `git diff`, `git log`, `git show` |
 
-**Ejemplo:** "Encuentra dónde se define Button" -> `Grep pattern="Button"` directamente
+**Ejemplo:** "Encuentra dónde se define Button" -> `rg -n "Button"`
 
 ## Búsquedas Complejas (Agentes)
 
