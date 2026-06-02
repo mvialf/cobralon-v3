@@ -296,21 +296,20 @@ describe('DELETE /api/payments/[id]', () => {
         select: { id: true, type: true, amount: true, customerId: true },
       })
 
-      // Debe crear ADJUSTMENT de reversión en batch
-      expect(mockTx!.creditTransaction.createMany).toHaveBeenCalledWith({
-        data: [
-          expect.objectContaining({
-            customerId: 'c1',
-            amount: new Decimal(5000),
-            type: 'ADJUSTMENT',
-            paymentId: null,
-            metadata: expect.objectContaining({
-              reversedTransactionId: 'ct-1',
-              reversedType: 'APPLIED',
-            }),
+      const createManyArg = mockTx!.creditTransaction.createMany.mock.calls[0]?.[0]
+      expect(createManyArg.data).toHaveLength(1)
+      expect(createManyArg.data[0]).toEqual(
+        expect.objectContaining({
+          customerId: 'c1',
+          type: 'ADJUSTMENT',
+          paymentId: null,
+          metadata: expect.objectContaining({
+            reversedTransactionId: 'ct-1',
+            reversedType: 'APPLIED',
           }),
-        ],
-      })
+        })
+      )
+      expect(createManyArg.data[0].amount.toString()).toBe('5000')
     })
 
     it('debe crear ADJUSTMENT de reversión para crédito OVERPAYMENT', async () => {
@@ -340,21 +339,20 @@ describe('DELETE /api/payments/[id]', () => {
       const request = createRequest('DELETE')
       await DELETE(request, createContext())
 
-      // Debe crear ADJUSTMENT de reversión en batch
-      expect(mockTx!.creditTransaction.createMany).toHaveBeenCalledWith({
-        data: [
-          expect.objectContaining({
-            customerId: 'c1',
-            amount: new Decimal(-10000),
-            type: 'ADJUSTMENT',
-            paymentId: null,
-            metadata: expect.objectContaining({
-              reversedTransactionId: 'ct-2',
-              reversedType: 'OVERPAYMENT',
-            }),
+      const createManyArg = mockTx!.creditTransaction.createMany.mock.calls[0]?.[0]
+      expect(createManyArg.data).toHaveLength(1)
+      expect(createManyArg.data[0]).toEqual(
+        expect.objectContaining({
+          customerId: 'c1',
+          type: 'ADJUSTMENT',
+          paymentId: null,
+          metadata: expect.objectContaining({
+            reversedTransactionId: 'ct-2',
+            reversedType: 'OVERPAYMENT',
           }),
-        ],
-      })
+        })
+      )
+      expect(createManyArg.data[0].amount.toString()).toBe('-10000')
     })
 
     it('debe crear ADJUSTMENTs para escenario mixto APPLIED + OVERPAYMENT', async () => {
