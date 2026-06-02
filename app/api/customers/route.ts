@@ -18,11 +18,13 @@ import { FINANCIAL } from '@/lib/constants/financial-constants'
  *   - page: número de página (default: 1)
  *   - limit: registros por página (default: 10, max: 100)
  *   - search: buscar por nombre, email o teléfono
+ *   - withPendingBalance: filtrar clientes con al menos un proyecto con saldo pendiente
  */
 export const GET = withLogging(async (request, logger) => {
   const { searchParams } = new URL(request.url)
   const { page, limit, skip } = parsePaginationParams(searchParams)
   const search = searchParams.get('search') || ''
+  const withPendingBalance = searchParams.get('withPendingBalance') === 'true'
 
   // Sorting params con validación Zod
   const sortBySchema = z.enum(['name', 'createdAt', 'phone', 'email']).optional()
@@ -35,6 +37,7 @@ export const GET = withLogging(async (request, logger) => {
       page,
       limit,
       search: search || undefined,
+      withPendingBalance: withPendingBalance || undefined,
     },
     'Fetching customers with filters'
   )
@@ -43,13 +46,24 @@ export const GET = withLogging(async (request, logger) => {
     // Búsqueda normalizada (sin acentos, case-insensitive) via normalize_text() de PostgreSQL
     let whereCondition: Prisma.CustomerWhereInput = {}
 
-    if (search) {
+    if (search || withPendingBalance) {
       const matchingIds = await prisma.$queryRaw<Array<{ id: string }>>`
-        SELECT c.id
+        SELECT DISTINCT c.id
         FROM "Customer" c
-        WHERE normalize_text(c.name) LIKE normalize_text(${`%${search}%`})
-           OR normalize_text(COALESCE(c.email, '')) LIKE normalize_text(${`%${search}%`})
-           OR normalize_text(c.phone) LIKE normalize_text(${`%${search}%`})
+        ${
+          withPendingBalance
+            ? Prisma.sql`
+              JOIN "Project" p ON p."customerId" = c.id
+              JOIN "ProjectFinancials" pf ON pf."projectId" = p.id
+            `
+            : Prisma.empty
+        }
+        WHERE (
+          normalize_text(c.name) LIKE normalize_text(${`%${search}%`})
+          OR normalize_text(COALESCE(c.email, '')) LIKE normalize_text(${`%${search}%`})
+          OR normalize_text(c.phone) LIKE normalize_text(${`%${search}%`})
+        )
+        ${withPendingBalance ? Prisma.sql`AND pf.balance > ${FINANCIAL.BALANCE_TOLERANCE}` : Prisma.empty}
       `
       whereCondition = { id: { in: matchingIds.map((r) => r.id) } }
     }

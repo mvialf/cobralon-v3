@@ -31,6 +31,8 @@ Documentacion:
 
 - La UI de pagos usa un flujo unico de registro: el pago se crea para un cliente y la tabla de distribucion muestra los proyectos afectados, incluso cuando hay un solo proyecto.
 - FIFO distribuye automaticamente el monto entre proyectos con deuda; la distribucion puede ajustarse manualmente.
+- El selector de cliente del registro de pagos filtra clientes con proyectos con saldo pendiente.
+- La accion "Registrar pago" en proyectos funciona como shortcut al cliente del proyecto y se oculta cuando el proyecto no tiene saldo pendiente.
 - La creacion de pagos se orquesta en `lib/use-cases/payments/create-payment.ts`; la route HTTP permanece como adaptador.
 - El modelo financiero sigue usando `PaymentAllocation` y `ProjectApplication` como fuente de verdad de aplicacion a proyectos; `Payment.type` queda como compatibilidad interna durante la transicion.
 - Las cuotas son informativas, sin interes, y su estado se deriva desde `dueDate`.

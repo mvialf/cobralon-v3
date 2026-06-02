@@ -319,6 +319,7 @@ export function PaymentToCustomerForm({
             <CustomerSearchField
               control={form.control}
               preselectedCustomerId={preselectedCustomerId}
+              withPendingBalance
               onCustomerSelect={handleCustomerSelect}
             />
 

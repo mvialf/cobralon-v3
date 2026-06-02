@@ -48,6 +48,7 @@ export interface CustomersQueryParams {
   search?: string
   sortBy?: string
   sortOrder?: 'asc' | 'desc'
+  withPendingBalance?: boolean
 }
 
 /** Respuesta de GET /api/customers */
@@ -127,6 +128,7 @@ export function useCustomers(params: CustomersQueryParams = {}) {
       if (params.search) searchParams.set('search', params.search)
       if (params.sortBy) searchParams.set('sortBy', params.sortBy)
       if (params.sortOrder) searchParams.set('sortOrder', params.sortOrder)
+      if (params.withPendingBalance) searchParams.set('withPendingBalance', 'true')
 
       const response = await fetch(`/api/customers?${searchParams}`)
 

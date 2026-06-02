@@ -173,6 +173,24 @@ describe('GET /api/customers', () => {
       expect(prisma.$queryRaw).toHaveBeenCalled()
       expect(prisma.customer.findMany).toHaveBeenCalled()
     })
+
+    it('debe filtrar clientes con proyectos con saldo pendiente', async () => {
+      vi.mocked(prisma.$queryRaw).mockResolvedValue([{ id: '1' }, { id: '2' }])
+      vi.mocked(prisma.customer.count).mockResolvedValue(2)
+      vi.mocked(prisma.customer.findMany).mockResolvedValue([
+        { id: '1', name: 'Cliente 1', email: null, phone: '+56912345678' },
+        { id: '2', name: 'Cliente 2', email: null, phone: '+56912345679' },
+      ] as never)
+
+      const request = createGetRequest({ withPendingBalance: 'true' })
+      await callGET(request)
+
+      expect(prisma.$queryRaw).toHaveBeenCalled()
+      expect(prisma.customer.count).toHaveBeenCalledWith({ where: { id: { in: ['1', '2'] } } })
+      expect(prisma.customer.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({ where: { id: { in: ['1', '2'] } } })
+      )
+    })
   })
 
   describe('manejo de errores', () => {

@@ -11,9 +11,10 @@ import {
 import { ViewProjectDetailsDialog } from '@/components/dialogs/projects/view-project-details-dialog'
 import { ViewProjectPaymentsDialog } from '@/components/dialogs/projects/view-project-payments-dialog'
 import { EditProjectDialog } from '@/components/dialogs/projects/edit-project-dialog'
-import { PaymentToProjectDialog } from '@/components/dialogs/payments/payment-to-project-dialog'
+import { PaymentToCustomerDialog } from '@/components/dialogs/payments/payment-to-customer-dialog'
 import { ProjectAdjustmentDialog } from '@/components/dialogs/projects/project-adjustment-dialog'
 import { ConfirmDeleteDialog } from '@/components/dialogs/confirm-delete-dialog'
+import { FINANCIAL } from '@/lib/constants/financial-constants'
 import { toast } from 'sonner'
 import { type Project } from '../types'
 
@@ -35,6 +36,7 @@ export function ProjectActionsCell({ project, onDataChanged }: ProjectActionsCel
   const [editDialogOpen, setEditDialogOpen] = useState(false)
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
+  const hasPendingBalance = project.balance > FINANCIAL.BALANCE_TOLERANCE
 
   const handleDelete = async () => {
     setIsDeleting(true)
@@ -77,10 +79,12 @@ export function ProjectActionsCell({ project, onDataChanged }: ProjectActionsCel
         </DropdownMenuItem>
 
         {/* Registrar pago */}
-        <DropdownMenuItem onClick={() => setPaymentDialogOpen(true)}>
-          <DollarSign className="mr-2 h-4 w-4" />
-          Registrar pago
-        </DropdownMenuItem>
+        {hasPendingBalance && (
+          <DropdownMenuItem onClick={() => setPaymentDialogOpen(true)}>
+            <DollarSign className="mr-2 h-4 w-4" />
+            Registrar pago
+          </DropdownMenuItem>
+        )}
 
         {/* Aplicar ajuste */}
         <DropdownMenuItem onClick={() => setAdjustmentDialogOpen(true)}>
@@ -143,10 +147,10 @@ export function ProjectActionsCell({ project, onDataChanged }: ProjectActionsCel
       />
 
       {/* Dialog para registrar pago */}
-      <PaymentToProjectDialog
+      <PaymentToCustomerDialog
         open={paymentDialogOpen}
         onOpenChange={setPaymentDialogOpen}
-        preselectedProjectId={project.id}
+        preselectedCustomerId={project.customer.id}
         onSuccess={() => {
           // Refetch la tabla cuando se registra un pago exitosamente
           onDataChanged?.()

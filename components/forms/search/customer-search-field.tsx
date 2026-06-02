@@ -14,6 +14,7 @@ interface CustomerSearchFieldProps {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   control: Control<any>
   preselectedCustomerId?: string
+  withPendingBalance?: boolean
   onCustomerSelect?: (customer: Customer | null) => void
 }
 
@@ -34,6 +35,7 @@ interface CustomerSearchFieldProps {
 export function CustomerSearchField({
   control,
   preselectedCustomerId,
+  withPendingBalance = false,
   onCustomerSelect,
 }: CustomerSearchFieldProps) {
   // State para búsqueda de clientes
@@ -55,6 +57,7 @@ export function CustomerSearchField({
   const { data: customersResponse, isLoading: loadingCustomers } = useCustomers({
     search: debouncedCustomerSearch,
     limit: 20,
+    withPendingBalance,
   })
 
   // Extraer customers del response (puede ser undefined si query no está enabled)
@@ -126,7 +129,9 @@ export function CustomerSearchField({
                   emptyMessage={
                     debouncedCustomerSearch.length < 2
                       ? 'Escribe al menos 2 caracteres para buscar'
-                      : 'No se encontraron clientes'
+                      : withPendingBalance
+                        ? 'No se encontraron clientes con saldo pendiente'
+                        : 'No se encontraron clientes'
                   }
                   loading={loadingCustomers}
                   loadingText="Buscando clientes..."
