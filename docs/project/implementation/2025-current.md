@@ -29,6 +29,9 @@ Documentacion:
 
 ## Pagos, cuotas y comisiones
 
+- 2026-06-02: `createPayment` fue modularizado internamente con helpers privados para validacion, carga de entidades, creacion del pago, cuotas netas, credito aplicado, `ProjectApplication` y sobrepagos.
+- `POST /api/payments` se mantiene como adaptador HTTP delgado; sus tests cubren contrato HTTP, validacion Zod y traduccion de errores.
+- La cobertura financiera critica de pagos vive en `lib/use-cases/payments/__tests__/create-payment.test.ts`; no se modifico DB, `ProjectApplication` ni `Project.balance`.
 - La UI de pagos usa un flujo unico de registro: el pago se crea para un cliente y la tabla de distribucion muestra los proyectos afectados, incluso cuando hay un solo proyecto.
 - FIFO distribuye automaticamente el monto entre proyectos con deuda; la distribucion puede ajustarse manualmente.
 - El selector de cliente del registro de pagos filtra clientes con proyectos con saldo pendiente.
