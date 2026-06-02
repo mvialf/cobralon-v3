@@ -2,7 +2,6 @@ import { z } from 'zod'
 import { FINANCIAL } from '../constants/financial-constants'
 import {
   absMoney,
-  addMoney,
   compareMoney,
   greaterThanMoney,
   roundMoney,
@@ -42,19 +41,16 @@ export const createPaymentApiSchema = z
     currency: z
       .string({ required_error: 'La moneda es requerida' })
       .length(3, 'La moneda debe ser un código de 3 letras'),
-    date: z.string({ required_error: 'La fecha es requerida' }).min(1, 'La fecha es requerida'),
+    date: z.coerce.date({
+      required_error: 'La fecha es requerida',
+      invalid_type_error: 'Fecha inválida',
+    }),
     paymentMethodId: z
       .string({ required_error: 'El método de pago es requerido' })
       .min(1, 'El método de pago es requerido'),
     reference: z.string().nullable().optional(),
     notes: z.string().nullable().optional(),
     selectedInstallments: z.number().int().min(1).nullable().optional(),
-    creditApplied: z.coerce
-      .number()
-      .min(0)
-      .refine(hasMaxTwoDecimalPlaces, maxTwoDecimalsMessage)
-      .optional()
-      .default(0),
     allocations: z
       .array(
         z.object({
@@ -73,15 +69,11 @@ export const createPaymentApiSchema = z
       )
       .min(1, 'Debe asignar el pago a al menos un proyecto'),
   })
+  .strict()
   .superRefine((data, ctx) => {
     data.allocations.forEach((allocation, index) => {
-      const legacyCreditApplied =
-        data.type === 'Project' && index === 0 && allocation.creditApplied === 0
-          ? data.creditApplied
-          : 0
-
       const hasReceivedMoney = greaterThanMoney(allocation.allocatedAmount, 0)
-      const creditToApply = addMoney(allocation.creditApplied, legacyCreditApplied)
+      const creditToApply = allocation.creditApplied
 
       if (!hasReceivedMoney && !greaterThanMoney(creditToApply, 0)) {
         ctx.addIssue({
@@ -176,7 +168,6 @@ export type CreatePaymentPayload = {
   type: 'Project' | 'Customer' // Tipo de pago
   customerId: string
   amount: number
-  creditApplied?: number
   currency: string
   date: Date
   paymentMethodId: string
@@ -366,7 +357,6 @@ export function paymentToProjectToPayload(
     reference: null,
     notes: values.notes || null,
     selectedInstallments: values.selectedInstallments || null,
-    creditApplied: values.creditApplied || 0,
     allocations: [
       {
         projectId: values.projectId,

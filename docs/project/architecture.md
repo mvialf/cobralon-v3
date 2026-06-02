@@ -5,6 +5,7 @@ Cobralon usa Next.js App Router como aplicacion full-stack. La UI vive en `app/`
 ## Principios
 
 - La logica financiera no depende de UI.
+- Los calculos deterministas deben vivir como funciones puras cuando puedan compartirse con previews.
 - Las operaciones que crean pagos, creditos, aplicaciones o ajustes son transaccionales.
 - Los saldos operativos se derivan desde ledgers y vistas, no desde campos mutables arbitrarios.
 - Los endpoints usan validacion Zod y errores estandarizados via `withApiHandler` cuando aplica.
@@ -24,6 +25,8 @@ La vista consolida:
 
 `Project.balance` existe como campo legacy/compatibilidad, pero no debe usarse como fuente principal para nuevas consultas financieras.
 
+`lib/business-logic/project-balance.ts` contiene el calculo puro de snapshot financiero de proyecto. El mapper de `ProjectFinancials` lo usa para campos derivados, manteniendo la vista SQL como lectura autoritativa durante esta fase.
+
 ### Pagos
 
 `Payment` registra el ingreso de dinero. Puede ser:
@@ -32,6 +35,10 @@ La vista consolida:
 - pago a cliente distribuido por FIFO entre proyectos con deuda.
 
 `PaymentAllocation` mantiene la asignacion N:M entre pagos y proyectos. Esta tabla permite auditoria por proyecto y soporta pagos 1:N.
+
+La creacion de pagos vive en `lib/use-cases/payments/create-payment.ts`. `POST /api/payments` actua como adaptador HTTP: valida con Zod, delega al caso de uso y retorna la respuesta.
+
+El contrato API ya no acepta `creditApplied` top-level. El credito aplicado debe enviarse en `allocations[].creditApplied`; el schema rechaza el campo top-level para evitar perdida silenciosa de credito en clientes legacy.
 
 ### Aplicaciones de proyecto
 

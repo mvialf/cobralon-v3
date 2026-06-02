@@ -486,7 +486,7 @@ describe('POST /api/payments', () => {
   })
 
   describe('validación de crédito aplicado', () => {
-    it('debe rechazar crédito top-level en pago tipo Customer', async () => {
+    it('debe rechazar crédito top-level en payload API', async () => {
       vi.mocked(prisma.project.findMany).mockResolvedValue([
         { id: 'p1', customerId: 'customer-1', currency: 'CLP' },
         { id: 'p2', customerId: 'customer-1', currency: 'CLP' },
@@ -505,7 +505,7 @@ describe('POST /api/payments', () => {
       const data = await response.json()
 
       expect(response.status).toBe(400)
-      expect(data.error).toContain('top-level')
+      expect(data.error).toBe('Datos inválidos')
     })
 
     it('debe aplicar crédito manual distribuido en pago tipo Customer', async () => {
@@ -731,8 +731,7 @@ describe('POST /api/payments', () => {
         ...validPayload,
         amount: 90000,
         type: 'Project',
-        creditApplied: 10000,
-        allocations: [{ projectId: 'project-1', allocatedAmount: 90000 }],
+        allocations: [{ projectId: 'project-1', allocatedAmount: 90000, creditApplied: 10000 }],
       })
       const response = await callPOST(request)
 
@@ -915,8 +914,7 @@ describe('POST /api/payments', () => {
       const request = createRequest({
         ...validPayload,
         amount: 80000,
-        creditApplied: 20000,
-        allocations: [{ projectId: 'project-1', allocatedAmount: 80000 }],
+        allocations: [{ projectId: 'project-1', allocatedAmount: 80000, creditApplied: 20000 }],
       })
       const response = await callPOST(request)
 
@@ -1084,8 +1082,7 @@ describe('POST /api/payments', () => {
 
       const request = createRequest({
         ...validPayload,
-        creditApplied: 5000,
-        allocations: [{ projectId: 'project-1', allocatedAmount: 100000 }],
+        allocations: [{ projectId: 'project-1', allocatedAmount: 100000, creditApplied: 5000 }],
       })
       const response = await callPOST(request)
 
@@ -1116,8 +1113,7 @@ describe('POST /api/payments', () => {
 
       const request = createRequest({
         ...validPayload,
-        creditApplied: 5000,
-        allocations: [{ projectId: 'project-1', allocatedAmount: 100000 }],
+        allocations: [{ projectId: 'project-1', allocatedAmount: 100000, creditApplied: 5000 }],
       })
       const response = await callPOST(request)
 

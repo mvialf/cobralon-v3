@@ -5,22 +5,33 @@ Este documento resume implementaciones que siguen siendo relevantes para mantene
 ## Arquitectura financiera
 
 - `ProjectFinancials` centraliza saldos derivados de proyectos.
+- `project-balance.ts` concentra calculos puros de snapshot financiero de proyecto.
 - `ProjectApplication` normaliza aplicaciones de efectivo, credito y ajustes.
 - `CreditTransaction` es el ledger de credito de clientes.
 - `Project.balance` y saldos legacy no deben usarse como fuente principal en codigo nuevo.
+- `creditApplied` API top-level fue retirado; credito aplicado debe ir por allocation.
+- `createPayment` separa el caso de uso financiero de `POST /api/payments`.
 
 Archivos clave:
 
+- `lib/business-logic/project-balance.ts`
 - `lib/business-logic/project-financials.ts`
 - `lib/business-logic/credit-management.ts`
 - `lib/business-logic/payment-fifo.ts`
+- `lib/use-cases/payments/create-payment.ts`
 - `prisma/migrations/20260517120000_create_project_financials_view/migration.sql`
 - `prisma/migrations/20260517123000_add_project_applications/migration.sql`
+
+Documentacion:
+
+- [Auditoria del modelo financiero](../financial-model-audit.md)
+- [ADR-020](../decisions/020-financial-simplification.md)
 
 ## Pagos, cuotas y comisiones
 
 - Pagos a proyecto y pagos a cliente conviven como flujos separados.
 - FIFO distribuye pagos de cliente a proyectos con deuda.
+- La creacion de pagos se orquesta en `lib/use-cases/payments/create-payment.ts`; la route HTTP permanece como adaptador.
 - Las cuotas son informativas, sin interes, y su estado se deriva desde `dueDate`.
 - Las comisiones se guardan al registrar el pago para auditoria.
 - El estado de cuenta permite solicitar saldo total, porcentaje o monto fijo sobre la deuda seleccionada. Esta solicitud es documental: no crea pagos, allocations, applications ni movimientos de credito.

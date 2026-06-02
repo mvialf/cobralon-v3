@@ -150,9 +150,7 @@ export function validateAllocationsSum(
  * - La suma de allocations solo valida dinero nuevo recibido.
  */
 export function validatePaymentApplicationSum(
-  type: PaymentType,
   amount: number,
-  creditApplied: number,
   allocations: AllocationForValidation[]
 ): ValidationResult {
   return validateAllocationsSum(amount, allocations)
@@ -256,15 +254,14 @@ export function validatePositiveAllocations(
 export function validatePaymentAllocations(
   type: PaymentType,
   amount: number,
-  allocations: AllocationForValidation[],
-  creditApplied = 0
+  allocations: AllocationForValidation[]
 ): ValidationResult {
   // 1. Validar tipo vs cantidad de allocations
   const typeResult = validatePaymentType(type, allocations)
   if (!typeResult.valid) return typeResult
 
   // 2. Validar suma de allocations
-  const sumResult = validatePaymentApplicationSum(type, amount, creditApplied, allocations)
+  const sumResult = validatePaymentApplicationSum(amount, allocations)
   if (!sumResult.valid) return sumResult
 
   // 3. Validar no duplicados

@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import {
+  createPaymentApiSchema,
   paymentToProjectSchema,
   paymentToCustomerSchema,
   parseProjectsWithBalance,
@@ -10,6 +11,55 @@ import {
   type ProjectWithBalance,
   type ProjectWithBalanceSerialized,
 } from '../payment-validations'
+
+describe('createPaymentApiSchema', () => {
+  const validApiPayment = {
+    type: 'Project',
+    customerId: '00000000-0000-0000-0000-000000000001',
+    amount: 90000,
+    currency: 'CLP',
+    date: '2026-06-02T00:00:00.000Z',
+    paymentMethodId: '00000000-0000-0000-0000-000000000002',
+    reference: null,
+    notes: null,
+    selectedInstallments: null,
+    allocations: [
+      {
+        projectId: '00000000-0000-0000-0000-000000000003',
+        allocatedAmount: 90000,
+        creditApplied: 10000,
+      },
+    ],
+  }
+
+  it('acepta credito aplicado solo por allocation', () => {
+    const result = createPaymentApiSchema.safeParse(validApiPayment)
+
+    expect(result.success).toBe(true)
+    if (result.success) {
+      expect(result.data.allocations[0].creditApplied).toBe(10000)
+      expect('creditApplied' in result.data).toBe(false)
+    }
+  })
+
+  it('rechaza creditApplied top-level para evitar perdida silenciosa de credito', () => {
+    const result = createPaymentApiSchema.safeParse({
+      ...validApiPayment,
+      creditApplied: 10000,
+    })
+
+    expect(result.success).toBe(false)
+  })
+
+  it('rechaza fechas invalidas antes del caso de uso', () => {
+    const result = createPaymentApiSchema.safeParse({
+      ...validApiPayment,
+      date: 'not-a-date',
+    })
+
+    expect(result.success).toBe(false)
+  })
+})
 
 describe('paymentToProjectSchema (flujo 1:1)', () => {
   const validPayment: PaymentToProjectFormValues = {
@@ -912,7 +962,7 @@ describe('paymentToProjectToPayload', () => {
     expect(payload.type).toBe('Project')
     expect(payload.customerId).toBe('cust-123')
     expect(payload.amount).toBe(1000000)
-    expect(payload.creditApplied).toBe(50000)
+    expect('creditApplied' in payload).toBe(false)
     expect(payload.currency).toBe('CLP')
     expect(payload.date).toEqual(formValues.date)
     expect(payload.paymentMethodId).toBe('pm-123')
@@ -960,7 +1010,8 @@ describe('paymentToProjectToPayload', () => {
     )
 
     expect(creditApplied).toBe(50000)
-    expect(payload.creditApplied).toBe(0)
+    expect('creditApplied' in payload).toBe(false)
+    expect(payload.allocations[0].creditApplied).toBe(0)
     expect(payload.allocations[0].allocatedAmount).toBe(valuesWithoutCredit.amount)
   })
 })
