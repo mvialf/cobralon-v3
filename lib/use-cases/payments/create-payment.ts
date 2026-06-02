@@ -80,6 +80,119 @@ type CreditTransactionCreateManyRow = {
   metadata: Prisma.InputJsonValue
 }
 
+type LoadedPaymentEntities = Awaited<ReturnType<typeof loadPaymentEntities>>
+
+function normalizeAllocations(
+  rawAllocations: CreatePaymentInput['allocations']
+): NormalizedAllocation[] {
+  return rawAllocations.map((allocation) => ({
+    ...allocation,
+    creditApplied: allocation.creditApplied ?? 0,
+  }))
+}
+
+function validatePaymentShape(
+  type: CreatePaymentInput['type'],
+  amount: number,
+  allocations: NormalizedAllocation[],
+  paymentLogger: LoggerLike
+) {
+  const typeValidation = validatePaymentType(type, allocations)
+  if (!typeValidation.valid) {
+    paymentLogger.warn(
+      { type, allocationCount: allocations.length },
+      'Payment type validation failed'
+    )
+    throw new BusinessError(typeValidation.error!, 400)
+  }
+
+  const duplicatesValidation = validateNoDuplicateProjects(allocations)
+  if (!duplicatesValidation.valid) {
+    paymentLogger.warn(
+      { projectIds: allocations.map((a) => a.projectId) },
+      'Duplicate project IDs detected'
+    )
+    throw new BusinessError(duplicatesValidation.error!, 400)
+  }
+
+  const sumValidation = validatePaymentApplicationSum(amount, allocations)
+  if (!sumValidation.valid) {
+    paymentLogger.warn(
+      {
+        expected: amount,
+        actual: allocations.reduce((s, a) => s + a.allocatedAmount, 0),
+      },
+      'Allocation sum mismatch'
+    )
+    throw new BusinessError(sumValidation.error!, 400)
+  }
+}
+
+async function loadPaymentEntities(
+  customerId: string,
+  paymentMethodId: string,
+  projectIds: string[]
+) {
+  const [customerExists, paymentMethod, projects] = await Promise.all([
+    prisma.customer.findUnique({ where: { id: customerId } }),
+    prisma.paymentMethod.findUnique({
+      where: { id: paymentMethodId },
+      include: { commissionTiers: true },
+    }),
+    prisma.project.findMany({
+      where: { id: { in: projectIds } },
+      select: { id: true, customerId: true, currency: true, projectNumber: true },
+    }),
+  ])
+
+  return { customerExists, paymentMethod, projects }
+}
+
+function validateLoadedEntities(
+  loaded: LoadedPaymentEntities,
+  expected: { customerId: string; currency: string; projectIds: string[] },
+  paymentLogger: LoggerLike
+) {
+  const { customerExists, paymentMethod, projects } = loaded
+
+  if (!customerExists) {
+    paymentLogger.warn('Customer not found')
+    throw new BusinessError('El cliente no existe', 404)
+  }
+
+  if (!paymentMethod) {
+    paymentLogger.warn('Payment method not found')
+    throw new BusinessError('El método de pago no existe', 404)
+  }
+
+  paymentLogger.debug({ projectIds: expected.projectIds }, 'Validating projects')
+
+  if (projects.length !== expected.projectIds.length) {
+    paymentLogger.warn(
+      { expected: expected.projectIds.length, found: projects.length },
+      'Some projects not found'
+    )
+    throw new BusinessError('Uno o más proyectos no existen', 404)
+  }
+
+  const customerValidation = validateSameCustomer(projects, expected.customerId)
+  if (!customerValidation.valid) {
+    paymentLogger.warn('Not all projects belong to same customer')
+    throw new BusinessError(customerValidation.error!, 400)
+  }
+
+  const currencyValidation = validateSameCurrency(projects, expected.currency)
+  if (!currencyValidation.valid) {
+    paymentLogger.warn(
+      { expected: expected.currency, found: projects.map((p) => p.currency) },
+      'Currency mismatch'
+    )
+    throw new BusinessError(currencyValidation.error!, 400)
+  }
+
+  return { customer: customerExists, paymentMethod, projects }
+}
+
 export async function createPayment(input: CreatePaymentInput, logger: LoggerLike) {
   const {
     type,
@@ -93,10 +206,7 @@ export async function createPayment(input: CreatePaymentInput, logger: LoggerLik
     allocations: rawAllocations,
     selectedInstallments,
   } = input
-  const allocations: NormalizedAllocation[] = rawAllocations.map((allocation) => ({
-    ...allocation,
-    creditApplied: allocation.creditApplied ?? 0,
-  }))
+  const allocations = normalizeAllocations(rawAllocations)
   const totalCreditToApply = moneyToNumber(
     sumMoney(allocations.map((allocation) => allocation.creditApplied))
   )
@@ -112,86 +222,15 @@ export async function createPayment(input: CreatePaymentInput, logger: LoggerLik
   paymentLogger.info('Payment creation requested')
 
   const projectIds = allocations.map((a) => a.projectId)
-
-  const typeValidation = validatePaymentType(type, allocations)
-  if (!typeValidation.valid) {
-    paymentLogger.warn(
-      { type, allocationCount: allocations.length },
-      'Payment type validation failed'
-    )
-    throw new BusinessError(typeValidation.error!, 400)
-  }
-
-  const dbQueriesPromise = Promise.all([
-    prisma.customer.findUnique({ where: { id: customerId } }),
-    prisma.paymentMethod.findUnique({
-      where: { id: paymentMethodId },
-      include: { commissionTiers: true },
-    }),
-    prisma.project.findMany({
-      where: { id: { in: projectIds } },
-      select: { id: true, customerId: true, currency: true, projectNumber: true },
-    }),
-  ])
+  validatePaymentShape(type, amount, allocations, paymentLogger)
 
   paymentLogger.debug('Validating customer, payment method and projects exist')
-  const [customerExists, paymentMethod, projects] = await dbQueriesPromise
-
-  if (!customerExists) {
-    paymentLogger.warn('Customer not found')
-    throw new BusinessError('El cliente no existe', 404)
-  }
-
-  if (!paymentMethod) {
-    paymentLogger.warn('Payment method not found')
-    throw new BusinessError('El método de pago no existe', 404)
-  }
-
-  const duplicatesValidation = validateNoDuplicateProjects(allocations)
-  if (!duplicatesValidation.valid) {
-    paymentLogger.warn(
-      { projectIds: allocations.map((a) => a.projectId) },
-      'Duplicate project IDs detected'
-    )
-    throw new BusinessError(duplicatesValidation.error!, 400)
-  }
-
-  paymentLogger.debug({ projectIds }, 'Validating projects')
-
-  if (projects.length !== projectIds.length) {
-    paymentLogger.warn(
-      { expected: projectIds.length, found: projects.length },
-      'Some projects not found'
-    )
-    throw new BusinessError('Uno o más proyectos no existen', 404)
-  }
-
-  const customerValidation = validateSameCustomer(projects, customerId)
-  if (!customerValidation.valid) {
-    paymentLogger.warn('Not all projects belong to same customer')
-    throw new BusinessError(customerValidation.error!, 400)
-  }
-
-  const currencyValidation = validateSameCurrency(projects, currency)
-  if (!currencyValidation.valid) {
-    paymentLogger.warn(
-      { expected: currency, found: projects.map((p) => p.currency) },
-      'Currency mismatch'
-    )
-    throw new BusinessError(currencyValidation.error!, 400)
-  }
-
-  const sumValidation = validatePaymentApplicationSum(amount, allocations)
-  if (!sumValidation.valid) {
-    paymentLogger.warn(
-      {
-        expected: amount,
-        actual: allocations.reduce((s, a) => s + a.allocatedAmount, 0),
-      },
-      'Allocation sum mismatch'
-    )
-    throw new BusinessError(sumValidation.error!, 400)
-  }
+  const loaded = await loadPaymentEntities(customerId, paymentMethodId, projectIds)
+  const { paymentMethod, projects } = validateLoadedEntities(
+    loaded,
+    { customerId, currency, projectIds },
+    paymentLogger
+  )
 
   paymentLogger.debug('All validations passed')
 
