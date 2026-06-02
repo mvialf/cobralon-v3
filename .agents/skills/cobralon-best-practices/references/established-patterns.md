@@ -1,6 +1,6 @@
-# Patrones Establecidos en Cobralon
+# Patrones Existentes en Cobralon
 
-Patrones que el proyecto **ya implementa correctamente**. Esta referencia sirve para mantener consistencia al escribir código nuevo.
+Patrones presentes en el proyecto que pueden servir como punto de partida. Verifica que el caso actual tenga el mismo perfil de performance antes de copiarlos; no los preserves si generan waterfalls, renders innecesarios, bundle extra o serialización excesiva.
 
 ## Server/Client Split con HydrationBoundary
 
@@ -28,8 +28,8 @@ export default async function CustomersPage() {
 }
 ```
 
-**Qué mantener:**
-- `page.tsx` siempre Server Component con prefetch
+**Qué verificar antes de copiar:**
+- `page.tsx` como Server Component con prefetch cuando la hidratación aporte valor
 - `page-client.tsx` como Client Component con `'use client'`
 - HydrationBoundary para pasar datos pre-fetched
 - El hook de React Query en page-client reutiliza la misma queryKey
@@ -54,8 +54,8 @@ const [total, customers] = await Promise.all([
 ])
 ```
 
-**Qué mantener:**
-- Siempre paralelizar count + findMany en endpoints paginados
+**Qué verificar antes de copiar:**
+- Preferir paralelizar count + findMany en endpoints paginados cuando sean independientes
 - Usar destructuring del array para nombrar resultados
 - Si hay más queries independientes (ej: facets, aggregations), incluirlas en el mismo Promise.all
 
@@ -75,10 +75,10 @@ import * as Icons from 'lucide-react'
 import * as UI from '@/components/ui'
 ```
 
-**Qué mantener:**
+**Qué verificar antes de copiar:**
 - Importar solo lo que se usa
-- Nunca `import *` excepto para namespaces necesarios (ej: `import * as React`)
-- Imports de lucide-react siempre nombrados (tree-shakeable)
+- Evitar `import *` salvo namespaces necesarios (ej: `import * as React`)
+- Imports de lucide-react nombrados cuando el tree-shaking lo aprovecha
 
 ## Barrel Files Selectivos
 
@@ -95,9 +95,9 @@ export { createSelectColumn } from './columns/select-column'
 export { createNormalizedFilter } from './filter-functions'
 ```
 
-**Qué mantener:**
+**Qué verificar antes de copiar:**
 - Barrel files solo para APIs públicas de componentes complejos (data-table, capture-dialog, tag-system)
-- Named exports explícitos, nunca `export *`
+- Named exports explícitos; evitar `export *`
 - Importar desde el barrel: `import { DataTable } from '@/components/data-table'`
 
 ## React Hook Form + Zod
@@ -121,11 +121,11 @@ const form = useForm<CustomerFormData>({
 })
 ```
 
-**Qué mantener:**
+**Qué verificar antes de copiar:**
 - Schemas de validación en `lib/validations/`
 - `zodResolver` como puente entre Zod y React Hook Form
 - FormField + FormControl + FormMessage de shadcn/ui
-- defaultValues siempre explícitos
+- defaultValues explícitos cuando eviten estados no controlados o renders correctivos
 
 ## Composición de Campos de Formulario
 
@@ -140,7 +140,7 @@ const form = useForm<CustomerFormData>({
 <UninstallTagsFields control={form.control} />
 ```
 
-**Qué mantener:**
+**Qué verificar antes de copiar:**
 - Sub-componentes reciben `control` del form padre
 - Cada sección es un componente reutilizable
 - forwardRef + useImperativeHandle para exponer submit/reset al padre
@@ -158,7 +158,7 @@ const { fields, replace, update, remove } = useFieldArray({
 })
 ```
 
-**Qué mantener:**
+**Qué verificar antes de copiar:**
 - useFieldArray para tablas editables (payment allocations)
 - FormField dentro de cada row con `name={`allocations.${index}.field`}`
 - Validación de sumas con tolerancia financiera
@@ -218,7 +218,7 @@ export const POST = withApiHandler<CreateEntityBody>(
 )
 ```
 
-**Qué mantener:**
+**Qué verificar antes de copiar:**
 - GET lista paginada → `withLogging` con try/catch manual + `parsePaginationParams`/`buildPaginationResponse`
 - GET simple (catálogo) → `withApiHandler` sin bodySchema es alternativa válida
 - POST/PUT/DELETE → `withApiHandler` con bodySchema, validateUuidParams, fallbackError
@@ -246,9 +246,9 @@ lib/business-logic/
 └── installments.ts        # Cuotas informativas
 ```
 
-**Qué mantener:**
+**Qué verificar antes de copiar:**
 - Sin imports de `@/components`, `next/`, ni `@prisma/client` en estos módulos
-- Funciones puras para reglas; módulos con DB (`project-financials`, `credit-management`) deben aceptar `PrismaTransaction` cuando aplique
+- Funciones puras para reglas; módulos con DB (`project-financials`, `credit-management`) aceptan `PrismaTransaction` cuando aplica
 - Testing directo sin mocking de DB/UI
 - Usar `PrismaTransaction` de `@/lib/db/types` para tipar el parámetro `tx` en transacciones
 
@@ -268,8 +268,8 @@ return NextResponse.json({
 })
 ```
 
-**Qué mantener:**
-- Siempre usar `parsePaginationParams` en lugar de parsear manualmente
+**Qué verificar antes de copiar:**
+- Preferir `parsePaginationParams` en lugar de parsear manualmente
 - `buildPaginationResponse` calcula `totalPages` automáticamente
 - Default limit=10, máximo limit=100
 
@@ -288,9 +288,9 @@ export const GET = createStatusListHandler(config)
 export const POST = createStatusCreateHandler(config)
 ```
 
-**Qué mantener:**
+**Qué verificar antes de copiar:**
 - Usar la factory para las 3 entidades de status (project, aftersale, visit)
-- Nunca duplicar lógica de CRUD de status manualmente
+- Evitar duplicar lógica de CRUD de status manualmente
 - La factory maneja validaciones de unicidad (isInitial, isFinal, nombre), order automático y soft/hard delete
 
 ## keepPreviousData en React Query
@@ -311,8 +311,8 @@ export function useCustomers(params: CustomersQueryParams = {}) {
 }
 ```
 
-**Qué mantener:**
-- `placeholderData: keepPreviousData` en todos los hooks paginados
+**Qué verificar antes de copiar:**
+- `placeholderData: keepPreviousData` en hooks paginados cuando mejore continuidad visual sin ocultar datos obsoletos
 - `staleTime` y `gcTime` configurados para evitar re-fetches innecesarios
 - queryKey incluye todos los parámetros de filtrado/paginación
 
@@ -334,8 +334,8 @@ export function serialize<T>(data: T): T {
 }
 ```
 
-**Qué mantener:**
-- Siempre serializar datos Prisma antes de pasarlos a Client Components
+**Qué verificar antes de copiar:**
+- Serializar datos Prisma antes de pasarlos a Client Components cuando incluyan tipos no serializables
 - Convierte Decimal → number y BigInt → number
 - Previene errores de hidratación con tipos no serializables
 
@@ -354,7 +354,7 @@ import { withLogging } from '@/lib/logger-middleware'
 import { Button } from '../../../components/ui/button'
 ```
 
-**Qué mantener:**
-- `@/` para todas las importaciones internas
-- Nunca rutas relativas con `../`
+**Qué verificar antes de copiar:**
+- Preferir `@/` para importaciones internas
+- Evitar rutas relativas profundas con `../`
 - Configurado en `tsconfig.json` paths

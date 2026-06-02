@@ -54,8 +54,14 @@ npm test -- app/api/                         # Tests de endpoints
 
 **Cómo mockear Prisma en tests:** Usar skill `cobralon-testing-strategy`
 
+## Dudas de Arquitectura
+
+Si un cálculo financiero mezcla Prisma con reglas puras, duplica totales entre frontend/backend o no queda claro si debe vivir en DB/view, backend o función compartida, usar `cobralon-architecture-simplification` antes de mover código.
+Contrastar también con `docs/rules/api-routes.md` si el cambio entra por endpoints, y con `docs/rules/components.md` si la UI muestra previews, totales o validaciones relacionadas.
+
 ## Skills relacionados
 
 - **Lógica financiera completa**: usar skill `cobralon-financial-logic` para invariantes y patrón de transacción
+- **Simplificación arquitectónica**: usar skill `cobralon-architecture-simplification` para separar cálculo puro, persistencia y responsabilidades
 - **Performance de queries**: usar skill `cobralon-best-practices` para paralelización
 - **Testing**: usar skill `cobralon-testing-strategy` para mocking de Prisma y factories

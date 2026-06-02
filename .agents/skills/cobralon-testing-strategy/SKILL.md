@@ -41,6 +41,20 @@ npm run test:e2e:report               # Ver último reporte HTML
 - **Naming:** `describe('módulo')` → `it('debe comportamiento')`
 - **Setup:** `beforeEach` con `vi.clearAllMocks()`
 - **Assertions async:** `await waitFor(() => expect(...))` para React Query
+- **Baseline:** antes de refactors de performance o arquitectura, dejar verde el baseline relevante para distinguir regresiones reales de ruido previo.
+- **Cobertura útil:** probar invariantes y decisiones de dominio, no solo que se llamaron mocks internos.
+
+## Tests Financieros
+
+- Verificar efectos observables: balances, allocations, ledger de crédito, estados y errores de dominio.
+- Confirmar signos y montos exactos en entradas/salidas de dinero, créditos, refunds y ajustes.
+- Evitar snapshots rígidos de payloads Prisma salvo que ese shape sea un contrato explícito.
+- Combinar con `cobralon-financial-logic` cuando el cambio toque pagos, créditos, FIFO, balances o `lib/business-logic/`.
+
+## Auditoría de API Routes
+
+- Revisar rutas `app/api/**/route.ts` sin `app/api/**/__tests__/route.test.ts` sirve como diagnóstico de riesgo.
+- No convertir esa auditoría en obligación automática: priorizar endpoints críticos, cambios actuales e invariantes de dominio.
 
 ## Coverage targets
 

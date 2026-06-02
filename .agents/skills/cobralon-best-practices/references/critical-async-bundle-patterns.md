@@ -12,7 +12,7 @@ Las dos categorías de mayor impacto en performance. Combina reglas adaptadas de
 **Aplica a:** `app/api/*/route.ts`
 **Estado:** ✅ Implementado — GET endpoints con Promise.all, POST payments con patrón defer
 
-Queries Prisma independientes deben ejecutarse en paralelo con `Promise.all`.
+Cuando las queries Prisma son independientes, suele convenir ejecutarlas en paralelo con `Promise.all`.
 
 #### Correcto (implementado en payments POST con patrón defer)
 
@@ -147,7 +147,7 @@ async function CustomersData() {
 **Aplica a:** `components/`, `app/`
 **Estado:** ⚠️ Pendiente — no se usa `next/dynamic` en el proyecto
 
-Componentes que no se renderizan al cargar la página deben cargarse con `next/dynamic`.
+Componentes que no se renderizan al cargar la página son candidatos a `next/dynamic`, especialmente si arrastran dependencias pesadas.
 
 #### Incorrecto
 
@@ -197,15 +197,15 @@ export function CustomersPageClient() {
 
 **Impacto:** CRITICAL
 **Aplica a:** `lib/excel/*.ts`
-**Estado:** ⚠️ Pendiente
+**Estado:** ⚠️ Verificar
 
-La librería `xlsx` (~150KB gzip) se importa estáticamente en 10+ archivos bajo `lib/excel/`. Se incluye en el bundle aunque el usuario nunca use funciones de Excel.
+Antes de optimizar `xlsx`, verifica imports en código productivo y en tests por separado. Un import estático en tests no implica impacto en el bundle productivo; un import productivo solo importa para bundle size si llega al grafo client o al camino inicial que se está midiendo.
 
 #### Incorrecto
 
 ```typescript
-// lib/excel/project-parser.ts
-// ❌ Import estático — xlsx entra en el bundle de la página
+// Ejemplo hipotético: parser Excel alcanzable por el bundle inicial
+// ⚠️ Import estático — verificar si este módulo llega al bundle client/inicial
 import * as XLSX from 'xlsx'
 
 export function parseProjectExcel(buffer: ArrayBuffer) {
@@ -226,7 +226,7 @@ export async function parseProjectExcel(buffer: ArrayBuffer) {
 }
 ```
 
-**Alternativa:** Si los parsers se usan solo en componentes client, el `next/dynamic` del componente padre ya evita incluir xlsx en el bundle inicial. Pero el import dinámico en el parser da una capa extra de protección.
+**Alternativa:** Si los parsers se alcanzan solo detrás de un componente cargado con `next/dynamic`, puede ser suficiente para el bundle inicial. El import dinámico en el parser agrega protección, pero conviene confirmarlo con bundle analyzer o trazas reales.
 
 ### Named imports (no barrel *)
 
@@ -234,7 +234,7 @@ export async function parseProjectExcel(buffer: ArrayBuffer) {
 **Aplica a:** Todo el codebase
 **Estado:** ✅ Implementado
 
-Ya documentado en [established-patterns.md](established-patterns.md#named-imports). Mantener este patrón.
+Ya documentado en [established-patterns.md](established-patterns.md#named-imports). Preferir este patrón cuando mantenga el tree-shaking efectivo.
 
 ```typescript
 // ✅ Tree-shakeable

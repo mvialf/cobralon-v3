@@ -19,6 +19,13 @@ Esta skill es OBLIGATORIA cuando tocas lógica financiera para evitar bugs crít
 5. Todo movimiento de crédito -> CreditTransaction (auditoría)
 ```
 
+## Separación de Responsabilidades
+
+- **Cálculo puro:** funciones determinísticas sin Prisma ni side effects; deben poder compartirse entre backend y preview frontend cuando aporte claridad.
+- **Preview frontend:** puede usar cálculos puros compartidos para anticipar montos, FIFO o distribución, pero nunca define balances finales.
+- **Validación autoritativa:** ocurre en backend con datos actuales de DB antes de persistir; no confía en payloads calculados por el frontend.
+- **Persistencia transaccional:** todo cambio de balances, allocations o ledger de crédito se guarda dentro de `$transaction`.
+
 ## Módulos de Lógica de Negocio
 
 | Módulo | Responsabilidad |
@@ -40,6 +47,7 @@ Esta skill es OBLIGATORIA cuando tocas lógica financiera para evitar bugs crít
 
 ## Checklist Antes de Modificar Lógica Financiera
 
+- [ ] ¿Esto puede ser función pura compartible antes de entrar a Prisma?
 - [ ] Leí el módulo relevante en `lib/business-logic/`
 - [ ] Entiendo cómo afecta a balances y créditos
 - [ ] Usaré `$transaction` para operaciones atómicas

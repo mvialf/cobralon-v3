@@ -191,7 +191,7 @@ export default async function CustomerDetailPage({ params }: Props) {
 }
 ```
 
-**Qué mantener:** Siempre usar `Promise.all` cuando hay múltiples `prefetchQuery` independientes en un Server Component.
+**Qué verificar:** Preferir `Promise.all` cuando hay múltiples `prefetchQuery` realmente independientes en un Server Component.
 
 ## Dedup HydrationBoundary
 

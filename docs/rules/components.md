@@ -57,7 +57,13 @@ npx shadcn@latest add [component-name]
 
 Para features CRUD completas, usar el skill `cobralon-crud-generator` y contrastar con patrones reales en `app/customer`, `app/projects`, `components/forms` y `components/dialogs`.
 
+## Dudas de Arquitectura
+
+Si un componente replica cálculos de backend, contiene reglas de dominio persistentes o necesita previews financieros complejos, usar `cobralon-architecture-simplification` para decidir qué queda en frontend y qué debe ser función pura compartida o validación backend.
+Contrastar también con `docs/rules/api-routes.md` para contratos de endpoints y con `docs/rules/database.md` cuando los totales dependan de persistencia, transacciones o balances derivados.
+
 ## Skills relacionados
 
 - **Generación CRUD**: usar skill `cobralon-crud-generator` para crear feature completa
 - **Best practices**: usar skill `cobralon-best-practices` para patrones de performance y rendering
+- **Simplificación arquitectónica**: usar skill `cobralon-architecture-simplification` para duplicación frontend/backend y separación de responsabilidades

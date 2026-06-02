@@ -129,9 +129,15 @@ await prisma.$transaction(async (tx) => {
 
 Ver `lib/business-logic/` para lógica de negocio pura.
 
+## Dudas de Arquitectura
+
+Si una route empieza a concentrar cálculo de dominio, persistencia, preview para UI o lógica duplicada del frontend, usar la skill `cobralon-architecture-simplification` antes de optimizar o agregar otra capa.
+Contrastar también con `docs/rules/database.md` si hay Prisma, transacciones o cálculos persistidos, y con `docs/rules/components.md` si el contrato afecta previews o validaciones de frontend.
+
 ## Skills relacionados
 
 - **Lógica financiera** (pagos, créditos, FIFO): usar skill `cobralon-financial-logic`
+- **Simplificación arquitectónica** (routes gordas, capas, duplicación): usar skill `cobralon-architecture-simplification`
 - **Performance** (async waterfalls, Promise.all): usar skill `cobralon-best-practices`
 - **Error handling** (patrones completos, Pino, toasts): usar skill `cobralon-error-handling`
 - **Generación CRUD**: usar skill `cobralon-crud-generator` para nuevas entidades
