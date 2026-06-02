@@ -6,7 +6,6 @@ Cobralon es un sistema de gestion de cobranza, proyectos, pagos, cuotas, postven
 
 - [architecture.md](architecture.md): arquitectura de negocio y modelo financiero.
 - [auth.md](auth.md): Better Auth, sesiones y roles.
-- [import-export.md](import-export.md): importacion/exportacion Excel.
 - [features/calendar-system.md](features/calendar-system.md): calendario unificado.
 - [payment-system.md](payment-system.md): detalles del sistema de pagos.
 - [regional-config.md](regional-config.md): configuracion regional.
@@ -33,7 +32,6 @@ Cobralon es un sistema de gestion de cobranza, proyectos, pagos, cuotas, postven
 - Comisiones por metodo de pago.
 - Ajustes de proyecto.
 - Calendario con eventos de proyectos, postventas y visitas.
-- Importacion/exportacion Excel para clientes, proyectos y pagos.
 
 ## Reglas de trabajo
 

@@ -18,7 +18,6 @@ Usar `withApiHandler` cuando el endpoint tenga validacion, errores de negocio o 
 
 Usar `withLogging` o logger directo solo cuando el wrapper no encaje, por ejemplo:
 
-- endpoints que generan archivos;
 - handlers delegados a librerias externas;
 - health checks.
 
@@ -29,9 +28,6 @@ Usar `withLogging` o logger directo solo cuando el wrapper no encaje, por ejempl
 | `app/api/auth/[...all]/route.ts` | Handler de Better Auth |
 | `app/api/health/warmup/route.ts` | Health check simple |
 | `app/api/test/cleanup/route.ts` | Solo soporte de tests/dev |
-| `app/api/customers/export/route.ts` | Respuesta de archivo |
-| `app/api/projects/export/route.ts` | Respuesta de archivo |
-| `app/api/payments/export/route.ts` | Respuesta de archivo |
 
 No existe route vigente `app/api/cron/mark-installments-paid/route.ts`.
 

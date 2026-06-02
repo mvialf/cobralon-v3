@@ -507,7 +507,7 @@ export class ErrorBoundary extends Component<Props, State> {
 
 ---
 
-### 18. Exportación PDF/Excel
+### 18. Reportes exportables
 
 **Estado:** Pendiente
 **Prioridad:** Baja
@@ -518,7 +518,7 @@ export class ErrorBoundary extends Component<Props, State> {
 **Librerías sugeridas:**
 
 - PDF: `@react-pdf/renderer` o `jspdf`
-- Excel: `xlsx` o `exceljs`
+- Formato tabular: definir cuando se rediseñe la necesidad real de reportes.
 
 ---
 

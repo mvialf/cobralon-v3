@@ -155,7 +155,7 @@ describe('normalizeRegionValue()', () => {
     })
   })
 
-  describe('Formatos reales de Excel imports', () => {
+  describe('Formatos reales de datos externos', () => {
     it('debe manejar "Región Metropolitana" (formato más común)', () => {
       expect(normalizeRegionValue('Región Metropolitana')).toBe('13')
     })

@@ -17,8 +17,6 @@ import {
   PanelRightOpen,
   PanelRightClose,
   Calendar,
-  Upload,
-  Download,
   LogOut,
 } from 'lucide-react'
 import { authClient, useSession } from '@/lib/auth-client'
@@ -115,16 +113,6 @@ const settingsItems: NavigationItem[] = [
         title: 'Métodos de Pago',
         url: '/settings/payments',
         icon: Wallet,
-      },
-      {
-        title: 'Importar Datos',
-        url: '/settings/import',
-        icon: Upload,
-      },
-      {
-        title: 'Exportar Datos',
-        url: '/settings/export',
-        icon: Download,
       },
     ],
   },

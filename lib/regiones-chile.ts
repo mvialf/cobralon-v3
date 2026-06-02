@@ -151,12 +151,12 @@ export function normalizeRegionValue(value: string): string | null {
   if (!trimmed) return null
 
   // Fast path: verificar si ya es un código válido
-  // Esto maneja casos donde el Excel ya tiene códigos ("13", "05", etc.)
+  // Esto maneja casos donde datos externos ya tienen códigos ("13", "05", etc.)
   if (getRegionByCodigo(trimmed)) {
     return trimmed
   }
 
   // Slow path: intentar conversión de nombre → código
-  // Esto maneja casos donde el Excel tiene nombres ("Metropolitana", etc.)
+  // Esto maneja casos donde datos externos tienen nombres ("Metropolitana", etc.)
   return getRegionCodigoByNombre(trimmed)
 }

@@ -7,7 +7,6 @@ Esta carpeta contiene solo documentacion vigente del proyecto Cobralon.
 - [Proyecto](project/README.md): mapa tecnico y funcional.
 - [Arquitectura](project/architecture.md): modelo de negocio, datos y flujos criticos.
 - [Autenticacion](project/auth.md): Better Auth, roles y rutas protegidas.
-- [Importacion y exportacion](project/import-export.md): Excel, endpoints y cobertura de tests.
 - [Calendario](project/features/calendar-system.md): eventos de proyectos, postventas y visitas.
 - [ADRs](project/decisions/README.md): decisiones de arquitectura del proyecto.
 - [Backlog](project/backlog.md): trabajo pendiente documentado.

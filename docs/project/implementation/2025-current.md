@@ -46,7 +46,7 @@ Documentacion:
 ## API routes
 
 - La mayoria de endpoints aplicables usan `withApiHandler` o `withLogging`.
-- Los endpoints de auth, export, health y test cleanup quedan excluidos por diseño.
+- Los endpoints de auth, health y test cleanup quedan excluidos por diseño.
 - `users/route.ts` es endpoint administrativo vigente, no scaffold.
 
 Documentacion:
@@ -64,16 +64,11 @@ Documentacion:
 
 - [Sistema de calendario](../features/calendar-system.md)
 
-## Importacion y exportacion
+## Importacion y exportacion retirada
 
-- Import/export Excel para clientes, proyectos y pagos.
-- Tests API existentes para importaciones.
-- Cobertura UI parcial para importacion de pagos.
-
-Documentacion:
-
-- [Importacion y exportacion](../import-export.md)
-- [Estado tests importacion](../plans/import-tests-plan.md)
+- El flujo Excel de importacion/exportacion fue retirado para reducir superficie de mantenimiento.
+- No quedan endpoints `/api/*/import`, `/api/*/export`, paginas `/settings/import` o `/settings/export`, ni dependencia `xlsx`.
+- Cargas puntuales deben hacerse por DB/scripts controlados hasta que se diseñe una nueva solucion.
 
 ## Logging y errores
 

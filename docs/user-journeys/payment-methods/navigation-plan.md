@@ -21,7 +21,7 @@
 - **Sidebar** (izquierda): Navegacion global
 - **Breadcrumb**: `Panel Principal > Configuración`
 - **Header**: Titulo "Configuración" (h1)
-- **Sub-navegacion** (izquierda del contenido): Secciones: General, Importar Datos, Estados del Sistema, **Metodos de Pago** (activo)
+- **Sub-navegacion** (izquierda del contenido): Secciones: General, Estados del Sistema, **Metodos de Pago** (activo), Razones de Ajuste
 - **Card**: Titulo "Métodos de Pago" + descripcion + boton "Nuevo Método"
 - **Tabla**: Lista de metodos con drag & drop
 
@@ -81,7 +81,7 @@ waitFor  -> table visible (waitForGone "Cargando...")
 ```
 assert -> text "Configura los métodos de pago disponibles" visible
 assert -> button "Nuevo Método" visible
-assert -> navigation con links: General, Importar Datos, Estados del Sistema, Métodos de Pago
+assert -> navigation con links: General, Estados del Sistema, Métodos de Pago, Razones de Ajuste
 ```
 
 ### 3. Verificar tabla de metodos
