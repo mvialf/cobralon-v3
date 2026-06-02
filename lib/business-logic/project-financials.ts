@@ -4,6 +4,7 @@ import { FINANCIAL } from '@/lib/constants/financial-constants'
 import { prisma } from '@/lib/db'
 import type { PrismaTransaction } from '@/lib/db/types'
 import { addMoney, greaterThanMoneyWithTolerance, moneyToNumber } from './money'
+import { calculateProjectBalanceSnapshot } from './project-balance'
 
 type PrismaDb = typeof prisma | PrismaTransaction
 
@@ -57,21 +58,28 @@ export function mapProjectFinancials(row: ProjectFinancialsRawRow): ProjectFinan
   const rawBalanceMoney = row.rawBalance
   const balanceMoney = row.balance
   const totalAmount = addMoney(settledTotalMoney, rawBalanceMoney)
+  const snapshot = calculateProjectBalanceSnapshot({
+    projectId: row.projectId,
+    totalAmount: moneyToNumber(totalAmount),
+    appliedCashTotal: moneyToNumber(appliedCashTotalMoney),
+    appliedCreditTotal: moneyToNumber(appliedCreditTotalMoney),
+    adjustmentTotal: moneyToNumber(adjustmentTotalMoney),
+    overpayment: moneyToNumber(row.overpayment),
+    balanceTolerance: FINANCIAL.BALANCE_TOLERANCE,
+  })
 
   return {
     projectId: row.projectId,
     allocatedTotal: moneyToNumber(allocatedTotalMoney),
-    appliedCashTotal: moneyToNumber(appliedCashTotalMoney),
-    appliedCreditTotal: moneyToNumber(appliedCreditTotalMoney),
-    adjustmentTotal: moneyToNumber(adjustmentTotalMoney),
-    settledTotal: moneyToNumber(settledTotalMoney),
+    appliedCashTotal: snapshot.appliedCashTotal,
+    appliedCreditTotal: snapshot.appliedCreditTotal,
+    adjustmentTotal: snapshot.adjustmentTotal,
+    settledTotal: snapshot.settledTotal,
     rawBalance: moneyToNumber(rawBalanceMoney),
     balance: moneyToNumber(balanceMoney),
-    overpayment: moneyToNumber(row.overpayment),
-    totalPaid: moneyToNumber(settledTotalMoney),
-    percentPaid: greaterThanMoneyWithTolerance(totalAmount, 0, 0)
-      ? moneyToNumber(settledTotalMoney.dividedBy(totalAmount).times(100))
-      : 0,
+    overpayment: snapshot.overpayment,
+    totalPaid: snapshot.totalPaid,
+    percentPaid: snapshot.percentPaid,
     hasDebt: greaterThanMoneyWithTolerance(balanceMoney, 0, FINANCIAL.BALANCE_TOLERANCE),
   }
 }
