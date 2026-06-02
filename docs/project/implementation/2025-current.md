@@ -29,9 +29,10 @@ Documentacion:
 
 ## Pagos, cuotas y comisiones
 
-- Pagos a proyecto y pagos a cliente conviven como flujos separados.
-- FIFO distribuye pagos de cliente a proyectos con deuda.
+- La UI de pagos usa un flujo unico de registro: el pago se crea para un cliente y la tabla de distribucion muestra los proyectos afectados, incluso cuando hay un solo proyecto.
+- FIFO distribuye automaticamente el monto entre proyectos con deuda; la distribucion puede ajustarse manualmente.
 - La creacion de pagos se orquesta en `lib/use-cases/payments/create-payment.ts`; la route HTTP permanece como adaptador.
+- El modelo financiero sigue usando `PaymentAllocation` y `ProjectApplication` como fuente de verdad de aplicacion a proyectos; `Payment.type` queda como compatibilidad interna durante la transicion.
 - Las cuotas son informativas, sin interes, y su estado se deriva desde `dueDate`.
 - Las comisiones se guardan al registrar el pago para auditoria.
 - El estado de cuenta permite solicitar saldo total, porcentaje o monto fijo sobre la deuda seleccionada. Esta solicitud es documental: no crea pagos, allocations, applications ni movimientos de credito.

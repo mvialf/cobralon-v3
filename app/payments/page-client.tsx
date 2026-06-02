@@ -8,7 +8,6 @@ import { AppLayout } from '@/components/layout/app-layout'
 import { DataTable, type BulkAction } from '@/components/data-table'
 import { createColumns, type Payment } from './columns'
 import { PaymentDetailsDialog } from '@/components/dialogs/payments/payment-details-dialog'
-import { PaymentToProjectDialog } from '@/components/dialogs/payments/payment-to-project-dialog'
 import { PaymentToCustomerDialog } from '@/components/dialogs/payments/payment-to-customer-dialog'
 import { Button } from '@/components/ui/button'
 import {
@@ -21,12 +20,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
 import {
   usePayments,
   useDeletePayment,
@@ -55,7 +48,6 @@ export function PaymentsPageClient() {
   const debouncedSearch = useDebounce(searchTerm, 500)
 
   // Estados de filtros server-side
-  const [typeFilter, setTypeFilter] = useState<'Project' | 'Customer' | undefined>(undefined)
   const [paymentMethodFilter, setPaymentMethodFilter] = useState<string | undefined>(undefined)
   const [projectNumberFilter, setProjectNumberFilter] = useState<string | undefined>(undefined)
 
@@ -69,7 +61,6 @@ export function PaymentsPageClient() {
       limit: pagination.pageSize,
       // Server-side filtering
       search: debouncedSearch || undefined,
-      type: typeFilter,
       paymentMethodId: paymentMethodFilter,
       projectNumber: projectNumberFilter,
       // Facets solo en página 1 (carga inicial + cambio de filtros que resetean a pág 1)
@@ -82,7 +73,6 @@ export function PaymentsPageClient() {
       pagination.pageIndex,
       pagination.pageSize,
       debouncedSearch,
-      typeFilter,
       paymentMethodFilter,
       projectNumberFilter,
       sorting,
@@ -129,8 +119,7 @@ export function PaymentsPageClient() {
   // Estado de dialogs
   const [selectedPayment, setSelectedPayment] = useState<Payment | null>(null)
   const [isDetailsDialogOpen, setIsDetailsDialogOpen] = useState(false)
-  const [isPaymentToProjectDialogOpen, setIsPaymentToProjectDialogOpen] = useState(false)
-  const [isPaymentToCustomerDialogOpen, setIsPaymentToCustomerDialogOpen] = useState(false)
+  const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false)
 
   const handleViewDetails = (payment: Payment) => {
     setSelectedPayment(payment)
@@ -207,22 +196,10 @@ export function PaymentsPageClient() {
       breadcrumbs={[{ label: 'Inicio', href: '/' }, { label: 'Pagos' }]}
       action={
         <div className="flex items-center gap-2">
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button>
-                <Plus className="mr-2 h-4 w-4" />
-                Nuevo Pago
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => setIsPaymentToProjectDialogOpen(true)}>
-                Pago a Proyecto
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setIsPaymentToCustomerDialogOpen(true)}>
-                Pago a Cliente
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          <Button onClick={() => setIsPaymentDialogOpen(true)}>
+            <Plus className="mr-2 h-4 w-4" />
+            Nuevo Pago
+          </Button>
         </div>
       }
     >
@@ -268,20 +245,6 @@ export function PaymentsPageClient() {
                 },
               },
               {
-                id: 'type',
-                title: 'Tipo',
-                options: [
-                  { label: 'Proyecto', value: 'Project' },
-                  { label: 'Cliente', value: 'Customer' },
-                ],
-                onFilterChange: (values) => {
-                  setTypeFilter(values[0] as 'Project' | 'Customer' | undefined)
-                  if (pagination.pageIndex !== 0) {
-                    setPagination({ ...pagination, pageIndex: 0 })
-                  }
-                },
-              },
-              {
                 id: 'paymentMethodName',
                 title: 'Método de Pago',
                 options:
@@ -300,11 +263,8 @@ export function PaymentsPageClient() {
             // Toolbar: conteo y limpiar filtros server-side
             totalCount={data?.pagination.total}
             totalCountLabel="pagos"
-            activeFilterCount={
-              (typeFilter ? 1 : 0) + (paymentMethodFilter ? 1 : 0) + (projectNumberFilter ? 1 : 0)
-            }
+            activeFilterCount={(paymentMethodFilter ? 1 : 0) + (projectNumberFilter ? 1 : 0)}
             onClearAllFilters={() => {
-              setTypeFilter(undefined)
               setPaymentMethodFilter(undefined)
               setProjectNumberFilter(undefined)
             }}
@@ -327,17 +287,10 @@ export function PaymentsPageClient() {
         onOpenChange={setIsDetailsDialogOpen}
       />
 
-      {/* Modal de registro de pago a proyecto */}
-      <PaymentToProjectDialog
-        open={isPaymentToProjectDialogOpen}
-        onOpenChange={setIsPaymentToProjectDialogOpen}
-        onSuccess={handleSuccess}
-      />
-
-      {/* Modal de registro de pago a cliente */}
+      {/* Modal de registro de pago */}
       <PaymentToCustomerDialog
-        open={isPaymentToCustomerDialogOpen}
-        onOpenChange={setIsPaymentToCustomerDialogOpen}
+        open={isPaymentDialogOpen}
+        onOpenChange={setIsPaymentDialogOpen}
         onSuccess={handleSuccess}
       />
 

@@ -9,7 +9,6 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu'
-import { StatusBadge } from '@/components/ui/status-badge'
 import { DataTableColumnHeader } from '@/components/data-table'
 import { ProjectNameSummary } from '@/components/summarys/project-name-summary'
 import { formatDate, formatCurrency } from '@/lib/format'
@@ -68,30 +67,43 @@ export const createColumns = ({
 }: ColumnsProps = {}): ColumnDef<Payment>[] => [
   // Columna de selección (checkbox)
   createSelectColumn<Payment>(),
-  // Cliente/Proyecto (fusionado)
+  // Cliente
   {
     id: 'associated',
     accessorFn: (row) => {
-      // Para sorting: extraer nombre relevante
-      if (row.type === 'Customer') {
-        return row.customer?.name || ''
-      }
-      if (row.type === 'Project' && row.allocations.length === 1) {
-        return row.allocations[0].project.projectName || row.allocations[0].project.projectNumber
-      }
-      return ''
+      return [
+        row.customer?.name || '',
+        ...row.allocations.map(
+          (allocation) => allocation.project.projectName || allocation.project.projectNumber
+        ),
+      ].join(' ')
     },
-    header: ({ column }) => <DataTableColumnHeader column={column} title="Cliente/Proyecto" />,
+    header: ({ column }) => <DataTableColumnHeader column={column} title="Cliente" />,
+    cell: ({ row }) => {
+      const payment = row.original
+      return <span className="font-medium">{payment.customer?.name || '-'}</span>
+    },
+    enableSorting: false,
+  },
+
+  // Aplicación a proyectos
+  {
+    id: 'projectNumber',
+    accessorFn: (row) => {
+      // Extraer todos los números de proyecto de allocations
+      return row.allocations.map((a) => a.project.projectNumber).join(', ')
+    },
+    header: ({ column }) => <DataTableColumnHeader column={column} title="Aplicado a" />,
     cell: ({ row }) => {
       const payment = row.original
 
-      // Customer payment → customer name
-      if (payment.type === 'Customer') {
-        return <span className="font-medium">{payment.customer?.name || '-'}</span>
+      // Si no tiene allocations, mostrar guión
+      if (payment.allocations.length === 0) {
+        return <span className="text-muted-foreground">-</span>
       }
 
-      // Project payment 1:1 → ProjectNameSummary
-      if (payment.type === 'Project' && payment.allocations.length === 1) {
+      // Si tiene 1 allocation, mostrar el número
+      if (payment.allocations.length === 1) {
         const project = payment.allocations[0].project
         return (
           <ProjectNameSummary
@@ -103,35 +115,6 @@ export const createColumns = ({
         )
       }
 
-      // Project payment 1:N → vacío
-      return <span className="text-muted-foreground">-</span>
-    },
-    enableSorting: false,
-  },
-
-  // Número de Proyecto
-  {
-    id: 'projectNumber',
-    accessorFn: (row) => {
-      // Extraer todos los números de proyecto de allocations
-      return row.allocations.map((a) => a.project.projectNumber).join(', ')
-    },
-    header: ({ column }) => <DataTableColumnHeader column={column} title="N° Proyecto" />,
-    cell: ({ row }) => {
-      const payment = row.original
-
-      // Si no tiene allocations, mostrar guión
-      if (payment.allocations.length === 0) {
-        return <span className="text-muted-foreground">-</span>
-      }
-
-      // Si tiene 1 allocation, mostrar el número
-      if (payment.allocations.length === 1) {
-        return (
-          <span className="font-mono text-sm">{payment.allocations[0].project.projectNumber}</span>
-        )
-      }
-
       // Si tiene múltiples allocations, mostrar cantidad
       return (
         <span className="text-sm text-muted-foreground">
@@ -140,24 +123,6 @@ export const createColumns = ({
       )
     },
     enableSorting: false,
-    // filterFn removido - ahora usa server-side filtering
-  },
-
-  // Tipo
-  {
-    accessorKey: 'type',
-    header: ({ column }) => <DataTableColumnHeader column={column} title="Tipo" />,
-    cell: ({ row }) => {
-      const type = row.getValue('type') as 'Project' | 'Customer'
-
-      return (
-        <StatusBadge
-          bgClass={type === 'Project' ? 'bg-blue-500' : 'bg-green-500'}
-          label={type === 'Project' ? 'Proyecto' : 'Cliente'}
-        />
-      )
-    },
-    enableSorting: true,
     // filterFn removido - ahora usa server-side filtering
   },
 
@@ -240,7 +205,6 @@ export const createColumns = ({
     id: 'actions',
     cell: ({ row, table }) => {
       const payment = row.original
-      const isCustomerPayment = payment.type === 'Customer'
 
       // ✅ Extraer callbacks del table meta (type-safe)
       const { handleDelete, deletingPaymentId } = getTableMeta<PaymentsTableMeta>(table)
@@ -262,16 +226,11 @@ export const createColumns = ({
         <DataTableDropdown>
           <DropdownMenuLabel>Acciones</DropdownMenuLabel>
 
-          {/* Ver detalles: SOLO para pagos 1:N */}
-          {isCustomerPayment && (
-            <>
-              <DropdownMenuItem onClick={() => onViewDetails?.(payment)}>
-                <Eye className="mr-2 h-4 w-4" />
-                Ver detalles
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-            </>
-          )}
+          <DropdownMenuItem onClick={() => onViewDetails?.(payment)}>
+            <Eye className="mr-2 h-4 w-4" />
+            Ver detalles
+          </DropdownMenuItem>
+          <DropdownMenuSeparator />
 
           {/* Eliminar pago */}
           <DropdownMenuItem className="text-destructive" onClick={onDelete} disabled={isDeleting}>

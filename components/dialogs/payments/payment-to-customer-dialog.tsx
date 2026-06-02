@@ -27,7 +27,7 @@ interface PaymentToCustomerDialogProps {
 }
 
 /**
- * Dialog para registro de "Pago a Cliente" (1:N)
+ * Dialog para registro de pago.
  *
  * Maneja:
  * - Apertura/cierre del dialog
@@ -92,7 +92,7 @@ export function PaymentToCustomerDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-5xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Registrar Pago a Cliente</DialogTitle>
+          <DialogTitle>Registrar Pago</DialogTitle>
         </DialogHeader>
 
         <PaymentToCustomerForm

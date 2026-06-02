@@ -58,14 +58,14 @@ interface PaymentToCustomerFormProps {
 }
 
 /**
- * Formulario para "Pago a Cliente" (1:N)
+ * Formulario para registrar un pago.
  *
  * Flujo donde el usuario:
  * 1. Selecciona un cliente
  * 2. Ingresa el monto total del pago
- * 3. Distribuye el monto entre múltiples proyectos:
- *    - Modo FIFO: Distribución automática por antigüedad
- *    - Modo Manual: Distribución personalizada
+ * 3. Distribuye el monto entre los proyectos pendientes del cliente:
+ *    - Auto: distribución FIFO por antigüedad
+ *    - Manual: distribución personalizada
  * 4. La suma de allocations debe ser exactamente igual al monto total
  */
 export function PaymentToCustomerForm({
@@ -81,7 +81,7 @@ export function PaymentToCustomerForm({
   const [customerProjects, setCustomerProjects] = useState<ProjectWithBalance[]>([])
 
   // State para modo de distribución
-  const [distributionMode, setDistributionMode] = useState<'fifo' | 'manual'>('manual')
+  const [distributionMode, setDistributionMode] = useState<'fifo' | 'manual'>('fifo')
 
   // Form setup
   const defaultValues = useMemo(
@@ -224,7 +224,7 @@ export function PaymentToCustomerForm({
       setSelectedCustomerId(customer?.id || null)
       // Reset allocations y modo cuando cambia cliente
       replace([])
-      setDistributionMode('manual')
+      setDistributionMode('fifo')
     },
     [replace]
   )
@@ -326,7 +326,7 @@ export function PaymentToCustomerForm({
               control={form.control}
               currency={customerProjects[0]?.currency}
               disabled={!selectedCustomerId || customerProjects.length === 0}
-              amountLabel="Monto Total del Pago *"
+              amountLabel="Monto del pago *"
             />
 
             <PaymentMethodFields

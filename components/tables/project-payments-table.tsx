@@ -20,9 +20,8 @@ interface ProjectPaymentsTableProps {
  * Muestra:
  * - Lista de pagos del proyecto (via allocations)
  * - Ordenados cronológicamente (ascendente: del más antiguo al más reciente)
- * - Numeración secuencial (N° con (*) si es pago dividido), fecha, monto asignado
+ * - Numeración secuencial, fecha, monto asignado
  * - Opcionalmente: método de pago (según prop hidePaymentMethod)
- * - Nota al pie: (*) indica pagos obtenidos de pago global de cliente
  * - Sin acciones (tabla puramente informativa)
  */
 export function ProjectPaymentsTable({
@@ -124,7 +123,6 @@ export function ProjectPaymentsTable({
             {allocations.map((allocation, index) => (
               <tr key={allocation.id}>
                 <td className="py-2 px-4 font-medium text-capture-foreground text-end text-sm">
-                  {allocation.payment.type === 'Customer' ? '(*) ' : ''}
                   {index + 1}
                 </td>
                 <td className="py-2 px-4 font-medium text-capture-foreground text-center text-sm">
@@ -144,11 +142,6 @@ export function ProjectPaymentsTable({
             ))}
           </tbody>
         </table>
-        {allocations.some((a) => a.payment.type === 'Customer') && (
-          <p className="text-xs font-normal text-capture-foreground pt-2 px-4">
-            (*) Obtenido de pago global de cliente
-          </p>
-        )}
       </div>
     </div>
   )
