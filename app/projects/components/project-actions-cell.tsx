@@ -151,6 +151,7 @@ export function ProjectActionsCell({ project, onDataChanged }: ProjectActionsCel
         open={paymentDialogOpen}
         onOpenChange={setPaymentDialogOpen}
         preselectedCustomerId={project.customer.id}
+        preselectedProjectId={project.id}
         onSuccess={() => {
           // Refetch la tabla cuando se registra un pago exitosamente
           onDataChanged?.()

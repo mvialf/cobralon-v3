@@ -39,6 +39,7 @@ import {
 import { PaymentMethodFields } from '@/components/forms/fields/payment-method-fields'
 import { PaymentAmountDateFields } from '@/components/forms/fields/payment-amount-date-fields'
 import { CustomerSearchField } from '@/components/forms/search/customer-search-field'
+import { Badge } from '@/components/ui/badge'
 
 // ✅ Constantes fuera del componente para evitar re-renders infinitos
 const EMPTY_PROJECTS: ProjectWithBalance[] = []
@@ -54,6 +55,7 @@ interface PaymentToCustomerFormProps {
   onSubmit: (data: PaymentToCustomerFormValues, currency: string) => void | Promise<void>
   isSubmitting?: boolean
   preselectedCustomerId?: string
+  preselectedProjectId?: string
   formId?: string // Para submit externo desde DialogFooter
 }
 
@@ -72,6 +74,7 @@ export function PaymentToCustomerForm({
   onSubmit,
   isSubmitting = false,
   preselectedCustomerId,
+  preselectedProjectId,
   formId,
 }: PaymentToCustomerFormProps) {
   // State para cliente seleccionado
@@ -81,7 +84,9 @@ export function PaymentToCustomerForm({
   const [customerProjects, setCustomerProjects] = useState<ProjectWithBalance[]>([])
 
   // State para modo de distribución
-  const [distributionMode, setDistributionMode] = useState<'fifo' | 'manual'>('fifo')
+  const [distributionMode, setDistributionMode] = useState<'fifo' | 'manual'>(
+    preselectedProjectId ? 'manual' : 'fifo'
+  )
 
   // Form setup
   const defaultValues = useMemo(
@@ -186,6 +191,54 @@ export function PaymentToCustomerForm({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [watchedAmount, distributionMode])
 
+  // Si el flujo viene desde una fila de proyecto, preservar ese contexto sin usar FIFO.
+  useEffect(() => {
+    if (
+      !preselectedProjectId ||
+      distributionMode !== 'manual' ||
+      !watchedAmount ||
+      watchedAmount <= 0 ||
+      customerProjects.length === 0 ||
+      fields.length === 0
+    ) {
+      return
+    }
+
+    const selectedProject = customerProjects.find((project) => project.id === preselectedProjectId)
+    if (!selectedProject) return
+
+    const allocations = form.getValues('allocations')
+
+    allocations.forEach((allocation, index) => {
+      const nextAllocatedAmount =
+        allocation.projectId === preselectedProjectId
+          ? Math.min(watchedAmount, selectedProject.balance)
+          : 0
+      const currentCreditApplied = allocation.creditApplied || 0
+
+      if (
+        allocation.allocatedAmount === nextAllocatedAmount &&
+        allocation.creditApplied === currentCreditApplied
+      ) {
+        return
+      }
+
+      update(index, {
+        projectId: allocation.projectId,
+        allocatedAmount: nextAllocatedAmount,
+        creditApplied: currentCreditApplied,
+      })
+    })
+  }, [
+    preselectedProjectId,
+    watchedAmount,
+    distributionMode,
+    customerProjects,
+    fields.length,
+    form,
+    update,
+  ])
+
   // Handler: Calcular FIFO
   const handleCalculateFIFO = useCallback(() => {
     if (!watchedAmount || watchedAmount <= 0) {
@@ -224,9 +277,9 @@ export function PaymentToCustomerForm({
       setSelectedCustomerId(customer?.id || null)
       // Reset allocations y modo cuando cambia cliente
       replace([])
-      setDistributionMode('fifo')
+      setDistributionMode(preselectedProjectId ? 'manual' : 'fifo')
     },
-    [replace]
+    [preselectedProjectId, replace]
   )
 
   // ✅ useWatch para obtener las allocations en tiempo real y calcular totales
@@ -500,12 +553,21 @@ export function PaymentToCustomerForm({
                         {fields.map((field, index) => {
                           const project = customerProjects.find((p) => p.id === field.projectId)
                           if (!project) return null
+                          const isPreselectedProject = project.id === preselectedProjectId
 
                           return (
-                            <TableRow key={field.id}>
+                            <TableRow
+                              key={field.id}
+                              className={cn(isPreselectedProject && 'bg-muted/40')}
+                            >
                               <TableCell>
                                 <div>
-                                  <div className="font-medium">{project.projectNumber}</div>
+                                  <div className="flex items-center gap-2">
+                                    <span className="font-medium">{project.projectNumber}</span>
+                                    {isPreselectedProject && (
+                                      <Badge variant="secondary">Origen</Badge>
+                                    )}
+                                  </div>
                                   {project.projectName && (
                                     <div className="text-sm text-muted-foreground">
                                       {project.projectName}
