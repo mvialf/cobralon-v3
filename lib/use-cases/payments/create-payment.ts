@@ -193,6 +193,357 @@ function validateLoadedEntities(
   return { customer: customerExists, paymentMethod, projects }
 }
 
+function buildCommissionResult(
+  amount: number,
+  paymentMethod: {
+    commissionTiers: Array<{
+      minInstallments: number | null
+      maxInstallments: number | null
+      percentageFee: unknown
+      fixedFee: unknown
+    }>
+  },
+  selectedInstallments: number | null | undefined
+) {
+  const commissionTiers = paymentMethod.commissionTiers.map((t) => ({
+    minInstallments: t.minInstallments,
+    maxInstallments: t.maxInstallments,
+    percentageFee: Number(t.percentageFee),
+    fixedFee: Number(t.fixedFee),
+  }))
+
+  return computePaymentCommission(amount, commissionTiers, selectedInstallments)
+}
+
+async function createPaymentRecord(
+  tx: PrismaTransaction,
+  input: CreatePaymentInput,
+  allocations: NormalizedAllocation[],
+  commissionResult: ReturnType<typeof computePaymentCommission>
+) {
+  return tx.payment.create({
+    data: {
+      type: input.type,
+      customerId: input.customerId,
+      amount: money(input.amount),
+      currency: input.currency,
+      date: input.date,
+      paymentMethodId: input.paymentMethodId,
+      reference: input.reference?.trim() || null,
+      notes: input.notes?.trim() || null,
+      selectedInstallments: input.selectedInstallments || null,
+      commissionAmount: commissionResult ? money(commissionResult.commissionAmount) : null,
+      netAmount: commissionResult ? money(commissionResult.netAmount) : null,
+      commissionRate: commissionResult ? money(commissionResult.percentageFee) : null,
+      commissionFixed: commissionResult ? money(commissionResult.fixedFee) : null,
+      allocations: {
+        create: allocations
+          .filter((a) => greaterThanMoney(a.allocatedAmount, 0))
+          .map((a) => ({
+            projectId: a.projectId,
+            allocatedAmount: money(a.allocatedAmount),
+          })),
+      },
+      installments: generatePrismaInstallmentsCreate(
+        input.amount,
+        input.selectedInstallments,
+        input.date,
+        Decimal
+      ),
+    },
+    include: {
+      customer: { select: { id: true, name: true, phone: true } },
+      paymentMethod: { select: { id: true, name: true, icon: true } },
+      allocations: {
+        select: {
+          id: true,
+          projectId: true,
+          allocatedAmount: true,
+          project: {
+            select: {
+              id: true,
+              projectNumber: true,
+              projectName: true,
+              totalAmount: true,
+              currency: true,
+            },
+          },
+        },
+      },
+      installments: {
+        select: {
+          id: true,
+          installmentNumber: true,
+          amount: true,
+          netAmount: true,
+          dueDate: true,
+        },
+        orderBy: { installmentNumber: 'asc' },
+      },
+    },
+  })
+}
+
+async function updateInstallmentNetAmounts(
+  tx: PrismaTransaction,
+  payment: Awaited<ReturnType<typeof createPaymentRecord>>,
+  commissionResult: ReturnType<typeof computePaymentCommission>,
+  paymentLogger: LoggerLike
+) {
+  if (!commissionResult || payment.installments.length <= 1) return
+
+  const installmentAmounts = payment.installments.map((inst) => moneyToNumber(inst.amount))
+  const netAmounts = distributeNetToInstallments(installmentAmounts, commissionResult.netAmount)
+
+  await Promise.all(
+    payment.installments.map((inst, idx) =>
+      tx.installment.update({
+        where: { id: inst.id },
+        data: { netAmount: money(netAmounts[idx]) },
+      })
+    )
+  )
+
+  paymentLogger.debug(
+    { installmentCount: payment.installments.length },
+    'Net amounts distributed to installments'
+  )
+}
+
+async function applyCustomerCredit(params: {
+  tx: PrismaTransaction
+  customerId: string
+  amount: number
+  paymentId: string
+  paymentDate: Date
+  allocations: NormalizedAllocation[]
+  initialFinancials: Awaited<ReturnType<typeof getProjectsFinancials>>
+  totalCreditToApply: number
+  paymentLogger: LoggerLike
+}) {
+  const appliedCreditTransactionByProject = new Map<string, string>()
+  if (!greaterThanMoney(params.totalCreditToApply, 0)) return appliedCreditTransactionByProject
+
+  const locked = await lockCustomerCreditBalance(params.customerId, params.tx)
+  if (!locked) {
+    throw new BusinessError('Cliente no encontrado durante validación de crédito', 404)
+  }
+
+  const customerCreditBalance = await getCustomerCreditBalance(params.customerId, params.tx)
+
+  if (greaterThanMoneyWithTolerance(params.totalCreditToApply, customerCreditBalance)) {
+    throw new BusinessError(
+      `Crédito insuficiente. Disponible: ${formatCurrency(customerCreditBalance, 'CLP')}`,
+      400
+    )
+  }
+
+  for (const allocation of params.allocations) {
+    const creditAmount = allocation.creditApplied
+    if (!greaterThanMoney(creditAmount, 0)) continue
+
+    const projectFinancials = params.initialFinancials.get(allocation.projectId)
+    if (!projectFinancials) {
+      throw new BusinessError('Proyecto no encontrado durante validación de crédito', 404)
+    }
+
+    const balanceAfterCash = moneyToNumber(
+      maxMoney(0, subtractMoney(projectFinancials.balance, allocation.allocatedAmount))
+    )
+    const creditValidation = canApplyCredit(creditAmount, customerCreditBalance, balanceAfterCash)
+    if (!creditValidation.valid) {
+      throw new BusinessError(creditValidation.error!, 400)
+    }
+  }
+
+  const rows = params.allocations
+    .filter((allocation) => greaterThanMoney(allocation.creditApplied, 0))
+    .map((allocation) => {
+      const creditTransactionId = randomUUID()
+      appliedCreditTransactionByProject.set(allocation.projectId, creditTransactionId)
+
+      return {
+        id: creditTransactionId,
+        customerId: params.customerId,
+        amount: negateMoney(allocation.creditApplied),
+        type: 'APPLIED' as const,
+        description: `Crédito aplicado al pago ${params.paymentId.slice(0, 8)}`,
+        paymentId: params.paymentId,
+        projectId: allocation.projectId,
+        metadata: {
+          paymentAmount: params.amount,
+          creditApplied: allocation.creditApplied,
+          paymentDate: params.paymentDate.toISOString(),
+        },
+      }
+    })
+
+  if (rows.length > 0) {
+    await (params.tx as ProjectApplicationWriter).creditTransaction.createMany({ data: rows })
+  }
+
+  params.paymentLogger.info(
+    {
+      paymentId: params.paymentId,
+      creditApplied: params.totalCreditToApply,
+      previousCredit: customerCreditBalance,
+    },
+    'Credit applied successfully in transaction'
+  )
+
+  return appliedCreditTransactionByProject
+}
+
+async function createProjectApplications(params: {
+  tx: PrismaTransaction
+  projects: Array<{ id: string; customerId: string }>
+  payment: Awaited<ReturnType<typeof createPaymentRecord>>
+  allocations: NormalizedAllocation[]
+  initialFinancials: Awaited<ReturnType<typeof getProjectsFinancials>>
+  appliedCreditTransactionByProject: Map<string, string>
+}) {
+  const creditByProject = new Map(
+    params.allocations
+      .filter((allocation) => greaterThanMoney(allocation.creditApplied, 0))
+      .map((allocation) => [allocation.projectId, allocation.creditApplied])
+  )
+  const paymentAllocationByProject = new Map(
+    params.payment.allocations.map((allocation) => [
+      allocation.project.id,
+      { id: allocation.id, amount: allocation.allocatedAmount },
+    ])
+  )
+  const rows: ProjectApplicationCreateManyRow[] = []
+
+  for (const project of params.projects) {
+    const startingFinancials = params.initialFinancials.get(project.id)
+    if (!startingFinancials) {
+      throw new BusinessError('Proyecto no encontrado durante aplicación de pago', 404)
+    }
+
+    const allocation = paymentAllocationByProject.get(project.id)
+    const cashAmount = allocation?.amount ?? 0
+    const creditAmount = creditByProject.get(project.id) ?? 0
+
+    if (allocation && greaterThanMoney(cashAmount, 0)) {
+      rows.push({
+        projectId: project.id,
+        customerId: project.customerId,
+        paymentId: params.payment.id,
+        paymentAllocationId: allocation.id,
+        amount: money(cashAmount),
+        sourceType: 'CASH',
+      })
+    }
+
+    if (greaterThanMoney(creditAmount, 0)) {
+      const creditTransactionId = params.appliedCreditTransactionByProject.get(project.id)
+      if (!creditTransactionId) {
+        throw new BusinessError('No se pudo registrar la aplicación de crédito', 500)
+      }
+
+      rows.push({
+        projectId: project.id,
+        customerId: project.customerId,
+        paymentId: params.payment.id,
+        creditTransactionId,
+        amount: money(creditAmount),
+        sourceType: 'CUSTOMER_CREDIT',
+      })
+    }
+  }
+
+  if (rows.length > 0) {
+    await (params.tx as ProjectApplicationWriter).projectApplication.createMany({ data: rows })
+  }
+}
+
+async function createOverpaymentCredits(params: {
+  tx: PrismaTransaction
+  projects: Array<{ id: string; customerId: string; projectNumber: string }>
+  allocations: NormalizedAllocation[]
+  initialFinancials: Awaited<ReturnType<typeof getProjectsFinancials>>
+  paymentId: string
+  amount: number
+  paymentDate: Date
+  paymentLogger: LoggerLike
+}) {
+  const creditByProject = new Map(
+    params.allocations
+      .filter((allocation) => greaterThanMoney(allocation.creditApplied, 0))
+      .map((allocation) => [allocation.projectId, allocation.creditApplied])
+  )
+  const allocationByProject = new Map(
+    params.allocations.map((allocation) => [allocation.projectId, allocation.allocatedAmount])
+  )
+  const rows: CreditTransactionCreateManyRow[] = []
+
+  for (const project of params.projects) {
+    const startingFinancials = params.initialFinancials.get(project.id)
+    if (!startingFinancials) {
+      throw new BusinessError('Proyecto no encontrado durante validación de sobrepago', 404)
+    }
+
+    const allocatedAmount = allocationByProject.get(project.id) ?? 0
+    const creditAppliedToProject = creditByProject.get(project.id) ?? 0
+    const cashCapacityAfterCredit = maxMoney(
+      0,
+      subtractMoney(startingFinancials.balance, creditAppliedToProject)
+    )
+    const overpaymentAmount = maxMoney(0, subtractMoney(allocatedAmount, cashCapacityAfterCredit))
+
+    if (!greaterThanMoney(overpaymentAmount, 0)) continue
+
+    const rawBalanceAfterPayment = subtractMoney(
+      subtractMoney(startingFinancials.rawBalance, allocatedAmount),
+      creditAppliedToProject
+    )
+    const rawBalanceAfterPaymentNumber = moneyToNumber(rawBalanceAfterPayment)
+    const overpaymentAmountNumber = moneyToNumber(overpaymentAmount)
+
+    params.paymentLogger.info(
+      {
+        projectId: project.id,
+        projectNumber: project.projectNumber,
+        previousBalance: startingFinancials.balance,
+        rawBalanceAfterPayment: rawBalanceAfterPaymentNumber,
+        overpaymentAmount: overpaymentAmountNumber,
+      },
+      'Overpayment detected - converting to customer credit'
+    )
+
+    rows.push({
+      id: randomUUID(),
+      customerId: project.customerId,
+      amount: money(overpaymentAmount),
+      type: 'OVERPAYMENT',
+      description: `Sobrepago generado en proyecto P-${project.projectNumber}`,
+      paymentId: params.paymentId,
+      projectId: project.id,
+      metadata: {
+        paymentAmount: params.amount,
+        creditApplied: creditAppliedToProject,
+        projectBalance: rawBalanceAfterPaymentNumber,
+        overpaymentAmount: overpaymentAmountNumber,
+        paymentDate: params.paymentDate.toISOString(),
+      },
+    })
+
+    params.paymentLogger.info(
+      {
+        projectId: project.id,
+        projectNumber: project.projectNumber,
+        creditGenerated: overpaymentAmountNumber,
+      },
+      'Overpayment credit generated successfully in transaction'
+    )
+  }
+
+  if (rows.length > 0) {
+    await (params.tx as ProjectApplicationWriter).creditTransaction.createMany({ data: rows })
+  }
+}
+
 export async function createPayment(input: CreatePaymentInput, logger: LoggerLike) {
   const {
     type,
@@ -201,8 +552,6 @@ export async function createPayment(input: CreatePaymentInput, logger: LoggerLik
     currency,
     date,
     paymentMethodId,
-    reference,
-    notes,
     allocations: rawAllocations,
     selectedInstallments,
   } = input
@@ -235,13 +584,7 @@ export async function createPayment(input: CreatePaymentInput, logger: LoggerLik
   paymentLogger.debug('All validations passed')
 
   const paymentDate = date
-  const commissionTiers = paymentMethod.commissionTiers.map((t) => ({
-    minInstallments: t.minInstallments,
-    maxInstallments: t.maxInstallments,
-    percentageFee: Number(t.percentageFee),
-    fixedFee: Number(t.fixedFee),
-  }))
-  const commissionResult = computePaymentCommission(amount, commissionTiers, selectedInstallments)
+  const commissionResult = buildCommissionResult(amount, paymentMethod, selectedInstallments)
 
   paymentLogger.info(
     {
@@ -258,298 +601,45 @@ export async function createPayment(input: CreatePaymentInput, logger: LoggerLik
   const transactionStartedAt = Date.now()
   const payment = await prisma.$transaction(async (tx: PrismaTransaction) => {
     const initialFinancials = await getProjectsFinancials(projectIds, tx)
-
-    const newPayment = await tx.payment.create({
-      data: {
-        type,
-        customerId,
-        amount: money(amount),
-        currency,
-        date: paymentDate,
-        paymentMethodId,
-        reference: reference?.trim() || null,
-        notes: notes?.trim() || null,
-        selectedInstallments: selectedInstallments || null,
-        commissionAmount: commissionResult ? money(commissionResult.commissionAmount) : null,
-        netAmount: commissionResult ? money(commissionResult.netAmount) : null,
-        commissionRate: commissionResult ? money(commissionResult.percentageFee) : null,
-        commissionFixed: commissionResult ? money(commissionResult.fixedFee) : null,
-        allocations: {
-          create: allocations
-            .filter((a) => greaterThanMoney(a.allocatedAmount, 0))
-            .map((a) => ({
-              projectId: a.projectId,
-              allocatedAmount: money(a.allocatedAmount),
-            })),
-        },
-        installments: generatePrismaInstallmentsCreate(
-          amount,
-          selectedInstallments,
-          paymentDate,
-          Decimal
-        ),
-      },
-      include: {
-        customer: { select: { id: true, name: true, phone: true } },
-        paymentMethod: { select: { id: true, name: true, icon: true } },
-        allocations: {
-          select: {
-            id: true,
-            projectId: true,
-            allocatedAmount: true,
-            project: {
-              select: {
-                id: true,
-                projectNumber: true,
-                projectName: true,
-                totalAmount: true,
-                currency: true,
-              },
-            },
-          },
-        },
-        installments: {
-          select: {
-            id: true,
-            installmentNumber: true,
-            amount: true,
-            netAmount: true,
-            dueDate: true,
-          },
-          orderBy: { installmentNumber: 'asc' },
-        },
-      },
-    })
+    const newPayment = await createPaymentRecord(tx, input, allocations, commissionResult)
 
     paymentLogger.debug({ paymentId: newPayment.id }, 'Payment created in transaction')
 
-    if (commissionResult && newPayment.installments.length > 1) {
-      const installmentAmounts = newPayment.installments.map((inst) => moneyToNumber(inst.amount))
-      const netAmounts = distributeNetToInstallments(installmentAmounts, commissionResult.netAmount)
+    await updateInstallmentNetAmounts(tx, newPayment, commissionResult, paymentLogger)
 
-      await Promise.all(
-        newPayment.installments.map((inst, idx) =>
-          tx.installment.update({
-            where: { id: inst.id },
-            data: { netAmount: money(netAmounts[idx]) },
-          })
-        )
-      )
+    const appliedCreditTransactionByProject = await applyCustomerCredit({
+      tx,
+      customerId,
+      amount,
+      paymentId: newPayment.id,
+      paymentDate,
+      allocations,
+      initialFinancials,
+      totalCreditToApply,
+      paymentLogger,
+    })
 
-      paymentLogger.debug(
-        { installmentCount: newPayment.installments.length },
-        'Net amounts distributed to installments'
-      )
-    }
-
-    const creditByProject = new Map<string, number>(
-      allocations
-        .filter((allocation) => greaterThanMoney(allocation.creditApplied, 0))
-        .map((allocation) => [allocation.projectId, allocation.creditApplied])
-    )
-    const appliedCreditTransactionByProject = new Map<string, string>()
-
-    if (greaterThanMoney(totalCreditToApply, 0)) {
-      const locked = await lockCustomerCreditBalance(customerId, tx)
-      if (!locked) {
-        throw new BusinessError('Cliente no encontrado durante validación de crédito', 404)
-      }
-
-      const customerCreditBalance = await getCustomerCreditBalance(customerId, tx)
-
-      if (greaterThanMoneyWithTolerance(totalCreditToApply, customerCreditBalance)) {
-        throw new BusinessError(
-          `Crédito insuficiente. Disponible: ${formatCurrency(customerCreditBalance, 'CLP')}`,
-          400
-        )
-      }
-
-      for (const allocation of allocations) {
-        const creditAmount = allocation.creditApplied
-        if (!greaterThanMoney(creditAmount, 0)) continue
-
-        const projectFinancials = initialFinancials.get(allocation.projectId)
-        if (!projectFinancials) {
-          throw new BusinessError('Proyecto no encontrado durante validación de crédito', 404)
-        }
-
-        const balanceAfterCash = moneyToNumber(
-          maxMoney(0, subtractMoney(projectFinancials.balance, allocation.allocatedAmount))
-        )
-        const creditValidation = canApplyCredit(
-          creditAmount,
-          customerCreditBalance,
-          balanceAfterCash
-        )
-        if (!creditValidation.valid) {
-          throw new BusinessError(creditValidation.error!, 400)
-        }
-      }
-
-      const appliedCreditRows = allocations
-        .filter((allocation) => greaterThanMoney(allocation.creditApplied, 0))
-        .map((allocation) => {
-          const creditTransactionId = randomUUID()
-          appliedCreditTransactionByProject.set(allocation.projectId, creditTransactionId)
-
-          return {
-            id: creditTransactionId,
-            customerId,
-            amount: negateMoney(allocation.creditApplied),
-            type: 'APPLIED' as const,
-            description: `Crédito aplicado al pago ${newPayment.id.slice(0, 8)}`,
-            paymentId: newPayment.id,
-            projectId: allocation.projectId,
-            metadata: {
-              paymentAmount: amount,
-              creditApplied: allocation.creditApplied,
-              paymentDate: paymentDate.toISOString(),
-            },
-          }
-        })
-
-      if (appliedCreditRows.length > 0) {
-        await (tx as ProjectApplicationWriter).creditTransaction.createMany({
-          data: appliedCreditRows,
-        })
-      }
-
-      paymentLogger.info(
-        {
-          paymentId: newPayment.id,
-          creditApplied: totalCreditToApply,
-          previousCredit: customerCreditBalance,
-        },
-        'Credit applied successfully in transaction'
-      )
-    }
-
-    const projectApplicationRows: ProjectApplicationCreateManyRow[] = []
-    const paymentAllocationByProject = new Map(
-      newPayment.allocations.map((allocation) => [
-        allocation.project.id,
-        { id: allocation.id, amount: allocation.allocatedAmount },
-      ])
-    )
-
-    for (const project of projects) {
-      const startingFinancials = initialFinancials.get(project.id)
-      if (!startingFinancials) {
-        throw new BusinessError('Proyecto no encontrado durante aplicación de pago', 404)
-      }
-
-      const allocation = paymentAllocationByProject.get(project.id)
-      const cashAmount = allocation?.amount ?? 0
-      const creditAmount = creditByProject.get(project.id) ?? 0
-      const cashApplicationAmount = cashAmount
-
-      if (allocation && greaterThanMoney(cashApplicationAmount, 0)) {
-        projectApplicationRows.push({
-          projectId: project.id,
-          customerId: project.customerId,
-          paymentId: newPayment.id,
-          paymentAllocationId: allocation.id,
-          amount: money(cashApplicationAmount),
-          sourceType: 'CASH',
-        })
-      }
-
-      if (greaterThanMoney(creditAmount, 0)) {
-        const appliedCreditTransactionId = appliedCreditTransactionByProject.get(project.id)
-        if (!appliedCreditTransactionId) {
-          throw new BusinessError('No se pudo registrar la aplicación de crédito', 500)
-        }
-
-        projectApplicationRows.push({
-          projectId: project.id,
-          customerId: project.customerId,
-          paymentId: newPayment.id,
-          creditTransactionId: appliedCreditTransactionId,
-          amount: money(creditAmount),
-          sourceType: 'CUSTOMER_CREDIT',
-        })
-      }
-    }
-
-    if (projectApplicationRows.length > 0) {
-      await (tx as ProjectApplicationWriter).projectApplication.createMany({
-        data: projectApplicationRows,
-      })
-    }
+    await createProjectApplications({
+      tx,
+      projects,
+      payment: newPayment,
+      allocations,
+      initialFinancials,
+      appliedCreditTransactionByProject,
+    })
 
     paymentLogger.debug({ projectIds }, 'Checking for overpayments in transaction')
 
-    const allocationByProject = new Map(
-      allocations.map((allocation) => [allocation.projectId, allocation.allocatedAmount])
-    )
-    const overpaymentRows: CreditTransactionCreateManyRow[] = []
-
-    for (const project of projects) {
-      const startingFinancials = initialFinancials.get(project.id)
-      if (!startingFinancials) {
-        throw new BusinessError('Proyecto no encontrado durante validación de sobrepago', 404)
-      }
-
-      const allocatedAmount = allocationByProject.get(project.id) ?? 0
-      const creditAppliedToProject = creditByProject.get(project.id) ?? 0
-      const cashCapacityAfterCredit = maxMoney(
-        0,
-        subtractMoney(startingFinancials.balance, creditAppliedToProject)
-      )
-      const overpaymentAmount = maxMoney(0, subtractMoney(allocatedAmount, cashCapacityAfterCredit))
-
-      if (greaterThanMoney(overpaymentAmount, 0)) {
-        const rawBalanceAfterPayment = subtractMoney(
-          subtractMoney(startingFinancials.rawBalance, allocatedAmount),
-          creditAppliedToProject
-        )
-        const rawBalanceAfterPaymentNumber = moneyToNumber(rawBalanceAfterPayment)
-        const overpaymentAmountNumber = moneyToNumber(overpaymentAmount)
-
-        paymentLogger.info(
-          {
-            projectId: project.id,
-            projectNumber: project.projectNumber,
-            previousBalance: startingFinancials.balance,
-            rawBalanceAfterPayment: rawBalanceAfterPaymentNumber,
-            overpaymentAmount: overpaymentAmountNumber,
-          },
-          'Overpayment detected - converting to customer credit'
-        )
-
-        overpaymentRows.push({
-          id: randomUUID(),
-          customerId: project.customerId,
-          amount: money(overpaymentAmount),
-          type: 'OVERPAYMENT',
-          description: `Sobrepago generado en proyecto P-${project.projectNumber}`,
-          paymentId: newPayment.id,
-          projectId: project.id,
-          metadata: {
-            paymentAmount: amount,
-            creditApplied: creditAppliedToProject,
-            projectBalance: rawBalanceAfterPaymentNumber,
-            overpaymentAmount: overpaymentAmountNumber,
-            paymentDate: paymentDate.toISOString(),
-          },
-        })
-
-        paymentLogger.info(
-          {
-            projectId: project.id,
-            projectNumber: project.projectNumber,
-            creditGenerated: overpaymentAmountNumber,
-          },
-          'Overpayment credit generated successfully in transaction'
-        )
-      }
-    }
-
-    if (overpaymentRows.length > 0) {
-      await (tx as ProjectApplicationWriter).creditTransaction.createMany({
-        data: overpaymentRows,
-      })
-    }
+    await createOverpaymentCredits({
+      tx,
+      projects,
+      allocations,
+      initialFinancials,
+      paymentId: newPayment.id,
+      amount,
+      paymentDate,
+      paymentLogger,
+    })
 
     return newPayment
   })
