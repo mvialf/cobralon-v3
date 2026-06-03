@@ -145,9 +145,9 @@ El credito aplicado debe enviarse solo en `allocations[].creditApplied`.
 `Project.balance` sigue en el schema y en algunos comentarios/tests, aunque las lecturas
 criticas ya usan `ProjectFinancials`.
 
-Decision recomendada: no eliminarlo del schema en la primera fase, pero prohibir su uso
-en codigo nuevo y documentarlo como legacy. La eliminacion fisica requiere una fase con
-migracion y auditoria de datos.
+Decision vigente: no eliminarlo del schema en la primera fase, pero prohibir su uso en
+codigo nuevo y documentarlo como legacy. La eliminacion fisica queda para una fase futura
+con migracion, auditoria de datos y aprobacion explicita.
 
 ### `POST /api/payments` como caso de uso implicito
 
@@ -164,7 +164,8 @@ quedo como adaptador HTTP.
 la suma de allocations coincida con `Payment.amount`. Ese parametro ya no aporta a la
 regla porque credito aplicado no es dinero nuevo.
 
-Decision recomendada: simplificar la firma despues de eliminar `creditApplied` top-level.
+Pendiente menor: simplificar la firma en una limpieza posterior, porque `creditApplied`
+top-level ya fue eliminado del contrato API.
 
 ## Complejidad Necesaria
 
@@ -263,28 +264,24 @@ Decision vigente: no eliminar `ProjectApplication` en la primera fase.
 2. Aceptar balances calculados por el cliente como verdad.
 3. Eliminar `ProjectApplication` antes de adelgazar `POST /api/payments`.
 4. Eliminar `Project.balance` del schema sin auditoria de datos legacy.
-5. Mantener compatibilidad top-level `creditApplied` mientras se agregan nuevas reglas.
+5. Reintroducir compatibilidad top-level `creditApplied` en clientes o routes nuevas.
 6. Refactorizar pagos sin tests de reversa de credito y sobrepago.
 
-## Simplificaciones Recomendadas
+## Estado De Simplificaciones
 
-Orden propuesto:
+Completado en la primera fase:
 
-1. Registrar ADR de simplificacion financiera.
-2. Extraer calculo puro de snapshot de balance de proyecto.
-3. Eliminar `creditApplied` top-level del contrato API.
-4. Extraer `createPayment` como caso de uso financiero.
-5. Mantener `ProjectApplication` durante esa extraccion.
-6. Re-evaluar `ProjectApplication` solo con el caso de uso ya aislado.
-7. Planificar la eliminacion fisica de `Project.balance` en una fase posterior.
+- Registrar ADR de simplificacion financiera.
+- Extraer calculo puro de snapshot de balance de proyecto.
+- Eliminar `creditApplied` top-level del contrato API.
+- Extraer `createPayment` como caso de uso financiero.
+- Mantener `ProjectApplication` durante esa extraccion.
 
-Estado de primera fase:
+Pendiente para fases posteriores:
 
-- ADR de simplificacion financiera registrado.
-- Calculo puro de balance extraido a `lib/business-logic/project-balance.ts`.
-- `creditApplied` top-level eliminado del contrato API; el schema ahora rechaza ese campo para
-  evitar perdida silenciosa de credito.
-- Creacion de pagos extraida a `lib/use-cases/payments/create-payment.ts`.
+- Re-evaluar `ProjectApplication` solo con evidencia nueva y el caso de uso ya aislado.
+- Planificar la eliminacion fisica de `Project.balance` despues de una auditoria de datos.
+- Diagnosticar warnings legacy con una ejecucion actual de `npm run audit:important-data`.
 
 ## Criterio de Exito
 

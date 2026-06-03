@@ -10,6 +10,30 @@
 
 ---
 
+## Estado Actual
+
+Estado al 2026-06-03: **completado**.
+
+Este plan fue ejecutado por los commits:
+
+- `eb64e7f` - tests financieros del caso de uso.
+- `c401741` - separacion de validaciones y carga inicial.
+- `1fe3498` - modularizacion interna de `createPayment`.
+- `f4539da` - separacion entre contrato HTTP y logica financiera.
+- `430d1d9` - documentacion de la modularizacion.
+
+Los checkboxes historicos se mantienen como bitacora, pero no deben interpretarse como
+tareas pendientes. El estado vigente es:
+
+- `createPayment(input, logger)` conserva la API publica.
+- `POST /api/payments` conserva el contrato externo y actua como adaptador HTTP.
+- Los helpers privados viven en `lib/use-cases/payments/create-payment.ts`.
+- La cobertura financiera critica vive en `lib/use-cases/payments/__tests__/create-payment.test.ts`.
+- `app/api/payments/__tests__/route.test.ts` cubre contrato HTTP, validacion y traduccion de errores.
+- No se modifico DB, `ProjectApplication` ni `Project.balance`.
+
+---
+
 ## Non-Goals
 
 - No modificar `prisma/schema.prisma`.
@@ -1155,4 +1179,3 @@ Expected: working tree limpio y commits de la fase visibles.
 - [ ] `ProjectApplication` sigue registrando `CASH` y `CUSTOMER_CREDIT`.
 - [ ] No hay migraciones DB.
 - [ ] `npm run lint` y `npm run typecheck` pasan.
-

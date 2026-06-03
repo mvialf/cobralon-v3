@@ -146,6 +146,6 @@ API:
 La auditoria local mas reciente documentada reporto:
 
 - `0 critical`
-- `10 warning` en `legacy-project-balance-differs-from-financials`
+- `18 warning` en `legacy-project-balance-differs-from-financials`
 
 Esto significa que no hay bloqueo critico conocido, pero aun existen diferencias legacy entre saldos historicos y `ProjectFinancials` que deben tratarse como deuda de datos, no como fuente alternativa de verdad.

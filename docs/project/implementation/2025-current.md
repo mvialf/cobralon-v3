@@ -11,6 +11,8 @@ Este documento resume implementaciones que siguen siendo relevantes para mantene
 - `Project.balance` y saldos legacy no deben usarse como fuente principal en codigo nuevo.
 - `creditApplied` API top-level fue retirado; credito aplicado debe ir por allocation.
 - `createPayment` separa el caso de uso financiero de `POST /api/payments`.
+- La auditoria financiera read-only de proyecto expone `ProjectFinancials` y
+  `ProjectApplication` sin crear ni recalcular datos desde frontend.
 
 Archivos clave:
 
@@ -25,6 +27,7 @@ Archivos clave:
 Documentacion:
 
 - [Auditoria del modelo financiero](../financial-model-audit.md)
+- [Conciliacion de balances legacy](../legacy-balance-reconciliation.md)
 - [ADR-020](../decisions/020-financial-simplification.md)
 
 ## Pagos, cuotas y comisiones
@@ -102,6 +105,6 @@ Documentacion:
 Ultima auditoria local conocida:
 
 - `0 critical`
-- `10 warning` en `legacy-project-balance-differs-from-financials`
+- `18 warning` en `legacy-project-balance-differs-from-financials`
 
 Si se vuelve a ejecutar `npm run audit:important-data`, no commitear reportes generados en `backups/`.

@@ -144,6 +144,6 @@ Migraciones relevantes:
 La ultima auditoria local conocida con `npm run audit:important-data` reporto:
 
 - `0 critical`
-- `10 warning` en `legacy-project-balance-differs-from-financials`
+- `18 warning` en `legacy-project-balance-differs-from-financials`
 
 El reporte generado por el script no debe commitearse en `backups/`.

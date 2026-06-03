@@ -10,6 +10,37 @@
 
 ---
 
+## Estado Actual
+
+Estado al 2026-06-03: **completado como primera fase**.
+
+Este plan quedo ejecutado por commits posteriores al documento original. Los checkboxes
+historicos se mantienen como bitacora de ejecucion, pero no representan trabajo pendiente.
+La fuente vigente del estado implementado esta en:
+
+- `docs/project/financial-model-audit.md`
+- `docs/project/decisions/020-financial-simplification.md`
+- `docs/project/implementation/2025-current.md`
+
+Implementado:
+
+- Auditoria del modelo financiero creada.
+- ADR-020 registrado.
+- `lib/business-logic/project-balance.ts` extraido con tests.
+- `lib/business-logic/project-financials.ts` delega calculos derivados al snapshot puro.
+- `creditApplied` top-level eliminado del contrato API.
+- `POST /api/payments` delegado a `lib/use-cases/payments/create-payment.ts`.
+- `ProjectApplication` se mantiene y queda documentado como decision vigente.
+- Arquitectura e implementacion vigente actualizadas.
+
+Pendiente fuera de esta primera fase:
+
+- Eliminacion fisica de `Project.balance` del schema.
+- Reconciliacion de datos legacy con reporte actual y aprobacion explicita.
+- Re-evaluacion de `ProjectApplication` solo si aparece evidencia nueva.
+
+---
+
 ## Scope And Principles
 
 Este plan no es una optimización de bundle ni una limpieza cosmética. Es una simplificación de dominio financiero.
@@ -1018,4 +1049,3 @@ git commit -m "docs: registrar simplificacion financiera"
 - Risk control: each task has focused tests and commits.
 - Business safety: backend remains authoritative for financial persistence.
 - Known gap: full schema migration from `ProjectApplication` to a different ledger model is intentionally deferred until after use-case extraction and audit.
-
