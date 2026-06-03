@@ -11,7 +11,7 @@ import {
 import { ViewProjectDetailsDialog } from '@/components/dialogs/projects/view-project-details-dialog'
 import { ViewProjectPaymentsDialog } from '@/components/dialogs/projects/view-project-payments-dialog'
 import { EditProjectDialog } from '@/components/dialogs/projects/edit-project-dialog'
-import { PaymentToCustomerDialog } from '@/components/dialogs/payments/payment-to-customer-dialog'
+import { PaymentToProjectDialog } from '@/components/dialogs/payments/payment-to-project-dialog'
 import { ProjectAdjustmentDialog } from '@/components/dialogs/projects/project-adjustment-dialog'
 import { ProjectFinancialAuditDialog } from '@/components/dialogs/projects/project-financial-audit-dialog'
 import { ConfirmDeleteDialog } from '@/components/dialogs/confirm-delete-dialog'
@@ -161,10 +161,9 @@ export function ProjectActionsCell({ project, onDataChanged }: ProjectActionsCel
       />
 
       {/* Dialog para registrar pago */}
-      <PaymentToCustomerDialog
+      <PaymentToProjectDialog
         open={paymentDialogOpen}
         onOpenChange={setPaymentDialogOpen}
-        preselectedCustomerId={project.customer.id}
         preselectedProjectId={project.id}
         onSuccess={() => {
           // Refetch la tabla cuando se registra un pago exitosamente
