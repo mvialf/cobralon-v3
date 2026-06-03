@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { Pencil, Trash2, Eye, Receipt, DollarSign, BadgePercent } from 'lucide-react'
+import { Pencil, Trash2, Eye, Receipt, DollarSign, BadgePercent, FileSearch } from 'lucide-react'
 import { DataTableDropdown } from '@/components/data-table'
 import {
   DropdownMenuItem,
@@ -13,6 +13,7 @@ import { ViewProjectPaymentsDialog } from '@/components/dialogs/projects/view-pr
 import { EditProjectDialog } from '@/components/dialogs/projects/edit-project-dialog'
 import { PaymentToCustomerDialog } from '@/components/dialogs/payments/payment-to-customer-dialog'
 import { ProjectAdjustmentDialog } from '@/components/dialogs/projects/project-adjustment-dialog'
+import { ProjectFinancialAuditDialog } from '@/components/dialogs/projects/project-financial-audit-dialog'
 import { ConfirmDeleteDialog } from '@/components/dialogs/confirm-delete-dialog'
 import { FINANCIAL } from '@/lib/constants/financial-constants'
 import { toast } from 'sonner'
@@ -31,6 +32,7 @@ interface ProjectActionsCellProps {
 export function ProjectActionsCell({ project, onDataChanged }: ProjectActionsCellProps) {
   const [detailsOpen, setDetailsOpen] = useState(false)
   const [paymentsOpen, setPaymentsOpen] = useState(false)
+  const [financialAuditOpen, setFinancialAuditOpen] = useState(false)
   const [paymentDialogOpen, setPaymentDialogOpen] = useState(false)
   const [adjustmentDialogOpen, setAdjustmentDialogOpen] = useState(false)
   const [editDialogOpen, setEditDialogOpen] = useState(false)
@@ -76,6 +78,12 @@ export function ProjectActionsCell({ project, onDataChanged }: ProjectActionsCel
         <DropdownMenuItem onClick={() => setPaymentsOpen(true)}>
           <Receipt className="mr-2 h-4 w-4" />
           Ver pagos
+        </DropdownMenuItem>
+
+        {/* Auditoria financiera */}
+        <DropdownMenuItem onClick={() => setFinancialAuditOpen(true)}>
+          <FileSearch className="mr-2 h-4 w-4" />
+          Auditoria financiera
         </DropdownMenuItem>
 
         {/* Registrar pago */}
@@ -136,6 +144,12 @@ export function ProjectActionsCell({ project, onDataChanged }: ProjectActionsCel
         projectId={project.id}
         open={paymentsOpen}
         onOpenChange={setPaymentsOpen}
+      />
+
+      <ProjectFinancialAuditDialog
+        projectId={project.id}
+        open={financialAuditOpen}
+        onOpenChange={setFinancialAuditOpen}
       />
 
       {/* Dialog para editar proyecto */}
