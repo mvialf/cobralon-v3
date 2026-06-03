@@ -118,7 +118,7 @@ async function getRevenueChartData() {
   const monthFormatter = new Intl.DateTimeFormat('es-CL', { month: 'short' })
   const buckets = new Map<
     string,
-    { month: string; label: string; sales: number; revenue: number }
+    { month: string; label: string; sales: number; salesSubtotal: number; revenue: number }
   >()
   const cursor = new Date(start)
 
@@ -128,6 +128,7 @@ async function getRevenueChartData() {
       month,
       label: monthFormatter.format(cursor).replace('.', ''),
       sales: 0,
+      salesSubtotal: 0,
       revenue: 0,
     })
     cursor.setMonth(cursor.getMonth() + 1)
@@ -136,7 +137,7 @@ async function getRevenueChartData() {
   const [projects, payments] = await Promise.all([
     prisma.project.findMany({
       where: { date: { gte: start, lte: end } },
-      select: { date: true, totalAmount: true },
+      select: { date: true, subtotal: true, totalAmount: true },
     }),
     prisma.payment.findMany({
       where: { date: { gte: start, lte: end } },
@@ -149,6 +150,7 @@ async function getRevenueChartData() {
 
     if (bucket) {
       bucket.sales += Number(project.totalAmount)
+      bucket.salesSubtotal += Number(project.subtotal)
     }
   }
 
