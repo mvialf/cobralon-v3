@@ -6,6 +6,34 @@ import { parsePaginationParams, buildPaginationResponse } from '@/lib/utils/pagi
 import { getInstallmentStatus } from '@/lib/business-logic/installments'
 import { getEndOfTodayAppTZ } from '@/lib/timezone'
 
+const DEFAULT_MONTHLY_TOTALS_CURRENCY = 'CLP'
+
+function getMonthKey(date: Date): string {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`
+}
+
+function getMonthRangeFromOffset(offset: number): {
+  monthKey: string
+  startDate: Date
+  endDate: Date
+} {
+  const now = new Date()
+  const startDate = new Date(now.getFullYear(), now.getMonth() + offset, 1)
+  const endDate = new Date(now.getFullYear(), now.getMonth() + offset + 1, 0, 23, 59, 59, 999)
+
+  return {
+    monthKey: getMonthKey(startDate),
+    startDate,
+    endDate,
+  }
+}
+
+function parseMonthlyTotalsMonths(value: string): number {
+  const parsed = Number.parseInt(value, 10)
+  if (!Number.isFinite(parsed) || parsed <= 0) return 0
+  return Math.min(parsed, 12)
+}
+
 /**
  * GET /api/installments
  *
@@ -19,10 +47,12 @@ import { getEndOfTodayAppTZ } from '@/lib/timezone'
  *   - customerId: filtrar por cliente específico
  *   - startDate: filtrar cuotas con vencimiento desde esta fecha (ISO string)
  *   - endDate: filtrar cuotas con vencimiento hasta esta fecha (ISO string)
+ *   - monthlyTotals: cantidad de meses futuros a resumir (max 12)
  *
  * Response:
  *   - installments: Array de installments con payment, customer y allocations incluidas
  *   - pagination: { page, limit, total, totalPages }
+ *   - monthlyTotals: Array opcional de totales por mes para cuotas próximas
  */
 export const GET = withLogging(async (request, logger) => {
   try {
@@ -33,6 +63,7 @@ export const GET = withLogging(async (request, logger) => {
     const customerId = searchParams.get('customerId') || ''
     const startDate = searchParams.get('startDate') || ''
     const endDate = searchParams.get('endDate') || ''
+    const monthlyTotalsMonths = parseMonthlyTotalsMonths(searchParams.get('monthlyTotals') || '')
 
     // Construir filtro dinámico
     const where: Prisma.InstallmentWhereInput = {}
@@ -130,9 +161,71 @@ export const GET = withLogging(async (request, logger) => {
       status: getInstallmentStatus(i.dueDate),
     }))
 
+    let monthlyTotals:
+      | Array<{
+          monthKey: string
+          startDate: string
+          endDate: string
+          amount: number
+          currency: string
+        }>
+      | undefined
+
+    if (monthlyTotalsMonths > 0) {
+      const monthRanges = Array.from({ length: monthlyTotalsMonths }, (_, index) =>
+        getMonthRangeFromOffset(index)
+      )
+      const totalsByMonth = new Map<string, { amount: number; currency: string }>()
+      const endOfToday = getEndOfTodayAppTZ()
+      const lastMonth = monthRanges[monthRanges.length - 1]
+
+      const summaryInstallments = await prisma.installment.findMany({
+        where: {
+          dueDate: {
+            gt: endOfToday,
+            lte: lastMonth.endDate,
+          },
+        },
+        select: {
+          amount: true,
+          dueDate: true,
+          payment: {
+            select: {
+              currency: true,
+            },
+          },
+        },
+      })
+
+      summaryInstallments.forEach((installment) => {
+        const monthKey = getMonthKey(installment.dueDate)
+        const current = totalsByMonth.get(monthKey) || {
+          amount: 0,
+          currency: installment.payment.currency || DEFAULT_MONTHLY_TOTALS_CURRENCY,
+        }
+
+        totalsByMonth.set(monthKey, {
+          ...current,
+          amount: current.amount + Number(installment.amount),
+        })
+      })
+
+      monthlyTotals = monthRanges.map((range) => {
+        const total = totalsByMonth.get(range.monthKey)
+        return {
+          monthKey: range.monthKey,
+          startDate: range.startDate.toISOString(),
+          endDate: range.endDate.toISOString(),
+          amount: total?.amount || 0,
+          currency: total?.currency || DEFAULT_MONTHLY_TOTALS_CURRENCY,
+        }
+      })
+    }
+
     return NextResponse.json({
       installments: installmentsWithStatus,
       pagination: buildPaginationResponse(page, limit, total),
+      ...(monthlyTotals ? { monthlyTotals } : {}),
     })
   } catch (error) {
     logger.error({ err: error }, 'Error fetching installments')

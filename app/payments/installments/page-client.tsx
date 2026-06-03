@@ -4,10 +4,11 @@ import { useState, useMemo } from 'react'
 import { type PaginationState } from '@tanstack/react-table'
 import { AppLayout } from '@/components/layout/app-layout'
 import { DataTable } from '@/components/data-table'
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { createColumns } from './columns'
 import { useInstallments, type InstallmentsQueryParams } from '@/hooks/queries/use-installments'
 import { useConfiguration } from '@/hooks/use-configuration'
+import { formatCurrency } from '@/lib/format'
+import { cn } from '@/lib/utils'
 
 /** Genera label del mes capitalizado, ej: "Abril 2026" */
 function getMonthLabel(offset: number): string {
@@ -26,7 +27,7 @@ function getMonthRange(offset: number): { startDate: string; endDate: string } {
   return { startDate: start.toISOString(), endDate: end.toISOString() }
 }
 
-const MONTH_TABS = [0, 1, 2] as const
+const MONTH_TABS = [0, 1, 2, 3, 4, 5] as const
 
 export function InstallmentsPageClient() {
   const { configuration } = useConfiguration()
@@ -55,6 +56,7 @@ export function InstallmentsPageClient() {
       status: statusFilter.length === 1 ? (statusFilter[0] as 'upcoming' | 'due') : undefined,
       startDate: monthRange.startDate,
       endDate: monthRange.endDate,
+      monthlyTotals: MONTH_TABS.length,
     }),
     [pagination.pageIndex, pagination.pageSize, statusFilter, monthRange]
   )
@@ -62,6 +64,7 @@ export function InstallmentsPageClient() {
   const { data, isLoading, isPlaceholderData } = useInstallments(queryParams)
 
   const installments = data?.installments || []
+  const monthlyTotals = data?.monthlyTotals || []
   const pageCount = data?.pagination.totalPages || 0
 
   const columns = useMemo(
@@ -84,21 +87,41 @@ export function InstallmentsPageClient() {
         { label: 'Cuotas Comercio' },
       ]}
     >
-      <Tabs
-        value={String(monthOffset)}
-        onValueChange={(v) => {
-          setMonthOffset(Number(v))
-          setPagination((prev) => ({ ...prev, pageIndex: 0 }))
-        }}
-      >
-        <TabsList>
-          {MONTH_TABS.map((offset) => (
-            <TabsTrigger key={offset} value={String(offset)}>
-              {getMonthLabel(offset)}
-            </TabsTrigger>
-          ))}
-        </TabsList>
-      </Tabs>
+      <div className="flex gap-2 overflow-x-auto pb-1">
+        {MONTH_TABS.map((offset) => {
+          const total = monthlyTotals[offset]
+          const isSelected = monthOffset === offset
+
+          return (
+            <button
+              key={offset}
+              type="button"
+              onClick={() => {
+                setMonthOffset(offset)
+                setPagination((prev) => ({ ...prev, pageIndex: 0 }))
+              }}
+              className={cn(
+                'min-w-32 flex-1 rounded-md border px-3 py-2 text-left shadow-sm transition-colors',
+                isSelected
+                  ? 'border-primary bg-primary text-primary-foreground'
+                  : 'border-border bg-card text-card-foreground hover:bg-accent hover:text-accent-foreground'
+              )}
+            >
+              <span
+                className={cn(
+                  'block text-xs font-medium',
+                  isSelected ? 'text-primary-foreground' : 'text-muted-foreground'
+                )}
+              >
+                {getMonthLabel(offset)}
+              </span>
+              <span className="block truncate text-sm font-semibold">
+                {formatCurrency(total?.amount || 0, total?.currency || configuration.currency)}
+              </span>
+            </button>
+          )
+        })}
+      </div>
 
       {isLoading && !isPlaceholderData ? (
         <div className="flex items-center justify-center h-64">

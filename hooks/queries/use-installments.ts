@@ -22,11 +22,21 @@ export interface InstallmentsQueryParams {
   customerId?: string
   startDate?: string
   endDate?: string
+  monthlyTotals?: number
+}
+
+export interface InstallmentMonthlyTotal {
+  monthKey: string
+  startDate: string
+  endDate: string
+  amount: number
+  currency: string
 }
 
 /** Respuesta de GET /api/installments */
 export interface InstallmentsResponse {
   installments: Installment[]
+  monthlyTotals?: InstallmentMonthlyTotal[]
   pagination: {
     page: number
     limit: number
@@ -60,6 +70,7 @@ export function useInstallments(params: InstallmentsQueryParams = {}) {
       if (params.customerId) searchParams.set('customerId', params.customerId)
       if (params.startDate) searchParams.set('startDate', params.startDate)
       if (params.endDate) searchParams.set('endDate', params.endDate)
+      if (params.monthlyTotals) searchParams.set('monthlyTotals', String(params.monthlyTotals))
 
       const response = await fetch(`/api/installments?${searchParams}`)
 

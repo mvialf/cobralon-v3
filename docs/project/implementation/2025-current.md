@@ -42,6 +42,7 @@ Documentacion:
 - La creacion de pagos se orquesta en `lib/use-cases/payments/create-payment.ts`; la route HTTP permanece como adaptador.
 - El modelo financiero sigue usando `PaymentAllocation` y `ProjectApplication` como fuente de verdad de aplicacion a proyectos; `Payment.type` queda como compatibilidad interna durante la transicion.
 - Las cuotas son informativas, sin interes, y su estado se deriva desde `dueDate`.
+- `GET /api/installments` puede retornar `monthlyTotals` para mostrar una proyeccion informativa de cuotas proximas por mes; la UI de `Cuotas Comercio` usa 6 meses horizontales como selector y resumen.
 - Las comisiones se guardan al registrar el pago para auditoria.
 - El estado de cuenta permite solicitar saldo total, porcentaje o monto fijo sobre la deuda seleccionada. Esta solicitud es documental: no crea pagos, allocations, applications ni movimientos de credito.
 

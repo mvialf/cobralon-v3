@@ -256,6 +256,45 @@ describe('GET /api/installments', () => {
     })
   })
 
+  describe('totales mensuales', () => {
+    it('debe retornar 6 totales mensuales cuando se solicita monthlyTotals', async () => {
+      const now = new Date()
+      const firstMonthDate = new Date(now.getFullYear(), now.getMonth(), 15)
+
+      vi.mocked(prisma.installment.findMany)
+        .mockResolvedValueOnce([])
+        .mockResolvedValueOnce([
+          {
+            id: 'inst-summary-1',
+            amount: new Decimal(100000),
+            dueDate: firstMonthDate,
+            payment: {
+              currency: 'CLP',
+            },
+          },
+          {
+            id: 'inst-summary-2',
+            amount: new Decimal(50000),
+            dueDate: firstMonthDate,
+            payment: {
+              currency: 'CLP',
+            },
+          },
+        ] as never)
+
+      const response = await GET(createRequest({ monthlyTotals: '6' }))
+      const data = await response.json()
+
+      expect(response.status).toBe(200)
+      expect(data.monthlyTotals).toHaveLength(6)
+      expect(data.monthlyTotals[0]).toMatchObject({
+        amount: 150000,
+        currency: 'CLP',
+      })
+      expect(data.monthlyTotals[0].monthKey).toMatch(/^\d{4}-\d{2}$/)
+    })
+  })
+
   describe('manejo de errores', () => {
     it('debe retornar 500 cuando Prisma falla', async () => {
       vi.mocked(prisma.installment.findMany).mockRejectedValue(new Error('DB Error'))
