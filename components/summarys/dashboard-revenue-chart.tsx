@@ -84,13 +84,12 @@ export function calculateSalesSubtotalOverlay({
   }
 
   const ratio = Math.min(salesSubtotal / sales, 1)
-  const inset = Math.min(3, width / 4)
   const overlayHeight = height * ratio
 
   return {
-    x: x + inset,
+    x,
     y: y + height - overlayHeight,
-    width: Math.max(width - inset * 2, 0),
+    width,
     height: overlayHeight,
   }
 }
@@ -127,7 +126,7 @@ function SalesBarShape({ x, y, width, height, fill, payload }: SalesBarShapeProp
           y={overlay.y}
           width={overlay.width}
           height={overlay.height}
-          fill="var(--chart-2)"
+          fill="var(--chart-6)"
           rx={2}
           ry={2}
         />
@@ -159,7 +158,7 @@ function ChartTooltip({ active, payload, label }: TooltipProps<number, string>) 
         </div>
         <div className="flex items-center justify-between gap-6">
           <span className="flex items-center gap-2 text-muted-foreground">
-            <span className="size-2 rounded-sm bg-chart-2" aria-hidden="true" />
+            <span className="size-2 rounded-sm bg-chart-6" aria-hidden="true" />
             Subtotal ventas
           </span>
           <span className="font-medium">{formatCurrency(salesSubtotal)}</span>

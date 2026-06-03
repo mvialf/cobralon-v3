@@ -14,9 +14,9 @@ describe('calculateSalesSubtotalOverlay', () => {
         salesSubtotal: 150,
       })
     ).toEqual({
-      x: 13,
+      x: 10,
       y: 45,
-      width: 24,
+      width: 30,
       height: 75,
     })
   })
@@ -56,9 +56,9 @@ describe('calculateSalesSubtotalOverlay', () => {
         salesSubtotal: 250,
       })
     ).toEqual({
-      x: 13,
+      x: 10,
       y: 20,
-      width: 24,
+      width: 30,
       height: 100,
     })
   })
