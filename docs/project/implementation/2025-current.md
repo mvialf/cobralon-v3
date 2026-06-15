@@ -101,6 +101,14 @@ Documentacion:
 
 - [ADR-012 Pino](../decisions/012-pino-structured-logging.md)
 
+## Clientes
+
+- 2026-06-15: Correccion en edicion de cliente sin email. El frontend enviaba
+  `email: null`, pero `updateCustomerApiSchema` no aceptaba `null`, causando 400
+  "Datos invalidos" en produccion para clientes importados sin email. Se cambio
+  a `email: ''`, que el backend ya convierte a `null` correctamente.
+  Archivo: `components/dialogs/customers/edit-customer-dialog.tsx`.
+
 ## Estado de auditoria de datos
 
 Ultima auditoria local conocida:

@@ -60,7 +60,7 @@ export function EditCustomerDialog({
         id: customer.id,
         name: data.name,
         phone: data.phone,
-        email: data.email || null,
+        email: data.email || '',
       })
       onOpenChange(false) // Cerrar dialog solo si fue exitoso
       onCustomerUpdated?.()
