@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { render, screen, waitFor, within } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import React from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
@@ -49,7 +49,9 @@ function renderForm(props?: Partial<React.ComponentProps<typeof PaymentToCustome
   )
 }
 
-function mockFetch() {
+function mockFetch(options: { creditBalance?: number } = {}) {
+  const { creditBalance = 0 } = options
+
   global.fetch = vi.fn(async (input: RequestInfo | URL) => {
     const url = input.toString()
 
@@ -84,7 +86,7 @@ function mockFetch() {
     if (url.includes('/api/customers/') && url.includes('/credit')) {
       return {
         ok: true,
-        json: async () => ({ creditBalance: 0 }),
+        json: async () => ({ creditBalance }),
       } as Response
     }
 
@@ -106,6 +108,12 @@ function mockFetch() {
     }
 
     throw new Error(`Unhandled fetch: ${url}`)
+  })
+}
+
+async function waitForPaymentMethod() {
+  await waitFor(() => {
+    expect(screen.getByRole('combobox', { name: /Método de Pago/i })).toHaveTextContent('Efectivo')
   })
 }
 
@@ -136,6 +144,114 @@ describe('PaymentToCustomerForm', () => {
     await waitFor(() => {
       const rowInputs = within(selectedProjectRow as HTMLTableRowElement).getAllByRole('textbox')
       expect(rowInputs[0]).toHaveValue('$ 50.000')
+    })
+  })
+
+  it('debe rechazar el submit cuando las allocations no suman el monto total', async () => {
+    const onSubmit = vi.fn()
+    const user = userEvent.setup()
+
+    renderForm({ onSubmit, preselectedProjectId: oldestProjectId })
+
+    await screen.findByText('P-001')
+    await waitForPaymentMethod()
+
+    const amountInput = screen.getAllByRole('textbox')[0]
+    await user.clear(amountInput)
+    await user.type(amountInput, '100000')
+
+    const firstRow = screen.getByText('P-001').closest('tr') as HTMLTableRowElement
+    const [allocatedInput] = Array.from(firstRow.querySelectorAll('input[type="text"]'))
+    await waitFor(() => expect(allocatedInput).toHaveValue('$ 100.000'))
+    await user.clear(allocatedInput)
+    await user.type(allocatedInput, '30000')
+
+    fireEvent.submit(document.querySelector('form') as HTMLFormElement)
+
+    await waitFor(() => {
+      expect(onSubmit).not.toHaveBeenCalled()
+    })
+  })
+
+  it('debe rechazar el submit cuando el crédito aplicado excede el crédito disponible', async () => {
+    mockFetch({ creditBalance: 20000 })
+
+    const onSubmit = vi.fn()
+    const user = userEvent.setup()
+
+    renderForm({ onSubmit, preselectedProjectId: oldestProjectId })
+
+    await screen.findByText('P-001')
+    await waitForPaymentMethod()
+
+    const amountInput = screen.getAllByRole('textbox')[0]
+    await user.clear(amountInput)
+    await user.type(amountInput, '80000')
+
+    const firstRow = screen.getByText('P-001').closest('tr') as HTMLTableRowElement
+    const [allocatedInput, creditInput] = Array.from(firstRow.querySelectorAll('input[type="text"]'))
+    await waitFor(() => expect(allocatedInput).toHaveValue('$ 80.000'))
+
+    await user.clear(creditInput)
+    await user.type(creditInput, '30000')
+
+    fireEvent.submit(document.querySelector('form') as HTMLFormElement)
+
+    await waitFor(() => {
+      expect(onSubmit).not.toHaveBeenCalled()
+    })
+  })
+
+  it('debe rechazar el submit cuando el crédito supera el balance restante del proyecto', async () => {
+    mockFetch({ creditBalance: 200000 })
+
+    const onSubmit = vi.fn()
+    const user = userEvent.setup()
+
+    renderForm({ onSubmit, preselectedProjectId: oldestProjectId })
+
+    await screen.findByText('P-001')
+    await waitForPaymentMethod()
+
+    const amountInput = screen.getAllByRole('textbox')[0]
+    await user.clear(amountInput)
+    await user.type(amountInput, '100000')
+
+    const firstRow = screen.getByText('P-001').closest('tr') as HTMLTableRowElement
+    const [allocatedInput, creditInput] = Array.from(firstRow.querySelectorAll('input[type="text"]'))
+    await waitFor(() => expect(allocatedInput).toHaveValue('$ 100.000'))
+
+    await user.clear(creditInput)
+    await user.type(creditInput, '110000')
+
+    fireEvent.submit(document.querySelector('form') as HTMLFormElement)
+
+    await waitFor(() => {
+      expect(onSubmit).not.toHaveBeenCalled()
+    })
+  })
+
+  it('debe ejecutar onSubmit cuando el formulario es válido', async () => {
+    const onSubmit = vi.fn()
+    const user = userEvent.setup()
+
+    renderForm({ onSubmit, preselectedProjectId: oldestProjectId })
+
+    await screen.findByText('P-001')
+    await waitForPaymentMethod()
+
+    const amountInput = screen.getAllByRole('textbox')[0]
+    await user.clear(amountInput)
+    await user.type(amountInput, '100000')
+
+    const firstRow = screen.getByText('P-001').closest('tr') as HTMLTableRowElement
+    const [allocatedInput] = Array.from(firstRow.querySelectorAll('input[type="text"]'))
+    await waitFor(() => expect(allocatedInput).toHaveValue('$ 100.000'))
+
+    fireEvent.submit(document.querySelector('form') as HTMLFormElement)
+
+    await waitFor(() => {
+      expect(onSubmit).toHaveBeenCalledOnce()
     })
   })
 })

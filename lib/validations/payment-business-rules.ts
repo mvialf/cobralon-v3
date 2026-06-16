@@ -17,6 +17,7 @@ import {
   absMoney,
   greaterThanMoney,
   greaterThanMoneyWithTolerance,
+  maxMoney,
   moneyToFixed,
   sumMoney,
   subtractMoney,
@@ -37,6 +38,15 @@ export type PaymentType = 'Project' | 'Customer'
 export interface AllocationForValidation {
   projectId: string
   allocatedAmount: number
+}
+
+/**
+ * Estructura de una allocation con crédito aplicado
+ */
+export interface CustomerCreditAllocation {
+  projectId: string
+  allocatedAmount: number
+  creditApplied: number
 }
 
 /**
@@ -154,6 +164,63 @@ export function validatePaymentApplicationSum(
   allocations: AllocationForValidation[]
 ): ValidationResult {
   return validateAllocationsSum(amount, allocations)
+}
+
+/**
+ * Valida que el crédito aplicado en un pago 1:N (Customer) sea válido.
+ *
+ * Reglas:
+ * 1. El crédito total aplicado no puede exceder el crédito disponible del cliente.
+ * 2. Para cada proyecto, el crédito aplicado no puede superar el balance restante
+ *    después de restar el monto asignado en efectivo.
+ *
+ * Solo se evalúan allocations con crédito aplicado mayor a cero.
+ *
+ * @param allocations - Array de allocations con crédito aplicado
+ * @param customerCredit - Crédito disponible total del cliente
+ * @param getProjectBalance - Función que retorna el balance de un proyecto dado su ID
+ * @returns Resultado de validación
+ */
+export function validateCustomerCreditApplication(
+  allocations: CustomerCreditAllocation[],
+  customerCredit: number,
+  getProjectBalance: (projectId: string) => number
+): ValidationResult {
+  const creditAllocations = allocations.filter((allocation) =>
+    greaterThanMoney(allocation.creditApplied, 0)
+  )
+
+  if (creditAllocations.length === 0) {
+    return { valid: true }
+  }
+
+  const totalCreditApplied = sumMoney(creditAllocations.map((a) => a.creditApplied)).toNumber()
+
+  if (greaterThanMoneyWithTolerance(totalCreditApplied, customerCredit, FINANCIAL.TOLERANCE)) {
+    return {
+      valid: false,
+      error: 'El crédito aplicado excede el crédito disponible del cliente',
+    }
+  }
+
+  for (const allocation of creditAllocations) {
+    const projectBalance = getProjectBalance(allocation.projectId)
+    const balanceAfterCash = maxMoney(
+      0,
+      subtractMoney(projectBalance, allocation.allocatedAmount)
+    ).toNumber()
+
+    if (
+      greaterThanMoneyWithTolerance(allocation.creditApplied, balanceAfterCash, FINANCIAL.TOLERANCE)
+    ) {
+      return {
+        valid: false,
+        error: 'El crédito aplicado no puede superar el balance restante de cada proyecto',
+      }
+    }
+  }
+
+  return { valid: true }
 }
 
 /**

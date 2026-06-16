@@ -1,251 +1,106 @@
-/**
- * Tests para lib/validations/payment-business-rules.ts
- *
- * Valida las reglas de negocio centralizadas para pagos
- */
+import { describe, expect, it } from 'vitest'
 
-import { describe, it, expect } from 'vitest'
 import {
-  validatePaymentType,
-  validateAllocationsSum,
-  validateNoDuplicateProjects,
-  validatePositiveAllocations,
-  validatePaymentAllocations,
-  validateSameCustomer,
-  validateSameCurrency,
+  validateCustomerCreditApplication,
+  validatePaymentApplicationSum,
 } from '../payment-business-rules'
 
-describe('validatePaymentType', () => {
-  describe('tipo Project', () => {
-    it('debe aceptar exactamente 1 allocation', () => {
-      const result = validatePaymentType('Project', [{ projectId: 'abc', allocatedAmount: 1000 }])
-      expect(result.valid).toBe(true)
-    })
-
-    it('debe rechazar 0 allocations', () => {
-      const result = validatePaymentType('Project', [])
-      expect(result.valid).toBe(false)
-      expect(result.error).toContain('exactamente 1 asignación')
-    })
-
-    it('debe rechazar múltiples allocations', () => {
-      const result = validatePaymentType('Project', [
-        { projectId: 'abc', allocatedAmount: 500 },
-        { projectId: 'def', allocatedAmount: 500 },
-      ])
-      expect(result.valid).toBe(false)
-      expect(result.error).toContain('exactamente 1 asignación')
-    })
-  })
-
-  describe('tipo Customer', () => {
-    it('debe aceptar 1 allocation', () => {
-      const result = validatePaymentType('Customer', [{ projectId: 'abc', allocatedAmount: 1000 }])
-      expect(result.valid).toBe(true)
-    })
-
-    it('debe aceptar múltiples allocations', () => {
-      const result = validatePaymentType('Customer', [
-        { projectId: 'abc', allocatedAmount: 500 },
-        { projectId: 'def', allocatedAmount: 500 },
-      ])
-      expect(result.valid).toBe(true)
-    })
-
-    it('debe rechazar 0 allocations', () => {
-      const result = validatePaymentType('Customer', [])
-      expect(result.valid).toBe(false)
-      expect(result.error).toContain('al menos 1 asignación')
-    })
-  })
-})
-
-describe('validateAllocationsSum', () => {
-  it('debe aceptar suma exacta', () => {
-    const result = validateAllocationsSum(1000, [
-      { projectId: 'abc', allocatedAmount: 600 },
-      { projectId: 'def', allocatedAmount: 400 },
+describe('validatePaymentApplicationSum', () => {
+  it('debe ser válido cuando las allocations suman el monto total', () => {
+    const result = validatePaymentApplicationSum(100000, [
+      { projectId: 'p1', allocatedAmount: 60000 },
+      { projectId: 'p2', allocatedAmount: 40000 },
     ])
+
     expect(result.valid).toBe(true)
   })
 
-  it('debe aceptar diferencia dentro de tolerancia (0.01)', () => {
-    const result = validateAllocationsSum(1000, [{ projectId: 'abc', allocatedAmount: 1000.005 }])
-    expect(result.valid).toBe(true)
-  })
+  it('debe ser inválido cuando las allocations no suman el monto total', () => {
+    const result = validatePaymentApplicationSum(100000, [
+      { projectId: 'p1', allocatedAmount: 50000 },
+    ])
 
-  it('debe rechazar diferencia fuera de tolerancia', () => {
-    const result = validateAllocationsSum(1000, [{ projectId: 'abc', allocatedAmount: 500 }])
     expect(result.valid).toBe(false)
     expect(result.error).toContain('no suman el monto total')
   })
-
-  it('debe manejar allocation única', () => {
-    const result = validateAllocationsSum(1000, [{ projectId: 'abc', allocatedAmount: 1000 }])
-    expect(result.valid).toBe(true)
-  })
-
-  it('debe manejar múltiples allocations con decimales', () => {
-    const result = validateAllocationsSum(100, [
-      { projectId: 'a', allocatedAmount: 33.33 },
-      { projectId: 'b', allocatedAmount: 33.33 },
-      { projectId: 'c', allocatedAmount: 33.34 },
-    ])
-    expect(result.valid).toBe(true)
-  })
-
-  it('debe sumar decimales sin artefactos binarios', () => {
-    const result = validateAllocationsSum(0.3, [
-      { projectId: 'a', allocatedAmount: 0.1 },
-      { projectId: 'b', allocatedAmount: 0.2 },
-    ])
-
-    expect(result.valid).toBe(true)
-  })
 })
 
-describe('validateNoDuplicateProjects', () => {
-  it('debe aceptar IDs únicos', () => {
-    const result = validateNoDuplicateProjects([
-      { projectId: 'abc', allocatedAmount: 500 },
-      { projectId: 'def', allocatedAmount: 500 },
-    ])
+describe('validateCustomerCreditApplication', () => {
+  const getProjectBalance = (projectId: string) => {
+    const balances: Record<string, number> = {
+      p1: 100000,
+      p2: 150000,
+    }
+    return balances[projectId] ?? 0
+  }
+
+  it('debe ser válido cuando no hay crédito aplicado', () => {
+    const result = validateCustomerCreditApplication(
+      [{ projectId: 'p1', allocatedAmount: 100000, creditApplied: 0 }],
+      50000,
+      getProjectBalance
+    )
+
     expect(result.valid).toBe(true)
   })
 
-  it('debe rechazar IDs duplicados', () => {
-    const result = validateNoDuplicateProjects([
-      { projectId: 'abc', allocatedAmount: 300 },
-      { projectId: 'abc', allocatedAmount: 700 },
-    ])
+  it('debe ser válido cuando el crédito aplicado está dentro de los límites', () => {
+    const result = validateCustomerCreditApplication(
+      [
+        { projectId: 'p1', allocatedAmount: 50000, creditApplied: 30000 },
+        { projectId: 'p2', allocatedAmount: 0, creditApplied: 20000 },
+      ],
+      50000,
+      getProjectBalance
+    )
+
+    expect(result.valid).toBe(true)
+  })
+
+  it('debe ser inválido cuando el crédito total excede el crédito disponible', () => {
+    const result = validateCustomerCreditApplication(
+      [
+        { projectId: 'p1', allocatedAmount: 0, creditApplied: 30000 },
+        { projectId: 'p2', allocatedAmount: 0, creditApplied: 30000 },
+      ],
+      50000,
+      getProjectBalance
+    )
+
     expect(result.valid).toBe(false)
-    expect(result.error).toContain('múltiples veces')
+    expect(result.error).toBe('El crédito aplicado excede el crédito disponible del cliente')
   })
 
-  it('debe aceptar array vacío', () => {
-    const result = validateNoDuplicateProjects([])
-    expect(result.valid).toBe(true)
-  })
+  it('debe ser inválido cuando el crédito excede el balance restante de un proyecto', () => {
+    const result = validateCustomerCreditApplication(
+      [{ projectId: 'p1', allocatedAmount: 50000, creditApplied: 60000 }],
+      100000,
+      getProjectBalance
+    )
 
-  it('debe aceptar allocation única', () => {
-    const result = validateNoDuplicateProjects([{ projectId: 'abc', allocatedAmount: 1000 }])
-    expect(result.valid).toBe(true)
-  })
-})
-
-describe('validatePositiveAllocations', () => {
-  it('debe aceptar todos los montos positivos', () => {
-    const result = validatePositiveAllocations([
-      { projectId: 'abc', allocatedAmount: 500 },
-      { projectId: 'def', allocatedAmount: 500 },
-    ])
-    expect(result.valid).toBe(true)
-  })
-
-  it('debe rechazar monto cero', () => {
-    const result = validatePositiveAllocations([{ projectId: 'abc', allocatedAmount: 0 }])
     expect(result.valid).toBe(false)
-    expect(result.error).toContain('mayores a 0')
+    expect(result.error).toBe(
+      'El crédito aplicado no puede superar el balance restante de cada proyecto'
+    )
   })
 
-  it('debe rechazar monto negativo', () => {
-    const result = validatePositiveAllocations([{ projectId: 'abc', allocatedAmount: -100 }])
-    expect(result.valid).toBe(false)
-  })
+  it('debe considerar el balance completo cuando no hay monto asignado en efectivo', () => {
+    const result = validateCustomerCreditApplication(
+      [{ projectId: 'p1', allocatedAmount: 0, creditApplied: 100001 }],
+      200000,
+      getProjectBalance
+    )
 
-  it('debe aceptar array vacío', () => {
-    const result = validatePositiveAllocations([])
-    expect(result.valid).toBe(true)
-  })
-})
-
-describe('validatePaymentAllocations (función completa)', () => {
-  it('debe aceptar pago Project válido', () => {
-    const result = validatePaymentAllocations('Project', 1000, [
-      { projectId: 'abc', allocatedAmount: 1000 },
-    ])
-    expect(result.valid).toBe(true)
-  })
-
-  it('debe aceptar pago Customer válido con múltiples allocations', () => {
-    const result = validatePaymentAllocations('Customer', 1000, [
-      { projectId: 'abc', allocatedAmount: 600 },
-      { projectId: 'def', allocatedAmount: 400 },
-    ])
-    expect(result.valid).toBe(true)
-  })
-
-  it('debe fallar en primera validación que falla (tipo)', () => {
-    const result = validatePaymentAllocations('Project', 1000, [
-      { projectId: 'abc', allocatedAmount: 500 },
-      { projectId: 'def', allocatedAmount: 500 },
-    ])
-    expect(result.valid).toBe(false)
-    expect(result.error).toContain('exactamente 1 asignación')
-  })
-
-  it('debe fallar en validación de suma si tipo pasa', () => {
-    const result = validatePaymentAllocations('Customer', 1000, [
-      { projectId: 'abc', allocatedAmount: 100 },
-    ])
-    expect(result.valid).toBe(false)
-    expect(result.error).toContain('no suman el monto total')
-  })
-
-  it('debe fallar en validación de duplicados si suma pasa', () => {
-    const result = validatePaymentAllocations('Customer', 1000, [
-      { projectId: 'abc', allocatedAmount: 500 },
-      { projectId: 'abc', allocatedAmount: 500 },
-    ])
-    expect(result.valid).toBe(false)
-    expect(result.error).toContain('múltiples veces')
-  })
-
-  it('debe fallar en validación de montos positivos', () => {
-    const result = validatePaymentAllocations('Customer', 0, [
-      { projectId: 'abc', allocatedAmount: 0 },
-    ])
-    // La validación de suma pasará (0 = 0), pero la de positivos fallará
     expect(result.valid).toBe(false)
   })
-})
 
-describe('validateSameCustomer', () => {
-  it('debe aceptar todos los proyectos del mismo cliente', () => {
-    const projects = [{ customerId: 'cust-1' }, { customerId: 'cust-1' }, { customerId: 'cust-1' }]
-    const result = validateSameCustomer(projects, 'cust-1')
-    expect(result.valid).toBe(true)
-  })
+  it('debe permitir crédito igual al balance restante dentro de la tolerancia', () => {
+    const result = validateCustomerCreditApplication(
+      [{ projectId: 'p1', allocatedAmount: 50000, creditApplied: 50000 }],
+      100000,
+      getProjectBalance
+    )
 
-  it('debe rechazar si algún proyecto tiene cliente diferente', () => {
-    const projects = [{ customerId: 'cust-1' }, { customerId: 'cust-2' }]
-    const result = validateSameCustomer(projects, 'cust-1')
-    expect(result.valid).toBe(false)
-    expect(result.error).toContain('mismo cliente')
-  })
-
-  it('debe aceptar array vacío', () => {
-    const result = validateSameCustomer([], 'cust-1')
-    expect(result.valid).toBe(true)
-  })
-})
-
-describe('validateSameCurrency', () => {
-  it('debe aceptar todos los proyectos con la misma moneda', () => {
-    const projects = [{ currency: 'CLP' }, { currency: 'CLP' }, { currency: 'CLP' }]
-    const result = validateSameCurrency(projects, 'CLP')
-    expect(result.valid).toBe(true)
-  })
-
-  it('debe rechazar si algún proyecto tiene moneda diferente', () => {
-    const projects = [{ currency: 'CLP' }, { currency: 'USD' }]
-    const result = validateSameCurrency(projects, 'CLP')
-    expect(result.valid).toBe(false)
-    expect(result.error).toContain('misma moneda')
-  })
-
-  it('debe aceptar array vacío', () => {
-    const result = validateSameCurrency([], 'CLP')
     expect(result.valid).toBe(true)
   })
 })

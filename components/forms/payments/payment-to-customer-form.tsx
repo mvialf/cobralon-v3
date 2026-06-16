@@ -11,6 +11,10 @@ import {
   type ProjectWithBalance,
   parseProjectsWithBalance,
 } from '@/lib/validations/payment-validations'
+import {
+  validateCustomerCreditApplication,
+  validatePaymentApplicationSum,
+} from '@/lib/validations/payment-business-rules'
 import { calculateFIFO } from '@/lib/business-logic/payment-fifo'
 import { FINANCIAL } from '@/lib/constants/financial-constants'
 import { formatCurrency } from '@/lib/format'
@@ -320,41 +324,25 @@ export function PaymentToCustomerForm({
       return
     }
 
-    // 3. Validar suma (con las allocations filtradas)
-    const totalAllocatedSubmit = allocationsWithValue.reduce((sum, a) => sum + a.allocatedAmount, 0)
-    const differenceSubmit = watchedAmount - totalAllocatedSubmit
-    if (Math.abs(differenceSubmit) >= FINANCIAL.TOLERANCE) {
-      form.setError('allocations', {
-        message: 'La suma de allocations debe ser igual al monto total',
-      })
+    // 3. Validar suma de allocations contra el monto total
+    const sumValidation = validatePaymentApplicationSum(values.amount, allocationsWithValue)
+    if (!sumValidation.valid) {
+      form.setError('allocations', { message: sumValidation.error })
       return
     }
 
-    const totalCreditSubmit = allocationsWithValue.reduce(
-      (sum, a) => sum + (a.creditApplied || 0),
-      0
+    // 4. Validar crédito aplicado
+    const creditValidation = validateCustomerCreditApplication(
+      allocationsWithValue,
+      customerCreditBalance,
+      (projectId) => customerProjects.find((p) => p.id === projectId)?.balance ?? 0
     )
-    if (totalCreditSubmit - customerCreditBalance >= FINANCIAL.TOLERANCE) {
-      form.setError('allocations', {
-        message: 'El crédito aplicado excede el crédito disponible del cliente',
-      })
+    if (!creditValidation.valid) {
+      form.setError('allocations', { message: creditValidation.error })
       return
     }
 
-    const hasInvalidCredit = allocationsWithValue.some((allocation) => {
-      const project = customerProjects.find((p) => p.id === allocation.projectId)
-      if (!project) return true
-      const balanceAfterCash = Math.max(0, project.balance - allocation.allocatedAmount)
-      return (allocation.creditApplied || 0) - balanceAfterCash >= FINANCIAL.TOLERANCE
-    })
-    if (hasInvalidCredit) {
-      form.setError('allocations', {
-        message: 'El crédito aplicado no puede superar el balance restante de cada proyecto',
-      })
-      return
-    }
-
-    // 4. Derivar currency del primer proyecto
+    // 5. Derivar currency del primer proyecto
     const firstAllocation = allocationsWithValue[0]
     const project = customerProjects.find((p) => p.id === firstAllocation.projectId)
     const currency = project?.currency || 'CLP'
