@@ -3,7 +3,6 @@ import { prisma } from '@/lib/db'
 import { Prisma } from '@prisma/client'
 import { withLogging } from '@/lib/logger-middleware'
 import { parsePaginationParams, buildPaginationResponse } from '@/lib/utils/pagination'
-import { getInstallmentStatus } from '@/lib/business-logic/installments'
 import { getEndOfTodayAppTZ } from '@/lib/timezone'
 
 const DEFAULT_MONTHLY_TOTALS_CURRENCY = 'CLP'
@@ -50,7 +49,8 @@ function parseMonthlyTotalsMonths(value: string): number {
  *   - monthlyTotals: cantidad de meses futuros a resumir (max 12)
  *
  * Response:
- *   - installments: Array de installments con payment, customer y allocations incluidas
+ *   - installments: Array de installments con payment, customer y allocations incluidas.
+ *     El status derivado (upcoming/due) se calcula en el cliente a partir de dueDate.
  *   - pagination: { page, limit, total, totalPages }
  *   - monthlyTotals: Array opcional de totales por mes para cuotas próximas
  */
@@ -155,12 +155,6 @@ export const GET = withLogging(async (request, logger) => {
       prisma.installment.count({ where }),
     ])
 
-    // Enriquecer con status derivado de dueDate
-    const installmentsWithStatus = installments.map((i) => ({
-      ...i,
-      status: getInstallmentStatus(i.dueDate),
-    }))
-
     let monthlyTotals:
       | Array<{
           monthKey: string
@@ -223,7 +217,7 @@ export const GET = withLogging(async (request, logger) => {
     }
 
     return NextResponse.json({
-      installments: installmentsWithStatus,
+      installments,
       pagination: buildPaginationResponse(page, limit, total),
       ...(monthlyTotals ? { monthlyTotals } : {}),
     })

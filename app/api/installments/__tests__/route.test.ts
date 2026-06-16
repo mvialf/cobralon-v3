@@ -231,7 +231,6 @@ describe('GET /api/installments', () => {
           installmentNumber: 1,
           amount: new Decimal(100000),
           dueDate: new Date(),
-          status: 'upcoming',
           payment: {
             id: 'pay-1',
             amount: new Decimal(300000),

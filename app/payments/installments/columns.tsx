@@ -11,7 +11,7 @@ import { Badge } from '@/components/ui/badge'
 import { DataTableColumnHeader } from '@/components/data-table'
 import { formatDate, formatCurrency } from '@/lib/format'
 import { ProjectNameSummary } from '@/components/summarys/project-name-summary'
-import { isPastOrToday } from '@/lib/timezone'
+import { getInstallmentStatus } from '@/lib/business-logic/installments'
 
 export interface Installment {
   id: string
@@ -19,7 +19,6 @@ export interface Installment {
   amount: number
   netAmount: number | null
   dueDate: string
-  status: string // Derivado de dueDate por la API
   payment: {
     id: string
     amount: number
@@ -139,23 +138,23 @@ export const createColumns = ({
     header: ({ column }) => <DataTableColumnHeader column={column} title="Vencimiento" />,
     cell: ({ row }) => {
       const date = new Date(row.getValue('dueDate'))
-      const isOverdue = !isPastOrToday(date) && date < new Date()
+      const status = getInstallmentStatus(date)
+      const isOverdue = status === 'due'
 
       return (
         <div className={isOverdue ? 'text-red-600 font-medium' : ''}>
           {formatDate(row.getValue('dueDate'), 'short', locale)}
-          {isOverdue && row.original.status === 'upcoming' && (
-            <div className="text-xs">Vencido</div>
-          )}
+          {isOverdue && <div className="text-xs">Vencido</div>}
         </div>
       )
     },
   },
   {
-    accessorKey: 'status',
+    id: 'status',
+    accessorFn: (row) => getInstallmentStatus(new Date(row.dueDate)),
     header: ({ column }) => <DataTableColumnHeader column={column} title="Estado" />,
     cell: ({ row }) => {
-      const status = row.getValue('status') as string
+      const status = getInstallmentStatus(new Date(row.original.dueDate))
       return (
         <Badge variant={status === 'due' ? 'destructive' : 'secondary'}>
           {status === 'due' ? 'Vencida' : 'Próxima'}
