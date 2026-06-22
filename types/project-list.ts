@@ -42,6 +42,8 @@ export interface ProjectListRawRow {
   updatedAt: Date
   currency: string
   totalAmount: Decimal
+  flagStatus: string
+  flaggedAt: Date | null
 
   // Customer fields (from JOIN)
   customer_id: string
@@ -83,6 +85,8 @@ export interface ProjectListItem {
   updatedAt: Date
   currency: string
   totalAmount: number
+  flagStatus: 'none' | 'flagged'
+  flaggedAt: Date | null
   customer: {
     id: string
     name: string
@@ -160,6 +164,8 @@ export function transformRawToProjectListItem(row: ProjectListRawRow): ProjectLi
     updatedAt: row.updatedAt,
     currency: row.currency,
     totalAmount,
+    flagStatus: row.flagStatus as 'none' | 'flagged',
+    flaggedAt: row.flaggedAt,
     customer: {
       id: row.customer_id,
       name: row.customer_name,

@@ -24,6 +24,8 @@ export interface Project {
   totalPaid: number // Total pagado (solo pagos ACTIVE) - calculado en backend
   balance: number // Saldo pendiente (total - totalPaid) - calculado en backend
   percentPaid: number // Porcentaje pagado (0-100) - calculado en backend
+  flagStatus: 'none' | 'flagged' // Marcador de atención
+  flaggedAt: string | Date | null // Fecha en que fue marcado para atención
   customer: {
     id: string
     name: string
@@ -43,6 +45,8 @@ export interface ColumnsProps {
   updatingProjectId?: string | null
   /** Estado de actualización (projectId actual siendo actualizado para fecha) */
   updatingDateProjectId?: string | null
+  /** Estado de actualización (projectId actual siendo actualizado para flag) */
+  updatingFlagProjectId?: string | null
 }
 
 /**
@@ -54,4 +58,6 @@ export interface ProjectsTableMeta {
   handleStatusChange?: (projectId: string, newStatusId: string) => Promise<void>
   /** Callback to handle project date change */
   handleDateChange?: (projectId: string, newDate: Date) => Promise<void>
+  /** Callback to handle project flag toggle */
+  handleFlagToggle?: (projectId: string, flagStatus: 'none' | 'flagged') => Promise<void>
 }

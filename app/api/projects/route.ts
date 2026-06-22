@@ -210,6 +210,7 @@ export const POST = withApiHandler<CreateProjectApiBody>(
       squareMeters,
       description,
       uninstallTagIds,
+      flagStatus,
     } = body
 
     const projectLogger = logger.child({
@@ -273,6 +274,10 @@ export const POST = withApiHandler<CreateProjectApiBody>(
           windowsCount: windowsCount || 0,
           squareMeters: money(squareMeters || 0),
           description: description || null,
+          ...(flagStatus && {
+            flagStatus,
+            flaggedAt: flagStatus === 'flagged' ? new Date() : null,
+          }),
         },
       })
 

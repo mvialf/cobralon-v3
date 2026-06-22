@@ -118,6 +118,30 @@ Documentacion:
   a `email: ''`, que el backend ya convierte a `null` correctamente.
   Archivo: `components/dialogs/customers/edit-customer-dialog.tsx`.
 
+## Marcador de atencion en proyectos
+
+- 2025-06-16: Se agrego `Project.flagStatus` (string `"none" | "flagged"`) para marcar proyectos que necesitan atencion, evitando boolean para permitir estados futuros.
+- 2026-06-22: Se agrego `Project.flaggedAt` nullable y el indice `Project(flagStatus, flaggedAt DESC)` para que el Panel Principal ordene por fecha real de marcado, no por cualquier actualizacion del proyecto.
+- La tabla de proyectos muestra un icono bookmark inline entre las columnas "Estado" y "Estado Proyecto"; sin encabezado de columna, sin resaltar fila.
+- El icono usa variables globales del tema: outline `text-muted-foreground`, relleno `text-primary`.
+- Click inline alterna el estado con mutacion optimista en React Query; fallos se revierten y notifican con toast.
+- `PUT /api/projects/[id]` acepta `flagStatus`; al marcar setea `flaggedAt = now()`, al desmarcar setea `flaggedAt = null`.
+- `POST /api/projects` respeta `flagStatus` si se envia y setea `flaggedAt` de forma consistente.
+- El Panel Principal (celda C) muestra el proyecto con `flagStatus = "flagged"` mas reciente por `flaggedAt`, con saldo y total, o "Sin proyectos destacados" si no hay ninguno.
+- Se agregaron tests del contrato API y del optimistic update del hook.
+
+Archivos clave:
+
+- `app/projects/components/project-flag-cell.tsx`
+- `app/projects/columns.tsx`
+- `app/projects/page-client.tsx`
+- `hooks/queries/use-projects.ts`
+- `app/page.tsx`
+- `app/api/projects/[id]/route.ts`
+- `app/api/projects/route.ts`
+- `lib/validations/project-validations.ts`
+- `prisma/schema.prisma`
+
 ## Estado de auditoria de datos
 
 Ultima auditoria local conocida:

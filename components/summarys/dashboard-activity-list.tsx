@@ -14,6 +14,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { ProjectNameSummary } from '@/components/summarys/project-name-summary'
+import { DashboardAmountStack } from '@/components/summarys/dashboard-amount-stack'
 import { formatCurrency, formatDate } from '@/lib/format'
 import { cn } from '@/lib/utils'
 
@@ -123,14 +124,10 @@ export function DashboardActivityList({
               <div className="flex items-center justify-end px-0 text-lg">
                 {inst.installmentNumber}/{inst.selectedInstallments || '?'}
               </div>
-              <div className="flex flex-col items-center justify-end">
-                <div className="px-1 font-bold text-sm">
-                  {formatCurrency(inst.amount, inst.currency)}
-                </div>
-                <div className="px-1 text-xs text-muted-foreground">
-                  {formatDate(inst.dueDate, 'short')}
-                </div>
-              </div>
+              <DashboardAmountStack
+                primary={formatCurrency(inst.amount, inst.currency)}
+                secondary={formatDate(inst.dueDate, 'short')}
+              />
             </div>
           ),
         })),
@@ -153,14 +150,10 @@ export function DashboardActivityList({
             />
           ),
           right: (
-            <div className="flex flex-col items-end justify-center">
-              <div className="px-1 font-bold text-sm">
-                {formatCurrency(proj.total, proj.currency)}
-              </div>
-              <div className="px-1 text-xs text-muted-foreground">
-                {formatCurrency(proj.totalPaid, proj.currency)}
-              </div>
-            </div>
+            <DashboardAmountStack
+              primary={formatCurrency(proj.total, proj.currency)}
+              secondary={formatCurrency(proj.totalPaid, proj.currency)}
+            />
           ),
         })),
       },
@@ -184,14 +177,10 @@ export function DashboardActivityList({
             <span className="text-xs">{pay.customerName}</span>
           ),
           right: (
-            <div className="flex flex-col items-end justify-center">
-              <div className="px-1 font-bold text-sm">
-                {formatCurrency(pay.amount, pay.currency)}
-              </div>
-              <div className="px-1 text-xs text-muted-foreground">
-                {formatDate(pay.date, 'short')}
-              </div>
-            </div>
+            <DashboardAmountStack
+              primary={formatCurrency(pay.amount, pay.currency)}
+              secondary={formatDate(pay.date, 'short')}
+            />
           ),
         })),
       },

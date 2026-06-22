@@ -62,6 +62,8 @@ const project: Project = {
   totalPaid: 25000,
   balance: 75000,
   percentPaid: 25,
+  flagStatus: 'none',
+  flaggedAt: null,
   customer: {
     id: '00000000-0000-0000-0000-000000000201',
     name: 'Cliente Test',

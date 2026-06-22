@@ -34,12 +34,15 @@ prisma/migrations/*
 !prisma/migrations/20260518100000_harden_financial_integrity/migration.sql
 !prisma/migrations/20260518113000_prune_redundant_indexes/
 !prisma/migrations/20260518113000_prune_redundant_indexes/migration.sql
+!prisma/migrations/20260622120000_add_project_flagged_at/
+!prisma/migrations/20260622120000_add_project_flagged_at/migration.sql
 
 # vercel
 .vercel
 
 # codex local config
 .codex/config.toml
+.superpowers/
 
 # legacy assistant config
 CLAUDE.md

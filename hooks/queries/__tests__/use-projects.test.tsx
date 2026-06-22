@@ -11,6 +11,7 @@ import {
   useUpdateProject,
   useDeleteProject,
   useUpdateProjectStatus,
+  useUpdateProjectFlag,
   type ProjectsResponse,
   type CreateProjectData,
 } from '../use-projects'
@@ -66,6 +67,8 @@ describe('useProjects', () => {
           totalPaid: 500000,
           balance: 500000,
           percentPaid: 50,
+          flagStatus: 'none',
+          flaggedAt: null,
           customer: { id: 'cust-1', name: 'Cliente A', phone: '+56912345678' },
           projectStatus: {
             id: 'status-1',
@@ -234,6 +237,8 @@ describe('useCreateProject', () => {
       totalPaid: 0,
       balance: 2000000,
       percentPaid: 0,
+      flagStatus: 'none',
+      flaggedAt: null,
       customer: { id: 'cust-1', name: 'Cliente A', phone: '+56912345678' },
       projectStatus: {
         id: 'status-1',
@@ -325,6 +330,8 @@ describe('useUpdateProject', () => {
       totalPaid: 800000,
       balance: 700000,
       percentPaid: 53.33,
+      flagStatus: 'none',
+      flaggedAt: null,
       customer: { id: 'cust-1', name: 'Cliente A', phone: '+56912345678' },
       projectStatus: {
         id: 'status-1',
@@ -409,6 +416,8 @@ describe('useDeleteProject', () => {
           totalPaid: 500000,
           balance: 500000,
           percentPaid: 50,
+          flagStatus: 'none',
+          flaggedAt: null,
           customer: { id: 'cust-1', name: 'Cliente A', phone: '+56912345678' },
           projectStatus: {
             id: 'status-1',
@@ -425,6 +434,8 @@ describe('useDeleteProject', () => {
           totalPaid: 300000,
           balance: 200000,
           percentPaid: 60,
+          flagStatus: 'none',
+          flaggedAt: null,
           customer: { id: 'cust-1', name: 'Cliente A', phone: '+56912345678' },
           projectStatus: {
             id: 'status-1',
@@ -482,6 +493,8 @@ describe('useDeleteProject', () => {
           totalPaid: 500000,
           balance: 500000,
           percentPaid: 50,
+          flagStatus: 'none',
+          flaggedAt: null,
           customer: { id: 'cust-1', name: 'Cliente A', phone: '+56912345678' },
           projectStatus: {
             id: 'status-1',
@@ -527,11 +540,13 @@ describe('useUpdateProjectStatus', () => {
       id: 'proj-1',
       projectNumber: 'P 0001-2025',
       projectName: null,
-      totalAmount: 1000000,
-      totalPaid: 500000,
-      balance: 500000,
-      percentPaid: 50,
-      customer: { id: 'cust-1', name: 'Cliente A', phone: '+56912345678' },
+          totalAmount: 1000000,
+          totalPaid: 500000,
+          balance: 500000,
+          percentPaid: 50,
+          flagStatus: 'none',
+          flaggedAt: null,
+          customer: { id: 'cust-1', name: 'Cliente A', phone: '+56912345678' },
       projectStatus: {
         id: 'status-2',
         name: 'Finalizado',
@@ -572,5 +587,128 @@ describe('useUpdateProjectStatus', () => {
     await expect(
       result.current.mutateAsync({ projectId: 'proj-1', statusId: 'status-999' })
     ).rejects.toThrow()
+  })
+})
+
+// ============================================================================
+// TEST GROUP 8: useUpdateProjectFlag() (Mutation con optimistic update)
+// ============================================================================
+
+describe('useUpdateProjectFlag', () => {
+  it('debe actualizar el marcador optimistamente en la cache de proyectos', async () => {
+    const queryClient = new QueryClient({
+      defaultOptions: {
+        queries: { retry: false },
+        mutations: { retry: false },
+      },
+    })
+    const queryKey = ['projects', { page: 1, limit: 10 }]
+    const initialData: ProjectsResponse = {
+      projects: [
+        {
+          id: 'proj-1',
+          projectNumber: 'P 0001-2025',
+          projectName: null,
+          totalAmount: 1000000,
+          totalPaid: 500000,
+          balance: 500000,
+          percentPaid: 50,
+          flagStatus: 'none',
+          flaggedAt: null,
+          customer: { id: 'cust-1', name: 'Cliente A', phone: '+56912345678' },
+          projectStatus: {
+            id: 'status-1',
+            name: 'Activo',
+            color: { bgClass: 'bg-green-500' },
+          },
+          date: new Date(),
+        },
+      ],
+      pagination: { page: 1, limit: 10, total: 1, totalPages: 1 },
+    }
+    queryClient.setQueryData(queryKey, initialData)
+
+    global.fetch = vi.fn(
+      () =>
+        new Promise((resolve) => {
+          setTimeout(() => {
+            resolve({
+              ok: true,
+              json: async () => ({
+                ...initialData.projects[0],
+                flagStatus: 'flagged',
+                flaggedAt: '2026-06-22T12:00:00.000Z',
+              }),
+            } as Response)
+          }, 25)
+        })
+    )
+
+    const wrapper = ({ children }: { children: React.ReactNode }) => (
+      <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+    )
+
+    const { result } = renderHook(() => useUpdateProjectFlag(), { wrapper })
+
+    result.current.mutate({ projectId: 'proj-1', flagStatus: 'flagged' })
+
+    await waitFor(() => {
+      const cachedData = queryClient.getQueryData<ProjectsResponse>(queryKey)
+      expect(cachedData?.projects[0].flagStatus).toBe('flagged')
+      expect(cachedData?.projects[0].flaggedAt).toBeTruthy()
+    })
+  })
+
+  it('debe revertir el marcador optimista si la API falla', async () => {
+    const queryClient = new QueryClient({
+      defaultOptions: {
+        queries: { retry: false },
+        mutations: { retry: false },
+      },
+    })
+    const queryKey = ['projects', { page: 1, limit: 10 }]
+    const initialData: ProjectsResponse = {
+      projects: [
+        {
+          id: 'proj-1',
+          projectNumber: 'P 0001-2025',
+          projectName: null,
+          totalAmount: 1000000,
+          totalPaid: 500000,
+          balance: 500000,
+          percentPaid: 50,
+          flagStatus: 'none',
+          flaggedAt: null,
+          customer: { id: 'cust-1', name: 'Cliente A', phone: '+56912345678' },
+          projectStatus: {
+            id: 'status-1',
+            name: 'Activo',
+            color: { bgClass: 'bg-green-500' },
+          },
+          date: new Date(),
+        },
+      ],
+      pagination: { page: 1, limit: 10, total: 1, totalPages: 1 },
+    }
+    queryClient.setQueryData(queryKey, initialData)
+
+    global.fetch = vi.fn().mockResolvedValueOnce({
+      ok: false,
+      json: async () => ({ error: 'Error al actualizar marcador' }),
+    })
+
+    const wrapper = ({ children }: { children: React.ReactNode }) => (
+      <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+    )
+
+    const { result } = renderHook(() => useUpdateProjectFlag(), { wrapper })
+
+    await expect(
+      result.current.mutateAsync({ projectId: 'proj-1', flagStatus: 'flagged' })
+    ).rejects.toThrow()
+
+    const cachedData = queryClient.getQueryData<ProjectsResponse>(queryKey)
+    expect(cachedData?.projects[0].flagStatus).toBe('none')
+    expect(cachedData?.projects[0].flaggedAt).toBeNull()
   })
 })

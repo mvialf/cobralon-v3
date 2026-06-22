@@ -105,6 +105,8 @@ const mockProject = {
   windowsCount: 5,
   squareMeters: new Decimal(50),
   description: null,
+  flagStatus: 'none',
+  flaggedAt: null,
   customer: { id: 'customer-1', name: 'Test Customer', phone: '+56912345678' },
   projectStatus: { id: 'status-1', name: 'En progreso', isFinal: false, color: null },
   uninstallTags: [],
@@ -372,6 +374,76 @@ describe('PUT /api/projects/[id]', () => {
       const response = await PUT(request, createParams(VALID_UUID))
 
       expect(response.status).toBe(200)
+    })
+
+    it('debe actualizar flagStatus a flagged', async () => {
+      let updateData: Record<string, unknown> | null = null
+      vi.mocked(prisma.$transaction).mockImplementation(async (fn) => {
+        const mockTx = {
+          project: {
+            update: vi.fn().mockImplementation((args: { data: Record<string, unknown> }) => {
+              updateData = args.data
+              return { id: 'project-1' }
+            }),
+            findUnique: vi.fn().mockResolvedValue({
+              ...mockProject,
+              flagStatus: 'flagged',
+            }),
+          },
+          $queryRaw: vi.fn().mockResolvedValue([mockFinancialsRow]),
+          projectUninstallTag: {
+            deleteMany: vi.fn().mockResolvedValue({ count: 0 }),
+            createMany: vi.fn().mockResolvedValue({ count: 0 }),
+          },
+        }
+        return fn(mockTx as never)
+      })
+
+      const request = createRequest('PUT', { flagStatus: 'flagged' })
+      const response = await PUT(request, createParams(VALID_UUID))
+      const data = await response.json()
+
+      expect(response.status).toBe(200)
+      expect(updateData?.['flagStatus']).toBe('flagged')
+      expect(updateData?.['flaggedAt']).toBeInstanceOf(Date)
+      expect(data.flagStatus).toBe('flagged')
+    })
+
+    it('debe actualizar flagStatus a none', async () => {
+      let updateData: Record<string, unknown> | null = null
+      vi.mocked(prisma.$transaction).mockImplementation(async (fn) => {
+        const mockTx = {
+          project: {
+            update: vi.fn().mockImplementation((args: { data: Record<string, unknown> }) => {
+              updateData = args.data
+              return { id: 'project-1' }
+            }),
+            findUnique: vi.fn().mockResolvedValue(mockProject),
+          },
+          $queryRaw: vi.fn().mockResolvedValue([mockFinancialsRow]),
+          projectUninstallTag: {
+            deleteMany: vi.fn().mockResolvedValue({ count: 0 }),
+            createMany: vi.fn().mockResolvedValue({ count: 0 }),
+          },
+        }
+        return fn(mockTx as never)
+      })
+
+      const request = createRequest('PUT', { flagStatus: 'none' })
+      const response = await PUT(request, createParams(VALID_UUID))
+      const data = await response.json()
+
+      expect(response.status).toBe(200)
+      expect(updateData?.['flagStatus']).toBe('none')
+      expect(updateData?.['flaggedAt']).toBeNull()
+      expect(data.flagStatus).toBe('none')
+    })
+
+    it('debe rechazar flagStatus inválido', async () => {
+      const request = createRequest('PUT', { flagStatus: 'invalid' })
+      const response = await PUT(request, createParams(VALID_UUID))
+
+      expect(response.status).toBe(400)
     })
   })
 

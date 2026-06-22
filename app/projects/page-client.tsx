@@ -23,6 +23,7 @@ import {
   useProjects,
   useUpdateProjectStatus,
   useUpdateProjectDate,
+  useUpdateProjectFlag,
   useBulkDeleteProjects,
   type ProjectsQueryParams,
 } from '@/hooks/queries/use-projects'
@@ -80,6 +81,7 @@ export function ProjectsPageClient() {
   // Mutation hooks para actualizar datos de proyecto
   const updateStatusMutation = useUpdateProjectStatus()
   const updateDateMutation = useUpdateProjectDate()
+  const updateFlagMutation = useUpdateProjectFlag()
   const bulkDeleteMutation = useBulkDeleteProjects()
 
   // Extraer data del hook (con fallbacks)
@@ -122,6 +124,10 @@ export function ProjectsPageClient() {
 
   const handleDateChange = async (projectId: string, newDate: Date) => {
     await updateDateMutation.mutateAsync({ projectId, date: newDate.toISOString() })
+  }
+
+  const handleFlagToggle = async (projectId: string, flagStatus: 'none' | 'flagged') => {
+    await updateFlagMutation.mutateAsync({ projectId, flagStatus })
   }
 
   const handleSearchChange = (search: string) => {
@@ -172,6 +178,9 @@ export function ProjectsPageClient() {
       : null,
     updatingDateProjectId: updateDateMutation.isPending
       ? updateDateMutation.variables?.projectId
+      : null,
+    updatingFlagProjectId: updateFlagMutation.isPending
+      ? updateFlagMutation.variables?.projectId
       : null,
     onDataChanged: () => queryClient.invalidateQueries({ queryKey: ['projects'] }),
   })
@@ -267,6 +276,7 @@ export function ProjectsPageClient() {
             meta={{
               handleStatusChange,
               handleDateChange,
+              handleFlagToggle,
             }}
             // Selección múltiple y acciones masivas
             enableRowSelection

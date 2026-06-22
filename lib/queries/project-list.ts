@@ -81,6 +81,8 @@ export async function queryProjectList(filters: ProjectListFilters): Promise<Pro
       p."updatedAt",
       p.currency,
       p."totalAmount",
+      p."flagStatus",
+      p."flaggedAt",
       c.id as customer_id,
       c.name as customer_name,
       c.phone as customer_phone,

@@ -12,6 +12,7 @@ import { formatCurrency } from '@/lib/format'
 import { calculateProjectState } from '@/lib/business-logic/project-state'
 import { EditableDate } from '@/components/ui/editable-date'
 import { ProjectActionsCell } from './components/project-actions-cell'
+import { ProjectFlagCell } from './components/project-flag-cell'
 import { transformStatusToOption, filterByProjectStatus } from './utils/column-helpers'
 import { type Project, type ColumnsProps, type ProjectsTableMeta } from './types'
 
@@ -29,6 +30,7 @@ export const createColumns = ({
   statuses = [],
   updatingProjectId = null,
   updatingDateProjectId = null,
+  updatingFlagProjectId = null,
 }: ColumnsProps = {}): ColumnDef<Project>[] => [
   // Columna de selección (checkbox)
   createSelectColumn<Project>(),
@@ -86,6 +88,29 @@ export const createColumns = ({
     filterFn: filterByProjectStatus,
     meta: {
       headerClassName: 'text-center',
+      cellClassName: 'text-center',
+    },
+  },
+  {
+    id: 'flagStatus',
+    size: 40,
+    header: () => null,
+    cell: ({ row, table }) => {
+      const project = row.original
+      const { handleFlagToggle } = getTableMeta<ProjectsTableMeta>(table)
+      const isPending = updatingFlagProjectId === project.id
+
+      return (
+        <ProjectFlagCell
+          projectId={project.id}
+          flagStatus={project.flagStatus}
+          isPending={isPending}
+          onToggle={handleFlagToggle}
+        />
+      )
+    },
+    meta: {
+      headerClassName: 'w-10',
       cellClassName: 'text-center',
     },
   },

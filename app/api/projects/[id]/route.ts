@@ -146,6 +146,10 @@ export const PUT = withApiHandler<UpdateProjectApiBody>(
     if (body.windowsCount !== undefined) updateData.windowsCount = body.windowsCount
     if (body.squareMeters !== undefined) updateData.squareMeters = money(body.squareMeters)
     if (body.description !== undefined) updateData.description = body.description || null
+    if (body.flagStatus !== undefined) {
+      updateData.flagStatus = body.flagStatus
+      updateData.flaggedAt = body.flagStatus === 'flagged' ? new Date() : null
+    }
 
     const project = await prisma.$transaction(async (tx) => {
       await tx.project.update({ where: { id }, data: updateData })

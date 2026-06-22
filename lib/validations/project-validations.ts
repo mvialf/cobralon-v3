@@ -132,6 +132,7 @@ export const createProjectApiSchema = projectBaseSchema.extend({
     required_error: 'La fecha de ingreso es requerida',
   }),
   totalAmount: z.number().positive().optional(),
+  flagStatus: z.enum(['none', 'flagged']).optional(),
 })
 
 export type CreateProjectApiBody = z.infer<typeof createProjectApiSchema>

@@ -78,6 +78,48 @@ export interface ProjectsResponse {
   }
 }
 
+type ProjectFlagStatus = 'none' | 'flagged'
+
+interface ProjectFlagMutationVariables {
+  projectId: string
+  flagStatus: ProjectFlagStatus
+}
+
+interface ProjectFlagMutationContext {
+  previousProjects: Array<[readonly unknown[], unknown]>
+}
+
+function isProjectsResponse(data: unknown): data is ProjectsResponse {
+  return Boolean(
+    data && typeof data === 'object' && 'projects' in data && Array.isArray(data.projects)
+  )
+}
+
+function isProject(data: unknown): data is Project {
+  return Boolean(data && typeof data === 'object' && 'id' in data && 'flagStatus' in data)
+}
+
+function applyProjectFlagOptimisticUpdate(
+  data: unknown,
+  { projectId, flagStatus }: ProjectFlagMutationVariables,
+  flaggedAt: string | null
+) {
+  if (isProjectsResponse(data)) {
+    return {
+      ...data,
+      projects: data.projects.map((project) =>
+        project.id === projectId ? { ...project, flagStatus, flaggedAt } : project
+      ),
+    }
+  }
+
+  if (isProject(data) && data.id === projectId) {
+    return { ...data, flagStatus, flaggedAt }
+  }
+
+  return data
+}
+
 /** Datos para POST /api/projects */
 export interface CreateProjectData {
   customerId: string
@@ -274,10 +316,67 @@ export function useUpdateProject() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['projects'] })
-      toast.success('Proyecto actualizado exitosamente')
+      toast.success('Fecha actualizada exitosamente')
     },
     onError: (error) => {
       handleMutationError(error)
+    },
+  })
+}
+
+// ============================================================================
+// MUTATION: UPDATE FLAG (marcar/desmarcar proyecto para seguimiento)
+// ============================================================================
+
+/**
+ * Hook especializado para actualizar el marcador de atención de un proyecto
+ * Usado por ProjectFlagCell en la tabla de proyectos
+ *
+ * @example
+ * const updateFlagMutation = useUpdateProjectFlag()
+ * updateFlagMutation.mutate({ projectId: 'abc', flagStatus: 'flagged' })
+ */
+export function useUpdateProjectFlag() {
+  const queryClient = useQueryClient()
+
+  return useMutation<Project, Error, ProjectFlagMutationVariables, ProjectFlagMutationContext>({
+    mutationFn: async ({ projectId, flagStatus }): Promise<Project> => {
+      const response = await fetch(`/api/projects/${projectId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ flagStatus }),
+      })
+
+      if (!response.ok) {
+        throw await createApiError(response, 'Error al actualizar marcador')
+      }
+
+      return response.json()
+    },
+    onMutate: async (variables) => {
+      await queryClient.cancelQueries({ queryKey: ['projects'] })
+
+      const previousProjects = queryClient.getQueriesData({ queryKey: ['projects'] })
+      const flaggedAt = variables.flagStatus === 'flagged' ? new Date().toISOString() : null
+
+      queryClient.setQueriesData({ queryKey: ['projects'] }, (data) =>
+        applyProjectFlagOptimisticUpdate(data, variables, flaggedAt)
+      )
+
+      return { previousProjects }
+    },
+    onSuccess: () => {
+      toast.success('Marcador actualizado')
+    },
+    onError: (error, _variables, context) => {
+      context?.previousProjects.forEach(([queryKey, data]) => {
+        queryClient.setQueryData(queryKey, data)
+      })
+      handleMutationError(error)
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ['projects'] })
+      queryClient.invalidateQueries({ queryKey: ['featured-project'] })
     },
   })
 }
@@ -342,10 +441,6 @@ export function useDeleteProject() {
     },
   })
 }
-
-// ============================================================================
-// MUTATION: UPDATE STATUS (especializado para cambio de estado)
-// ============================================================================
 
 // ============================================================================
 // MUTATION: BULK DELETE (eliminar múltiples proyectos)

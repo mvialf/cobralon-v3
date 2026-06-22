@@ -313,6 +313,49 @@ describe('POST /api/projects', () => {
       expect(response.status).toBe(201)
     })
 
+    it('debe setear flaggedAt al crear proyecto marcado', async () => {
+      let createData: Record<string, unknown> | null = null
+      vi.mocked(prisma.$transaction).mockImplementation(async (fn) => {
+        const mockTx = {
+          project: {
+            create: vi.fn().mockImplementation((args: { data: Record<string, unknown> }) => {
+              createData = args.data
+              return {
+                id: 'project-1',
+                projectNumber: 'P-001',
+                subtotal: new Decimal(1000000),
+                taxRate: new Decimal(19),
+                totalAmount: new Decimal(1190000),
+                balance: new Decimal(1190000),
+                flagStatus: 'flagged',
+                flaggedAt: createData.flaggedAt,
+              }
+            }),
+            findUnique: vi.fn().mockResolvedValue({
+              id: 'project-1',
+              projectNumber: 'P-001',
+              flagStatus: 'flagged',
+              flaggedAt: new Date('2026-06-22T12:00:00.000Z'),
+              customer: { id: 'customer-1', name: 'Test' },
+              projectStatus: null,
+              uninstallTags: [],
+            }),
+          },
+          projectUninstallTag: {
+            createMany: vi.fn().mockResolvedValue({ count: 0 }),
+          },
+        }
+        return fn(mockTx as never)
+      })
+
+      const request = createPostRequest({ ...validPayload, flagStatus: 'flagged' })
+      const response = await callPOST(request)
+
+      expect(response.status).toBe(201)
+      expect(createData?.['flagStatus']).toBe('flagged')
+      expect(createData?.['flaggedAt']).toBeInstanceOf(Date)
+    })
+
     it('debe aceptar apartment opcional', async () => {
       const request = createPostRequest({
         ...validPayload,
