@@ -1,15 +1,13 @@
 export const dynamic = 'force-dynamic'
 
-import Link from 'next/link'
-import { Bookmark } from 'lucide-react'
 import { AppLayout } from '@/components/layout/app-layout'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { prisma } from '@/lib/db'
 import { formatCurrency } from '@/lib/format'
-import { getProjectFinancials } from '@/lib/business-logic/project-financials'
-import { moneyToNumber } from '@/lib/business-logic/money'
+import { moneyToNumber, type MoneyInput } from '@/lib/business-logic/money'
 import { DashboardActivityList } from '@/components/summarys/dashboard-activity-list'
+import { DashboardFollowUpList } from '@/components/summarys/dashboard-follow-up-list'
 import { MonthlySalesSelector } from '@/components/summarys/monthly-sales-selector'
 import { DashboardRevenueChart } from '@/components/summarys/dashboard-revenue-chart'
 
@@ -279,27 +277,40 @@ async function getRecentPayments() {
   }))
 }
 
-async function getFeaturedProject() {
-  const project = await prisma.project.findFirst({
-    where: { flagStatus: 'flagged' },
-    orderBy: { flaggedAt: 'desc' },
-    include: {
-      customer: { select: { name: true } },
-    },
-  })
+async function getFollowUpProjects() {
+  const projects = await prisma.$queryRaw<
+    Array<{
+      id: string
+      projectNumber: string
+      projectName: string | null
+      customerName: string
+      totalAmount: MoneyInput
+      balance: MoneyInput
+    }>
+  >`
+    SELECT
+      p.id,
+      p."projectNumber",
+      p."projectName",
+      c.name AS "customerName",
+      p."totalAmount",
+      COALESCE(pf.balance, p."totalAmount") AS balance
+    FROM "Project" p
+    LEFT JOIN "ProjectFinancials" pf ON pf."projectId" = p.id
+    JOIN "Customer" c ON c.id = p."customerId"
+    WHERE p."flagStatus" = 'flagged'
+    ORDER BY p."flaggedAt" DESC NULLS LAST
+    LIMIT 15
+  `
 
-  if (!project) return null
-
-  const financials = await getProjectFinancials(project.id)
-
-  return {
+  return projects.map((project) => ({
     id: project.id,
     projectNumber: project.projectNumber,
     projectName: project.projectName,
-    customerName: project.customer.name,
+    customerName: project.customerName,
     totalAmount: moneyToNumber(project.totalAmount),
-    balance: financials?.balance ?? moneyToNumber(project.totalAmount),
-  }
+    balance: moneyToNumber(project.balance),
+  }))
 }
 
 export default async function HomePage({ searchParams }: HomePageProps) {
@@ -313,7 +324,7 @@ export default async function HomePage({ searchParams }: HomePageProps) {
     installments,
     recentProjects,
     recentPayments,
-    featuredProject,
+    followUpProjects,
   ] = await Promise.all([
     getMonthlySales(selectedMonth),
     getAvailableMonths(selectedMonth),
@@ -321,7 +332,7 @@ export default async function HomePage({ searchParams }: HomePageProps) {
     getUpcomingInstallments(),
     getRecentProjects(),
     getRecentPayments(),
-    getFeaturedProject(),
+    getFollowUpProjects(),
   ])
 
   return (
@@ -364,41 +375,7 @@ export default async function HomePage({ searchParams }: HomePageProps) {
           </CardContent>
         </Card>
 
-        <Card className="gap-1.5 overflow-hidden" style={{ gridArea: 'c' }}>
-          <CardHeader className="px-3 py-0">
-            <CardTitle className="flex items-center gap-1.5 text-sm font-medium text-muted-foreground">
-              <Bookmark className="h-3.5 w-3.5" />
-              Destacado
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="px-3 py-0">
-            {featuredProject ? (
-              <Link href="/projects" className="block hover:opacity-80 transition-opacity">
-                <div className="grid grid-cols-2 gap-2">
-                  <div className="min-w-0">
-                    <p className="text-sm font-medium truncate">{featuredProject.projectNumber}</p>
-                    <p className="text-xs text-muted-foreground truncate">
-                      {featuredProject.customerName}
-                    </p>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-lg font-bold leading-tight">
-                      {formatCurrency(featuredProject.balance)}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      Total {formatCurrency(featuredProject.totalAmount)}
-                    </p>
-                  </div>
-                </div>
-              </Link>
-            ) : (
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <Bookmark className="h-4 w-4" />
-                Sin proyectos destacados
-              </div>
-            )}
-          </CardContent>
-        </Card>
+        <DashboardFollowUpList gridArea="c" projects={followUpProjects} />
 
         <DashboardRevenueChart gridArea="b" data={revenueChartData} />
 

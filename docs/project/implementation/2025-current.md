@@ -127,7 +127,7 @@ Documentacion:
 - Click inline alterna el estado con mutacion optimista en React Query; fallos se revierten y notifican con toast.
 - `PUT /api/projects/[id]` acepta `flagStatus`; al marcar setea `flaggedAt = now()`, al desmarcar setea `flaggedAt = null`.
 - `POST /api/projects` respeta `flagStatus` si se envia y setea `flaggedAt` de forma consistente.
-- El Panel Principal (celda C) muestra el proyecto con `flagStatus = "flagged"` mas reciente por `flaggedAt`, con saldo y total, o "Sin proyectos destacados" si no hay ninguno.
+- El Panel Principal (celda C) muestra una lista adaptativa de proyectos en seguimiento (`flagStatus = "flagged"`), ordenados por `flaggedAt` descendente, con saldo y total. La lista mide el alto disponible como "Proximas Cuotas" y muestra solo los items que caben; si no hay ninguno, muestra "Sin proyectos en seguimiento".
 - Se agregaron tests del contrato API y del optimistic update del hook.
 
 Archivos clave:

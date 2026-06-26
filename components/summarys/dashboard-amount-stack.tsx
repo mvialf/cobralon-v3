@@ -10,7 +10,7 @@ interface DashboardAmountStackProps {
 /**
  * Componente reutilizable para mostrar un monto destacado con un detalle secundario.
  * Usado en el Panel Principal para mantener consistencia visual entre
- * "Proximas Cuotas", "Nuevos Proyectos", "Ultimos Pagos" y la tarjeta "Destacado".
+ * "Proximas Cuotas", "Nuevos Proyectos", "Ultimos Pagos" y "Seguimiento".
  */
 export function DashboardAmountStack({
   primary,
