@@ -128,7 +128,7 @@ export const ProjectForm = React.forwardRef<ProjectFormHandle, ProjectFormProps>
           projectStatusId: defaultValues.projectStatusId || '',
           date: defaultValues.date || new Date(),
           subtotal: defaultValues.subtotal || 0,
-          taxRate: defaultValues.taxRate || 19,
+          taxRate: defaultValues.taxRate ?? 19,
           currency: defaultValues.currency || configuration.currency || 'CLP',
           windowsCount: defaultValues.windowsCount || 0,
           squareMeters: defaultValues.squareMeters || 0,
