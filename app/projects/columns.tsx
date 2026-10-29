@@ -2,10 +2,9 @@
  * Column definitions for Projects DataTable
  */
 
-import { type ColumnDef, type ColumnMeta, type HeaderContext } from '@tanstack/react-table'
+import { type ColumnDef } from '@tanstack/react-table'
 import { Badge } from '@/components/ui/badge'
 import { DataTableColumnHeader, createSelectColumn, getTableMeta } from '@/components/data-table'
-import { DataTableFacetedFilter } from '@/components/data-table/data-table-faceted-filter'
 import { EditableBadge } from '@/components/ui/editable-badge'
 import { ProjectNameSummary } from '@/components/summarys/project-name-summary'
 import { PaymentProgressSummary } from '@/components/summarys/payment-progress-summary'
@@ -20,24 +19,6 @@ import { type Project, type ColumnsProps, type ProjectsTableMeta } from './types
 // Re-export types for consumers
 export { type Project } from './types'
 
-type ProjectStatusColumnMeta = ColumnMeta<Project, unknown> & {
-  statusFilter?: ColumnsProps['statusFilter']
-}
-
-// Mantener la identidad del encabezado evita cerrar el popover al cambiar la selección.
-function ProjectStatusHeader({ column }: HeaderContext<Project, unknown>) {
-  const { statusFilter } = column.columnDef.meta as ProjectStatusColumnMeta
-
-  return (
-    <div className="flex items-center justify-center gap-2">
-      <DataTableColumnHeader column={column} title="Estado" />
-      {statusFilter && (
-        <DataTableFacetedFilter column={column} title="Filtrar estados" {...statusFilter} />
-      )}
-    </div>
-  )
-}
-
 /**
  * Creates column definitions for Projects DataTable
  *
@@ -47,7 +28,6 @@ function ProjectStatusHeader({ column }: HeaderContext<Project, unknown>) {
 export const createColumns = ({
   onDataChanged,
   statuses = [],
-  statusFilter,
   updatingProjectId = null,
   updatingDateProjectId = null,
   updatingFlagProjectId = null,
@@ -76,7 +56,7 @@ export const createColumns = ({
   },
   {
     accessorKey: 'projectStatus',
-    header: ProjectStatusHeader,
+    header: ({ column }) => <DataTableColumnHeader column={column} title="Estado" />,
     cell: ({ row, table }) => {
       const project = row.original
       const status = project.projectStatus
@@ -109,13 +89,12 @@ export const createColumns = ({
     meta: {
       headerClassName: 'text-center',
       cellClassName: 'text-center',
-      statusFilter,
-    } as ProjectStatusColumnMeta,
+    },
   },
   {
-    id: 'flagStatus',
+    accessorKey: 'flagStatus',
     size: 40,
-    header: () => null,
+    header: ({ column }) => <DataTableColumnHeader column={column} title="Destacado" />,
     cell: ({ row, table }) => {
       const project = row.original
       const { handleFlagToggle } = getTableMeta<ProjectsTableMeta>(table)
@@ -130,6 +109,7 @@ export const createColumns = ({
         />
       )
     },
+    enableSorting: true,
     meta: {
       headerClassName: 'w-10',
       cellClassName: 'text-center',

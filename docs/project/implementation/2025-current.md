@@ -118,21 +118,12 @@ Documentacion:
   a `email: ''`, que el backend ya convierte a `null` correctamente.
   Archivo: `components/dialogs/customers/edit-customer-dialog.tsx`.
 
-## Filtro de estado en proyectos
-
-- 2026-10-29: El encabezado "Estado" permite filtrar varios estados con el mismo
-  `DataTableFacetedFilter` de la barra superior. Ambos controles comparten selección,
-  opciones, colores y contadores del servidor; conservan el ordenamiento existente.
-- Cambiar o limpiar la selección vuelve a la primera página. El filtrado y la
-  precarga de la página siguiente conservan el contrato `statusIds` de la API.
-- La prueba de integración en `app/projects/__tests__/page-client.test.tsx` cubre
-  sincronización, multiselección, limpieza, paginación, búsqueda y ordenamiento.
-
 ## Marcador de atencion en proyectos
 
 - 2025-06-16: Se agrego `Project.flagStatus` (string `"none" | "flagged"`) para marcar proyectos que necesitan atencion, evitando boolean para permitir estados futuros.
 - 2026-06-22: Se agrego `Project.flaggedAt` nullable y el indice `Project(flagStatus, flaggedAt DESC)` para que el Panel Principal ordene por fecha real de marcado, no por cualquier actualizacion del proyecto.
-- La tabla de proyectos muestra un icono bookmark inline entre las columnas "Estado" y "Estado Proyecto"; sin encabezado de columna, sin resaltar fila.
+- La tabla de proyectos muestra un icono bookmark inline entre las columnas "Estado" y "Estado Proyecto", sin resaltar fila.
+- 2026-10-29: El encabezado "Destacado" permite ordenar por `flagStatus` en servidor antes de paginar: Asc muestra primero los destacados y Desc los no destacados. Se revirtio el filtro de estado agregado por error en el encabezado.
 - El icono usa variables globales del tema: outline `text-muted-foreground`, relleno `text-primary`.
 - Click inline alterna el estado con mutacion optimista en React Query; fallos se revierten y notifican con toast.
 - `PUT /api/projects/[id]` acepta `flagStatus`; al marcar setea `flaggedAt = now()`, al desmarcar setea `flaggedAt = null`.

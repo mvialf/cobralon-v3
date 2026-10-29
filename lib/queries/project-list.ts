@@ -41,6 +41,7 @@ const SORT_COLUMN_MAP: Record<string, Prisma.Sql> = {
   balance: DERIVED_BALANCE,
   projectNumber: Prisma.sql`p."projectNumber"`,
   projectStatus: Prisma.sql`ps.name`,
+  flagStatus: Prisma.sql`p."flagStatus"`,
 }
 
 /**

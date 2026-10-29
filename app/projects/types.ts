@@ -3,7 +3,6 @@
  */
 
 import { type EditableBadgeOption } from '@/components/ui/editable-badge'
-import { type ServerFacet } from '@/components/data-table'
 
 /**
  * Project entity structure as returned by the API
@@ -42,13 +41,6 @@ export interface ColumnsProps {
   onDataChanged?: () => void
   /** Lista de estados disponibles para el EditableBadge */
   statuses?: EditableBadgeOption[]
-  /** Filtro controlado compartido con la barra superior */
-  statusFilter?: {
-    options: { label: string; value: string; bgClass?: string }[]
-    controlledSelectedValues: string[]
-    serverFacets?: ServerFacet[]
-    onFilterChange: (values: string[]) => void
-  }
   /** Estado de actualización (projectId actual siendo actualizado para estado) */
   updatingProjectId?: string | null
   /** Estado de actualización (projectId actual siendo actualizado para fecha) */

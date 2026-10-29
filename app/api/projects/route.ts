@@ -91,6 +91,7 @@ export const GET = withLogging(async (request, logger) => {
       'projectNumber',
       'totalPaid',
       'projectStatus',
+      'flagStatus',
     ])
     .optional()
   const sortOrderSchema = z.enum(['asc', 'desc']).optional()

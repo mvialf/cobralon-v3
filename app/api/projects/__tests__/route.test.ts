@@ -106,6 +106,17 @@ describe('GET /api/projects', () => {
     vi.clearAllMocks()
   })
 
+  it.each(['asc', 'desc'])('debe aceptar ordenamiento por destacado en %s', async (sortOrder) => {
+    const response = await callGET(
+      createGetRequest({ projectState: 'all', sortBy: 'flagStatus', sortOrder })
+    )
+
+    expect(response.status).toBe(200)
+    expect(queryProjectList).toHaveBeenCalledWith(
+      expect.objectContaining({ sortBy: 'flagStatus', sortOrder })
+    )
+  })
+
   describe('validación de projectState', () => {
     // Los tests de GET son complejos porque la API tiene validación Zod interna
     // que es difícil de mockear. Solo testeamos la validación que podemos controlar.
