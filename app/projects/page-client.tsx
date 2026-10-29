@@ -104,6 +104,9 @@ export function ProjectsPageClient() {
               limit: String(queryParams.limit),
             })
             if (queryParams.search) params.append('search', queryParams.search)
+            if (queryParams.statusIds?.length) {
+              params.append('statusIds', queryParams.statusIds.join(','))
+            }
             if (queryParams.projectState) params.append('projectState', queryParams.projectState)
             if (queryParams.sortBy) params.append('sortBy', queryParams.sortBy)
             if (queryParams.sortOrder) params.append('sortOrder', queryParams.sortOrder)
@@ -143,6 +146,11 @@ export function ProjectsPageClient() {
     setPagination((prev) => ({ ...prev, pageIndex: 0 }))
   }
 
+  const handleStatusFilterChange = (values: string[]) => {
+    setStatusIds(values)
+    setPagination((prev) => ({ ...prev, pageIndex: 0 }))
+  }
+
   // Handler para bulk delete
   const handleBulkDelete = async (selectedProjects: Project[]) => {
     setProjectsToDelete(selectedProjects)
@@ -167,12 +175,24 @@ export function ProjectsPageClient() {
     },
   ]
 
+  const statusFilterOptions = statuses.map((status) => ({
+    label: status.name,
+    value: status.id,
+    bgClass: status.color.bgClass,
+  }))
+
   const columns = createColumns({
     statuses: statuses.map((s) => ({
       id: s.id,
       label: s.name,
       color: { bgClass: s.color.bgClass },
     })),
+    statusFilter: {
+      options: statusFilterOptions,
+      controlledSelectedValues: statusIds,
+      serverFacets: data?.facets?.projectStatus,
+      onFilterChange: handleStatusFilterChange,
+    },
     updatingProjectId: updateStatusMutation.isPending
       ? updateStatusMutation.variables?.projectId
       : null,
@@ -184,13 +204,6 @@ export function ProjectsPageClient() {
       : null,
     onDataChanged: () => queryClient.invalidateQueries({ queryKey: ['projects'] }),
   })
-
-  // Formatear opciones para el filtro de status
-  const statusFilterOptions = (statuses || []).map((status) => ({
-    label: status.name,
-    value: status.id,
-    bgClass: status.color.bgClass,
-  }))
 
   const projectStateToggle = (
     <ToggleGroup
@@ -256,13 +269,7 @@ export function ProjectsPageClient() {
                 title: 'Estado',
                 options: statusFilterOptions,
                 selectedValues: statusIds,
-                onFilterChange: (values) => {
-                  setStatusIds(values)
-                  // Resetear a página 1 cuando cambia el filtro
-                  if (pagination.pageIndex !== 0) {
-                    setPagination({ ...pagination, pageIndex: 0 })
-                  }
-                },
+                onFilterChange: handleStatusFilterChange,
               },
             ]}
             // Toolbar: conteo y limpiar filtros server-side
@@ -270,7 +277,7 @@ export function ProjectsPageClient() {
             totalCountLabel="proyectos"
             activeFilterCount={(statusIds.length > 0 ? 1 : 0) + (projectState !== 'Activo' ? 1 : 0)}
             onClearAllFilters={() => {
-              setStatusIds([])
+              handleStatusFilterChange([])
               setProjectState('Activo')
             }}
             meta={{
